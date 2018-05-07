@@ -1,3 +1,8 @@
+---
+layout: default
+title: Single cell RNA sequencing analysis course
+---
+
 # Welcome to NBIS scRNA-seq tutorial packages
 
 This page contains links to different tutorials that are used in the scRNA-seq analysis course. We see this as a "smörgåsbord" of tutorials, we do not expect that all course participants will have time to run through all of the tutorials, so we suggest that you pick-and-mix the analyses/packages that you find most interesting. 
