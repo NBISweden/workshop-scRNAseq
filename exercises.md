@@ -32,7 +32,7 @@ For those not familiar with working with biomaRt, we suggest that you have a loo
 
 Basic PCA and clustering using base R on mouse embryonic development data.
 
-*	[Tutorial for PCA and clustering](exercises/PCA_and_clustering.md)
+*	[Tutorial for PCA and clustering](labs/PCA_and_clustering.md)
 
 ### scater package
 
