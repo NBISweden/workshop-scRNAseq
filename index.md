@@ -8,8 +8,8 @@ Scilifelab Solna, Rooms Air & Fire,  2018-05-21 - 2018-05-23
 
 
 ## Course Links
-[Pre-course material](precourse)   
-[Schedule](schedule)  
+[Pre-course material](precourse)
+[Schedule](schedule)
 [Exercises](exercises)
 
 ## Labs links
@@ -24,7 +24,7 @@ Scilifelab Solna, Rooms Air & Fire,  2018-05-21 - 2018-05-23
 
 ## Address and travel suggestions
 
-[Travel Info](travel)  
+[Travel Info](travel)
 
 
 ## Course leaders
