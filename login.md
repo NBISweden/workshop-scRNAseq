@@ -1,12 +1,12 @@
 ---
 layout: default
-title:  'Single cell RNA sequencing data analysis'
+title:  'login - scRNAseq course'
 ---
 
 
 # scRNAseq course
 
-Held in Uppsala October 2-4, 2017.
+Held in Solna May 21-23, 2018.
 
 ##  How to login on interactive node during exercise
 

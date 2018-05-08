@@ -325,21 +325,7 @@ hcl.euk<-hclust(dist.euk,method="ward.D2")
 #Lets plot a heatmap with the correlations and the results from the different clustering methods. 
 # Here we use the dendrogram from hclust to order the cells.
     
-library(gplots)
-```
-
-    ## 
-    ## Attaching package: 'gplots'
-
-    ## The following object is masked from 'package:plotrix':
-    ## 
-    ##     plotCI
-
-    ## The following object is masked from 'package:stats':
-    ## 
-    ##     lowess
-
-``` r
+suppressMessages(library(gplots))
 heatmap.2(C,ColSideColors=col.stage,RowSideColors=col.stage,
           Colv=as.dendrogram(hcl.corr),Rowv=as.dendrogram(hcl.corr),
           scale="none",trace="none",main="correlation, Ward")
