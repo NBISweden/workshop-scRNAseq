@@ -1,6 +1,6 @@
 ---
 layout: default
-title:  'Precourse Material'
+title:  'Precourse Material - scRNAseq course'
 ---
 
 # Pre-course Material

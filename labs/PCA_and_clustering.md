@@ -5,10 +5,9 @@ Here are some simple examples on how to run PCA/Clustering on a single cell RNA-
 
 The dataset used is single-cell RNA-seq data from mouse embryonic development from Deng. et al. Science 2014, Vol. 343 no. 6167 pp. 193-196, "Single-Cell RNA-Seq Reveals Dynamic, Random Monoallelic Gene Expression in Mammalian Cells"
 
-All data you need is available in the course folder with subfolder: `scrnaseq_course/data/mouse_embryo/`
+All data you need is available in the course uppmax folder with subfolder: `scrnaseq_course/data/mouse_embryo/`
 
-Data processing:
-----------------
+### Data processing:
 
 First read in the data and define colors/symbols for plotting
 
@@ -36,7 +35,8 @@ embryo<-unlist(lapply(strsplit(sample.names,"\\."),function(x) x[1]))
     
 stages<-unique(stage)
 # have 11 different stages, define 11 colors for those.
-coldef.stage<-c("black","red","green","blue","cyan","magenta","yellow","pink","gray","brown","orange")
+coldef.stage<-c("black","red","green","blue","cyan","magenta",
+                "yellow","pink","gray","brown","orange")
 names(coldef.stage) <- stages
 col.stage <- coldef.stage[stage]
     
@@ -48,8 +48,7 @@ names(pchdef.embryo)<-embryos
 pch.embryo<-pchdef.embryo[embryo]
 ```
 
-PCA
----
+### PCA
 
 There are some custom functions in PCA\_RNAseq\_functions.R that are called run.pca, pca.plot, pca.contribution.plot and pca.loadings.plot. Have a look at the file for documentation of the scripts.
 
@@ -77,7 +76,7 @@ plot(data.frame(PC$x[,1:5]),col=col.stage,pch=pch.embryo,main="first PCA")
 
 ![](PCA_and_clustering_files/figure-markdown_github/unnamed-chunk-3-2.png)
 
-### Color the cells by number of detected genes
+#### Color the cells by number of detected genes
 
 ``` r
 library(plotrix)
@@ -93,7 +92,7 @@ plot(data.frame(PC$x[,1:5]),col=col.nDet,pch=pch.embryo,main="first PCA")
 
 ![](PCA_and_clustering_files/figure-markdown_github/unnamed-chunk-4-1.png)
 
-### Plot contribution to variance per PC
+#### Plot contribution to variance per PC
 
 ``` r
 # variance per pc
@@ -106,7 +105,7 @@ barplot(vars[1:15],names.arg=1:15)
 
 ![](PCA_and_clustering_files/figure-markdown_github/unnamed-chunk-5-1.png)
 
-### Plot top loadings for PC 1-5
+#### Plot top loadings for PC 1-5
 
 ``` r
 # top gene loadings for the first 5 components
@@ -120,14 +119,16 @@ par(mfrow=c(5,2),mar=c(2,2,1,1),oma=c(1,5,1,1))
 for (i in 1:5) {
     top<-order(PC$rotation[,i],decreasing=T)[1:nPlot]
     bottom<-order(PC$rotation[,i],decreasing=F)[1:nPlot]
-    barplot(contr[top,i],main=sprintf("genes on pos axis PC%d",i),ylab="% contr",las=2,horiz=T)
-    barplot(contr[bottom,i],main=sprintf("genes on neg axis PC%d",i),ylab="% contr",las=2,horiz=T)
+    barplot(contr[top,i],main=sprintf("genes on pos axis PC%d",i),
+            ylab="% contr",las=2,horiz=T)
+    barplot(contr[bottom,i],main=sprintf("genes on neg axis PC%d",i),
+            ylab="% contr",las=2,horiz=T)
 }
 ```
 
 ![](PCA_and_clustering_files/figure-markdown_github/unnamed-chunk-6-1.png)
 
-### plot PCA together with the top loading genes, a biplot
+#### Plot PCA together with the top loading genes, a biplot
 
 We can either plot the top genes on each PC, or take the genes with the furthest distance from origo.
 
@@ -163,8 +164,7 @@ text(rot[selG,1],rot[selG,2],rownames(rot)[selG],cex=1,col="black")
 
 Have a look at the plots you created, what type of variance does the different PCs capture? How many PCs are informative? Do the genes that contribute to each PC make sense?
 
-Coloring in PCA
----------------
+### Coloring in PCA
 
 We can also add in coloring by any color we want, lets use the expression of the top genes for PC1 & PC2. Here I have used the function color.scale from the `plotrix` package to define a color range with green-yellow-red scale.
 
@@ -188,8 +188,7 @@ for (gene in plotgenes) {
 
 ![](PCA_and_clustering_files/figure-markdown_github/unnamed-chunk-8-1.png)
 
-Different settings in PCA
--------------------------
+### Different settings in PCA
 
 You ran PCA on log transformed rpkms and by default it does centering of the data, test doing it without logging and witout centering and compare the results.
 
@@ -277,7 +276,10 @@ Since we know some genes that separates the 2 cell layers, we can "cheat" and pl
 
 ``` r
 plotgenes <- c("Sox2","Tdgf1","Pdgfra","Gata2","Gata3","Dab2")
-par(mfrow=c(3,2),mar=c(1,1,2,1)) # define plotting of 4 plots (2 rows, 2 columns)   
+
+# define plotting of 4 plots (2 rows, 2 columns)    
+par(mfrow=c(3,2),mar=c(1,1,2,1)) 
+
 for (gene in plotgenes) {
    expr<-log2(as.numeric(DATA[gene,blasto]+1))
      # color scale with red for high values, yellow intermeidate,  green for low.
@@ -300,19 +302,20 @@ for (gene in plotgenes) {
 
 ![](PCA_and_clustering_files/figure-markdown_github/unnamed-chunk-11-2.png)
 
-Clustering
-----------
+### Clustering
 
 Now, lets try some different clustering methods. Quite often, clustering is based on pairwise correlations. So let's start with calculating pairwise correlations for all samples. Default for the R-function cor is Pearson correlation.
 
 ``` r
 C<-cor(log2(DATA+1))
 
-# Run clustering based on the correlations, where the distance will be 1-correlation, e.g. higher distance with lower correlation.
+# Run clustering based on the correlations, where the distance will 
+# be 1-correlation, e.g. higher distance with lower correlation.
 dist.corr<-as.dist(1-C) 
 hcl.corr<-hclust(dist.corr,method="ward.D2")
     
-#For comparison a test with a different clustering method, average linkage:
+#For comparison a test with a different clustering method, 
+#average linkage:
 hcl.corr2<-hclust(dist.corr,method="average")
     
 #Another option is to do clustering based on euklidean distances:
@@ -337,21 +340,27 @@ library(gplots)
     ##     lowess
 
 ``` r
-heatmap.2(C,ColSideColors=col.stage,RowSideColors=col.stage,Colv=as.dendrogram(hcl.corr),Rowv=as.dendrogram(hcl.corr),scale="none",trace="none",main="correlation, Ward")
+heatmap.2(C,ColSideColors=col.stage,RowSideColors=col.stage,
+          Colv=as.dendrogram(hcl.corr),Rowv=as.dendrogram(hcl.corr),
+          scale="none",trace="none",main="correlation, Ward")
 legend("topright",stages,fill=coldef.stage,cex=0.5,bty='n',inset=c(0,-0.15,0,0))
 ```
 
 ![](PCA_and_clustering_files/figure-markdown_github/unnamed-chunk-12-1.png)
 
 ``` r
-heatmap.2(C,ColSideColors=col.stage,RowSideColors=col.stage,Colv=as.dendrogram(hcl.corr2),Rowv=as.dendrogram(hcl.corr2),scale="none",trace="none",main="correlation, average")
+heatmap.2(C,ColSideColors=col.stage,RowSideColors=col.stage,
+          Colv=as.dendrogram(hcl.corr2),Rowv=as.dendrogram(hcl.corr2),
+          scale="none",trace="none",main="correlation, average")
 legend("topright",stages,fill=coldef.stage,cex=0.5,bty='n',inset=c(0,-0.15,0,0))
 ```
 
 ![](PCA_and_clustering_files/figure-markdown_github/unnamed-chunk-12-2.png)
 
 ``` r
-heatmap.2(C,ColSideColors=col.stage,RowSideColors=col.stage,Colv=as.dendrogram(hcl.euk),Rowv=as.dendrogram(hcl.euk),scale="none",trace="none",main="euklidean distance, Ward")
+heatmap.2(C,ColSideColors=col.stage,RowSideColors=col.stage,
+          Colv=as.dendrogram(hcl.euk),Rowv=as.dendrogram(hcl.euk),
+          scale="none",trace="none",main="euklidean distance, Ward")
 legend("topright",stages,fill=coldef.stage,cex=0.5,bty='n',inset=c(0,-0.15,0,0))
 ```
 
@@ -365,8 +374,7 @@ km10<-kmeans(log2(t(DATA)+1),10)
 km15<-kmeans(log2(t(DATA)+1),15)
 ```
 
-Plot the clusters from hierarchical clustering in PCA-space
------------------------------------------------------------
+### Plot the clusters from hierarchical clustering in PCA-space
 
 To get clusters from a hierarchical clustering we have to cut the branches of the dendrogram, this is done with the function "cutree", either with desired number of final clusters, or the height for cutting.
 
@@ -378,7 +386,8 @@ clusters.euk<-cutree(hcl.euk,7)
     
 #Now, lets plot them onto PCA-space, with PC1+PC2:
 # the default palette in R only has 8 colors, so we need to update it with more colors.
-palette(c("black","red","green3","blue","cyan","magenta", "yellow","orange","brown","pink","darkgreen","darkviolet","darkgray","lightblue","lightgray"))
+palette(c("black","red","green3","blue","cyan","magenta", "yellow","orange",
+          "brown","pink","darkgreen","darkviolet","darkgray","lightblue","lightgray"))
 
 par(mfrow=c(3,2),mar=c(1,1,4,1))
 pca.plot(PC,col=clusters.corr,main="clusters from correlation,Ward",selpc=1:2)
@@ -409,8 +418,7 @@ for (ncl in c(5,7,10,15,20,25,30,40)){
 
 Otimal would be to use bootstrapping when deciding on how many clusters to split the data on, and also for selecting the settings for clustering. But that takes a long time to run. The pvclust R-package can do bootsrapping for correlation based hierarchical clustering.
 
-PCA or MDS
-----------
+### PCA or MDS
 
 Classical MDS (based on euklidean distances) should be identical to PCA, so let's run both and compare
 
@@ -430,8 +438,7 @@ plot(fit.corr$points,col=col.stage,pch=pch.embryo,main="MDS correlation")
 
 ![](PCA_and_clustering_files/figure-markdown_github/unnamed-chunk-16-1.png)
 
-tSNE
-----
+### tSNE
 
 t-distributed stochastic neighbor embedding is a dimensionality reduction technique that is often used for scRNA-seq data. Here we will use the R-package Rtsne.
 
@@ -474,3 +481,37 @@ legend("topleft",stages,col=coldef.stage,pch=16,cex=0.5,bty='n')
 ![](PCA_and_clustering_files/figure-markdown_github/unnamed-chunk-18-1.png)
 
 Look at the different tSNE layouts, can you explain based on the settings the different behaviours.
+
+A good resource that can help you understand the parameters in tSNE is (Wahenberg, et al., "How to Use t-SNE Effectively”) <https://distill.pub/2016/misread-tsne/>.
+
+##### Session info
+
+``` r
+sessionInfo()
+```
+
+    ## R version 3.4.1 (2017-06-30)
+    ## Platform: x86_64-apple-darwin15.6.0 (64-bit)
+    ## Running under: macOS Sierra 10.12.6
+    ## 
+    ## Matrix products: default
+    ## BLAS: /Library/Frameworks/R.framework/Versions/3.4/Resources/lib/libRblas.0.dylib
+    ## LAPACK: /Library/Frameworks/R.framework/Versions/3.4/Resources/lib/libRlapack.dylib
+    ## 
+    ## locale:
+    ## [1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
+    ## 
+    ## attached base packages:
+    ## [1] stats     graphics  grDevices utils     datasets  methods   base     
+    ## 
+    ## other attached packages:
+    ## [1] Rtsne_0.13   gplots_3.0.1 plotrix_3.7 
+    ## 
+    ## loaded via a namespace (and not attached):
+    ##  [1] Rcpp_0.12.15       gtools_3.5.0       digest_0.6.15     
+    ##  [4] rprojroot_1.3-2    bitops_1.0-6       backports_1.1.2   
+    ##  [7] magrittr_1.5       evaluate_0.10.1    KernSmooth_2.23-15
+    ## [10] stringi_1.1.6      gdata_2.18.0       rmarkdown_1.8     
+    ## [13] tools_3.4.1        stringr_1.2.0      yaml_2.1.16       
+    ## [16] compiler_3.4.1     caTools_1.17.1     htmltools_0.3.6   
+    ## [19] knitr_1.19

@@ -1,0 +1,120 @@
+---
+title: "biomaRt examples"
+output:
+  md_document:
+    variant: markdown_github
+---
+
+# biomaRt
+
+Here is some example code on how to translate between gene symbols and ensembl gene ids using the biomaRt package. 
+For more details on the package, have a look at:
+https://bioconductor.org/packages/release/bioc/html/biomaRt.html
+
+
+All data you need is available in the course uppmax folder with subfolder:
+`scrnaseq_course/data/ILC/`
+
+#### Select dataset
+
+Load the biomaRt package and select which mart and dataset to use. 
+
+```{r, warning=FALSE}
+suppressMessages(require(biomaRt))
+
+# select which mart to use, in this case ensembl
+mart <- useMart("ensembl")
+
+# To see what datasets exits you can run: listDatasets
+head(listDatasets(mart))
+
+# in this case we use hsapiens_gene_ensembl
+mart <- useDataset("hsapiens_gene_ensembl", mart = mart)
+```
+
+
+#### Search based on Ensembl ID
+
+Here we will fetch gene_id, gene_name, description and biotype for all ensembl_ids that we have in the expression matrix.
+
+```{r}
+# to find out what attributes there are in the Dataset, use listAttributes
+head(listAttributes(mart))
+
+# read in expression matrix to get the genes we want to translate
+R <- read.table("data/ILC/ensembl_rpkmvalues_ILC.csv",sep=",",header=T)
+
+# getBM function fetches attributes from the database with specified names. 
+# with filters parameter you define which attribute you want to filter on
+# with values, you define which entries you want to fetch, leave empty to fetch all entries.
+# with attributes, you define what attributes you want to fetch
+
+genes.table <- getBM(filters= "ensembl_gene_id", attributes= c("ensembl_gene_id", 
+              "external_gene_name", "description","gene_biotype"), 
+              values= rownames(R), mart= mart) 
+
+head(genes.table)
+
+# write to a file for later use
+write.table(genes.table, file="data/ILC/gene_name_translation_biotype.tab",sep="\t")
+```
+
+#### Fetch Ensembl ID based on gene names
+
+You can do the opposite if you have gene names and want Ensembl IDs.
+```{r}
+# now we want to get all ensembl IDs for the genes in genes.table$external_gene_name
+genes.table2 <- getBM(filters= "external_gene_name", attributes= c("ensembl_gene_id", 
+          "external_gene_name", "description","gene_biotype"), 
+          values= genes.table$external_gene_name, mart= mart)
+
+# Keep in mind, you may get multiple ensembl IDs translated to the same gene name, 
+# so the number of entries will be different.
+dim(genes.table)
+dim(genes.table2)
+
+```
+
+Also, keep in mind that if you are working with an older version of Ensembl, some Ensembl IDs may be obsolete and not have any translation, so those will require some manual searching to annotate with gene names.
+
+
+#### Fetch Gene Ontology annotations
+
+You can also use biomaRt to fetch gene ontology annotations and a bunch of other attributes that you can find in the database. Here is an example for fetching GO-terms, that may be useful for running Pagoda if you are using your own dataset.
+
+```{r}
+go.table <- getBM(filters= "ensembl_gene_id", attributes= c("ensembl_gene_id", "external_gene_name", "go_id","name_1006", "namespace_1003"), values= rownames(R), mart= mart)
+
+head(go.table)
+
+# If you want to create a list with all genes as keys, and a vector of go-terms as values
+gene2go <- split(go.table$go_id, go.table$ensembl_gene_id)
+head(gene2go)
+
+# To do the opposite, go-terms as keys with a vector of genes with that go-term
+go2gene <- split(go.table$ensembl_gene_id, go.table$go_id)
+```
+
+#### Select only Biological Process
+
+If you want to select only Biological Process, the entry "namespace_1003" defines the type of GO-term, so you can filter on that as well.
+
+```{r}
+go.tableBP <- go.table[go.table$namespace_1003=="biological_process",]
+
+# if you want more informative names for the go-terms, merge GO-id with name
+go.name <- paste(go.tableBP$go_id,go.tableBP$name_1006,sep=";")
+go.tableBP$go.name <- go.name
+
+#make a list with GO-name to gene IDs
+goBP2gene <- split(go.tableBP$ensembl_gene_id, go.tableBP$go.name)
+
+# save to file
+save(goBP2gene, file="data/ILC/GO_BP_annotations.Rdata")
+```
+
+##### Session info
+
+```{r}
+sessionInfo()
+```
