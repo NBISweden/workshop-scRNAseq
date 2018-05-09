@@ -9,19 +9,7 @@ First of all we will R packages which we are going to use in this lab:
 suppressMessages(require(gplots))
 suppressMessages(require(ggplot2))
 suppressMessages(require(matrixStats))
-```
-
-    ## Warning: package 'matrixStats' was built under R version 3.4.3
-
-``` r
 suppressMessages(require(mixOmics))
-```
-
-    ## Warning: package 'mixOmics' was built under R version 3.4.3
-
-    ## Warning: package 'MASS' was built under R version 3.4.3
-
-``` r
 suppressMessages(require(RColorBrewer))
 suppressMessages(require(Rtsne))
 ```

@@ -7,8 +7,7 @@ title: Exercises - scRNAseq course
 
 This page contains links to different tutorials that are used in the scRNA-seq analysis course. We see this as a "smörgåsbord" of tutorials, we do not expect that all course participants will have time to run through all of the tutorials, so we suggest that you pick-and-mix the analyses/packages that you find most interesting. 
 
-For many of the packages we recommend that you follow the tutorials supplied by the different packages. But if you have brought your own data to the tutorials, we have included some examples on how to run these tutorials based on your own dataset and also some suggestions on which parts of the tutorials to focus on. 
-
+For many of the packages we recommend that you follow the tutorials supplied by the different packages. We have included some examples on how to run these tutorials based on your own dataset and also some suggestions on which parts of the tutorials to focus on. 
 
 We have run the tutorials with SmartSeq2 data from:
 
@@ -17,11 +16,11 @@ We have run the tutorials with SmartSeq2 data from:
 
 All raw data, and some intermediate files that take long time to compute, are available at uppmax folder: `/proj/uppstore2017171/b2013006_nobackup/scrnaseq_course/data/`
 
-But be aware, some steps of the tutorials will take long to run with large dataset, so it may be a good idea to use several R-sessions in paralell and work on other stuff while you are waiting. 
+You should be able to run these tutorials with your own data. But be aware, some steps of the tutorials will take long to run with large dataset, so it may be a good idea to use several R-sessions in paralell and work on other stuff while you are waiting. 
 
 As you run into problems, we will try to fill in the [FAQ](FAQ) with common quiestons.
 
-If you want to load all the code into R directly, you can access the R-markdown documents by clicking on the `Source` link to the left, or by cloning the whole repository.
+If you want to load all the code into R directly, you can access the R-markdown documents at our [github site](https://github.com/NBISweden/workshop-scRNAseq/tree/master/labs)
 
 #### Pipeline for mapping reads, QC and expression estimates
 
@@ -47,17 +46,19 @@ Tutorial with the scater package for QC of scRNA-seq data
 
 *	[Tutorial for scater](labs/scater_ilc)
 
-#### Batch analysis
 
-En example on how to check for batch effect and identify genes driven by the batch effect
+#### Estimating Batch-Effects
 
-*	[Tutorial for Batch analysis](labs/batch_analysis)
+A tutorial for estimating genome-wide and individual genes batch-effects.
 
-#### Normalization
+*       [Tutorial for Batch-Effects](labs/batch_analysis)
 
-A tutorial showing different methods for data normalizations, mainly using Scran package.
+#### Comparing Normalization Methods
 
-*	[Tutorial for Data normalization](labs/norm_analysis)
+A tutorial for comparison scRNAseq and bulk RNAseq normalization strategies.
+
+*       [Tutorial for Normalization](labs/norm_analysis)
+
 
 #### SC3 package
 
@@ -98,7 +99,7 @@ A tutorial for estimating genome-wide and individual genes batch-effects.
 
 #### Comparing Normalization Methods
 
-A tutorial for comparison scRNAseq and bulk RNAseq normalization strategies.
+A tutorial for comparison scRNAseq and bulk RNAseq normalization strategies. 
 
 *	[Tutorial for Normalization](labs/norm_analysis)   
 
