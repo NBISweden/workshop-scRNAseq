@@ -1,5 +1,7 @@
 Comparing scRNAseq Normalization Methods
 ========================================
+Author: Nikolay Oskolkov
+
 
 ### Load packages
 

@@ -1,5 +1,7 @@
 Methods for differential gene expression in scRNAseq data
 =========================================================
+Author: Åsa Björklund
+
 
 Here are some examples of methods commonly used for differential expression in scRNAseq data. Included in this tutorial are:
 

@@ -1,5 +1,7 @@
 SC3 example with ILC data
 =========================
+Author: Åsa Björklund
+
 
 Clustering of data using SC3 package, following tutorial at: <https://bioconductor.org/packages/release/bioc/vignettes/SC3/inst/doc/SC3.html>
 

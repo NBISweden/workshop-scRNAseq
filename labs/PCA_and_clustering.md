@@ -1,5 +1,6 @@
 PCA and clustering on a single cell RNA-seq dataset
 ===================================================
+Author: Åsa Björklund
 
 Here are some simple examples on how to run PCA/Clustering on a single cell RNA-seq dataset.
 

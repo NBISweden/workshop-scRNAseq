@@ -1,5 +1,7 @@
 Pagoda pathway wPCA
 ===================
+Author: Åsa Björklund
+
 
 Clustering of data using Pagoda in the SCDE package, following tutorial at: <http://hms-dbmi.github.io/scde/pagoda.html>
 

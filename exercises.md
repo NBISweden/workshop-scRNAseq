@@ -3,7 +3,7 @@ layout: default
 title: Exercises - scRNAseq course
 ---
 
-# Welcome to NBIS scRNA-seq tutorial packages
+# Welcome to NBIS scRNA-seq tutorials
 
 This page contains links to different tutorials that are used in the scRNA-seq analysis course. We see this as a "smörgåsbord" of tutorials, we do not expect that all course participants will have time to run through all of the tutorials, so we suggest that you pick-and-mix the analyses/packages that you find most interesting. 
 
@@ -90,18 +90,6 @@ For this tutorial we have included several different methods for differential ex
 A tutorial with mouse embryonic data using the Monocle package for pseudotime analysis.
 
 *	[Tutorial for Monocle](labs/monocle_analysis)   
-
-#### Estimating Batch-Effects
-
-A tutorial for estimating genome-wide and individual genes batch-effects.
-
-*	[Tutorial for Batch-Effects](labs/batch_analysis)   
-
-#### Comparing Normalization Methods
-
-A tutorial for comparison scRNAseq and bulk RNAseq normalization strategies. 
-
-*	[Tutorial for Normalization](labs/norm_analysis)   
 
 #### UPPMAX Sbatch
  

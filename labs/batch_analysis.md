@@ -1,5 +1,7 @@
 Estimating Batch-Effects in scRNAseq Data
 =========================================
+Author: Nikolay Oskolkov 
+
 
 ### Load packages
 

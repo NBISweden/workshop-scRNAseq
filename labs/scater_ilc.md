@@ -1,5 +1,7 @@
 Example of scater package for QC
 ================================
+Author: Åsa Björklund
+
 
 Detailed tutorial of scater package at: <https://www.bioconductor.org/packages/release/bioc/vignettes/scater/inst/doc/vignette-qc.html>
 
