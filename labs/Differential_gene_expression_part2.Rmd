@@ -1,0 +1,196 @@
+---
+title: "Differential_gene_expression_part2"
+output:
+  md_document:
+    variant: markdown_github
+---
+
+# Methods for differential gene expression in scRNAseq data - part2
+
+Continuing with DE detection for the mouse embryonic dataset. Since many packages are loaded in this tutorial, many will get problems with maximum DLLs reached. So we suggest you contiune in a new R-session. Or modify your environmental variables to allow for more DLLs as explained in the [FAQ](FAQ).
+
+In this section we will:
+* Run Seurat DE
+* Compare results of the different methods.
+
+## Load data
+
+First read in the data 
+
+```{r}
+# we will read both counts and rpkms as different method are more adopted for different type of data
+R <- read.table("data/mouse_embryo/rpkms_Deng2014_preinplantation.txt")
+M <- read.table("data/mouse_embryo/Metadata_mouse_embryo.csv",sep=",",header=T)
+
+# select only 8 and 16 stage embryos.
+selection <- c(grep("8cell",M$Stage),grep("16cell",M$Stage))
+
+# select those cells only from the data frames
+M<-M[selection,]
+R <- R[,selection]
+```
+
+# Seurat DE tests
+
+Seurat has several tests for differential expression (DE) which can be set with the test.use parameter in the FindMarkers() function:
+
+* "wilcox" : Wilcoxon rank sum test (default)
+* "bimod" : Likelihood-ratio test for single cell gene expression, (McDavid et al., Bioinformatics, 2013)
+* "roc" : Standard AUC classifier
+* "t" : Student's t-test
+* "tobit" : Tobit-test for differential gene expression (Trapnell et al., Nature Biotech, 2014)
+* "poisson" : Likelihood ratio test assuming an underlying poisson distribution. Use only for UMI-based datasets
+* "negbinom" : Likelihood ratio test assuming an underlying  negative binomial distribution. Use only for UMI-based  datasets
+* "MAST" : GLM-framework that treates cellular detection rate as a covariate (Finak et al, Genome Biology, 2015)
+* "DESeq2" : DE based on a model using the negative binomial distribution (Love et al, Genome Biology, 2014)
+
+
+```{r warning=F, message=F}
+library(Seurat)
+
+data <- CreateSeuratObject(raw.data = R, min.cells = 3, min.genes = 200, 
+                           project = "ILC",is.expr=1,meta.data=M)
+
+# Normalize the data
+scale.factor <- mean(colSums(R))
+data <- NormalizeData(object = data, normalization.method = "LogNormalize",  
+                      scale.factor = scale.factor)
+
+# regress out number of detected genes.d
+data <- ScaleData(object = data, vars.to.regress = c("nGene"),display.progress = F)
+
+# check that the seurat identity is set to the stages
+head(data@ident)
+
+# run all DE methods
+methods <- c("wilcox","bimod","roc","t","tobit")
+DE <- list()
+for (m in methods){
+    outfile <- paste("data/mouse_embryo/DE/seurat_",m,"_8cell_vs_16_cell.tab", sep='')
+    if(!file.exists(outfile)){
+      DE[[m]]<- FindMarkers(object = data,ident.1 = "X8cell",
+                        ident.2 = "X16cell",test.use = m)
+      write.table(DE[[m]],file=outfile,sep="\t",quote=F)
+    }
+}
+```
+
+# Summary of results.
+
+### Read in all the data
+
+```{r  warning=F, message=F}
+
+DE <- list()
+files <- c("data/mouse_embryo/DE/sc3_kwtest_8cell_vs_16_cell.tab",
+           "data/mouse_embryo/DE/scde_8cell_vs_16_cell.tab",
+           "data/mouse_embryo/DE/seurat_wilcox_8cell_vs_16_cell.tab",           
+           "data/mouse_embryo/DE/seurat_bimod_8cell_vs_16_cell.tab",
+           "data/mouse_embryo/DE/seurat_roc_8cell_vs_16_cell.tab",
+           "data/mouse_embryo/DE/seurat_t_8cell_vs_16_cell.tab",
+           "data/mouse_embryo/DE/seurat_tobit_8cell_vs_16_cell.tab")
+
+for (i in 1:7){ 
+  DE[[i]]<-read.table(files[i],sep="\t",header=T)
+}
+names(DE)<-c("SC3","SCDE","seurat-wilcox", "seurat-bimod","seurat-roc","seurat-t","seurat-tobit")
+
+# MAST file has gene names as first column, read in separately
+DE$MAST <- read.table("data/mouse_embryo/DE/mast_8cell_vs_16_cell.tab", 
+                      sep="\t",header=T,row.names=2)
+
+# get top 100 genes for each test
+top.100 <- lapply(DE,function(x) rownames(x)[1:100])
+
+# load a function for plotting overlap
+source("data/mouse_embryo/DE/overlap_phyper.R")
+# plot overlap and calculate significance with phyper test, as background, 
+# set number of genes in seurat.
+o <- overlap_phyper(top.100,plot=T,bg=nrow(DE$`seurat-bimod`))
+```
+
+Rows and columns are the different gene lists, and in the upper triangle the comparison of 2 datasets is shown with number of genes in common and color according to significance of overlap. Last columns show number of unique genes per list.
+
+### Significant DE genes
+
+Now we select significant genes from the different tests. In this case we use a cutoff for adjusted p-value at 0.05. 
+
+```{r  warning=F, message=F}
+# the  p-values from all Seurat functions except wilcox does not 
+# seem to be adjusted, so we need to adjust them first.
+adjust <- c(4,6,7)
+DE[adjust] <- lapply(DE[adjust], function(x) cbind(x,p.adjust(x$p_val)))
+
+
+# not really a p-value for the ROC test, so skip for now 
+# (5th entry in the list)
+pval.column <- c(2,8,5,5,5,5,6) # define which column contains the p-value
+names(pval.column)<-names(DE)[-5]
+sign.genes <- list()
+cutP<-0.05
+for (n in names(DE)[-5]){
+  sg <- which(DE[[n]][,pval.column[n]] < cutP)
+  sign.genes[[n]]<-rownames(DE[[n]])[sg]
+}
+
+# number of genes per dataset
+unlist(lapply(sign.genes,length))
+
+# check overlap again
+o <- overlap_phyper(sign.genes,plot=T,bg=nrow(DE$`seurat-bimod`))
+
+# list genes found in all 6 methods
+t<-table(unlist(sign.genes))
+head(sort(t,decreasing=T),n=10)
+```
+
+Only 3 genes detected by all 7 methods as DE.
+
+### Plot top DE genes 
+
+Plot onto the tSNE created with Seurat. So we first need to find variable genes, run PCA and tSNE for the Seurat object. 
+
+```{r  warning=F, message=F}
+# run a tsne for plotting onto
+data <- FindVariableGenes(object = data, mean.function = ExpMean, 
+                          dispersion.function = LogVMR, x.low.cutoff = 0.5, 
+                          x.high.cutoff = 10, y.cutoff = 0.5)
+data <- RunPCA(object = data,do.print=F)
+set.seed(1)
+data <- RunTSNE(object = data, dims.use = 1:5, do.fast = TRUE,perplexity=10)
+# plot first with color by celltype
+TSNEPlot(data)
+
+# plot top 9 genes for each method
+for (n in names(sign.genes)){
+  print(n)
+  p <- FeaturePlot(object = data, features.plot = sign.genes[[n]][1:9],  
+                   reduction.use = "tsne",no.axes=T,do.return = T)
+}
+
+```
+
+
+### Violin plots with the top genes
+
+```{r}
+# plot top 9 genes for each method
+for (n in names(sign.genes)){
+  print(n)
+  p2 <- VlnPlot(object = data, features.plot = sign.genes[[n]][1:9], 
+                nCol=3, do.return = T,
+                size.x.use = 7, size.y.use = 7, size.title.use = 10)
+  print(p2)
+}
+
+```
+
+You can judge for yourself which of the methods you feel is performing best, there is no true gold standard for this dataset. 
+
+Some methods are more conservative and give fewer genes. Others give more genes, but all of those do not have to be biologically relevant.  In general the number of genes is quite low for this small test set, with a higher number of cells, and more distinct celltypes, the number of of significant genes should become higher. 
+
+##### Session info
+
+```{r}
+sessionInfo()
+```
