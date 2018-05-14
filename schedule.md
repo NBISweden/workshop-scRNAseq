@@ -26,13 +26,13 @@ title:  'Schedule - scRNAseq course'
 
 **Wednesday 23rd of May**  
 **09.00-09.45** [Pseudotime and trajectory analysis](slides/) (Stefania Giaccomello)   
-**10.15-11.00** [RNA Velocity](slides/) (Gioele La Manno)
+**10.15-11.00** [RNA Velocity](slides/) (Gioele La Manno)   
 **11.00-12.00** [Spatial mapping of single cells](slides/) (Stefania Giaccomello)   
 **13.00-16.00** [Practical exercises](https://bitbucket.org/scilifelab-lts/scrnaseq-labs) (Åsa Björklund, Olga Dethlefsen)   
 **16.00-17.00** [Summary of the week]() (Åsa Björklund)   
 
 
-Each day we will have cofee at around 15.00 during the exercises
+Each day we will have cofee around 10.00 and at 15.00 during the exercises. 
 
 All lunches will be at Könings Restaurant (SMI building across the road).
 
