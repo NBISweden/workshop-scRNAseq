@@ -15,14 +15,14 @@ title:  'Schedule - scRNAseq course'
 **12.00-13.00** Lunch   
 **13.00-13.45** [Dimesionality reduction](slides/presentation_PU.html) (Per Unneberg)   
 **13.45-17.00** [Practical Exercises](https://bitbucket.org/scilifelab-lts/scrnaseq-labs) (Stefania Giaccomello, Johan Reimegård, Åsa Björklund, Verena Kutschera)   
-  
+**18.00-** Course dinner at [Shanti](http://www.shanti.se/)  
+
 **Tuesday 22nd of May**   
 **09.00-09.50** [Data normalization](slides/scRNAseq_course_norm.pdf) (Nikolay Oskolkov)   
 **10.20-11.20** [Clustering techniques and scRNAseq toolkits](slides/scRNAseq_toolkits_Asa_Bjorklund.pdf) (Åsa Björklund)   
 **10.20-12.00** [Practical exercises](https://bitbucket.org/scilifelab-lts/scrnaseq-labs)(Åsa Björklund, Stefania Giaccomello, Nikolay Oskolkov)   
 **12.00-13.00** Lunch    
 **13.00-17.00** [Practical exercises](https://bitbucket.org/scilifelab-lts/scrnaseq-labs)(Åsa Björklund, Stefania Giaccomello, Nikolay Oskolkov)   
-**18.00-** Course dinner   
 
 **Wednesday 23rd of May**  
 **09.00-9.50** [Differential gene expression](slides/scRNA-seq_diffExp.pdf) (Olga Dethlefsen)   

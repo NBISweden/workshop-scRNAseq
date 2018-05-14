@@ -14,7 +14,7 @@ We have run the tutorials with SmartSeq2 data from:
 * Mouse embryonic development from [Deng *et al.*](http://science.sciencemag.org/content/343/6167/193.long) 
 * Human innate lymphoid cells from [Björklund *et al.*](https://www.nature.com/articles/ni.3368)
 
-All raw data, and some intermediate files that take long time to compute, are available at uppmax folder: `/proj/uppstore2017171/b2013006_nobackup/scrnaseq_course/data/`
+All raw data, and some intermediate files that take long time to compute, are available at uppmax folder: `/proj/uppstore2017171/courses/scrnaseq_course/data/`
 
 You should be able to run these tutorials with your own data. But be aware, some steps of the tutorials will take long to run with large dataset, so it may be a good idea to use several R-sessions in paralell and work on other stuff while you are waiting. 
 
