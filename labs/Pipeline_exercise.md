@@ -174,11 +174,11 @@ First, go into one of your own folders and create one pipeline folder. Move into
 
 For running different steps of the pipeline there are a number of target rules that specifies which main steps of the pipeline that should be run:
 
-* align - will run STAR mapping
-* rseqc - will run the steps of the RseQC package that is specified in the configuration file.
-* rpkmforgenes - will run rpkmforgenes to estimate gene expression
-* all - will run all steps above
-* make_qc_report - will also prepare summary files and make qc summary - with this target rule everything in the pipeline should run. 
+* `align` - will run STAR mapping
+* `rseqc` - will run the steps of the RseQC package that is specified in the configuration file.
+* `rpkmforgenes` - will run rpkmforgenes to estimate gene expression
+* `all` - will run all steps above
+* `make_qc_report` - will also prepare summary files and make qc summary - with this target rule everything in the pipeline should run. 
 
 With snakemake, it is a good idea to start with a dryrun (using flag `-n`) to check that everything looks okay. Run also with flag `-p` to print out all the commands that snakemake wants to execute. 
 
@@ -195,7 +195,7 @@ You should now see a list of all rules that the pipeline needs to run, and also 
 
 Do the same but for everything including qc-report:
 
-      snakemake make_qc_report -j 4 -np -d ./ --configfile config.yaml 
+      snakemake make_qc_report -j 4 -np 
 
 
 If all looks fine at this point, it is time to start running the pipeline. So all you have to do is to remove the -n flag and run again.
