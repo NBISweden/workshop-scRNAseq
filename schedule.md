@@ -5,7 +5,9 @@ title:  'Schedule - scRNAseq course'
 
 # Schedule
 
-### This course is given at Scilifelab Solna, Rooms Air & Fire, ground floor to the left from the main entrance. 
+This course is given at Scilifelab Solna, Rooms Air & Fire, ground floor to the left from the main entrance. 
+
+Lecture slides will be provided as links as they get completed. 
 
 **Monday 21st of May**  
 **09.00-09.15** [Introduction](slides/) (Åsa Björklund)   
@@ -17,7 +19,7 @@ title:  'Schedule - scRNAseq course'
 **18.00-** Course dinner at [Shanti](http://www.shanti.se/)  
 
 **Tuesday 22nd of May**   
-**09.00-09.45** [Dimesionality reduction](slides/) (Per Unneberg)   
+**09.00-09.45** [Dimensionality reduction](slides/) (Per Unneberg)   
 **10.15-11.00** [Data normalization](slides/) (Nikolay Oskolkov)   
 **11.00-12.00** [Differential gene expression](slides/) (Olga Dethlefsen)   
 **12.00-13.00** Lunch    
