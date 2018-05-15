@@ -15,7 +15,7 @@ Lecture slides will be provided as links as they get completed.
 **10.30-11.15** [Introduction to read alignment pipelines and gene expression estimates](slides/) (Johan Reimegård)   
 **11.15-12.00** [scRNAseq quality control](slides/) (Åsa Björklund)   
 **12.00-13.00** Lunch   
-**13.00-17.00** [Practical Exercises](https://bitbucket.org/scilifelab-lts/scrnaseq-labs) (Stefania Giaccomello, Johan Reimegård, Åsa Björklund, Verena Kutschera)   
+**13.00-17.00** [Practical Exercises](exercises)(Stefania Giaccomello, Åsa Björklund, Estelle Proux-Vera, Nikolay Oskolkov)   
 **18.00-** Course dinner at [Shanti - Touch of Bengal](http://www.shanti.se/touch-of-bengal)  
 
 **Tuesday 22nd of May**   
@@ -24,13 +24,13 @@ Lecture slides will be provided as links as they get completed.
 **11.00-12.00** [Differential gene expression](slides/) (Olga Dethlefsen)   
 **12.00-13.00** Lunch    
 **13.00-14.00** [Clustering techniques and scRNAseq toolkits](slides/) (Åsa Björklund)   
-**14.00-17.00** [Practical exercises](https://bitbucket.org/scilifelab-lts/scrnaseq-labs)(Åsa Björklund, Stefania Giaccomello, Nikolay Oskolkov)   
+**14.00-17.00** [Practical exercises](exercises)(Åsa Björklund, Olga Dethlefsen, Nikolay Oskolkov)
 
 **Wednesday 23rd of May**  
 **09.00-09.45** [Pseudotime and trajectory analysis](slides/) (Stefania Giaccomello)   
 **10.15-11.00** [RNA Velocity](slides/) (Gioele La Manno)   
 **11.00-12.00** [Spatial mapping of single cells](slides/) (Stefania Giaccomello)   
-**13.00-16.00** [Practical exercises](https://bitbucket.org/scilifelab-lts/scrnaseq-labs) (Åsa Björklund, Olga Dethlefsen)   
+**13.00-16.00** [Practical exercises](https://bitbucket.org/scilifelab-lts/scrnaseq-labs) (Åsa Björklund, Stefania Giacomello, Anna Johansson)   
 **16.00-17.00** [Summary of the week]() (Åsa Björklund)   
 
 
