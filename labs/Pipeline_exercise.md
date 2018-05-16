@@ -14,9 +14,9 @@ _**Conda environments**_
 
 We have used Conda package management for all package installations, this is a good system for installing packages with all its dependencies. For more information on Conda, please have a look at their [website](https://conda.io/docs/index.html).
 
-We have prepared all installations already, but below is a short summary of the steps required to set up the pipeline. Read through the details, but is suggested that you create your own folder and run mapping for a few samples from the step - "Create your own project folder". If you also want to try out the installations, you are free to do so. 
+We have prepared all installations already, but below is a short summary of the steps required to set up the pipeline. Read through the details, but is suggested that you create your own folder and run mapping for a few samples from the step - **5. Create your own project folder**. If you also want to try out the installations, you are free to do so. 
 
-##### Conda installation and creating an environment - OBS! no need to run.
+#### 1. Conda installation and creating an environment - OBS! no need to run.
 
 This has already been prepared for this course, but in case you want to run it yourself, you should follow these steps but changing paths etc. 
 
@@ -59,7 +59,7 @@ Now the name of the activated conda should appear in your terminal like:
     
 You should now be able to run all the programs like python, R, samtools, STAR etc using all programs installed under that conda environment.
 
-##### Download reference files - OBS! no need to run.
+#### 2. Download reference files - OBS! no need to run.
 
 To run the snakemake pipeline, you need a number of files:
 
@@ -83,7 +83,7 @@ You can also add in additional sequence files with marker genes, like EGFP, dsRe
 
 For rseqc we also need a more conservtive annotation file with only house-keeping genes. With the full gene file this steps is very time consuming, so it is better to run on a smaller well defined gene set. The file was manually downloaded from Rseqc website that has files for some model species.
 
-##### Files needed to run the pipeline
+#### 3. Files needed to run the pipeline
 
 **_The metadata file_**
 
@@ -121,7 +121,7 @@ Which corresponds to the folder structure that we have:
       data/samples/ERR1042421/ERR1042421.fastq.gz
 
 
-##### Rulegraph - summary of the pipeline
+#### 4. Rulegraph - summary of the pipeline
 
 We can visualize all the rule dependencies in snakemake with a DAG using the `--rulegraph` option. We ran the command:
 
@@ -154,7 +154,7 @@ What will be done is:
 * make_qc_report - will create a suggested filtering and plot a bunch of QC-stats.
 
 
-##### Create your own project folder
+#### 5. Create your own project folder
 
 First, go into one of your own folders and create one pipeline folder. Move into that folder and instead of copying all the large files that you need you will instead make symlinks with the command `cp -rs` that will create all the nested folders, but creates symlinks to the fastq files. We will also make a symlink to the reference folder with `ln -s` so that we do not have to make a copy and create indexes for the human genome.
 
@@ -170,7 +170,7 @@ First, go into one of your own folders and create one pipeline folder. Move into
 
 **OBS!** Modify the working directory path in your Snakefile to the directory where you have copied all the data.  
 
-##### Run the pipeline
+#### 6. Run the pipeline
 
 For running different steps of the pipeline there are a number of target rules that specifies which main steps of the pipeline that should be run:
 
@@ -216,7 +216,7 @@ Now you can check the queue and see if your job has started yet with:
 
 Take a look at the report files that you specified in your sbatch script. Any error message from the pipeline will be appear there, and you can also follow the progress of the pipeline. We expect that the pipeline should take about 1.5h to run, so you can proceed with other tutorials while it runs.
 
-##### Output files
+#### 7. Output files
 
 If all went well, you should now have copleted all the steps. Within the folder `data/samples/` you should now have a number of files for each sample.
 
