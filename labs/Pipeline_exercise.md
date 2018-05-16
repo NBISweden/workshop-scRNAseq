@@ -162,11 +162,11 @@ First, go into one of your own folders and create one pipeline folder. Move into
        # create a folder with the samples and symlinks to fastq files:
        cp -rs /proj/uppstore2017171/courses/scrnaseq_course/pipeline_data/subsampled data/samples
        # make symlink to the reference folder:
-       ln -s /proj/uppstore2017171/courses/scrnaseq_course/pipeline/ref data/ref
+       ln -s /proj/uppstore2017171/courses/scrnaseq_course/pipeline/data/ref data/ref
        # copy the configuraiton file
-       cp /proj/b2013006/nobackup/scrnaseq_course/pipeline/config.yaml .
+       cp /proj/uppstore2017171/courses/scrnaseq_course/pipeline_data/files/config.yaml .
        # copy the Snakemake file
-       cp /proj/b2013006/nobackup/scrnaseq_course/pipeline/Snakefile .
+       cp /proj/uppstore2017171/courses/scrnaseq_course/pipeline_data/files/Snakefile .
 
 **OBS!** Modify the working directory path in your Snakefile to the directory where you have copied all the data.  
 
