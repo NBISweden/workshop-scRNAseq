@@ -228,14 +228,15 @@ You should also have a number of summary files in the folder `results/`.
 * merge.rpkmforgenes_rpkm.txt - rpkms 
 * merge.rpkmforgenes_counts.txt - counts
 * merge.rpkmforgenes_rpkm.qc_stats.txt - qc-stats from rpkms
-* qc_summary.csv - all qc stats
-* qc_summary.QC_report.html - the qc report
-* qc_summary.filtered_cells.txt - a file with suggested cells to filter out
-* qc_summary.settings.yaml - a yaml file with the settings that were used for qc-filtering.
+* qc_summary.csv - all qc stats from multiqc, rpkm stats etc.
+* qc_report.html - the qc report
+* qc_report.filtered_cells.txt - a file with suggested cells to filter out
+* qc_report.settings.yaml - a yaml file with the settings that were used for qc-filtering.
+* qc_report.sceset.RData - a SingleCellExperiment class object in Rdata format
 
 Also folder `multiqc` with the multiqc html report plus all the files that were stored during the multiqc run. 
 
-Download the files `qc_summary.QC_report.html` and `multiqc_report.html` to your computer and have a look at them in your browser.
+Download the files `qc_report.html` and `multiqc_report.html` to your computer and have a look at them in your browser.
 
 If you are happy with the filtering of cells, you can simply use the file that the qc-summary creates. You can also modify the filtering settings by making changes to the file qc-section in `config.yaml` and rerun the step for creating qc-report with `-f` (force) flag. 
 
