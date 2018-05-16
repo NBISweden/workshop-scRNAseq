@@ -1,7 +1,7 @@
 Pagoda pathway wPCA
 ===================
-Author: Åsa Björklund
 
+Author: Åsa Björklund
 
 Clustering of data using Pagoda in the SCDE package, following tutorial at: <http://hms-dbmi.github.io/scde/pagoda.html>
 
@@ -27,8 +27,6 @@ Load packages
 suppressMessages(library(scde))
 ```
 
-    ## Warning: package 'scde' was built under R version 3.4.2
-
 Read data
 ---------
 
@@ -48,6 +46,11 @@ Define color scales based on celltype and donor.
 ``` r
 celltype2cols <- c("blue", "cyan", "red", "green")[as.integer(M$Celltype)]
 donor2cols <- c("black", "orange", "magenta")[as.integer(M$Donor)]
+
+suppressMessages(library(plotrix))
+nD <- colSums(C>2)
+nDet2cols <-  color.scale(nD,c(0,1,1),
+  c(1,1,0),0)
 ```
 
 Get GO-terms
@@ -271,6 +274,7 @@ par(mfrow=c(2,2), mar = c(2.5,2.5,2.0,0.5), mgp = c(2,0.65,0), cex = 1.0);
 plot(tSNE.pagoda$Y,col=adjustcolor(col.cols,alpha=0.5),cex=1,pch=19,xlab="",ylab="",main="Pagoda clusters")
 plot(tSNE.pagoda$Y,col=adjustcolor(celltype2cols,alpha=0.5),cex=1,pch=19,xlab="",ylab="",main="Celltypes")
 plot(tSNE.pagoda$Y,col=adjustcolor(donor2cols,alpha=0.5),cex=1,pch=19,xlab="",ylab="",main="Donors")
+plot(tSNE.pagoda$Y,col=adjustcolor(nDet2cols,alpha=0.5),cex=1,pch=19,xlab="",ylab="",main="Detected genes")
 ```
 
 ![](pagoda_ilc_files/figure-markdown_github/unnamed-chunk-15-1.png)
@@ -287,9 +291,14 @@ par(mfrow=c(2,2), mar = c(2.5,2.5,2.0,0.5), mgp = c(2,0.65,0), cex = 1.0);
 plot(tSNE.counts$Y,col=adjustcolor(col.cols,alpha=0.5),cex=1,pch=19,xlab="",ylab="",main="Pagoda clusters")
 plot(tSNE.counts$Y,col=adjustcolor(celltype2cols,alpha=0.5),cex=1,pch=19,xlab="",ylab="",main="Celltypes")
 plot(tSNE.counts$Y,col=adjustcolor(donor2cols,alpha=0.5),cex=1,pch=19,xlab="",ylab="",main="Donors")
+plot(tSNE.counts$Y,col=adjustcolor(nDet2cols,alpha=0.5),cex=1,pch=19,xlab="",ylab="",main="Detected genes")
 ```
 
 ![](pagoda_ilc_files/figure-markdown_github/unnamed-chunk-16-1.png)
+
+What do you think about the clustering based on Pagoda?
+
+Do you see any clear issues with the tSNE based on counts?
 
 ##### Session info
 
@@ -312,7 +321,8 @@ sessionInfo()
     ## [1] stats     graphics  grDevices utils     datasets  methods   base     
     ## 
     ## other attached packages:
-    ## [1] Rtsne_0.13      scde_2.6.0      flexmix_2.3-14  lattice_0.20-35
+    ## [1] Rtsne_0.13      plotrix_3.7     scde_2.6.0      flexmix_2.3-14 
+    ## [5] lattice_0.20-35
     ## 
     ## loaded via a namespace (and not attached):
     ##  [1] Rcpp_0.12.15              nloptr_1.0.4             
