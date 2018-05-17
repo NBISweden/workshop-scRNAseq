@@ -6,6 +6,17 @@ title: Single cell RNA sequencing analysis course
 # Single cell RNA sequencing analysis course
 Scilifelab Solna, Rooms Air & Fire,  2018-05-21 - 2018-05-23
 
+This course will cover the basic steps in single cell RNAseq (scRNAseq) processing and data analysis. Topics covered will include:
+
+* An overview of the current scRNAseq techniques
+* Basic overview of pipelines for processing raw reads into expression values
+* Quality control of scRNAseq data
+* Dimensionality reduction and clustering techniques
+* Data normalization
+* Differential gene expression for scRNAseq data
+' Examples on how to use these tools in a research project.
+
+
 ##### Schedule
 
 Course schedule can be found here: [Schedule](schedule)
