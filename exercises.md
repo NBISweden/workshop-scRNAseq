@@ -40,6 +40,13 @@ Basic PCA, tSNE and clustering using base R on mouse embryonic development data.
 
 *	[Tutorial for PCA and clustering](labs/PCA_and_clustering)
 
+
+#### Constructing knn graphs
+
+Construction of graphs from cell-cell similiarities using igraph.  
+
+*       [Tutorial for KNN graphs](labs/igraph)		  
+
 #### scater package
 
 Tutorial with the scater package for QC of scRNA-seq data

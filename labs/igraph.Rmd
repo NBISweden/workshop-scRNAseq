@@ -1,0 +1,258 @@
+---
+title: "igraph"
+output:
+  md_document:
+    variant: markdown_github
+---
+
+# Create a single cell Graph
+Author: Åsa Björklund
+
+
+Here are some simple examples on how to create a KNN graph from single cell RNA-seq data using [igraph](http://igraph.org/r/). 
+
+We will create graphs with the ILC data that can be found in the course uppmax folder with subfolder:
+
+`scrnaseq_course/data/ILC/`
+
+
+```{r warning=TRUE}
+suppressMessages(require(igraph))
+``` 
+ 
+### Data processing:
+
+First read in the data and define colors/symbols for plotting. We will only take data from one donor "T86" to reduce the computational time and avoid batch effects.
+
+```{r load}
+# read in meta data table 
+M <- read.table("data/ILC/Metadata_ILC.csv", sep=",",header=T)
+
+# read rpkm values
+R <- read.table("data/ILC/ensembl_rpkmvalues_ILC.csv",sep=",",header=T)
+
+
+# select one donor
+t86 <- which(M$Donor == "T86")
+DATA <- R[,t86]
+
+# remove all lowly expressed genes, require expression in 5 cells
+DATA <- DATA[rowSums(DATA>1)>5,]
+
+# color scale for Celltype
+# have 11 different stages, define 11 colors for those.
+coldef.celltype<-c("black","red","green","blue")
+names(coldef.celltype) <- unique(M$Celltype[t86])
+col.celltype <- coldef.celltype[M$Celltype[t86]]
+
+```
+
+
+### Define a function for extracting nearest neighbors
+
+Based on an input matrix, we will calculate pairwise distances between cells. Based on those distances, k nearest neighbors are extracted. A matrix with all edges between neighbors is used to create a graph.
+
+```{r function, warning=FALSE}
+
+make.knn.graph<-function(D,k){
+  # calculate euclidean distances between cells
+  dist<-as.matrix(dist(D))
+  # make a list of edges to k nearest neighbors for each cell
+  edges <- mat.or.vec(0,2)
+  for (i in 1:nrow(dist)){
+    # find closes neighbours
+    matches <- setdiff(order(dist[i,],decreasing = F)[1:(k+1)],i)
+    # add edges in both directions
+    edges <- rbind(edges,cbind(rep(i,k),matches))  
+    edges <- rbind(edges,cbind(matches,rep(i,k)))  
+  }
+  # create a graph from the edgelist
+  graph <- graph_from_edgelist(edges,directed=F)
+  V(graph)$frame.color <- NA
+  # make a layout for visualizing in 2D
+  set.seed(1)
+  g.layout<-layout_with_fr(graph)
+  return(list(graph=graph,layout=g.layout))        
+}
+
+
+
+```
+
+
+### Create a few different graphs. 
+
+The graph can be created from pairwise distances in the full space or in a reduced embedding into PCA space or any other dimensionality reduction space. 
+
+Here we will use the raw rpkms or, selection of principal components using k=15.
+
+```{r k_15}
+
+# first use all data and calculate euklidean distances
+g.raw <- make.knn.graph(t(log2(DATA+1)),15)
+
+# Then do the same in pca space 
+PC<-prcomp(log2(t(DATA)+1))
+
+# using the first 50 principal components
+g.pca50 <- make.knn.graph(PC$x[,1:50],15)
+
+# or the first 10
+g.pca10 <- make.knn.graph(PC$x[,1:10],15)
+
+# or the first 3
+g.pca3 <- make.knn.graph(PC$x[,1:3],15)
+
+# plot all 4:
+par(mfrow=c(2,2),mar=c(1,1,1,1))
+plot.igraph(g.raw$graph,layout=g.raw$layout,vertex.color=col.celltype,
+            vertex.size=3,vertex.label=NA,main="raw data")
+legend("topright",names(coldef.celltype),col=coldef.celltype,
+       pch=16,cex=0.5,bty='n')
+plot.igraph(g.pca50$graph,layout=g.pca50$layout,vertex.color=col.celltype,
+            vertex.size=3,vertex.label=NA,main="50 PCs")
+plot.igraph(g.pca10$graph,layout=g.pca10$layout,vertex.color=col.celltype,
+            vertex.size=3,vertex.label=NA,main="10 PCs")
+plot.igraph(g.pca3$graph,layout=g.pca3$layout,vertex.color=col.celltype,
+            vertex.size=3,vertex.label=NA,main="3 PCs")
+mtext("k=15",1)
+
+
+```
+
+What do you think about the different graphs? Why do you think we get these different results?
+
+##### Do the same with a few different values for k
+
+```{r test_ks}
+
+ks <- c(5,10,30,50)
+
+for (k in ks){
+  g.raw <- make.knn.graph(t(log2(DATA+1)),k)
+  g.pca50 <- make.knn.graph(PC$x[,1:50],k)
+  g.pca10 <- make.knn.graph(PC$x[,1:10],k)
+  g.pca3 <- make.knn.graph(PC$x[,1:3],k)
+
+  # plot all 4:
+  par(mfrow=c(2,2),mar=c(1,1,1,1))
+  plot.igraph(g.raw$graph,layout=g.raw$layout,vertex.color=col.celltype,
+            vertex.size=5,vertex.label=NA,main="raw data")
+  legend("topright",names(coldef.celltype),col=coldef.celltype,
+       pch=16,cex=0.5,bty='n')
+  plot.igraph(g.pca50$graph,layout=g.pca50$layout,vertex.color=col.celltype,
+            vertex.size=5,vertex.label=NA,main="50 PCs")
+  plot.igraph(g.pca10$graph,layout=g.pca10$layout,vertex.color=col.celltype,
+            vertex.size=5,vertex.label=NA,main="10 PCs")
+  plot.igraph(g.pca3$graph,layout=g.pca3$layout,vertex.color=col.celltype,
+            vertex.size=5,vertex.label=NA,main="3 PCs")
+  mtext(sprintf("k=%d",k),1)
+}
+
+```
+
+
+#### Community detection 
+
+Lets select one of these networks and test different methods for detecting communities in the network. 
+
+Select the one with k=15 and 10 PCs. 
+
+```{r communities}
+
+g <- make.knn.graph(PC$x[,1:10],15)
+
+# infomap
+# Find community structure that minimizes the expected description
+# length of a random walker trajectory
+infomap <- cluster_infomap(g$graph)
+table(infomap$membership)
+
+
+# walktrap: 
+# finds subgraphs via random walks
+walktrap <- cluster_walktrap(g$graph)
+table(walktrap$membership)
+
+# louvain
+# multi-level modularity optimization algorithm 
+# for finding community structure
+louvain <- cluster_louvain(g$graph)
+table(louvain$membership)
+
+
+# define a palette with more than the 8 standard colors
+coldef<-c('black','forestgreen', 'red2', 'orange', 'cornflowerblue', 
+                'magenta', 'darkolivegreen4',  'indianred1', 'tan4',
+                'darkblue', 'mediumorchid1','firebrick4',  'yellowgreen',
+                'lightsalmon', 'tan3', "tan1",'darkgray', 'wheat4', '#DDAD4B',
+                'chartreuse', 'seagreen1', 'moccasin', 'mediumvioletred',
+                'seagreen','cadetblue1', "darkolivegreen1" ,"tan2",
+                "tomato3" , "#7CE3D8","gainsboro")
+
+
+# plot onto igraph
+par(mfrow=c(2,2),mar=c(1,1,1,1))
+plot.igraph(g$graph,layout=g$layout,vertex.color=col.celltype,
+            vertex.size=5,vertex.label=NA,main="Celltype")
+plot.igraph(g$graph,layout=g$layout,vertex.color=coldef[walktrap$membership],
+            vertex.size=5,vertex.label=NA,main="Walktrap")
+plot.igraph(g$graph,layout=g$layout,vertex.color=rep(coldef,5)[infomap$membership],
+            vertex.size=5,vertex.label=NA,main="Infomap")
+plot.igraph(g$graph,layout=g$layout,vertex.color=coldef[louvain$membership],
+            vertex.size=5,vertex.label=NA,main="Louvain")
+
+
+
+```
+
+There are many different methods for finding communities in the igraph package. For each of these methods, there are settings that you can change to aler how the graph is split. Please have a look at the manual if you want to find out more. 
+
+
+#### Layouts
+
+The layout functions optimizes the visualization of the graph in 2D space. This can be done with multiple different algorthms. The layout will not influence the clustering in any way since it is only used to optimize how the network is drawn.  
+
+```{r layouts}
+set.seed(1)
+
+# the layout that is created in the function is fruchterman.reingold
+layout.fr <- layout_with_fr(g$graph)
+
+# this was run with default iterations 500
+# it can sometimes improve the layout if it is run for more iterations.
+# lets first increase the iterations to check if we get a better layout
+layout.fr.10K <- layout_with_fr(g$graph, niter = 10000)
+
+# another layout is Kamada Kawai.
+layout.kk <- layout_with_kk(g$graph)
+
+# and LGL (Large Graph Layout)
+layout.lgl <- layout_with_lgl(g$graph)
+
+# plot with different layouts
+par(mfrow=c(2,2),mar=c(1,1,1,1))
+plot.igraph(g$graph,layout=layout.fr,vertex.color=col.celltype,
+            vertex.size=5,vertex.label=NA,main="FR 500")
+plot.igraph(g$graph,layout=layout.fr.10K,vertex.color=col.celltype,
+            vertex.size=5,vertex.label=NA,main="FR 10K")
+
+plot.igraph(g$graph,layout=layout.kk,vertex.color=col.celltype,
+            vertex.size=5,vertex.label=NA,main="KK")
+
+plot.igraph(g$graph,layout=layout.lgl,vertex.color=col.celltype,
+            vertex.size=5,vertex.label=NA,main="LGL")
+
+```
+
+As you can see, the different layouts give quite different results. Which layout you want to use is mainly a matter of opinion. 
+
+There are many more options in the igraph package, so please have a look at their manual if you want to test additional layouts. 
+
+##### Session info
+
+```{r}
+sessionInfo()
+```
+
+
