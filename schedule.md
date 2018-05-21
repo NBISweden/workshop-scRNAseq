@@ -11,7 +11,7 @@ Lecture slides will be provided as links as they get completed.
 
 **Monday 21st of May**  
 **09.00-09.15** [Introduction](slides/) (Åsa Björklund)   
-**09.15-10.00** [scRNAseq methodologies and ESCG platform](slides/) (Henrik Gezelius)   
+**09.15-10.00** [scRNAseq methodologies and ESCG platform](slides/ESCG_scRNA-seq-analysis_180521_slides__HG.pdf) (Henrik Gezelius)   
 **10.30-11.15** [Introduction to read alignment pipelines and gene expression estimates](slides/) (Johan Reimegård)   
 **11.15-12.00** [scRNAseq quality control](slides/) (Åsa Björklund)   
 **12.00-13.00** Lunch   
