@@ -58,7 +58,7 @@ Tutorial with the scater package for QC of scRNA-seq data
 
 A tutorial for estimating genome-wide and individual genes batch-effects.
 
-*       [Tutorial for Batch-Effects](labs/batch_analysis)
+*       [Tutorial for Batch-Effects](https://bitbucket.org/scilifelab-lts/scrnaseq-labs/src/a228442debe7f8eff28cfdba875349025db9b7a3/batch_analysis.md?fileviewer=file-view-default)
 
 #### Comparing Normalization Methods
 
