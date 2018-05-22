@@ -20,8 +20,8 @@ Lecture slides will be provided as links as they get completed.
 
 **Tuesday 22nd of May**   
 **09.00-09.45** [Dimensionality reduction](slides/) (Per Unneberg)   
-**10.15-11.00** [Data normalization](slides/) (Nikolay Oskolkov)   
-**11.00-12.00** [Differential gene expression](slides/) (Olga Dethlefsen)   
+**10.15-11.00** [Data normalization](slides/scRNAseq_course_2018_Oskolkov.pdf) (Nikolay Oskolkov)   
+**11.00-12.00** [Differential gene expression](slides/scRNA-seq-DE.pdf) (Olga Dethlefsen)   
 **12.00-13.00** Lunch    
 **13.00-14.00** [Clustering techniques and scRNAseq toolkits](slides/) (Åsa Björklund)   
 **14.00-17.00** [Practical exercises](exercises)(Åsa Björklund, Olga Dethlefsen, Nikolay Oskolkov)
