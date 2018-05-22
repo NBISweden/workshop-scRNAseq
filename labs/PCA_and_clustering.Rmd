@@ -175,20 +175,30 @@ for (gene in plotgenes) {
 
 ### Different settings in PCA
 
-You ran PCA on log transformed rpkms and by default it does centering of the data, test doing it without logging and witout centering and compare the results.
+You ran PCA on log transformed rpkms and by default it does centering of the data, test doing it without logging, witout centering and with scaling and compare the results.
 	
 ```{r}	
-PC.nolog<-prcomp(t(DATA))
-PC.nocenter<-prcomp(t(log2(DATA+1)),center=FALSE)
-PC.nocenterlog<-prcomp(t(DATA),center=FALSE)
-	
-# plot all 4 PCA settings
-par(mfrow=c(2,2))
-plot(PC$x[,1:2],col=col.stage,pch=pch.embryo,main="first PCA")
-legend("topleft",stages,col=coldef.stage,pch=16,cex=0.3,bty='n')
+# remove all unexpressed genes (or expressed in <= 2 cells), 
+# since scaling are not possible for genes with zero variance
+D <- DATA[rowSums(DATA>1)>2,]
+
+PC.center <- prcomp(t(log2(D+1)))
+PC.nolog<-prcomp(t(D))
+PC.nocenter<-prcomp(t(log2(D+1)),center=FALSE)
+PC.nocenterlog<-prcomp(t(D),center=FALSE)
+PC.scale <- prcomp(t(log2(D+1)),center=TRUE, scale=TRUE)
+PC.nocenterlog_scale<-prcomp(t(D),center=FALSE,scale=TRUE)	
+
+# plot all 6 PCA settings
+par(mfrow=c(2,3))
+plot(PC.center$x[,1:2],col=col.stage,pch=pch.embryo,main="centered")
 plot(PC.nolog$x[,1:2],col=col.stage,pch=pch.embryo,main="no logging")
 plot(PC.nocenter$x[,1:2],col=col.stage,pch=pch.embryo,main="no centering")
+legend("topleft",stages,col=coldef.stage,pch=16,cex=0.3,bty='n')
 plot(PC.nocenterlog$x[,1:2],col=col.stage,pch=pch.embryo,main="no centering, no logging")
+plot(PC.scale$x[,1:2],col=col.stage,pch=pch.embryo,main="centered & scaled")
+plot(PC.nocenterlog_scale$x[,1:2],col=col.stage,pch=pch.embryo,main="no centering, no logging, scaled")
+
 ```
 	
 What are the main differences, why is that do you think? 
