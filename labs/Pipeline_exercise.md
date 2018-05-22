@@ -24,7 +24,7 @@ First, you need to install miniconda following instructions at: http://conda.pyd
 
 At Uppmax:
 
-	cd /proj/b2013006/nobackup/scrnaseq_course/pipeline/conda
+	cd /proj/uppstore2017171/courses/scrnaseq_course/
    	wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh
    	bash Miniconda3-latest-Linux-x86_64.sh
    	# reply "yes" to licence agreement, and specify location for installation
@@ -69,10 +69,10 @@ To run the snakemake pipeline, you need a number of files:
 
 In this example we will map data from a human embryonic study, so we need to get genome and annotation files for the human genome, here we use ensembl annotations/genome:
 
-	 cd /proj/b2013006/nobackup/scrnaseq_course/pipeline/ref/
+	 cd /proj/uppstore2017171/courses/scrnaseq_course/pipeline/ref/
 	 wget ftp://ftp.ensembl.org/pub/release-90/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz
 	 wget ftp://ftp.ensembl.org/pub/release-90/gtf/homo_sapiens/Homo_sapiens.GRCh38.90.gtf.gz	 
-	 cp /proj/b2013006/nobackup/asab/data/genomes/ERCC/ERCC_spikes_no_polyA.fa ERCC.fasta
+	 cp /proj/uppstore2017171/staff/asab/data/genomes/ERCC/ERCC_spikes_no_polyA.fa ERCC.fasta
 	 # unzip the files
 	 gunzip Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz
 	 gunzip Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz
