@@ -29,7 +29,7 @@ Lecture slides will be provided as links as they get completed.
 **Wednesday 23rd of May**  
 **09.00-09.45** [Pseudotime and trajectory analysis](slides/pseudotime_SG_v2.pdf) (Stefania Giaccomello)   
 **10.15-11.00** [RNA Velocity](slides/) (Gioele La Manno)   
-**11.00-12.00** [Spatial mapping of single cells](slides/) (Stefania Giaccomello)   
+**11.00-12.00** [Spatial mapping of single cells](slides/spatial_mapping.pdf) (Stefania Giaccomello)   
 **13.00-16.00** [Practical exercises](https://bitbucket.org/scilifelab-lts/scrnaseq-labs) (Åsa Björklund, Stefania Giacomello, Anna Johansson)   
 **16.00-17.00** [Summary of the week]() (Åsa Björklund)   
 
