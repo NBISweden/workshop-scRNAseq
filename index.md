@@ -14,7 +14,7 @@ This course will cover the basic steps in single cell RNAseq (scRNAseq) processi
 * Dimensionality reduction and clustering techniques
 * Data normalization
 * Differential gene expression for scRNAseq data
-' Examples on how to use these tools in a research project.
+* Examples on how to use these tools in a research project.
 
 
 ##### Schedule
@@ -52,3 +52,4 @@ Here are some useful links to tools, courses etc.
 * The Human Cell Atlas project [here](https://www.humancellatlas.org/) 
 * The github repository for this course. Also contains the R markdown scripts that was used to generate all the exercises [here](https://github.com/NBISweden/workshop-scRNAseq)
 * Bitbucket repository for QC report scripts [here](https://bitbucket.org/asbj/qc-summary_scrnaseq)
+* Bitbucket repository for the NBIS scRNAseq pipeline [here](https://bitbucket.org/scilifelab-lts/lts-workflows-sm-scrnaseq)
