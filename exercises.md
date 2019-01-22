@@ -18,7 +18,7 @@ All raw data, and some intermediate files that take long time to compute, are av
 
 You should be able to run these tutorials with your own data. But be aware, some steps of the tutorials will take long to run with large dataset, so it may be a good idea to use several R-sessions in paralell and work on other stuff while you are waiting. 
 
-As you run into problems, we will try to fill in the [FAQ](FAQ) with common quiestons.
+As you run into problems, we will try to fill in the [FAQ](labs/FAQ) with common quiestons.
 
 If you want to load all the code into R directly, you can access the R-markdown documents at our [github site](https://github.com/NBISweden/workshop-scRNAseq/tree/master/labs)
 
@@ -52,7 +52,6 @@ Construction of graphs from cell-cell similiarities using igraph.
 Tutorial with the scater package for QC of scRNA-seq data
 
 *	[Tutorial for scater](labs/scater_ilc)
-
 
 #### Estimating Batch-Effects
 
