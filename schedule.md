@@ -33,6 +33,7 @@ Lecture slides will be provided as links as they get completed.
 **09.00-09.45** [Pseudotime and trajectory analysis](slides/) (Åsa Björklund)   
 **10.15-11.00** [Subgroups of midbrain dopamine neurons](slides/) (Åsa Björklund)   
 **11.00-12.00** [Spatial transcriptomics and spatial mapping of single cells](slides/) (Stefania Giaccomello)   
+**12.00-13.00** Lunch	  
 **13.00-13.15** [Wrap up of todays lectures](https://goo.gl/forms/LabSH8u7S2IQVZKj1) (Åsa Björklund)    
 **13.15-16.00** [Practical exercises](exercises) (Åsa, Estelle, Jakub)      	      
 **16.00-17.00** [Summary of the week]() (Åsa Björklund)    
