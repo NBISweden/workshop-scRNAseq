@@ -39,7 +39,6 @@ Please read carefully the [Precourse material](precourse) before the course star
 ##### Course leaders
 
 * [Åsa Björklund](http://nbis.se/about/staff/asa-bjorklund/)
-* [Stefania Giacomello](http://nbis.se/about/staff/stefania-giacomello/)
 
 ##### Useful links
 
@@ -53,3 +52,11 @@ Here are some useful links to tools, courses etc.
 * The github repository for this course. Also contains the R markdown scripts that was used to generate all the exercises [here](https://github.com/NBISweden/workshop-scRNAseq)
 * Bitbucket repository for QC report scripts [here](https://bitbucket.org/asbj/qc-summary_scrnaseq)
 * Bitbucket repository for the NBIS scRNAseq pipeline [here](https://bitbucket.org/scilifelab-lts/lts-workflows-sm-scrnaseq)
+
+
+##### Past courses
+
+[Stockholm May 21-23, 2018](https://nbisweden.github.io/workshop-archive/workshop-scRNAseq/2018-05-21/)
+
+[Uppsala October 2-4, 2017](https://scilifelab.github.io/courses/scrnaseq/1710/)
+
