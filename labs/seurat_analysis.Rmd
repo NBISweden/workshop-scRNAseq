@@ -51,9 +51,6 @@ m <- match(rownames(R),TR$ensembl_gene_id)
 newnames <- apply(cbind(as.vector(TR$external_gene_name)[m],rownames(R)),1,paste,collapse=":")
 rownames(R)<-newnames
 
-celltype2cols <- c("blue", "cyan", "red", "green")[as.integer(M$Celltype)]
-donor2cols <- c("black", "orange", "magenta")[as.integer(M$Donor)]
-
 ```
 
 ### Create seurat object
@@ -89,6 +86,39 @@ data <- SetAllIdent(object = data, id = "Donor")
 OBS! Each time you want to change colors in a gene plot, you need to change the identity class value in the seurat object in the slot data@ident. Perhaps there is a better way, but I did not find a solution.
 
 In many of the other Seurat plotting functions like TNSEPlot and PCAPlot you can use “group.by” to define which meta data variable the cells should be coloured by.
+
+
+### Mitochondrial content and rRNAs
+
+Other common QC-measures are proportion mitochondrial and rRNA mapping.  First calculate them and add to the metadata. 
+
+```{r}
+ensnames <- unlist(lapply(strsplit(rownames(data@data),":"), function(x) x[2]))
+
+# calculate mito proportion
+mito.genes <- which(ensnames %in% TR$ensembl_gene_id[TR$chromosome_name == "MT"])
+p.mito <- colSums(data@raw.data[mito.genes, ])/colSums(data@raw.data)
+data <- AddMetaData(object = data, metadata = p.mito, col.name = "p.mito")
+
+
+
+# and rRNA proportion
+rRNA.genes <- which(ensnames %in% TR$ensembl_gene_id[TR$gene_biotype %in% c("rRNA","rRNA_pseudogene")])
+p.rRNA <- colSums(data@raw.data[rRNA.genes, ])/colSums(data@raw.data)
+data <- AddMetaData(object = data, metadata = p.rRNA, col.name = "p.rRNA")
+
+# plot as violins
+VlnPlot(object = data, features.plot = c("nGene", "nUMI","p.mito","p.rRNA"), nCol = 2)
+
+# or as scatter plot
+par(mfrow = c(1, 2))
+GenePlot(data, gene1 = "nGene", gene2 = "p.mito")
+GenePlot(data, gene1 = "nGene", gene2 = "p.rRNA")
+
+```
+
+In this case the data has already been filtered for low quality cells, but you may want to remove cells that have high proportion of mitochondrial or rRNA reads from your analysis using the `FilterCells` function. 
+
 
 ## Data normalization and scaling
 
@@ -169,7 +199,7 @@ Now we use the `JackStraw` function to check which of the principal components t
 As a default, JackStraw is only run on the first 20 PCs, if you want to include more PCs in your tSNE and clustering, run JackStraw with `num.pc=30` or similar. 
 
 ```{r}
-dataB <- JackStraw(object = dataB, num.replicate = 100, do.print = FALSE)
+dataB <- JackStraw(object = dataB, num.replicate = 100, display.progress = FALSE)
 JackStrawPlot(object = dataB, PCs = 1:12)
 ```
 
@@ -258,6 +288,22 @@ print(x = head(x = cluster03.markers, n = 5))
 ```
 
 You can also run function `FindAllMarkers` wich will run DE detection for all the clusters vs the rest (or any other classification you may have in the `ident` slot).
+
+# Compare clustering settings
+
+Using the clustree package (https://cran.r-project.org/web/packages/clustree/index.html) you can visualize the clustering from Seurat with different resolutions that can help you understand how the clustering changes whith different settings. 
+
+```{r clustree, warning=FALSE}
+suppressMessages(require(clustree))
+
+# run clustering with different resolutions, test values from 0.1-1, we used resolution 0.6 before
+res <- c(0.1,0.2,0.3,0.4,0.5,0.7,0.8,0.9,1)
+
+dataB <- FindClusters(dataB, resolution = res, print.output = 0)
+
+```
+
+In this case it seems that the clustering is quite consistent regardless of the resolution settings. Only when going from resolution 0.4 to 0.5 there is a split of cluster 0. 
 
 ##### Session info
 

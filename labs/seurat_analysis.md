@@ -1,7 +1,7 @@
 Seurat analysis
 ===============
-Author: Åsa Björklund
 
+Author: Åsa Björklund
 
 Analysis of data using Seurat package, following tutorial at: <http://satijalab.org/seurat/pbmc3k_tutorial.html>
 
@@ -41,9 +41,6 @@ TR <- read.table("data/ILC/gene_name_translation_biotype.tab",sep="\t")
 m <- match(rownames(R),TR$ensembl_gene_id)
 newnames <- apply(cbind(as.vector(TR$external_gene_name)[m],rownames(R)),1,paste,collapse=":")
 rownames(R)<-newnames
-
-celltype2cols <- c("blue", "cyan", "red", "green")[as.integer(M$Celltype)]
-donor2cols <- c("black", "orange", "magenta")[as.integer(M$Donor)]
 ```
 
 ### Create seurat object
@@ -97,6 +94,42 @@ OBS! Each time you want to change colors in a gene plot, you need to change the 
 
 In many of the other Seurat plotting functions like TNSEPlot and PCAPlot you can use “group.by” to define which meta data variable the cells should be coloured by.
 
+### Mitochondrial content and rRNAs
+
+Other common QC-measures are proportion mitochondrial and rRNA mapping. First calculate them and add to the metadata.
+
+``` r
+ensnames <- unlist(lapply(strsplit(rownames(data@data),":"), function(x) x[2]))
+
+# calculate mito proportion
+mito.genes <- which(ensnames %in% TR$ensembl_gene_id[TR$chromosome_name == "MT"])
+p.mito <- colSums(data@raw.data[mito.genes, ])/colSums(data@raw.data)
+data <- AddMetaData(object = data, metadata = p.mito, col.name = "p.mito")
+
+
+
+# and rRNA proportion
+rRNA.genes <- which(ensnames %in% TR$ensembl_gene_id[TR$gene_biotype %in% c("rRNA","rRNA_pseudogene")])
+p.rRNA <- colSums(data@raw.data[rRNA.genes, ])/colSums(data@raw.data)
+data <- AddMetaData(object = data, metadata = p.rRNA, col.name = "p.rRNA")
+
+# plot as violins
+VlnPlot(object = data, features.plot = c("nGene", "nUMI","p.mito","p.rRNA"), nCol = 2)
+```
+
+![](seurat_analysis_files/figure-markdown_github/unnamed-chunk-2-1.png)
+
+``` r
+# or as scatter plot
+par(mfrow = c(1, 2))
+GenePlot(data, gene1 = "nGene", gene2 = "p.mito")
+GenePlot(data, gene1 = "nGene", gene2 = "p.rRNA")
+```
+
+![](seurat_analysis_files/figure-markdown_github/unnamed-chunk-2-2.png)
+
+In this case the data has already been filtered for low quality cells, but you may want to remove cells that have high proportion of mitochondrial or rRNA reads from your analysis using the `FilterCells` function.
+
 Data normalization and scaling
 ------------------------------
 
@@ -119,7 +152,7 @@ data <- FindVariableGenes(object = data, mean.function = ExpMean,
                           x.low.cutoff = 0.5, x.high.cutoff = 10, y.cutoff = 0.5)
 ```
 
-![](seurat_analysis_files/figure-markdown_github/unnamed-chunk-2-1.png)
+![](seurat_analysis_files/figure-markdown_github/unnamed-chunk-3-1.png)
 
 ``` r
 length(x = data@var.genes)
@@ -247,7 +280,7 @@ dataB <- RunPCA(object = dataB, pc.genes = data@var.genes, do.print = TRUE, pcs.
 VizPCA(object = data, pcs.use = 1:4)
 ```
 
-![](seurat_analysis_files/figure-markdown_github/unnamed-chunk-3-1.png)
+![](seurat_analysis_files/figure-markdown_github/unnamed-chunk-4-1.png)
 
 ``` r
 # Plot pca for both normalizatinos, 
@@ -265,7 +298,7 @@ p4 <- PCAPlot(object = dataB, dim.1 = 1, dim.2 = 2, do.return=T,group.by="Cellty
 grid.arrange(p1,p2,p3,p4,ncol=2)
 ```
 
-![](seurat_analysis_files/figure-markdown_github/unnamed-chunk-3-2.png)
+![](seurat_analysis_files/figure-markdown_github/unnamed-chunk-4-2.png)
 
 ``` r
 # heatmap with top loading genes
@@ -293,13 +326,16 @@ Now we use the `JackStraw` function to check which of the principal components t
 As a default, JackStraw is only run on the first 20 PCs, if you want to include more PCs in your tSNE and clustering, run JackStraw with `num.pc=30` or similar.
 
 ``` r
-dataB <- JackStraw(object = dataB, num.replicate = 100, do.print = FALSE)
+dataB <- JackStraw(object = dataB, num.replicate = 100, display.progress = FALSE)
 JackStrawPlot(object = dataB, PCs = 1:12)
 ```
 
     ## Warning: Removed 51523 rows containing missing values (geom_point).
 
-![](seurat_analysis_files/figure-markdown_github/unnamed-chunk-4-1.png)
+![](seurat_analysis_files/figure-markdown_github/unnamed-chunk-5-1.png)
+
+    ## An object of class seurat in project ILC 
+    ##  22931 genes across 648 samples.
 
 In this case, only PCs 1,2,3,4,6,7 & 12 are significant, so we will only use those in subsequent steps.
 
@@ -321,15 +357,18 @@ dataB <- FindClusters(object = dataB, reduction.type = "pca", dims.use = use.pcs
 PrintFindClustersParams(object = dataB)
 ```
 
-    ## Parameters used in latest FindClusters calculation run on: 2018-05-09 10:35:02
+    ## Warning in as.POSIXlt.POSIXct(x, tz): unknown timezone 'zone/tz/2018i.1.0/
+    ## zoneinfo/Europe/Stockholm'
+
+    ## Parameters used in latest FindClusters calculation run on: 2019-02-01 09:53:50
     ## =============================================================================
     ## Resolution: 0.6
     ## -----------------------------------------------------------------------------
     ## Modularity Function    Algorithm         n.start         n.iter
     ##      1                   1                 100             10
     ## -----------------------------------------------------------------------------
-    ## Reduction used          k.param          k.scale          prune.SNN
-    ##      pca                 30                25              0.0667
+    ## Reduction used          k.param          prune.SNN
+    ##      pca                 30                0.0667
     ## -----------------------------------------------------------------------------
     ## Dims used in calculation
     ## =============================================================================
@@ -348,21 +387,23 @@ dataB <- RunTSNE(object = dataB, dims.use = use.pcs, do.fast = TRUE)
 TSNEPlot(object = dataB,do.label = T)
 ```
 
-![](seurat_analysis_files/figure-markdown_github/unnamed-chunk-6-1.png)
+    ## Warning: package 'bindrcpp' was built under R version 3.4.4
+
+![](seurat_analysis_files/figure-markdown_github/unnamed-chunk-7-1.png)
 
 ``` r
 # compare to celltype identities, colour instead by Celltype with group.by
 TSNEPlot(object = dataB, group.by = "Celltype")
 ```
 
-![](seurat_analysis_files/figure-markdown_github/unnamed-chunk-6-2.png)
+![](seurat_analysis_files/figure-markdown_github/unnamed-chunk-7-2.png)
 
 ``` r
 # colour instead by Donor 
 TSNEPlot(object = dataB, group.by = "Donor")
 ```
 
-![](seurat_analysis_files/figure-markdown_github/unnamed-chunk-6-3.png)
+![](seurat_analysis_files/figure-markdown_github/unnamed-chunk-7-3.png)
 
 Color now automatically changes to the cluster identities, since the slot `ident` in the seurat object is automatically set to the cluster ids after clusering.
 
@@ -377,8 +418,8 @@ Now we can find and plot some of the cluster markers to check if our clustering 
 -   "tobit" : Tobit-test for differential gene expression (Trapnell et al., Nature Biotech, 2014)
 -   "poisson" : Likelihood ratio test assuming an underlying poisson distribution. Use only for UMI-based datasets
 -   "negbinom" : Likelihood ratio test assuming an underlying negative binomial distribution. Use only for UMI-based datasets
--   "MAST : GLM-framework that treates cellular detection rate as a covariate (Finak et al, Genome Biology, 2015)
--   "DESeq2 : DE based on a model using the negative binomial distribution (Love et al, Genome Biology, 2014)
+-   "MAST" : GLM-framework that treates cellular detection rate as a covariate (Finak et al, Genome Biology, 2015)
+-   "DESeq2" : DE based on a model using the negative binomial distribution (Love et al, Genome Biology, 2014)
 
 ``` r
 # find all genes that defines cluster1, we comare cluster1 to all the other clusters. 
@@ -401,14 +442,14 @@ As you can see, some of the genes are higher in cluster1, and have a positive fo
 VlnPlot(object = dataB, features.plot = rownames(cluster1.markers)[1:6],nCol=3,size.title.use=10)
 ```
 
-![](seurat_analysis_files/figure-markdown_github/unnamed-chunk-8-1.png)
+![](seurat_analysis_files/figure-markdown_github/unnamed-chunk-9-1.png)
 
 ``` r
 # or plot them onto tSNE
 FeaturePlot(object = dataB, features.plot = rownames(cluster1.markers)[1:6], cols.use = c("yellow", "red","black"), reduction.use = "tsne")
 ```
 
-![](seurat_analysis_files/figure-markdown_github/unnamed-chunk-8-2.png)
+![](seurat_analysis_files/figure-markdown_github/unnamed-chunk-9-2.png)
 
 ``` r
 # or as a ridge plot
@@ -427,7 +468,7 @@ RidgePlot(object = dataB, features.plot = rownames(cluster1.markers)[1:6])
 
     ## Picking joint bandwidth of 0.143
 
-![](seurat_analysis_files/figure-markdown_github/unnamed-chunk-8-3.png)
+![](seurat_analysis_files/figure-markdown_github/unnamed-chunk-9-3.png)
 
 You can also specify specific cells, or clusters that you want to compare:
 
@@ -446,6 +487,22 @@ print(x = head(x = cluster03.markers, n = 5))
 
 You can also run function `FindAllMarkers` wich will run DE detection for all the clusters vs the rest (or any other classification you may have in the `ident` slot).
 
+Compare clustering settings
+===========================
+
+Using the clustree package (<https://cran.r-project.org/web/packages/clustree/index.html>) you can visualize the clustering from Seurat with different resolutions that can help you understand how the clustering changes whith different settings.
+
+``` r
+suppressMessages(require(clustree))
+
+# run clustering with different resolutions, test values from 0.1-1, we used resolution 0.6 before
+res <- c(0.1,0.2,0.3,0.4,0.5,0.7,0.8,0.9,1)
+
+dataB <- FindClusters(dataB, resolution = res, print.output = 0)
+```
+
+In this case it seems that the clustering is quite consistent regardless of the resolution settings. Only when going from resolution 0.4 to 0.5 there is a split of cluster 0.
+
 ##### Session info
 
 ``` r
@@ -454,7 +511,7 @@ sessionInfo()
 
     ## R version 3.4.1 (2017-06-30)
     ## Platform: x86_64-apple-darwin15.6.0 (64-bit)
-    ## Running under: macOS Sierra 10.12.6
+    ## Running under: macOS  10.14
     ## 
     ## Matrix products: default
     ## BLAS: /Library/Frameworks/R.framework/Versions/3.4/Resources/lib/libRblas.0.dylib
@@ -464,55 +521,51 @@ sessionInfo()
     ## [1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
     ## 
     ## attached base packages:
-    ## [1] parallel  stats     graphics  grDevices utils     datasets  methods  
-    ## [8] base     
+    ## [1] stats     graphics  grDevices utils     datasets  methods   base     
     ## 
     ## other attached packages:
-    ## [1] bindrcpp_0.2        gridExtra_2.3       Seurat_2.2.0       
-    ## [4] Biobase_2.38.0      BiocGenerics_0.24.0 Matrix_1.2-12      
-    ## [7] cowplot_0.9.2       ggplot2_2.2.1      
+    ## [1] clustree_0.2.2 ggraph_1.0.2   bindrcpp_0.2.2 gridExtra_2.3 
+    ## [5] Seurat_2.3.4   Matrix_1.2-14  cowplot_0.9.2  ggplot2_3.1.0 
     ## 
     ## loaded via a namespace (and not attached):
-    ##   [1] diffusionMap_1.1-0   Rtsne_0.13           VGAM_1.0-4          
-    ##   [4] colorspace_1.3-2     ggridges_0.4.1       class_7.3-14        
-    ##   [7] modeltools_0.2-21    mclust_5.4           rprojroot_1.3-2     
-    ##  [10] htmlTable_1.11.2     base64enc_0.1-3      proxy_0.4-21        
-    ##  [13] rstudioapi_0.7       DRR_0.0.3            flexmix_2.3-14      
-    ##  [16] lubridate_1.7.1      prodlim_1.6.1        mvtnorm_1.0-7       
-    ##  [19] ranger_0.9.0         codetools_0.2-15     splines_3.4.1       
-    ##  [22] R.methodsS3_1.7.1    mnormt_1.5-5         doParallel_1.0.11   
-    ##  [25] robustbase_0.92-8    knitr_1.19           tclust_1.3-1        
-    ##  [28] RcppRoll_0.2.2       Formula_1.2-2        caret_6.0-78        
-    ##  [31] ica_1.0-1            broom_0.4.3          gridBase_0.4-7      
-    ##  [34] ddalpha_1.3.1        cluster_2.0.6        kernlab_0.9-25      
-    ##  [37] R.oo_1.21.0          sfsmisc_1.1-1        compiler_3.4.1      
-    ##  [40] backports_1.1.2      assertthat_0.2.0     lazyeval_0.2.1      
-    ##  [43] lars_1.2             acepack_1.4.1        htmltools_0.3.6     
-    ##  [46] tools_3.4.1          igraph_1.1.2         gtable_0.2.0        
-    ##  [49] glue_1.2.0           reshape2_1.4.3       dplyr_0.7.4         
-    ##  [52] Rcpp_0.12.15         NMF_0.20.6           trimcluster_0.1-2   
-    ##  [55] gdata_2.18.0         ape_5.0              nlme_3.1-131        
-    ##  [58] iterators_1.0.9      fpc_2.1-11           psych_1.7.8         
-    ##  [61] timeDate_3042.101    gower_0.1.2          stringr_1.2.0       
-    ##  [64] irlba_2.3.2          rngtools_1.2.4       gtools_3.5.0        
-    ##  [67] DEoptimR_1.0-8       MASS_7.3-48          scales_0.5.0        
-    ##  [70] ipred_0.9-6          RColorBrewer_1.1-2   yaml_2.1.16         
-    ##  [73] pbapply_1.3-4        pkgmaker_0.22        segmented_0.5-3.0   
-    ##  [76] rpart_4.1-12         latticeExtra_0.6-28  stringi_1.1.6       
-    ##  [79] foreach_1.4.4        checkmate_1.8.5      caTools_1.17.1      
-    ##  [82] lava_1.6             dtw_1.18-1           SDMTools_1.1-221    
-    ##  [85] rlang_0.1.6          pkgconfig_2.0.1      prabclus_2.2-6      
-    ##  [88] bitops_1.0-6         evaluate_0.10.1      lattice_0.20-35     
-    ##  [91] ROCR_1.0-7           purrr_0.2.4          bindr_0.1           
-    ##  [94] labeling_0.3         recipes_0.1.2        htmlwidgets_1.0     
-    ##  [97] tidyselect_0.2.3     CVST_0.2-1           plyr_1.8.4          
-    ## [100] magrittr_1.5         R6_2.2.2             gplots_3.0.1        
-    ## [103] Hmisc_4.1-1          dimRed_0.1.0         sn_1.5-1            
-    ## [106] withr_2.1.1          pillar_1.1.0         foreign_0.8-69      
-    ## [109] mixtools_1.1.0       survival_2.41-3      scatterplot3d_0.3-40
-    ## [112] nnet_7.3-12          tsne_0.1-3           tibble_1.4.2        
-    ## [115] KernSmooth_2.23-15   rmarkdown_1.8        grid_3.4.1          
-    ## [118] data.table_1.10.4-3  FNN_1.1              ModelMetrics_1.1.0  
-    ## [121] digest_0.6.15        diptest_0.75-7       xtable_1.8-2        
-    ## [124] numDeriv_2016.8-1    tidyr_0.8.0          R.utils_2.6.0       
-    ## [127] stats4_3.4.1         munsell_0.4.3        registry_0.5
+    ##   [1] Rtsne_0.13          colorspace_1.3-2    class_7.3-14       
+    ##   [4] modeltools_0.2-21   ggridges_0.4.1      mclust_5.4         
+    ##   [7] rprojroot_1.3-2     htmlTable_1.11.2    base64enc_0.1-3    
+    ##  [10] rstudioapi_0.7      proxy_0.4-21        farver_1.1.0       
+    ##  [13] ggrepel_0.7.0       flexmix_2.3-14      bit64_0.9-7        
+    ##  [16] mvtnorm_1.0-7       codetools_0.2-15    splines_3.4.1      
+    ##  [19] R.methodsS3_1.7.1   robustbase_0.92-8   knitr_1.19         
+    ##  [22] Formula_1.2-2       jsonlite_1.5        ica_1.0-1          
+    ##  [25] cluster_2.0.6       kernlab_0.9-25      png_0.1-7          
+    ##  [28] R.oo_1.21.0         ggforce_0.1.3       compiler_3.4.1     
+    ##  [31] httr_1.3.1          backports_1.1.2     assertthat_0.2.0   
+    ##  [34] lazyeval_0.2.1      tweenr_1.0.0        lars_1.2           
+    ##  [37] acepack_1.4.1       htmltools_0.3.6     tools_3.4.1        
+    ##  [40] igraph_1.1.2        gtable_0.2.0        glue_1.3.0         
+    ##  [43] RANN_2.5.1          reshape2_1.4.3      dplyr_0.7.8        
+    ##  [46] Rcpp_1.0.0          trimcluster_0.1-2   gdata_2.18.0       
+    ##  [49] ape_5.0             nlme_3.1-131        iterators_1.0.10   
+    ##  [52] fpc_2.1-11          gbRd_0.4-11         lmtest_0.9-35      
+    ##  [55] stringr_1.3.1       irlba_2.3.2         gtools_3.5.0       
+    ##  [58] DEoptimR_1.0-8      MASS_7.3-48         zoo_1.8-1          
+    ##  [61] scales_0.5.0        doSNOW_1.0.16       parallel_3.4.1     
+    ##  [64] RColorBrewer_1.1-2  yaml_2.1.16         reticulate_1.10    
+    ##  [67] pbapply_1.3-4       rpart_4.1-12        segmented_0.5-3.0  
+    ##  [70] latticeExtra_0.6-28 stringi_1.2.4       foreach_1.4.4      
+    ##  [73] checkmate_1.8.5     caTools_1.17.1      bibtex_0.4.2       
+    ##  [76] Rdpack_0.9-0        SDMTools_1.1-221    rlang_0.3.0.1      
+    ##  [79] pkgconfig_2.0.1     dtw_1.18-1          prabclus_2.2-6     
+    ##  [82] bitops_1.0-6        evaluate_0.10.1     lattice_0.20-35    
+    ##  [85] ROCR_1.0-7          purrr_0.2.4         bindr_0.1.1        
+    ##  [88] htmlwidgets_1.0     labeling_0.3        bit_1.1-12         
+    ##  [91] tidyselect_0.2.3    plyr_1.8.4          magrittr_1.5       
+    ##  [94] R6_2.2.2            snow_0.4-2          gplots_3.0.1       
+    ##  [97] Hmisc_4.1-1         pillar_1.1.0        foreign_0.8-69     
+    ## [100] withr_2.1.1         units_0.6-1         fitdistrplus_1.0-9 
+    ## [103] mixtools_1.1.0      survival_2.41-3     nnet_7.3-12        
+    ## [106] tibble_1.4.2        tsne_0.1-3          hdf5r_1.0.0        
+    ## [109] KernSmooth_2.23-15  rmarkdown_1.8       viridis_0.5.0      
+    ## [112] grid_3.4.1          data.table_1.10.4-3 metap_1.0          
+    ## [115] digest_0.6.15       diptest_0.75-7      tidyr_0.8.0        
+    ## [118] R.utils_2.6.0       stats4_3.4.1        munsell_0.4.3      
+    ## [121] viridisLite_0.3.0
