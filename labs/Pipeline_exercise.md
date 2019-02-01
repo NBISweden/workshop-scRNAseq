@@ -168,7 +168,7 @@ First, go into one of your own folders and create one pipeline folder. Move into
        # copy the Snakemake file
        cp /proj/uppstore2017171/courses/scrnaseq_course/pipeline_data/files/Snakefile .
 
-**OBS!** Modify the working directory path in your Snakefile to the directory where you have copied all the data.  
+**OBS!** Modify the working directory path in your Snakefile to the directory where you have copied all the data.  Also, have a look in the configuration file, to check what settings you are using and change the email adress.
 
 #### 6. Run the pipeline
 
