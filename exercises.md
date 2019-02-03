@@ -51,7 +51,7 @@ Construction of graphs from cell-cell similiarities using igraph.
 
 Tutorial with the scater package for QC of scRNA-seq data
 
-*	[Tutorial for scater](labs/scater_ilc)
+*	[Tutorial for scater](labs/scater_R35)
 
 #### Estimating Batch-Effects
 
@@ -70,7 +70,7 @@ A tutorial for comparison scRNAseq and bulk RNAseq normalization strategies.
 
 Tutorial with the SC3 consensus clustering package
 
-*	[Tutorial for SC3](labs/sc3_ilc)
+*	[Tutorial for SC3](labs/sc3_R35)
 
 #### Pagoda package
 
