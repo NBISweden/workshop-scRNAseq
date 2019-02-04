@@ -15,7 +15,7 @@ Lecture slides will be provided as links as they get completed.
 **10.30-11.20** [Introduction to read alignment pipelines and gene expression estimates](slides2019/read_alignments_2019_J_Reimegard.pdf) (Johan Reimegård)   
 **11.20-12.10** [scRNAseq quality control](slides2019/scRNAseq_QC_Asa_Bjorklund_2019.pdf) (Åsa Björklund)   
 **12.10-13.15** Lunch	  
-**13.15-14.00** [Dimensionality reduction](slides2019/..) (Paulo Czarnewski Barenco)   
+**13.15-14.00** [Dimensionality reduction](slides2019/Dimensionality_reduction_P_Czarnewski_2019.pdf) (Paulo Czarnewski Barenco)   
 **14.00-14.15** [Wrap up of todays lectures](https://goo.gl/forms/fr3owaquQgo72E2K3) (Åsa Björklund)   
 **14.15-14.30** [Intro to exercises](slides2019/exercises_intro_Asa_Bjorklund_2019.pdf) (Åsa Björklund)   
 **14.30-17.00** [Practical Exercises](exercises)(Johan, Anna, Åsa, Paulo)   
