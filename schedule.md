@@ -29,7 +29,7 @@ Lecture slides will be provided as links as they get completed.
 **12.15-13.15** Lunch    
 **13.15-17.00** [Practical exercises](exercises) (Nikolay, Olga, Åsa)   
 
-**Wednesday 23rd of May**  
+**Wednesday 6th of February**  
 **09.00-09.45** [Trajectory inference and other analyses](slides/) (Åsa Björklund)   
 **10.15-11.00** [Subgroups of midbrain dopamine neurons](slides/) (Åsa Björklund)   
 **11.00-12.00** [Spatial transcriptomics and spatial mapping of single cells](slides/) (Stefania Giaccomello)   
