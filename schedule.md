@@ -22,9 +22,9 @@ Lecture slides will be provided as links as they get completed.
 **18.00-** Course dinner at [Shanti Touch of Bengal](https://shanti.se/touch-of-bengal)
 
 **Tuesday 5th of Februray**   
-**09.00-09.50** [Data normalization](slides/) (Nikolay Oskolkov)   
-**10.20-11.10** [Differential gene expression](slides/) (Olga Dethlefsen)   
-**11.10-12.00** [Clustering techniques and scRNAseq toolkits](slides/) (Åsa Björklund)   
+**09.00-09.50** [Data normalization](slides/scRNAseq_course_norm_2019.pdf) (Nikolay Oskolkov)   
+**10.20-11.10** [Differential gene expression](slides/scRNA-seq-DE.pdf) (Olga Dethlefsen)   
+**11.10-12.00** [Clustering techniques and scRNAseq toolkits](slides/scRNAseq_toolkits_Asa_Bjorklund_2019.pdf) (Åsa Björklund)   
 **12.00-12.15** [Wrap up of todays lectures](https://goo.gl/forms/vDBBZrSyExz3Lh4K2) (Åsa Björklund)   
 **12.15-13.15** Lunch    
 **13.15-17.00** [Practical exercises](exercises) (Nikolay, Olga, Åsa)   
