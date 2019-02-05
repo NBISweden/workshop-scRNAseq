@@ -63,7 +63,7 @@ A tutorial for estimating genome-wide and individual genes batch-effects.
 
 A tutorial for comparison scRNAseq and bulk RNAseq normalization strategies.
 
-*       [Tutorial for Normalization](labs/norm_analysis)
+*       [Tutorial for Normalization](labs/norm_analysis_v2)
 
 
 #### SC3 package
