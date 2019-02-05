@@ -360,7 +360,7 @@ PrintFindClustersParams(object = dataB)
     ## Warning in as.POSIXlt.POSIXct(x, tz): unknown timezone 'zone/tz/2018i.1.0/
     ## zoneinfo/Europe/Stockholm'
 
-    ## Parameters used in latest FindClusters calculation run on: 2019-02-01 09:53:50
+    ## Parameters used in latest FindClusters calculation run on: 2019-02-05 13:44:05
     ## =============================================================================
     ## Resolution: 0.6
     ## -----------------------------------------------------------------------------
@@ -499,7 +499,10 @@ suppressMessages(require(clustree))
 res <- c(0.1,0.2,0.3,0.4,0.5,0.7,0.8,0.9,1)
 
 dataB <- FindClusters(dataB, resolution = res, print.output = 0)
+clustree(dataB)
 ```
+
+![](seurat_analysis_files/figure-markdown_github/clustree-1.png)
 
 In this case it seems that the clustering is quite consistent regardless of the resolution settings. Only when going from resolution 0.4 to 0.5 there is a split of cluster 0.
 
@@ -548,24 +551,24 @@ sessionInfo()
     ##  [52] fpc_2.1-11          gbRd_0.4-11         lmtest_0.9-35      
     ##  [55] stringr_1.3.1       irlba_2.3.2         gtools_3.5.0       
     ##  [58] DEoptimR_1.0-8      MASS_7.3-48         zoo_1.8-1          
-    ##  [61] scales_0.5.0        doSNOW_1.0.16       parallel_3.4.1     
-    ##  [64] RColorBrewer_1.1-2  yaml_2.1.16         reticulate_1.10    
-    ##  [67] pbapply_1.3-4       rpart_4.1-12        segmented_0.5-3.0  
-    ##  [70] latticeExtra_0.6-28 stringi_1.2.4       foreach_1.4.4      
-    ##  [73] checkmate_1.8.5     caTools_1.17.1      bibtex_0.4.2       
-    ##  [76] Rdpack_0.9-0        SDMTools_1.1-221    rlang_0.3.0.1      
-    ##  [79] pkgconfig_2.0.1     dtw_1.18-1          prabclus_2.2-6     
-    ##  [82] bitops_1.0-6        evaluate_0.10.1     lattice_0.20-35    
-    ##  [85] ROCR_1.0-7          purrr_0.2.4         bindr_0.1.1        
-    ##  [88] htmlwidgets_1.0     labeling_0.3        bit_1.1-12         
-    ##  [91] tidyselect_0.2.3    plyr_1.8.4          magrittr_1.5       
-    ##  [94] R6_2.2.2            snow_0.4-2          gplots_3.0.1       
-    ##  [97] Hmisc_4.1-1         pillar_1.1.0        foreign_0.8-69     
-    ## [100] withr_2.1.1         units_0.6-1         fitdistrplus_1.0-9 
-    ## [103] mixtools_1.1.0      survival_2.41-3     nnet_7.3-12        
-    ## [106] tibble_1.4.2        tsne_0.1-3          hdf5r_1.0.0        
-    ## [109] KernSmooth_2.23-15  rmarkdown_1.8       viridis_0.5.0      
-    ## [112] grid_3.4.1          data.table_1.10.4-3 metap_1.0          
-    ## [115] digest_0.6.15       diptest_0.75-7      tidyr_0.8.0        
-    ## [118] R.utils_2.6.0       stats4_3.4.1        munsell_0.4.3      
-    ## [121] viridisLite_0.3.0
+    ##  [61] scales_0.5.0        tidygraph_1.1.1     doSNOW_1.0.16      
+    ##  [64] parallel_3.4.1      RColorBrewer_1.1-2  yaml_2.1.16        
+    ##  [67] reticulate_1.10     pbapply_1.3-4       rpart_4.1-12       
+    ##  [70] segmented_0.5-3.0   latticeExtra_0.6-28 stringi_1.2.4      
+    ##  [73] foreach_1.4.4       checkmate_1.8.5     caTools_1.17.1     
+    ##  [76] bibtex_0.4.2        Rdpack_0.9-0        SDMTools_1.1-221   
+    ##  [79] rlang_0.3.0.1       pkgconfig_2.0.1     dtw_1.18-1         
+    ##  [82] prabclus_2.2-6      bitops_1.0-6        evaluate_0.10.1    
+    ##  [85] lattice_0.20-35     ROCR_1.0-7          purrr_0.2.4        
+    ##  [88] bindr_0.1.1         htmlwidgets_1.0     labeling_0.3       
+    ##  [91] bit_1.1-12          tidyselect_0.2.3    plyr_1.8.4         
+    ##  [94] magrittr_1.5        R6_2.2.2            snow_0.4-2         
+    ##  [97] gplots_3.0.1        Hmisc_4.1-1         pillar_1.1.0       
+    ## [100] foreign_0.8-69      withr_2.1.1         units_0.6-1        
+    ## [103] fitdistrplus_1.0-9  mixtools_1.1.0      survival_2.41-3    
+    ## [106] nnet_7.3-12         tibble_1.4.2        tsne_0.1-3         
+    ## [109] hdf5r_1.0.0         KernSmooth_2.23-15  rmarkdown_1.8      
+    ## [112] viridis_0.5.0       grid_3.4.1          data.table_1.10.4-3
+    ## [115] metap_1.0           digest_0.6.15       diptest_0.75-7     
+    ## [118] tidyr_0.8.0         R.utils_2.6.0       stats4_3.4.1       
+    ## [121] munsell_0.4.3       viridisLite_0.3.0
