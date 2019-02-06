@@ -11,7 +11,7 @@ Lecture slides will be provided as links as they get completed.
 
 **Monday 4th of Februray**  
 **09.00-09.15** [Course introduction](slides2019/course_intro_Asa_Bjorklund_2019.pdf) (Åsa Björklund)   
-**09.15-10.00** [scRNAseq methodologies and ESCG platform](slides2019/ESCG_scRNA-seq-analysis_180521_slides__HG.pdf) (Henrik Gezelius)   
+**09.15-10.00** [scRNAseq methodologies and ESCG platform](slides2019/slides2019/Eukaryotic_Single_Cell_Transcriptomics_HG_2019.pdf) (Henrik Gezelius)  
 **10.30-11.20** [Introduction to read alignment pipelines and gene expression estimates](slides2019/read_alignments_2019_J_Reimegard.pdf) (Johan Reimegård)   
 **11.20-12.10** [scRNAseq quality control](slides2019/scRNAseq_QC_Asa_Bjorklund_2019.pdf) (Åsa Björklund)   
 **12.10-13.15** Lunch	  
