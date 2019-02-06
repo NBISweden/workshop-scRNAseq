@@ -32,7 +32,7 @@ Lecture slides will be provided as links as they get completed.
 **Wednesday 6th of February**  
 **09.00-09.45** [Trajectory inference and other analyses](slides2019/scRNAseq_trajectory_extra_2019_Asa_Bjorklund.pdf) (Åsa Björklund)   
 **10.15-11.00** [Subgroups of midbrain dopamine neurons](slides2019/DA_presentation_2019.pdf) (Åsa Björklund)   
-**11.00-12.00** [Spatial transcriptomics and spatial mapping of single cells](slides2019/) (Stefania Giaccomello)   
+**11.00-12.00** [Spatial transcriptomics and spatial mapping of single cells](slides2019/spatial_mapping_v2_SG_190206.pdf) (Stefania Giaccomello)   
 **12.00-12.15** [Wrap up of todays lectures](https://goo.gl/forms/LabSH8u7S2IQVZKj1) (Åsa Björklund)    
 **12.15-13.15** Lunch	  
 **13.15-16.00** [Practical exercises](exercises) (Åsa, Estelle, Jakub)      	      
