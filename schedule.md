@@ -36,7 +36,7 @@ Lecture slides will be provided as links as they get completed.
 **12.00-12.15** [Wrap up of todays lectures](https://goo.gl/forms/LabSH8u7S2IQVZKj1) (Åsa Björklund)    
 **12.15-13.15** Lunch	  
 **13.15-16.00** [Practical exercises](exercises) (Åsa, Estelle, Jakub)      	      
-**16.00-17.00** [Summary of the course]() (Åsa Björklund)    
+**16.00-17.00** [Summary of the course](slides2019/course_summary_Asa_Bjorklund_2019.pdf) (Åsa Björklund)    
 
 Each day we will have cofee around 10.00 and at 15.00 during the exercises. Lunches will be at Svarta Räfven 12.15. 
 
