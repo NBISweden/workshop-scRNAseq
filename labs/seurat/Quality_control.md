@@ -210,11 +210,8 @@ as both Scater and Scanpy does, so here is some code for a custom plot.
 ``` r
 total_genes = Matrix::rowSums(C)
 top = order(total_genes, decreasing = T)[1:20]
-
-top = rownames(alldata)[order(total_genes, decreasing = T)[1:20]]
-
 c.top = C[top,]
-# normalize by total counts
+# normalize by total counts to get fraction of umis.
 n = Matrix::colSums(C)
 c.norm = sweep(c.top, 2, n, FUN="/")
 c.norm <- data.frame(c.norm)
@@ -389,7 +386,13 @@ datasets.
 
 ### Save the filtered data
 
+For coming analyses, remove the mitochondiral genes and MALAT1 from the
+matrix and save to a file.
+
 ``` r
+keep = setdiff(rownames(data.filt),c(mt.genes, "MALAT1"))
+data.filt <- data.filt[keep,]
+
 savefile = "../write/seurat/filtered_3pbmc.Rdata"
 save(data.filt, file=savefile)
 ```
