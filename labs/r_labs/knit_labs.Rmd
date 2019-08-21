@@ -1,0 +1,210 @@
+
+
+
+
+
+
+
+
+
+#----------------------------#
+#   GET LIBRARIES AND DATA   #
+#----------------------------#
+#DATA_TITLE:Get data
+
+#DATA_ALL1:In this tutorial, we will be using 3 publicly available dataset downloaded from 10X Genomics repository. They can be downloaded using the following bash commands. Simply create a folder called `data` and then use `curl` to pull the data from the 10X database.
+
+#DATA_ALL2:With data in place, now we can start loading libraries we will use in this tutorial.
+
+#DATA_ALL3:We can first load the data individually by reading directly from HDF5 file format (.h5). Note that among those , the dataset p3.1k actually has both gene expression and CITE-seq data, so we will use only the `Gene Expression` here. 
+
+#DATA_SEURAT:
+#DATA_SCRAN:
+#DATA_SCRANPY:
+#-----------
+
+
+
+
+#-------------------#
+#   CREATE OBJECT   #
+#-------------------#
+#OBJ_TITLE: Create Object 
+#OBJ_ALL1:We can now load the expression matricies into objects and then merge them into a single merged object. Each analysis workflow (Seurat, Scater, Scranpy, etc) has its own way of storing data. We will add dataset labels as cell.ids just in case you have overlapping barcodes between the datasets. After that we add a column `Chemistry` in the metadata for plotting later on.
+
+#OBJ_ALL2: Here it is how the count matrix and the metatada look like for every cell.
+
+#OBJ_SEURAT:
+#OBJ_SCRAN:
+#OBJ_SCRANPY:
+#-----------
+
+
+
+
+
+
+
+#--------#
+#   QC   #
+#--------#
+#QC_TITLE:Calculate QC
+
+#QC_ALL1:Having the data in a suitable format, we can start calculating some quality metrics. We can for example calculate the percentage of mitocondrial and ribossomal genes per cell and add to the metadata. This will be helpfull to visualize them across different metadata parameteres (i.e. datasetID and chemistry version). There are several ways of doing this, and here manually calculate the proportion of mitochondrial reads and add to the metadata table. 
+
+#QC_ALL2:In the same manner we will calculate the proportion gene expression that comes from ribosomal proteins. 
+
+
+#QC_TITLE2:Plot QC
+
+#QC_ALL3:Now we can plot some of the QC-features as violin plots.
+
+#QC_ALL4:As you can see, the v2 chemistry gives lower gene detection, but higher detection of ribosomal proteins. As the ribosomal proteins are highly expressed they will make up a larger proportion of the transcriptional landscape when fewer of the lowly expressed genes are detected. And we can plot the different QC-measures as scatter plots.
+#-----------
+
+
+
+
+
+#---------------#
+#   FILTERING   #
+#---------------#
+#FILTERING_TITLE:Filtering
+
+#FILTERING_TITLE2:Mitocondrial filtering
+
+#FILTERING_ALL1:We have quite a lot of cells with high proportion of mitochondrial reads. It could be wise to remove those cells, if we have enough cells left after filtering. Another option would be to either remove all mitochondrial reads from the dataset and hope that the remaining genes still have enough biological signal. A third option would be to just regress out the percent.mito variable during scaling.\nIn this case we have as much as 99.7% mitochondrial reads in some of the cells, so it is quite unlikely that there is much celltype signature left in those.\nLooking at the plots, make resonable decisions on where to draw the cutoff. In this case, the bulk of the cells are below 25% mitochondrial reads and that will be used as a cutoff.
+
+
+#FILTERING_ALL2:As you can see, there is still quite a lot of variation in percent mito, so it will have to be dealt with in the data analysis step.
+
+#FILTERING_TITLE3:Gene detection filtering
+
+#FILTERING_ALL3:Extremely high number of detected genes could indicate doublets. However, depending on the celltype composition in your sample, you may have cells with higher number of genes (and also higher counts) from one celltype. In these datasets, there is also a clear difference between the v2 vs v3 10x chemistry with regards to gene detection, so it may not be fair to apply the same cutoffs to all of them. Also, in the protein assay data there is a lot of cells with few detected genes giving a bimodal distribution. This type of distribution is not seen in the other 2 datasets. Considering that they are all pbmc datasets it makes sense to regard this distribution as low quality libraries. Filter the cells with high gene detection (putative doublets) with cutoffs 4100 for v3 chemistry and 2000 for v2.
+
+#FILTERING_ALL4:Filter the cells with low gene detection (low quality libraries) with less than 1000 genes for v2 and < 500 for v2.
+
+#FILTERING_TITLE4:Plot fitered QC
+
+#FILTERING_ALL5:Lets plot the same qc-stats another time.
+
+#-----------
+
+
+
+
+
+#----------------------#
+#   DATA INTEGRATION   #
+#----------------------#
+#CELLCYCLE_TITLE:Calculate cell-cycle scores
+
+#CELLCYCLE_ALL1:Calculating cell cycle scores based on a list of know S-phase and G2/M-phase genes.
+
+#CELLCYCLE_ALL2:In this case it looks like we only have a few cycling cells in the datasets.
+#-----------
+
+
+
+
+
+#----------------------#
+#   DATA INTEGRATION   #
+#----------------------#
+#INTEG_ALL:
+
+#-----------
+
+
+
+
+
+
+#---------#
+#   PCA   #
+#---------#
+#PCA_TITLE:PCA
+
+#PCA_ALL:First text about PCA
+#PCA_ALL:Second text about PCA
+
+#PCA_SEURAT:To run PCA you can use the function `RunPCA()`.
+#PCA_SCRAN:To run PCA you can use the function `runPCA()`.
+#PCA_SCRANPY:To run PCA, you can use the function `pca()`.
+#-----------
+
+
+
+
+
+
+#----------#
+#   UMAP   #
+#----------#
+#UMAP_ALL:
+#-----------
+
+
+
+
+
+
+
+#----------------#
+#   KNN-GRAPHS   #
+#----------------#
+#KNN_ALL:
+
+#-----------
+
+
+
+
+
+
+#----------------#
+#   CLUSTERING   #
+#----------------#
+#CLUST_ALL:
+
+#-----------
+
+
+
+
+
+#-----------------#
+#   DGE-MARKERS   #
+#-----------------#
+#DGEM_ALL:
+
+#-----------
+
+
+
+
+
+
+#--------------------#
+#   DGE-CONDITIONS   #
+#--------------------#
+#DGEC_ALL:
+
+#-----------
+
+
+
+
+
+
+#define path to this script (wherever it is)
+initial.options <- commandArgs(trailingOnly = FALSE)
+script_path <- dirname(sub("--file=","",initial.options[grep("--file=",initial.options)]))
+
+#define path to this script (wherever it is)
+setwd(script_path)
+rmarkdown::render("./seurat/lab_Seurat.Rmd")
+rmarkdown::render(".scran/lab_Scran.Rmd")
+#rmarkdown::render("Lab_Handcoded.Rmd")
+
+

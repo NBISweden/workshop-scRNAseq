@@ -1,0 +1,213 @@
+---
+title: "Seurat"
+author: Åsa Björklund  &  Paulo Czarnewski
+date: March 22, 2005
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    highlight: tango
+---
+
+```{r setup, include=FALSE}
+#define path to this script (wherever it is)
+initial.options <- commandArgs(trailingOnly = FALSE)
+script_path <- dirname(sub("--file=","",initial.options[grep("--file=",initial.options)]))
+script_path <- "/Users/paulo.barenco/Box/repos/workshop-scRNAseq/labs/r_labs/seurat"
+setwd(script_path)
+
+text <- readLines("../Knit_labs.Rmd")
+l <- function(x, text, lab="SEURAT"){  p = paste0("#",x,"_",lab,":")
+                                       return( sub(p,"", text[grep( p ,text)] ))}
+```
+***
+# `r l("DATA",text,"TITLE")`
+
+`r l("DATA",text,"ALL1")`
+
+
+```{bash, results='hide'}
+mkdir data; cd data
+curl -O http://cf.10xgenomics.com/samples/cell-exp/3.0.0/pbmc_1k_v2/pbmc_1k_v2_filtered_feature_bc_matrix.h5
+curl -O http://cf.10xgenomics.com/samples/cell-exp/3.0.0/pbmc_1k_v3/pbmc_1k_v3_filtered_feature_bc_matrix.h5
+curl -O http://cf.10xgenomics.com/samples/cell-exp/3.0.0/pbmc_1k_protein_v3/pbmc_1k_protein_v3_filtered_feature_bc_matrix.h5
+cd ..
+```
+
+`r l("DATA",text,"ALL2")`
+
+```{r, message='hide',warning='hide'}
+suppressMessages(require(Seurat))
+suppressMessages(require(scater))
+suppressMessages(require(Matrix))
+```
+
+`r l("DATA",text,"ALL3")`
+
+
+```{r,message='hide',warning='hide'}
+v3.1k <- Read10X_h5("data/pbmc_1k_v3_filtered_feature_bc_matrix.h5", use.names = T)
+v2.1k <- Read10X_h5("data/pbmc_1k_v2_filtered_feature_bc_matrix.h5", use.names = T)
+p3.1k <- Read10X_h5("data/pbmc_1k_protein_v3_filtered_feature_bc_matrix.h5", use.names = T)
+p3.1k <- p3.1k$`Gene Expression`
+```
+
+***
+# `r l("OBJ",text,"TITLE")`
+
+`r l("OBJ",text,"ALL1")`
+
+```{r}
+sdata.v2.1k <- CreateSeuratObject(v2.1k, project = "v2.1k")
+sdata.v3.1k <- CreateSeuratObject(v3.1k, project = "v3.1k")
+sdata.p3.1k <- CreateSeuratObject(p3.1k, project = "p3.1k")
+
+# Merge datasets into one single seurat object
+alldata <- merge(sdata.v2.1k, c(sdata.v3.1k,sdata.p3.1k), add.cell.ids=c("v2.1k","v3.1k","p3.1k"))
+
+# Add in a metadata column that indicates v2 vs v3 chemistry
+alldata$Chemistry <- ifelse(alldata$orig.ident == "v2.1k","v2","v3")
+```
+
+`r l("OBJ",text,"ALL2")`
+
+```{r ,  results='hold'}
+as.data.frame(alldata@assays$RNA@counts[1:10,1:2])
+head(alldata@meta.data,10)
+```
+
+
+***
+# `r l("QC",text,"TITLE")[1]`
+
+`r l("QC",text,"ALL1")`
+
+```{r, results='hold'}
+# Way1: Doing it using Seurat function
+alldata <- PercentageFeatureSet(alldata, "^MT-", col.name = "percent_mito")
+
+# Way2: Doing it manually
+total_counts_per_cell <- colSums(  alldata@assays$RNA@counts  )
+
+mito_genes <- rownames(alldata)[grep("^MT-",rownames(alldata))]
+head(mito_genes,10)
+alldata$percent_mito <- colSums(  alldata@assays$RNA@counts[mito_genes,]  ) / total_counts_per_cell
+
+```
+
+`r l("QC",text,"ALL2")`
+
+```{r, results='hold'}
+# Way1: Doing it using Seurat function
+alldata <- PercentageFeatureSet(alldata, "^RP[SL]", col.name = "percent_ribo")
+
+# Way2: Doing it manually
+ribo_genes <- rownames(alldata)[grep("^RP[SL]",rownames(alldata))]
+head(ribo_genes,10)
+alldata$percent_ribo <- colSums(  alldata@assays$RNA@counts[ribo_genes,]  ) / total_counts_per_cell
+```
+
+***
+# `r l("QC",text,"TITLE2")`
+
+`r l("QC",text,"ALL3")`
+
+```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=16}
+feats <- c("nFeature_RNA","nCount_RNA","percent_mito","percent_ribo")
+cowplot::plot_grid(ncol = 1,
+VlnPlot(alldata, group.by= "orig.ident", features = feats, pt.size = 0.1,ncol = 4) + NoLegend(),
+VlnPlot(alldata, group.by= "Chemistry", features = feats, pt.size = 0.1,ncol = 4) + NoLegend()
+)
+```
+
+
+`r l("QC",text,"ALL4")`
+
+```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=14,fig.width=16}
+cowplot::plot_grid(
+  FeatureScatter(alldata, "nCount_RNA"  , "nFeature_RNA", group.by = "orig.ident"),
+  FeatureScatter(alldata, "percent_mito", "nFeature_RNA", group.by = "orig.ident"),
+  FeatureScatter(alldata, "percent_ribo", "nFeature_RNA", group.by = "orig.ident"),
+  FeatureScatter(alldata, "percent_ribo", "percent_mito", group.by = "orig.ident")
+)
+```
+
+***
+# `r l("FILTERING",text,"TITLE")`
+
+## `r l("FILTERING",text,"TITLE2")`
+
+`r l("FILTERING",text,"ALL1")`
+
+```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=4}
+selected <- WhichCells(alldata, expression = percent_mito < 25)
+length(selected)
+
+# and subset the object to only keep those cells
+data.filt <- subset(alldata, cells = selected)
+
+# plot violins for new data
+VlnPlot(data.filt, features = "percent_mito")
+```
+
+`r l("FILTERING",text,"ALL2")`
+
+## `r l("FILTERING",text,"TITLE3")`
+
+`r l("FILTERING",text,"ALL3")`
+
+
+```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=16}
+#start with cells with many genes detected.
+high.det.v3 <- WhichCells(data.filt, expression = nFeature_RNA > 4100)
+high.det.v2 <- WhichCells(data.filt, expression = nFeature_RNA > 2000 & orig.ident == "v2.1k")
+
+# remove these cells
+data.filt <- subset(data.filt, cells=setdiff(WhichCells(data.filt),c(high.det.v2,high.det.v3)))
+
+# check number of cells
+ncol(data.filt)
+```
+
+`r l("FILTERING",text,"ALL4")`
+
+## `r l("FILTERING",text,"TITLE4")`
+
+`r l("FILTERING",text,"ALL5")`
+
+
+```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=8,fig.width=16}
+feats <- c("nFeature_RNA","nCount_RNA","percent_mito","percent_ribo")
+cowplot::plot_grid(ncol = 1,
+VlnPlot(data.filt, group.by= "orig.ident", features = feats, pt.size = 0.1,ncol = 4) + NoLegend(),
+VlnPlot(data.filt, group.by= "Chemistry", features = feats, pt.size = 0.1,ncol = 4) + NoLegend()
+)
+```
+
+
+
+# `r l("CELLCYCLE",text,"TITLE")`
+
+`r l("CELLCYCLE",text,"ALL1")`
+
+```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=4,fig.width=8}
+data.filt <- NormalizeData(data.filt)
+
+data.filt <- CellCycleScoring(object = data.filt,
+                              g2m.features = cc.genes$g2m.genes,
+                              s.features = cc.genes$s.genes)
+
+VlnPlot(data.filt, features = c("S.Score","G2M.Score"), group.by= "orig.ident")
+```
+
+
+`r l("CELLCYCLE",text,"ALL2")`
+
+
+
+
+
+
+
+
