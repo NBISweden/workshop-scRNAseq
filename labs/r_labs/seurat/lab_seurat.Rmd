@@ -1,13 +1,17 @@
 ---
 title: "Seurat"
-author: Åsa Björklund  &  Paulo Czarnewski
-date: August 22, 2019
+author: "Åsa Björklund  &  Paulo Czarnewski"
+date: "August 22, 2019"
 output:
   html_document:
-    toc: true
-    toc_depth: 3
-    toc_float: true
+    df_print: paged
+    toc: yes
+    toc_depth: '3'
+  html_notebook:
     highlight: tango
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
 ---
 
 ```{r setup, include=FALSE}
@@ -28,11 +32,10 @@ l <- function(x, text, lab="SEURAT"){  p = paste0("#",x,"_",lab,":")
 
 
 ```{bash, results='hide'}
-mkdir data; cd data
-curl -O http://cf.10xgenomics.com/samples/cell-exp/3.0.0/pbmc_1k_v2/pbmc_1k_v2_filtered_feature_bc_matrix.h5
-curl -O http://cf.10xgenomics.com/samples/cell-exp/3.0.0/pbmc_1k_v3/pbmc_1k_v3_filtered_feature_bc_matrix.h5
-curl -O http://cf.10xgenomics.com/samples/cell-exp/3.0.0/pbmc_1k_protein_v3/pbmc_1k_protein_v3_filtered_feature_bc_matrix.h5
-cd ..
+mkdir data
+curl -o data/pbmc_1k_v2_filtered_feature_bc_matrix.h5 -O http://cf.10xgenomics.com/samples/cell-exp/3.0.0/pbmc_1k_v2/pbmc_1k_v2_filtered_feature_bc_matrix.h5
+curl -o data/pbmc_1k_v3_filtered_feature_bc_matrix.h5 -O http://cf.10xgenomics.com/samples/cell-exp/3.0.0/pbmc_1k_v3/pbmc_1k_v3_filtered_feature_bc_matrix.h5
+curl -o data/pbmc_1k_protein_v3_filtered_feature_bc_matrix.h5 -O http://cf.10xgenomics.com/samples/cell-exp/3.0.0/pbmc_1k_protein_v3/pbmc_1k_protein_v3_filtered_feature_bc_matrix.h5
 ```
 
 `r l("DATA",text,"ALL2")`
@@ -83,6 +86,8 @@ head(alldata@meta.data,10)
 
 `r l("QC",text,"ALL1")`
 
+`r l("QC",text,"ALL1.1")`
+
 ```{r, results='hold'}
 # Way1: Doing it using Seurat function
 alldata <- PercentageFeatureSet(alldata, "^MT-", col.name = "percent_mito")
@@ -93,7 +98,6 @@ total_counts_per_cell <- colSums(  alldata@assays$RNA@counts  )
 mito_genes <- rownames(alldata)[grep("^MT-",rownames(alldata))]
 head(mito_genes,10)
 alldata$percent_mito <- colSums(  alldata@assays$RNA@counts[mito_genes,]  ) / total_counts_per_cell
-
 ```
 
 `r l("QC",text,"ALL2")`
@@ -115,48 +119,37 @@ alldata$percent_ribo <- colSums(  alldata@assays$RNA@counts[ribo_genes,]  ) / to
 
 ```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=16}
 feats <- c("nFeature_RNA","nCount_RNA","percent_mito","percent_ribo")
-cowplot::plot_grid(ncol = 1,
-VlnPlot(alldata, group.by= "orig.ident", features = feats, pt.size = 0.1,ncol = 4) + NoLegend(),
-VlnPlot(alldata, group.by= "Chemistry", features = feats, pt.size = 0.1,ncol = 4) + NoLegend()
-)
+VlnPlot(alldata, group.by= "orig.ident", features = feats, pt.size = 0.1,ncol = 4) + NoLegend()
 ```
 
 
 `r l("QC",text,"ALL4")`
 
-```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=14,fig.width=16}
-cowplot::plot_grid(
-  FeatureScatter(alldata, "nCount_RNA"  , "nFeature_RNA", group.by = "orig.ident"),
-  FeatureScatter(alldata, "percent_mito", "nFeature_RNA", group.by = "orig.ident"),
-  FeatureScatter(alldata, "percent_ribo", "nFeature_RNA", group.by = "orig.ident"),
-  FeatureScatter(alldata, "percent_ribo", "percent_mito", group.by = "orig.ident")
+```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=16}
+cowplot::plot_grid(ncol = 4,
+  FeatureScatter(alldata, "nCount_RNA"  , "nFeature_RNA", group.by = "orig.ident", pt.size = .1),
+  FeatureScatter(alldata, "percent_mito", "nFeature_RNA", group.by = "orig.ident", pt.size = .1),
+  FeatureScatter(alldata, "percent_ribo", "nFeature_RNA", group.by = "orig.ident", pt.size = .1),
+  FeatureScatter(alldata, "percent_ribo", "percent_mito", group.by = "orig.ident", pt.size = .1)
 )
 ```
 
 ***
 # `r l("FILTERING",text,"TITLE")`
 
-## `r l("FILTERING",text,"TITLE2")`
+## `r l("FILTERING",text,"TITLE1")`
 
-`r l("FILTERING",text,"ALL1")`
+`r l("FILTERING",text,"ALL0")`
 
 ```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=4}
-selected <- WhichCells(alldata, expression = percent_mito < 25)
-length(selected)
+selected_c <- WhichCells(alldata, expression = nFeature_RNA > 200)
+selected_f <- rownames(alldata)[ Matrix::rowSums(alldata) > 3]
 
-# and subset the object to only keep those cells
-data.filt <- subset(alldata, cells = selected)
-
-# plot violins for new data
-VlnPlot(data.filt, features = "percent_mito")
+data.filt <- subset(alldata, features=selected_f, cells=selected_c)
+dim(data.filt)
 ```
 
-`r l("FILTERING",text,"ALL2")`
-
-## `r l("FILTERING",text,"TITLE3")`
-
 `r l("FILTERING",text,"ALL3")`
-
 
 ```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=16}
 #start with cells with many genes detected.
@@ -170,19 +163,43 @@ data.filt <- subset(data.filt, cells=setdiff(WhichCells(data.filt),c(high.det.v2
 ncol(data.filt)
 ```
 
-`r l("FILTERING",text,"ALL4")`
+`r l("FILTERING",text,"ALL01")`
+
+```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=12}
+#Compute the relative expression of each gene per cell
+rel_expression <- t( t(data.filt@assays$RNA@counts) / Matrix::colSums(data.filt@assays$RNA@counts)) * 100
+most_expressed <- sort(Matrix::rowSums( rel_expression ),T)[20:1] / ncol(data.filt)
+
+par(mfrow=c(1,2),mar=c(4,6,1,1))
+boxplot( as.matrix(t(rel_expression[names(most_expressed),])),cex=.1, las=1, xlab="% total count per cell",col=scales::hue_pal()(20)[20:1],horizontal=TRUE)
+```
+
+`r l("FILTERING",text,"ALL02")`
+
+## `r l("FILTERING",text,"TITLE2")`
+
+`r l("FILTERING",text,"ALL1")`
+
+```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=16}
+selected_mito <- WhichCells(data.filt, expression = percent_mito < 0.25)
+selected_ribo <- WhichCells(data.filt, expression = percent_ribo > 0.05)
+
+# and subset the object to only keep those cells
+data.filt <- subset(data.filt, cells = selected_mito)
+data.filt <- subset(data.filt, cells = selected_ribo)
+```
+
+`r l("FILTERING",text,"ALL2")`
 
 ## `r l("FILTERING",text,"TITLE4")`
 
 `r l("FILTERING",text,"ALL5")`
 
 
-```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=8,fig.width=16}
+```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=16}
 feats <- c("nFeature_RNA","nCount_RNA","percent_mito","percent_ribo")
 cowplot::plot_grid(ncol = 1,
-VlnPlot(data.filt, group.by= "orig.ident", features = feats, pt.size = 0.1,ncol = 4) + NoLegend(),
-VlnPlot(data.filt, group.by= "Chemistry", features = feats, pt.size = 0.1,ncol = 4) + NoLegend()
-)
+VlnPlot(data.filt, group.by= "orig.ident", features = feats, pt.size = 0.1,ncol = 4) + NoLegend())
 ```
 
 
@@ -197,14 +214,22 @@ data.filt <- NormalizeData(data.filt)
 data.filt <- CellCycleScoring(object = data.filt,
                               g2m.features = cc.genes$g2m.genes,
                               s.features = cc.genes$s.genes)
-
-VlnPlot(data.filt, features = c("S.Score","G2M.Score"), group.by= "orig.ident")
 ```
-
 
 `r l("CELLCYCLE",text,"ALL2")`
 
+```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=16}
+VlnPlot(data.filt, features = c("S.Score","G2M.Score"), group.by= "orig.ident",ncol = 4, pt.size = .1)
+```
 
+
+`r l("CELLCYCLE",text,"ALL3")`
+
+`r l("CELLCYCLE",text,"ALL4")`
+
+```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=16}
+saveRDS(data.filt,"data/qc_filtered_3pbmc.rds")
+```
 
 
 
