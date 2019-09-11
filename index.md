@@ -4,26 +4,54 @@ title: Single cell RNA sequencing analysis course
 ---
 
 # Single cell RNA sequencing analysis course
-Scilifelab Solna, Rooms Air & Fire,  2019-02-04 - 2019-02-06
+Scilifelab Solna, Rooms Air & Fire,  2020-01-27 - 2020-01-29 (and 2020-01-30 optional day)
 
-This course will cover the basic steps in single cell RNAseq (scRNAseq) processing and data analysis. Topics covered will include:
+### Important dates
 
-* An overview of the current scRNAseq techniques
+Application open: September 20, 2019
+
+Application deadline: December 16, 2019
+
+Confirmation to accepted students: December 20, 2019
+
+### Contact information
+
+Do you have any questions regarding the course, please email to ws-scrnaseq@nbis.se
+
+### How to apply
+
+Course fee
+
+A course fee* of 2000 SEK will be invoiced to accepted participants. This includes lunches, coffee and course dinner.
+
+*Please note that NBIS cannot invoice individuals
+
+### Course content
+
+The first 3 days of the course will cover the basic steps in single cell RNAseq (scRNAseq) processing and data analysis. Topics covered will include:
+
+* An overview of the current scRNAseq technologies
 * Basic overview of pipelines for processing raw reads into expression values
 * Quality control of scRNAseq data
 * Dimensionality reduction and clustering techniques
 * Data normalization
 * Differential gene expression for scRNAseq data
-* Examples on how to use these tools in a research project.
+* Trajectory analysis
+* Comparison of different analysis pipelines such as Seurat, Scran and Scanpy
 
+On the fourth day we offer a "Bring your own data" day where you can analyse your data using the tools that you have discovered during the course, with TAs present to help you run the analyses and discuss your results. If you do not have your own data you can still select a public dataset of interest and analyse during that day.
+
+#### Application
+
+Fill in this [application](https://forms.gle/6VFVTFep6iYk7wLr9) by December 16th and please indicate whether you are planning to participate on the optional day of January 30th. 
 
 ##### Schedule
 
-Course schedule can be found here: [Schedule](schedule)
+Course schedule can be found here: [Schedule]()
 
 ##### Exercises
 
-All exercises for the afternoon sessions can be found at [Exercises](exercises). 
+All exercises for the afternoon sessions can be found at [Exercises](). 
 
 For working on Uppmax: to use the allocations we have for the course, please look [here](login.md).
 
@@ -35,16 +63,17 @@ Please read carefully the [Precourse material](precourse) before the course star
 
 [Travel Info](travel)
 
-
 ##### Course leaders
 
 * [Åsa Björklund](http://nbis.se/about/staff/asa-bjorklund/)
+* [Paulo Czarnewski](https://nbis.se/about/staff/paulo-czarnewski/)
 
 ##### Useful links
 
 Here are some useful links to tools, courses etc. 
 
-* Single cell RNA-seq course at from Hemberg lab [here](https://hemberg-lab.github.io/scRNA.seq.course/)
+* Single cell RNA-seq course at from Hemberg lab [here](https://scrnaseq-course.cog.sanger.ac.uk/website/ index.html
+* Single cell RNA-seq course at Broad [here](https://broadinstitute.github.io/2019_scWorkshop/)
 * Repository listing many scRNA-seq tools [here](https://github.com/seandavi/awesome-single-cell)
 * SingleCellExperiment objects for many datasets [here](https://hemberg-lab.github.io/scRNA.seq.datasets/)
 * Conquer datasets - many different datasets based on a salmon pipeline [here](http://imlspenticton.uzh.ch:3838/conquer/)
@@ -55,6 +84,8 @@ Here are some useful links to tools, courses etc.
 
 
 ##### Past courses
+
+[Stockholm February 4-6, 2019](https://nbisweden.github.io/workshop-archive/workshop-scRNAseq/2018-05-21/)
 
 [Stockholm May 21-23, 2018](https://nbisweden.github.io/workshop-archive/workshop-scRNAseq/2018-05-21/)
 
