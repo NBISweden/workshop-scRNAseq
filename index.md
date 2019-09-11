@@ -41,34 +41,48 @@ The first 3 days of the course will cover the basic steps in single cell RNAseq 
 
 On the fourth day we offer a "Bring your own data" day where you can analyse your data using the tools that you have discovered during the course, with TAs present to help you run the analyses and discuss your results. If you do not have your own data you can still select a public dataset of interest and analyse during that day.
 
-#### Application
+### Application
 
 Fill in this [application](https://forms.gle/6VFVTFep6iYk7wLr9) by December 16th and please indicate whether you are planning to participate on the optional day of January 30th. 
 
+### Entry requirements
+
+Required for being able to follow the course and complete the computer exercises
+
+* Basic knowledge in R/Linux.
+* Be able to bring your own laptop with R installed for the practical computational exercises. Instructions on installation will be sent by email to accepted participants.
+* Some programming/scripting experience is required (preferably in R).
+
+Desirable
+
+* Previous experience with RNA-seq analysis and/or participation in NGS/RNA-seq course is an advantage.
+
+Due to limited space the course can accommodate maximum of 25 participants. If we receive more applications, participants will be selected based on several criteria. Selection criteria include correct entry requirements, motivation to attend the course as well as gender and geographical balance.
+
 #### Schedule
 
-Course schedule can be found here: [Schedule]()
+Course schedule can be found here: [Schedule]() (TBA)
 
 #### Exercises
 
-All exercises for the afternoon sessions can be found at [Exercises](). 
+All exercises for the afternoon sessions can be found at [Exercises](). (TBA)
 
 For working on Uppmax: to use the allocations we have for the course, please look [here](login.md).
 
-#### Precourse
+### Precourse material
 
 Please read carefully the [Precourse material](precourse) before the course start. 
 
-#### Address and travel suggestions
+### Address and travel suggestions
 
 [Travel Info](travel)
 
-#### Course leaders
+### Course leaders
 
 * [Åsa Björklund](http://nbis.se/about/staff/asa-bjorklund/)
 * [Paulo Czarnewski](https://nbis.se/about/staff/paulo-czarnewski/)
 
-#### Useful links
+### Useful links
 
 Here are some useful links to tools, courses etc. 
 
@@ -83,7 +97,7 @@ Here are some useful links to tools, courses etc.
 * Bitbucket repository for the NBIS scRNAseq pipeline [here](https://bitbucket.org/scilifelab-lts/lts-workflows-sm-scrnaseq)
 
 
-#### Past courses
+### Past courses
 
 [Stockholm February 4-6, 2019](https://nbisweden.github.io/workshop-archive/workshop-scRNAseq/2018-05-21/)
 
