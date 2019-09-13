@@ -99,7 +99,7 @@ Here are some useful links to tools, courses etc.
 
 ### Past courses
 
-[Stockholm February 4-6, 2019](https://nbisweden.github.io/workshop-archive/workshop-scRNAseq/2018-05-21/)
+[Stockholm February 4-6, 2019](https://github.com/NBISweden/workshop-scRNAseq/tree/feb2019)
 
 [Stockholm May 21-23, 2018](https://nbisweden.github.io/workshop-archive/workshop-scRNAseq/2018-05-21/)
 
