@@ -1,0 +1,183 @@
+---
+title: "Dimensionality reduction"
+author: "Åsa Björklund  &  Paulo Czarnewski"
+date: "Sept 13, 2019"
+output:
+  html_document:
+    self_contained: true
+    highlight: tango
+    df_print: paged
+    toc: yes
+    toc_float:
+      collapsed: false
+      smooth_scroll: true
+    toc_depth: 3
+    keep_md: yes
+  html_notebook:
+    self_contained: true
+    highlight: tango
+    df_print: paged
+    toc: yes
+    toc_float:
+      collapsed: false
+      smooth_scroll: true
+    toc_depth: 3
+    keep_md: yes
+---
+
+# Load data
+
+First, let's load all necessary libraries and the QC-filtered dataset from the previous step.
+
+```{r, message='hide',warning='hide',results='hold'}
+suppressMessages(require(Seurat))
+suppressMessages(require(cowplot))
+suppressMessages(require(ggplot2))
+
+alldata <- readRDS("data/3pbmc_qc.rds")
+```
+
+## Feature selection
+
+Next, we first need to define which features/genes are important in our dataset to distinguish cell types. For this purpose, we need to find genes that are highly variable across cells, which in turn will also provide a good separation of the cell clusters.
+
+```{r, message='hide',warning='hide',results='hold'}
+alldata <- FindVariableFeatures(alldata, selection.method = "vst", nfeatures = 2000,verbose = FALSE,assay = "RNA")
+top10 <- head(VariableFeatures(alldata), 10)
+
+LabelPoints(plot = VariableFeaturePlot(alldata), points = top10, repel = TRUE)
+```
+
+## Z-score transformation
+
+Now that the data is prepared, we now proceed with PCA. Since each gene has a different expression level, it means that genes with higher expression values will naturally have higher variation that will be captured by PCA. This means that we need to somehow give each gene a similar weight when performing PCA (see below). The common practice is to center and scale each gene before performing PCA. This exact scaling is called Z-score normalization it is very useful for PCA, clustering and plotting heatmaps. Additionally, we can use this function to remove any unwanted sources of variation from the dataset, such as `cell cycle`, `sequencing depth`, `percent mitocondria`, etc. 
+
+```{r, message='hide',warning='hide',results='hold'}
+alldata <- ScaleData(alldata, vars.to.regress = "percent_mito", assay = "RNA")
+```
+
+
+***
+# PCA
+
+Performing PCA has many useful applications and interpretations, which much depends on the data used. In the case of life sciences, we want to segregate samples based on gene expression patterns in the data.
+
+```{r, message='hide',warning='hide',results='hold'}
+alldata <- RunPCA(alldata, npcs = 50, reduction.name = "PCA_on_RNA", assay = "RNA")
+```
+
+We can plot the first 6 dimensions like so.
+
+```{r, message='hide',warning='hide',results='hold',fig.asp=.28,fig.width=16}
+plot_grid(ncol = 3,
+  DimPlot(alldata, reduction = "PCA_on_RNA", group.by = "orig.ident",dims = 1:2),
+  DimPlot(alldata, reduction = "PCA_on_RNA", group.by = "orig.ident",dims = 3:4),
+  DimPlot(alldata, reduction = "PCA_on_RNA", group.by = "orig.ident",dims = 5:6) )
+```
+
+To identify which genes contribute the most to each PC, one can retreive the loading matrix information:
+
+```{r,message='hide',warning='hide', results='hold',results='hold',fig.asp=.4,fig.width=12}
+VizDimLoadings(alldata, dims = 1:4, reduction = "PCA_on_RNA",ncol = 4,balanced = T)
+```
+
+The same list of genes can also be visualized as a heatmap.
+
+```{r,message='hide',warning='hide', results='hold',results='hold',fig.asp=.3,fig.width=12}
+DimHeatmap(alldata, dims = 1:3, cells = 100, balanced = TRUE,reduction = "PCA_on_RNA", ncol = 5)
+```
+
+We can also plot the amount of variance explained by each PC.
+
+```{r,message='hide',warning='hide', results='hold',results='hold',fig.asp=.7,fig.width=4}
+ElbowPlot(alldata, reduction = "PCA_on_RNA",ndims = 50)
+```
+
+Based on this plot, we can see that the top 7 PCs retain a lot of information, while other PCs contain pregressivelly less. However, it is still advisable to use more PCs since they might contain informaktion about rare cell types (such as platelets and DCs in this dataset)
+
+***
+# tSNE
+
+We can now run [BH-tSNE](https://arxiv.org/abs/1301.3342).
+
+```{r,message='hide',warning='hide', results='hold',results='hold',fig.asp=1,fig.width=5}
+alldata <- RunTSNE(alldata, reduction = "PCA_on_RNA", dims = 1:30, reduction.name = "TSNE_on_RNA",
+                   perplexity=30,
+                   max_iter=1000,
+                   theta=0.5,
+                   eta=200,
+                   num_threads=0 )
+#see ?Rtsne and ?RunTSNE for more info
+```
+
+We can now plot the tSNE colored per dataset. We can start now clearly seeing the effect of batches present in the dataset.
+
+```{r,message='hide',warning='hide', results='hold',results='hold',fig.asp=.28,fig.width=16}
+plot_grid(ncol = 3,DimPlot(alldata, reduction = "TSNE_on_RNA", group.by = "orig.ident"))
+```
+
+
+***
+# UMAP
+
+We can now run [UMAP](https://arxiv.org/abs/1802.03426).
+
+```{r,message='hide',warning='hide', results='hold',results='hold',fig.asp=1.2,fig.width=10}
+alldata <- RunUMAP(alldata, reduction = "PCA_on_RNA", dims = 1:30,reduction.name = "UMAP_on_RNA",
+                   n.components=2,
+                   n.neighbors=30,
+                   n.epochs=200,
+                   min.dist=0.3,
+                   learning.rate=1,
+                   spread=1 )
+#see ?RunUMAP for more info
+```
+
+We can now plot the UMAP colored per dataset. Although less distinct as in the tSNE, we still see quite an effect of the different batches in the data.
+
+```{r,message='hide',warning='hide', results='hold',results='hold',fig.asp=.28,fig.width=16}
+plot_grid(ncol = 3,DimPlot(alldata, reduction = "UMAP_on_RNA", group.by = "orig.ident"))
+```
+
+***
+
+
+
+
+```{r,message='hide',warning='hide', results='hold',results='hold',fig.asp=.28,fig.width=16}
+plot_grid(ncol = 3,
+  DimPlot(alldata, reduction = "PCA_on_RNA", group.by = "orig.ident"),
+  DimPlot(alldata, reduction = "TSNE_on_RNA", group.by = "orig.ident"),
+  DimPlot(alldata, reduction = "UMAP_on_RNA", group.by = "orig.ident")
+)
+```
+
+Let's plot some marker genes for different celltypes onto the embedding. Some genes are:
+
+Markers	| Cell Type
+--- | ---
+CD3E	| T cells
+CD3E CD4	| CD4+ T cells
+CD3E CD8A	| CD8+ T cells
+GNLY, NKG7	| NK cells
+MS4A1	| B cells
+CD14, LYZ, CST3, MS4A7	| CD14+ Monocytes
+FCGR3A, LYZ, CST3, MS4A7	| FCGR3A+  Monocytes
+FCER1A, CST3 | DCs
+
+```{r,message='hide',warning='hide', results='hold',results='hold',fig.asp=.65,fig.width=16}
+FeaturePlot(alldata, reduction = "UMAP_on_RNA",dims = 1:2,features = c("CD3E","CD4","CD8A","NKG7","GNLY","MS4A1","CD14","LYZ","MS4A7","FCGR3A","CST3","FCER1A"),ncol = 4,order = T)
+```
+
+
+Here, we can conclude that our dataset contains a batch effect that needs to be corrected before proceeding to clustering and differential gene expression analysis. We can now save the object for use in the next step.
+
+```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=16}
+saveRDS(alldata,"data/3pbmc_qc_dm.rds")
+```
+
+
+
+
+
+
