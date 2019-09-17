@@ -26,7 +26,7 @@ These can be fetched using commands:
       curl -O http://cf.10xgenomics.com/samples/cell-exp/3.0.0/pbmc_1k_v3/pbmc_1k_v3_filtered_feature_bc_matrix.h5
       curl -O http://cf.10xgenomics.com/samples/cell-exp/3.0.0/pbmc_1k_protein_v3/pbmc_1k_protein_v3_filtered_feature_bc_matrix.h5
 
-All code is written so that you stand in the folder where the scripts are when you run the code and fetch data from the data folder with path '../data/' and all output files goes into folder '../write/lab_name/' where 'lab_name' can be either of 'scran', 'scanpy' or 'seurat'.
+All code is written so that you stand in the folder where the scripts are when you run the code and fetch data from the data folder with path `../data/` and all output files goes into folder `../write/lab_name/` where `lab_name` can be either of `scran`, `scanpy` or `seurat`.
 
 So also create the folder 'write' and subfolders for the lab you are planning to run.
 
