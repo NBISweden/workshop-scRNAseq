@@ -29,6 +29,7 @@ These can be fetched using commands:
 All code is written so that you stand in the folder where the scripts are when you run the code and fetch data from the data folder with path '../data/' and all output files goes into folder '../write/lab_name/' where 'lab_name' can be either of 'scran', 'scanpy' or 'seurat'.
 
 So also create the folder 'write' and subfolders for the lab you are planning to run.
+
    	cd ..
 	mkdir write
 	mkdir write/seurat
