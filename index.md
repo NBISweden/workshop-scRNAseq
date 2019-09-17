@@ -8,7 +8,7 @@ Scilifelab Solna, Rooms Air & Fire,  2020-01-27 - 2020-01-29 (and 2020-01-30 opt
 
 ### Important dates
 
-Application open: September 20, 2019
+Application open: September 13, 2019
 
 Application deadline: December 16, 2019
 
@@ -16,7 +16,7 @@ Confirmation to accepted students: December 20, 2019
 
 ### Contact information
 
-Do you have any questions regarding the course, please email to asa.bjorklund@scilifelab.se or paulo.czarnewski@scilifelab.se
+Do you have any questions regarding the course, please use our [Slack channel](https://join.slack.com/t/scrnaseqanaly-t2p4839/shared_invite/enQtNzYyOTExMjk2NjcyLTZkY2YwYWJjMzliZDk1OTY3ZGFiODc1ZWRjZTMwNGYzYjYyZTljNzZiZjkyYjg3OTFjNzg1Yjg1NDVjMWU5YTE) or email to asa.bjorklund@scilifelab.se or paulo.czarnewski@scilifelab.se
 
 ### How to apply
 
