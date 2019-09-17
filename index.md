@@ -16,7 +16,7 @@ Confirmation to accepted students: December 20, 2019
 
 ### Contact information
 
-Do you have any questions regarding the course, please use our [Slack channel](https://join.slack.com/t/scrnaseqanaly-t2p4839/shared_invite/enQtNzYyOTExMjk2NjcyLTZkY2YwYWJjMzliZDk1OTY3ZGFiODc1ZWRjZTMwNGYzYjYyZTljNzZiZjkyYjg3OTFjNzg1Yjg1NDVjMWU5YTE) or email to asa.bjorklund@scilifelab.se or paulo.czarnewski@scilifelab.se
+Do you have any questions regarding the course, please use our [Slack channel](https://join.slack.com/t/scrnaseqanaly-t2p4839/signup) or email to asa.bjorklund@scilifelab.se or paulo.czarnewski@scilifelab.se
 
 ### How to apply
 
