@@ -5,22 +5,36 @@ title: Exercises - scRNAseq course
 
 # Welcome to NBIS scRNA-seq tutorials
 
-This page contains links to different tutorials that are used in the scRNA-seq analysis course. We see this as a "smörgåsbord" of tutorials, we do not expect that all course participants will have time to run through all of the tutorials, so we suggest that you pick-and-mix the analyses/packages that you find most interesting. 
+Here we provide short tutorials on the different steps of scRNAseq analysis using either of the 3 most commonly used scRNAseq analysis pipelines, Seurat, Scran and Scanpy. It is up to you which one you want to try out, if you finish quickly, you may have time to run several of them.
 
-For many of the packages we recommend that you follow the tutorials supplied by the different packages. We have included some examples on how to run these tutorials based on your own dataset and also some suggestions on which parts of the tutorials to focus on. 
+### Installations
 
-We have run the tutorials with SmartSeq2 data from:
+We have conda recipies for all R packages in one file and for the Scanpy tutorial in another. If you have never worked with conda before, please read the [conda instructions](conda_instructions.md).
 
-* Mouse embryonic development from [Deng *et al.*](http://science.sciencemag.org/content/343/6167/193.long) 
-* Human innate lymphoid cells from [Björklund *et al.*](https://www.nature.com/articles/ni.3368)
+OBS! Need to fix some paths in instruction.
+Also info on Docker?
 
-All raw data, and some intermediate files that take long time to compute, are available at uppmax folder: `/proj/uppstore2017171/courses/scrnaseq_course/data/`
 
-You should be able to run these tutorials with your own data. But be aware, some steps of the tutorials will take long to run with large dataset, so it may be a good idea to use several R-sessions in paralell and work on other stuff while you are waiting. 
+### Dataset
+
+We will run all tutorials with a set of 3 PBMC 10x datasets from the 10X Genomics website, with different types of library preps.
+
+## Tutorials
+
+| Tutorial | Seurat | Scran | Scanpy |
+| -------- | ------ | ----- | ------ |
+| QC | [link](labs/r_labs/seurat/lab_seurat.html) | [link](labs/r_labs/scran/lab_scran.html) | [link](labs/scanpy/qc_3pbmc.ipynb) |
+| Dimensionality reduction | [link](labs/r_labs/seurat/lab_seurat.html) | [link](labs/r_labs/scran/lab_scran.html) | [link](labs/scanpy/dim_reduction.ipynb) |
+| Data integration | [link](labs/r_labs/seurat/lab_seurat.html) | [link](labs/r_labs/scran/lab_scran.html) | [link](labs/scanpy/batch_correction_mnn.ipynb) |
+| Clustering | [link](labs/r_labs/seurat/lab_seurat.html) | [link](labs/r_labs/scran/lab_scran.html) | [link](labs/scanpy/qc_3pbmc.ipynb) |
+| Differential expression | [link](labs/r_labs/seurat/lab_seurat.html) | [link](labs/r_labs/scran/lab_scran.html) | [link](labs/scanpy/qc_3pbmc.ipynb) |
+
+
+### FAQ
 
 As you run into problems, we will try to fill in the [FAQ](labs/FAQ) with common quiestons.
 
-If you want to load all the code into R directly, you can access the R-markdown documents at our [github site](https://github.com/NBISweden/workshop-scRNAseq/tree/master/labs)
+## Additional bonus exercises
 
 #### Pipeline for mapping reads, QC and expression estimates
 
@@ -31,7 +45,6 @@ Snakemake pipeline for processing SmartSeq2 data.
 #### Biomart - Convert gene names and fetch annotation
 
 For those not familiar with working with biomaRt, we suggest that you have a look at this example code for how to convert between different formats using biomaRt. 
- 
 *	[Tutorial for biomaRt](labs/biomart) 
 
 #### PCA, tSNE and clustering
@@ -47,11 +60,6 @@ Construction of graphs from cell-cell similiarities using igraph.
 
 *       [Tutorial for KNN graphs](labs/igraph)		  
 
-#### scater package
-
-Tutorial with the scater package for QC of scRNA-seq data
-
-*	[Tutorial for scater](labs/scater_R35)
 
 #### Estimating Batch-Effects
 
@@ -65,7 +73,6 @@ A tutorial for comparison scRNAseq and bulk RNAseq normalization strategies.
 
 *       [Tutorial for Normalization](labs/norm_analysis_v2)
 
-
 #### SC3 package
 
 Tutorial with the SC3 consensus clustering package
@@ -77,12 +84,6 @@ Tutorial with the SC3 consensus clustering package
 Pagoda patway wPCA for clustering of cells. OBS! several steps in this tutorial takes hours to run if you work with your own dataset, a good suggestion is to start with the first steps, knn.error.model, pagoda.varnorm and pagoda.pathway.wPCA and let it run while working on other tutorials. You can also run it with more than one core to speed things up.
  
 *	[Tutorial for Pagoda](labs/pagoda_ilc)
-
-#### Seurat package
-
-Tutorial for Seurat package with normalization, dimensionality reduction and clustering.
-
-*	[Tutorial for Seurat](labs/seurat_analysis)
 
 #### Differential expression
 
