@@ -67,6 +67,7 @@ As you run into problems, we will try to fill in the [FAQ](labs/FAQ) with common
 
 
 | Name | Description | Link |
+| -------- | ------ | ----- |
 | Read-to-count pipeline | Snakemake pipeline for processing SmartSeq2 data, mapping reads, QC and expression estimates. | [Pipeline tutorial](labs/Pipeline_exercise)  |
 | Biomart | For those not familiar with working with biomaRt, we suggest that you have a look at this example code for how to convert between different formats using biomaRt. | [Tutorial for biomaRt](labs/biomart)  |
 | PCA, tSNE and clustering | Basic PCA, tSNE and clustering using base R on mouse embryonic development data. | [[Tutorial for PCA and clustering](labs/PCA_and_clustering)  |
