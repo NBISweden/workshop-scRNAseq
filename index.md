@@ -99,12 +99,10 @@ Please read carefully the [Precourse material](precourse) before the course star
 ##### <img border="0" src="https://www.svgrepo.com/show/38706/group-of-people.svg" width="40" height="40"> Course leaders
 ***
 
-* [Åsa Björklund](http://nbis.se/about/staff/asa-bjorklund/)
-* [Paulo Czarnewski](https://nbis.se/about/staff/paulo-czarnewski/)
+If you have any questions regarding the course, please email to Åsa Björklund or Paulo Czarnewski
 
-###### Contact information
-
-Do you have any questions regarding the course, please email to asa.bjorklund@scilifelab.se or paulo.czarnewski@scilifelab.se
+* [Åsa Björklund](http://nbis.se/about/staff/asa-bjorklund/) (asa.bjorklund@scilifelab.se)
+* [Paulo Czarnewski](https://nbis.se/about/staff/paulo-czarnewski/) (paulo.czarnewski@scilifelab.se)
 
 <br/>
 
