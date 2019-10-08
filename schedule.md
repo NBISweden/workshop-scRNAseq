@@ -23,8 +23,8 @@ Lecture slides will be provided as links as they get completed.
 
 <br/>
 
-| Time | Description (link) | Link | Lecturer |
-| ---- | ------------------ | ---- | -------- |
+| Time  | Description         | Link  | Lecturer  |
+| ----- | ------------------- | ----- | --------- |
 | 09.00-09.15 | **Course introduction** | <a href="slides2019/course_intro_Asa_Bjorklund_2019.pdf"><img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"></a> | Åsa Björklund |
 | 09.15-10.00 | **scRNAseq methodologies and ESCG platform** | <a href="slides2019/Eukaryotic_Single_Cell_Transcriptomics_HG_2019.pdf"><img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"></a> | Henrik Gezelius |
 | 10.00-10.30 | Cofee Break	 |||
