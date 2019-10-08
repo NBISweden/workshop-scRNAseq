@@ -15,26 +15,18 @@ Lecture slides will be provided as links as they get completed.
 
 **Monday 27th of January**  
 
-<br/>
-
-<a href="slides2019/course_intro_Asa_Bjorklund_2019.pdf">
-<img border="0" src="files/business-presentation-svgrepo-com-3.svg" width="20" height="20">
-</a>
-
-<br/>
-
 | Time  | Description         | Link  | Lecturer  |
 | ----- | ------------------- | ----- | --------- |
 | 09.00 | **Course introduction** | <a href="slides2019/course_intro_Asa_Bjorklund_2019.pdf"><img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"></a> | Åsa Björklund |
 | 09.15 | **scRNAseq methodologies and ESCG platform** | <a href="slides2019/Eukaryotic_Single_Cell_Transcriptomics_HG_2019.pdf"><img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"></a> | Henrik Gezelius |
-| 10.00 | Cofee Break	 |||
+| 10.00 | Cofee Break	|
 | 10.30 | **Read alignment and quantification** | <a href="slides2019/read_alignments_2019_J_Reimegard.pdf"><img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"></a> | Johan Reimegård |
 | 11.20 |  **scRNAseq quality control** | <a href="slides2019/scRNAseq_QC_Asa_Bjorklund_2019.pdf"><img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"></a> | Åsa Björklund |
-| 12.10 | Lunch	 |||
+| 12.10 | Lunch |
 | 13.15 | **Dimensionality reduction** | <a href="slides2019/Dimensionality_reduction_P_Czarnewski_2019.pdf"><img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"></a> | Paulo Czarnewski |   
 | 14.00 | **Wrap up of todays lectures** | <a href="https://goo.gl/forms/fr3owaquQgo72E2K3"><img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"></a> | Åsa Björklund  |
 | 14.15 | **Intro to exercises** | <a href="slides2019/exercises_intro_Asa_Bjorklund_2019.pdf"><img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"></a> | Åsa Björklund |
-| 14.30 | Cofee Break	 |||
+| 14.30 | Cofee Break	|
 | 15.00 | **Practical Exercises** | <a href="exercises.md"><img border="0" src="https://www.svgrepo.com/show/6672/exercise.svg" width="20" height="20"></a> | Åsa,Paulo,Johan |
 | 18.00 | **Course dinner at [Shanti Touch of Bengal](https://shanti.se/touch-of-bengal)  || |
 
