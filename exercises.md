@@ -44,11 +44,11 @@ In principle we perform the same steps with all 3 pipelines, but there are some 
 
 | Tutorial | Seurat | Scran | Scanpy |
 | -------- | ------ | ----- | ------ |
-| QC | [link](labs/r_labs/seurat/lab_seurat.html) | [link](labs/r_labs/scran/lab_scran.html) | [link](labs/scanpy/qc_3pbmc.ipynb) |
-| Dimensionality reduction | [link](labs/r_labs/seurat/lab_seurat.html) | [link](labs/r_labs/scran/lab_scran.html) | [link](labs/scanpy/dim_reduction.ipynb) |
-| Data integration | [link](labs/r_labs/seurat/lab_seurat.html) | [link](labs/r_labs/scran/lab_scran.html) | [link](labs/scanpy/batch_correction_mnn.ipynb) |
-| Clustering | [link](labs/r_labs/seurat/lab_seurat.html) | [link](labs/r_labs/scran/lab_scran.html) | [link](labs/scanpy/qc_3pbmc.ipynb) |
-| Differential expression | [link](labs/r_labs/seurat/lab_seurat.html) | [link](labs/r_labs/scran/lab_scran.html) | [link](labs/scanpy/qc_3pbmc.ipynb) |
+| QC | [Seurat_qc](labs/compiled/seurat/seurat_01_qc_compiled.md) | [link](labs/compiled/scater/scater_01_qc_compiled.md) | [link](labs/scanpy/qc_3pbmc.ipynb) |
+| Dimensionality reduction | [Seurat_dr](labs/compiled/seurat/seurat_02_dim_reduction_compiled.md) | [link](labs/compiled/scater/scater_02_dim_reduction_compiled.md) | [link](labs/scanpy/dim_reduction.ipynb) |
+| Data integration | [Seurat_integr](labs/compiled/seurat/seurat_03_integration_compiled.md) | [link](labs/compiled/scater/scater_03_integration_compiled.md) | [link](labs/scanpy/batch_correction_mnn.ipynb) |
+| Clustering | [Seurat_clust](labs/compiled/seurat/lab_seurat.html) | [link](labs/compiled/scater/lab_scran.html) | [link](labs/scanpy/qc_3pbmc.ipynb) |
+| Differential expression | [Seurat_dge](labs/compiled/seurat/lab_seurat.html) | [link](labs/compiled/scater/lab_scran.html) | [link](labs/scanpy/qc_3pbmc.ipynb) |
 
 ### FAQ
 
