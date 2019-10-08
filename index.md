@@ -111,8 +111,6 @@ Do you have any questions regarding the course, please email to asa.bjorklund@sc
 ##### <img border="0" src="https://www.svgrepo.com/show/19262/link.svg" width="40" height="40"> Useful links
 ***
 
-Here are some useful links to tools, courses etc. 
-
 * [Single cell RNA-seq course at from Hemberg lab](https://scrnaseq-course.cog.sanger.ac.uk/website/ index.html
 * [Single cell RNA-seq course at Broad](https://broadinstitute.github.io/2019_scWorkshop/)
 * [Repository listing many scRNA-seq tools](https://github.com/seandavi/awesome-single-cell)
@@ -128,9 +126,7 @@ Here are some useful links to tools, courses etc.
 ##### <img border="0" src="https://www.svgrepo.com/show/83468/navigation-history-interface-symbol-of-a-clock-with-an-arrow.svg" width="40" height="40"> Past courses
 ***
 
-[Stockholm February 4-6, 2019](https://github.com/NBISweden/workshop-scRNAseq/tree/feb2019)
-
-[Stockholm May 21-23, 2018](https://nbisweden.github.io/workshop-archive/workshop-scRNAseq/2018-05-21/)
-
-[Uppsala October 2-4, 2017](https://scilifelab.github.io/courses/scrnaseq/1710/)
+* [Stockholm February 4-6, 2019](https://github.com/NBISweden/workshop-scRNAseq/tree/feb2019)
+* [Stockholm May 21-23, 2018](https://nbisweden.github.io/workshop-archive/workshop-scRNAseq/2018-05-21/)
+* [Uppsala October 2-4, 2017](https://scilifelab.github.io/courses/scrnaseq/1710/)
 
