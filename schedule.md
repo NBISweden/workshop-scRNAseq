@@ -14,6 +14,7 @@ Lecture slides will be provided as links as they get completed.
 <br/>
 
 **Monday 27th of January**  
+
 | Time | Description (link) | Lecturer |
 | ---- | ------------------ | -------- |
 | **09.00-09.15** | [Course introduction](slides2019/course_intro_Asa_Bjorklund_2019.pdf) | Åsa Björklund |
@@ -25,11 +26,12 @@ Lecture slides will be provided as links as they get completed.
 | **14.00-14.15** | [Wrap up of todays lectures](https://goo.gl/forms/fr3owaquQgo72E2K3) | Åsa Björklund |  
 | **14.15-14.30** | [Intro to exercises](slides2019/exercises_intro_Asa_Bjorklund_2019.pdf) | Åsa Björklund |
 | **14.30-17.00** | [Practical Exercises](exercises) | Åsa,Paulo,Johan |
-| **18.00-** | Course dinner at [Shanti Touch of Bengal](https://shanti.se/touch-of-bengal) ||
+| **18.00-** | Course dinner at [Shanti Touch of Bengal](https://shanti.se/touch-of-bengal) | |
 
 <br/>
 
 **Tuesday 28th of January**  
+
 | Time | Description (link) | Lecturer |
 | ---- | ------------------ | -------- |
 | **09.00-09.50** | [Data normalization](slides2019/scRNAseq_course_norm_2019.pdf) | Nikolay Oskolkov |
@@ -42,6 +44,7 @@ Lecture slides will be provided as links as they get completed.
 <br/>
 
 **Wednesday 29th of January**  
+
 | Time | Description (link) | Lecturer |
 | ---- | ------------------ | -------- |
 | **09.00-09.45** | [Trajectory inference and other analyses](slides2019/scRNAseq_trajectory_extra_2019_Asa_Bjorklund.pdf) | Åsa Björklund |   
@@ -55,6 +58,7 @@ Lecture slides will be provided as links as they get completed.
 <br/>
 
 **Wednesday 30th of January**  
+
 | Time | Description (link) | Lecturer |
 | ---- | ------------------ | -------- |
 | **09.00-12.00** | Bring your ouw data | Åsa,Paulo |   
