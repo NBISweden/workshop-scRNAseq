@@ -14,6 +14,8 @@ We have conda recipies for all R packages in one file and for the Scanpy tutoria
 OBS! Need to fix some paths in instruction.
 Also info on Docker?
 
+<br/>
+
 ### Dataset
 
 We will run all tutorials with a set of 3 PBMC 10x datasets from the 10X Genomics website, with different types of library preps.
@@ -36,6 +38,8 @@ So also create the folder 'write' and subfolders for the lab you are planning to
 	mkdir write/scran
 	mkdir write/scanpy	
 
+<br/>
+
 ## Tutorials
 
 Here are the tutorials using [Seurat](https://satijalab.org/seurat/), [Scran](https://bioconductor.org/packages/release/bioc/html/scran.html) or [Scanpy](https://scanpy.readthedocs.io/en/stable/). It is up to you which one you want to try out, if you finish quickly, you may have time to run several of them.
@@ -44,17 +48,39 @@ In principle we perform the same steps with all 3 pipelines, but there are some 
 
 | Tutorial | Seurat | Scran | Scanpy |
 | -------- | ------ | ----- | ------ |
-| QC | [Seurat_qc](labs/compiled/seurat/seurat_01_qc_compiled.md) | [link](labs/compiled/scater/scater_01_qc_compiled.md) | [link](labs/scanpy/qc_3pbmc.ipynb) |
-| Dimensionality reduction | [Seurat_dr](labs/compiled/seurat/seurat_02_dim_reduction_compiled.md) | [link](labs/compiled/scater/scater_02_dim_reduction_compiled.md) | [link](labs/scanpy/dim_reduction.ipynb) |
-| Data integration | [Seurat_integr](labs/compiled/seurat/seurat_03_integration_compiled.md) | [link](labs/compiled/scater/scater_03_integration_compiled.md) | [link](labs/scanpy/batch_correction_mnn.ipynb) |
-| Clustering | [Seurat_clust](labs/compiled/seurat/lab_seurat.html) | [link](labs/compiled/scater/lab_scran.html) | [link](labs/scanpy/qc_3pbmc.ipynb) |
-| Differential expression | [Seurat_dge](labs/compiled/seurat/lab_seurat.html) | [link](labs/compiled/scater/lab_scran.html) | [link](labs/scanpy/qc_3pbmc.ipynb) |
+| QC | [Seurat_qc](labs/compiled/seurat/seurat_01_qc_compiled.md) | [Scater_qc](labs/compiled/scater/scater_01_qc_compiled.md) | [ScanPY_qc](labs/scanpy/qc_3pbmc.ipynb) |
+| Dimensionality reduction | [Seurat_dr](labs/compiled/seurat/seurat_02_dim_reduction_compiled.md) | [Scater_dr](labs/compiled/scater/scater_02_dim_reduction_compiled.md) | [ScanPY_dr](labs/scanpy/dim_reduction.ipynb) |
+| Data integration | [Seurat_integr](labs/compiled/seurat/seurat_03_integration_compiled.md) | [Scater_integr](labs/compiled/scater/scater_03_integration_compiled.md) | [ScanPY_integr](labs/scanpy/batch_correction_mnn.ipynb) |
+| Clustering | [Seurat_clust](labs/compiled/seurat/lab_seurat.html) | [Scater_clust](labs/compiled/scater/lab_scran.html) | [ScanPY_clust](labs/scanpy/qc_3pbmc.ipynb) |
+| Differential expression | [Seurat_dge](labs/compiled/seurat/lab_seurat.html) | [Scater_dge](labs/compiled/scater/lab_scran.html) | [ScanPY_dge](labs/scanpy/qc_3pbmc.ipynb) |
+| Trajectory inference | [Monocle_ti](labs/compiled/monocle/monocle.html) | [Slingshot_ti](labs/compiled/slingshot/slingshot.html) | [PAGA_ti](labs/paga/paga.ipynb) |
+
+<br/>
 
 ### FAQ
 
 As you run into problems, we will try to fill in the [FAQ](labs/FAQ) with common quiestons.
 
+<br/>
+
 ## Additional bonus exercises
+
+
+| Name | Description | Link |
+| Read-to-count pipeline | Snakemake pipeline for processing SmartSeq2 data, mapping reads, QC and expression estimates. | [Pipeline tutorial](labs/Pipeline_exercise)  |
+| Biomart | For those not familiar with working with biomaRt, we suggest that you have a look at this example code for how to convert between different formats using biomaRt. | [Tutorial for biomaRt](labs/biomart)  |
+| PCA, tSNE and clustering | Basic PCA, tSNE and clustering using base R on mouse embryonic development data. | [[Tutorial for PCA and clustering](labs/PCA_and_clustering)  |
+| KNN-graphs | Construction of graphs from cell-cell similiarities using igraph.   | [Tutorial for KNN graphs](labs/igraph) |
+| Estimating Batch-Effects | A tutorial for estimating genome-wide and individual genes batch-effects. | [Tutorial for Batch-Effects](https://bitbucket.org/scilifelab-lts/scrnaseq-labs/src/a228442debe7f8eff28cfdba875349025db9b7a3/batch_analysis.md?fileviewer=file-view-default)  |
+| Comparing Normalization Methods | A tutorial for comparison scRNAseq and bulk RNAseq normalization strategies. | [Tutorial for Normalization](labs/norm_analysis_v2)  |
+| SC3 package | Tutorial with the SC3 consensus clustering package | [Tutorial for SC3](labs/sc3_R35) |
+| Trajectory with Monocle2 | A tutorial with mouse embryonic data using the Monocle package for pseudotime analysis. | [Tutorial for Monocle](labs/monocle_analysis) |
+| Differential expression | OBS! This old tutorial uses Seurat v2! For this tutorial we have included several different methods for differential expression tests on single cell data, including SCDE, MAST, SC3 and Seurat. The exercise has been split into 2 parts with evaluation of all results in the second part.  | [Tutorial for DE detection 1](labs/Differential_gene_expression)
+\n [Tutorial for DE detection 2](labs/Differential_gene_expression_part2) |
+| UPPMAX Sbatch | One example of a sbatch script | [sbatch scripts](labs/sbatchScript) |
+
+<br/>
+
 
 #### Pipeline for mapping reads, QC and expression estimates
 
