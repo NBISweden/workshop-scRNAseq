@@ -1,0 +1,95 @@
+---
+title: "Seurat"
+#CSS_ALL:
+---
+
+***
+#INTEG_TITLE:
+
+#INTEG_ALL1:
+
+#INTEG_TABLE:
+
+#INTEG_ALL2:
+
+```{r, message='hide',warning='hide',results='hold'}
+suppressMessages(require(Seurat))
+suppressMessages(require(cowplot))
+suppressMessages(require(ggplot2))
+
+alldata <- readRDS("data/3pbmc_qc_dm.rds")
+print(names(alldata@reductions))
+```
+
+#INTEG_ALL3:
+
+```{r, message='hide',warning='hide',results='hold'}
+alldata.list <- SplitObject(alldata, split.by = "orig.ident")
+
+for (i in 1:length(alldata.list)) {
+    alldata.list[[i]] <- NormalizeData(alldata.list[[i]], verbose = FALSE)
+    alldata.list[[i]] <- FindVariableFeatures(alldata.list[[i]], selection.method = "vst", nfeatures = 2000,verbose = FALSE)
+}
+```
+
+#INTEG_SEURAT1:
+
+```{r, message='hide',warning='hide',results='hold'}
+alldata.anchors <- FindIntegrationAnchors(object.list = alldata.list, dims = 1:30)
+```
+
+#INTEG_SEURAT2:
+
+```{r, message='hide',warning='hide',results='hold'}
+alldata.int <- IntegrateData(anchorset = alldata.anchors, dims = 1:30, new.assay.name = "CCA")
+```
+
+#INTEG_SEURAT3:
+
+```{r, message='hide',warning='hide',results='hold'}
+names(alldata.int@assays)
+```
+
+#INTEG_SEURAT4:
+
+```{r, message='hide',warning='hide',results='hold'}
+#Run Dimensionality reduction on integrated space
+alldata.int <- ScaleData(alldata.int, verbose = FALSE,assay = "CCA")
+alldata.int <- RunPCA(alldata.int, npcs = 30, verbose = FALSE, assay = "CCA",reduction.name = "PCA_on_CCA")
+alldata.int <- RunUMAP(alldata.int, reduction = "PCA_on_CCA", dims = 1:30,reduction.name = "UMAP_on_CCA")
+alldata.int <- RunTSNE(alldata.int, reduction = "PCA_on_CCA", dims = 1:30,reduction.name = "TSNE_on_CCA")
+```
+
+#INTEG_ALL4:
+
+```{r, message='hide',warning='hide',results='hold',fig.asp=.55,fig.width=16}
+plot_grid(ncol = 3,
+  DimPlot(alldata, reduction = "PCA_on_RNA", group.by = "orig.ident"),
+  DimPlot(alldata, reduction = "TSNE_on_RNA", group.by = "orig.ident"),
+  DimPlot(alldata, reduction = "UMAP_on_RNA", group.by = "orig.ident"),
+  
+  DimPlot(alldata.int, reduction = "PCA_on_CCA", group.by = "orig.ident"),
+  DimPlot(alldata.int, reduction = "TSNE_on_CCA", group.by = "orig.ident"),
+  DimPlot(alldata.int, reduction = "UMAP_on_CCA", group.by = "orig.ident")
+)
+```
+
+#DIMRED_ALL6:
+
+#MARKER_TABLE:
+
+```{r,message='hide',warning='hide', results='hold',results='hold',fig.asp=.65,fig.width=16}
+FeaturePlot(alldata.int, reduction = "UMAP_on_CCA",dims = 1:2,features = c("CD3E","CD4","CD8A","NKG7","GNLY","MS4A1","CD14","LYZ","MS4A7","FCGR3A","CST3","FCER1A"),ncol = 4,order = T)
+```
+
+#INTEG_ALL5:
+
+```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=16}
+saveRDS(alldata,"data/integrated_3pbmc.rds")
+```
+
+
+
+
+
+
