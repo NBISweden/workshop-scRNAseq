@@ -21,11 +21,11 @@ Please me sure you have completed the [<img border="0" src="https://www.svgrepo.
 
 | Tutorial | <img border="0" src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/R_logo.svg/1448px-R_logo.svg.png" width="20" height="20"> Seurat | <img border="0" src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/R_logo.svg/1448px-R_logo.svg.png" width="20" height="20"> Scater/Scran | <img border="0" src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Python-logo-notext.svg/1024px-Python-logo-notext.svg.png" width="20" height="20"> Scanpy |
 | -------- | ---------- | ---------------- | --------------- |
-| QC | [Seurat_qc](labs/compiled/seurat/seurat_01_qc_compiled.md) | [Scater_qc](labs/compiled/scater/scater_01_qc_compiled.md) | [ScanPY_qc](labs/scanpy/qc_3pbmc.ipynb) |
-| Dimensionality reduction | [Seurat_dr](labs/compiled/seurat/seurat_02_dim_reduction_compiled.md) | [Scater_dr](labs/compiled/scater/scater_02_dim_reduction_compiled.md) | [ScanPY_dr](labs/scanpy/dim_reduction.ipynb) |
-| Data integration | [Seurat_integr](labs/compiled/seurat/seurat_03_integration_compiled.md) | [Scater_integr](labs/compiled/scater/scater_03_integration_compiled.md) | [ScanPY_integr](labs/scanpy/batch_correction_mnn.ipynb) |
-| Clustering | [Seurat_clust](labs/compiled/seurat/lab_seurat.html) | [Scater_clust](labs/compiled/scater/lab_scran.html) | [ScanPY_clust](labs/scanpy/qc_3pbmc.ipynb) |
-| Differential expression | [Seurat_dge](labs/compiled/seurat/lab_seurat.html) | [Scater_dge](labs/compiled/scater/lab_scran.html) | [ScanPY_dge](labs/scanpy/qc_3pbmc.ipynb) |
+| Quality Control | [Seurat_qc](labs/compiled/seurat/seurat_01_qc_compiled.md) | [Scater_qc](labs/compiled/scater/scater_01_qc_compiled.md) | [ScanPY_qc](labs/scanpy/qc_3pbmc.ipynb) |
+| Dimensionality reduction | [Seurat_dr](labs/compiled/seurat/seurat_02_dim_reduction_compiled.md) | [Scater_dr](labs/compiled/scater/scater_02_dim_reduction_compiled.md) | [Scanpy_dr](labs/scanpy/dim_reduction.ipynb) |
+| Data integration | [Seurat_integr](labs/compiled/seurat/seurat_03_integration_compiled.md) | [Scater_integr](labs/compiled/scater/scater_03_integration_compiled.md) | [Scanpy_integr](labs/scanpy/batch_correction_mnn.ipynb) |
+| Clustering | [Seurat_clust](labs/compiled/seurat/lab_seurat.html) | [Scater_clust](labs/compiled/scater/lab_scran.html) | [Scanpy_clust](labs/scanpy/qc_3pbmc.ipynb) |
+| Differential expression | [Seurat_dge](labs/compiled/seurat/lab_seurat.html) | [Scater_dge](labs/compiled/scater/lab_scran.html) | [Scanpy_dge](labs/scanpy/qc_3pbmc.ipynb) |
 | Trajectory inference | [Monocle_ti](labs/compiled/monocle/monocle.html) | [Slingshot_ti](labs/compiled/slingshot/slingshot.html) | [PAGA_ti](labs/paga/paga.ipynb) |
 
 <br/>
