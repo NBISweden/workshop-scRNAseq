@@ -17,7 +17,7 @@ Lecture slides will be provided as links as they get completed.
 
 <br/>
 
-[![presentation](https://www.svgrepo.com/download/1216/presentation.svg)](slides2019/course_intro_Asa_Bjorklund_2019.pdf)
+[![presentation](files/business-presentation-svgrepo-com-3.svg)](slides2019/course_intro_Asa_Bjorklund_2019.pdf)
 
 <br/>
 
