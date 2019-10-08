@@ -42,11 +42,11 @@ On the fourth day we offer a "Bring your own data" day where you can analyse you
 ##### <img border="0" src="https://www.svgrepo.com/show/3874/contact-form.svg" width="40" height="40"> Application
 ***
 
-Fill in this [application](https://forms.gle/6VFVTFep6iYk7wLr9) by December 16th and please indicate whether you are planning to participate on the optional day of January 30th. 
-
 ###### How to apply
 
-Course fee
+Fill in this [application](https://forms.gle/6VFVTFep6iYk7wLr9) by December 16th and please indicate whether you are planning to participate on the optional day of January 30th. 
+
+###### Course fee
 
 A course fee* of 2000 SEK will be invoiced to accepted participants. This includes lunches, coffee and course dinner.
 
@@ -59,10 +59,7 @@ Required for being able to follow the course and complete the computer exercises
 * Basic knowledge in R/Linux.
 * Be able to bring your own laptop with R installed for the practical computational exercises. Instructions on installation will be sent by email to accepted participants.
 * Some programming/scripting experience is required (preferably in R).
-
-Desirable
-
-* Previous experience with RNA-seq analysis and/or participation in NGS/RNA-seq course is an advantage.
+* **Desirable**: Previous experience with RNA-seq analysis and/or participation in NGS/RNA-seq course is an advantage.
 
 Due to limited space the course can accommodate maximum of 25 participants. If we receive more applications, participants will be selected based on several criteria. Selection criteria include correct entry requirements, motivation to attend the course as well as gender and geographical balance.
 
@@ -116,19 +113,20 @@ Do you have any questions regarding the course, please email to asa.bjorklund@sc
 
 Here are some useful links to tools, courses etc. 
 
-* Single cell RNA-seq course at from Hemberg lab [here](https://scrnaseq-course.cog.sanger.ac.uk/website/ index.html
-* Single cell RNA-seq course at Broad [here](https://broadinstitute.github.io/2019_scWorkshop/)
-* Repository listing many scRNA-seq tools [here](https://github.com/seandavi/awesome-single-cell)
-* SingleCellExperiment objects for many datasets [here](https://hemberg-lab.github.io/scRNA.seq.datasets/)
-* Conquer datasets - many different datasets based on a salmon pipeline [here](http://imlspenticton.uzh.ch:3838/conquer/)
-* The Human Cell Atlas project [here](https://www.humancellatlas.org/) 
-* The github repository for this course. Also contains the R markdown scripts that was used to generate all the exercises [here](https://github.com/NBISweden/workshop-scRNAseq)
-* Bitbucket repository for QC report scripts [here](https://bitbucket.org/asbj/qc-summary_scrnaseq)
-* Bitbucket repository for the NBIS scRNAseq pipeline [here](https://bitbucket.org/scilifelab-lts/lts-workflows-sm-scrnaseq)
+* [Single cell RNA-seq course at from Hemberg lab](https://scrnaseq-course.cog.sanger.ac.uk/website/ index.html
+* [Single cell RNA-seq course at Broad](https://broadinstitute.github.io/2019_scWorkshop/)
+* [Repository listing many scRNA-seq tools](https://github.com/seandavi/awesome-single-cell)
+* [SingleCellExperiment objects for many datasets](https://hemberg-lab.github.io/scRNA.seq.datasets/)
+* [Conquer datasets - many different datasets based on a salmon pipeline](http://imlspenticton.uzh.ch:3838/conquer/)
+* [The Human Cell Atlas project](https://www.humancellatlas.org/) 
+* [The github repository for this course. Also contains the R markdown scripts that was used to generate all the exercises](https://github.com/NBISweden/workshop-scRNAseq)
+* [Bitbucket repository for QC report scripts](https://bitbucket.org/asbj/qc-summary_scrnaseq)
+* [Bitbucket repository for the NBIS scRNAseq pipeline](https://bitbucket.org/scilifelab-lts/lts-workflows-sm-scrnaseq)
 
 <br/>
 
 ##### <img border="0" src="https://www.svgrepo.com/show/83468/navigation-history-interface-symbol-of-a-clock-with-an-arrow.svg" width="40" height="40"> Past courses
+***
 
 [Stockholm February 4-6, 2019](https://github.com/NBISweden/workshop-scRNAseq/tree/feb2019)
 
