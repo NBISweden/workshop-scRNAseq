@@ -92,7 +92,7 @@ Please read carefully the [Precourse material](precourse) before the course star
 ##### <img border="0" src="https://www.svgrepo.com/show/4199/placeholder-on-a-map.svg" width="40" height="40"> Address and travel suggestions
 ***
 
-[Travel Info](travel)
+[Travel Info](travel.md)
 
 <br/>
 
