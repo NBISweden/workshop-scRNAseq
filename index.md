@@ -3,10 +3,12 @@ layout: default
 title: Single cell RNA sequencing analysis course
 ---
 
-# Single cell RNA sequencing analysis course
+### Single cell RNA sequencing analysis course
 Scilifelab Solna, Rooms Air & Fire,  2020-01-27 - 2020-01-29 (and 2020-01-30 optional day)
 
-### Important dates
+<br/>
+
+##### Important dates
 
 Application open: September 20, 2019
 
@@ -14,11 +16,15 @@ Application deadline: December 16, 2019
 
 Confirmation to accepted students: December 20, 2019
 
-### Contact information
+<br/>
+
+##### Contact information
 
 Do you have any questions regarding the course, please email to asa.bjorklund@scilifelab.se or paulo.czarnewski@scilifelab.se
 
-### How to apply
+<br/>
+
+##### How to apply
 
 Course fee
 
@@ -26,7 +32,9 @@ A course fee* of 2000 SEK will be invoiced to accepted participants. This includ
 
 *Please note that NBIS cannot invoice individuals
 
-### Course content
+<br/>
+
+##### Course content
 
 The first 3 days of the course will cover the basic steps in single cell RNAseq (scRNAseq) processing and data analysis. Topics covered will include:
 
@@ -41,11 +49,15 @@ The first 3 days of the course will cover the basic steps in single cell RNAseq 
 
 On the fourth day we offer a "Bring your own data" day where you can analyse your data using the tools that you have discovered during the course, with TAs present to help you run the analyses and discuss your results. If you do not have your own data you can still select a public dataset of interest and analyse during that day.
 
-### Application
+<br/>
+
+##### Application
 
 Fill in this [application](https://forms.gle/6VFVTFep6iYk7wLr9) by December 16th and please indicate whether you are planning to participate on the optional day of January 30th. 
 
-### Entry requirements
+<br/>
+
+##### Entry requirements
 
 Required for being able to follow the course and complete the computer exercises
 
@@ -59,30 +71,42 @@ Desirable
 
 Due to limited space the course can accommodate maximum of 25 participants. If we receive more applications, participants will be selected based on several criteria. Selection criteria include correct entry requirements, motivation to attend the course as well as gender and geographical balance.
 
-#### Schedule
+<br/>
+
+##### Schedule
 
 Course schedule can be found here: [Schedule]() (TBA)
 
-#### Exercises
+<br/>
+
+##### Exercises
 
 All exercises for the afternoon sessions can be found at [Exercises](). (TBA)
 
 For working on Uppmax: to use the allocations we have for the course, please look [here](login.md).
 
-### Precourse material
+<br/>
+
+##### Precourse material
 
 Please read carefully the [Precourse material](precourse) before the course start. 
 
-### Address and travel suggestions
+<br/>
+
+##### Address and travel suggestions
 
 [Travel Info](travel)
 
-### Course leaders
+<br/>
+
+##### Course leaders
 
 * [Åsa Björklund](http://nbis.se/about/staff/asa-bjorklund/)
 * [Paulo Czarnewski](https://nbis.se/about/staff/paulo-czarnewski/)
 
-### Useful links
+<br/>
+
+##### Useful links
 
 Here are some useful links to tools, courses etc. 
 
@@ -96,8 +120,9 @@ Here are some useful links to tools, courses etc.
 * Bitbucket repository for QC report scripts [here](https://bitbucket.org/asbj/qc-summary_scrnaseq)
 * Bitbucket repository for the NBIS scRNAseq pipeline [here](https://bitbucket.org/scilifelab-lts/lts-workflows-sm-scrnaseq)
 
+<br/>
 
-### Past courses
+##### Past courses
 
 [Stockholm February 4-6, 2019](https://github.com/NBISweden/workshop-scRNAseq/tree/feb2019)
 
