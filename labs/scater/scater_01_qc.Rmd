@@ -1,0 +1,223 @@
+---
+title: "Scater/Scran: Quality control"
+#CSS_ALL:
+---
+
+***
+#DATA_TITLE:
+
+#DATA_ALL1:
+
+```{bash, results='hide'}
+mkdir data
+curl -o data/pbmc_1k_v2_filtered_feature_bc_matrix.h5 -O http://cf.10xgenomics.com/samples/cell-exp/3.0.0/pbmc_1k_v2/pbmc_1k_v2_filtered_feature_bc_matrix.h5
+curl -o data/pbmc_1k_v3_filtered_feature_bc_matrix.h5 -O http://cf.10xgenomics.com/samples/cell-exp/3.0.0/pbmc_1k_v3/pbmc_1k_v3_filtered_feature_bc_matrix.h5
+curl -o data/pbmc_1k_protein_v3_filtered_feature_bc_matrix.h5 -O http://cf.10xgenomics.com/samples/cell-exp/3.0.0/pbmc_1k_protein_v3/pbmc_1k_protein_v3_filtered_feature_bc_matrix.h5
+```
+
+#DATA_ALL2:
+
+```{r, message='hide',warning='hide',results='hold'}
+suppressMessages(require(scater))
+suppressMessages(require(scran))
+suppressMessages(require(cowplot))
+suppressMessages(require(org.Hs.eg.db))
+```
+
+#DATA_ALL3:
+
+```{r,message='hide',warning='hide',results='hold'}
+v3.1k <- Seurat::Read10X_h5("data/pbmc_1k_v3_filtered_feature_bc_matrix.h5", use.names = T)
+v2.1k <- Seurat::Read10X_h5("data/pbmc_1k_v2_filtered_feature_bc_matrix.h5", use.names = T)
+p3.1k <- Seurat::Read10X_h5("data/pbmc_1k_protein_v3_filtered_feature_bc_matrix.h5", use.names = T)
+p3.1k <- p3.1k$`Gene Expression`
+```
+
+***
+#OBJ_TITLE:
+
+#OBJ_ALL1:
+
+```{r}
+sce <- SingleCellExperiment( assays = list(counts = cbind(v3.1k,v2.1k,p3.1k)) )
+dim(sce)
+cpm(sce) <- calculateCPM(sce)
+sce <- normalize(sce)
+```
+
+#OBJ_ALL2:
+
+```{r ,  results='hold'}
+#Adding metadata
+sce@colData$sample_id <- unlist(sapply(c("v3.1k","v2.1k","p3.1k"),function(x) rep(x,ncol(get(x)))))
+sce@colData$nCount <- Matrix::colSums(counts(sce))
+sce@colData$nFeatures <- Matrix::colSums(counts(sce)>0)
+sce@colData$size_factors <- scater::librarySizeFactors(sce)
+
+sce <- calculateQCMetrics(sce)
+
+head(sce@colData,10)
+```
+
+
+***
+#QC_TITLE:
+
+#QC_ALL1:
+
+#QC_ALL1.1:
+
+```{r, results='hold'}
+# Way1: Doing it manually
+mito_genes <- rownames(sce)[grep("^MT-",rownames(sce))]
+sce@colData$percent_mito <- Matrix::colSums(counts(sce)[mito_genes, ]) / sce@colData$nCount
+
+head(mito_genes,10)
+```
+
+#QC_ALL2:
+
+```{r, results='hold'}
+ribo_genes <- rownames(sce)[grep("^RP[SL]",rownames(sce))]
+sce@colData$percent_ribo <- Matrix::colSums(counts(sce)[ribo_genes, ]) / sce@colData$nCount
+
+head(ribo_genes,10)
+```
+
+***
+#QC_TITLE2:
+
+#QC_ALL3:
+
+```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=3,fig.width=10}
+plot_grid(plotColData(sce,y = "nFeatures",x = "sample_id",colour_by = "sample_id"),
+          plotColData(sce,y = "nCount",x = "sample_id",colour_by = "sample_id"),
+          plotColData(sce,y = "percent_mito",x = "sample_id",colour_by = "sample_id"),
+          plotColData(sce,y = "percent_ribo",x = "sample_id",colour_by = "sample_id"),ncol = 4)
+```
+
+#QC_ALL4:
+
+```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=4,fig.width=16}
+plot_grid(plotColData(sce,x = "nCount"      ,y = "nFeatures",colour_by = "sample_id"),
+          plotColData(sce,x = "percent_mito",y = "nFeatures",colour_by = "sample_id"),
+          plotColData(sce,x = "percent_ribo",y = "nFeatures",colour_by = "sample_id"),
+          plotColData(sce,x = "percent_ribo",y = "percent_mito",colour_by = "sample_id"),ncol = 4)
+```
+
+***
+#FILTERING_TITLE:
+
+#FILTERING_TITLE1:
+
+#FILTERING_ALL0:
+
+```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=4}
+dim(sce)
+
+selected_c <-  colnames(sce)[sce$nFeatures > 200]
+selected_f <- rownames(sce)[ Matrix::rowSums(counts(sce)) > 3]
+
+sce.filt <- sce[selected_f , selected_c]
+dim(sce.filt)
+```
+
+#FILTERING_ALL3:
+
+```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=16}
+high.det.v3 <- sce.filt$nFeatures > 4100
+high.det.v2 <- (sce.filt$nFeatures > 2000) & (sce.filt$sample_id == "v2.1k")
+
+# remove these cells
+sce.filt <- sce.filt[ , (!high.det.v3) & (!high.det.v2)]
+
+# check number of cells
+ncol(sce.filt)
+```
+
+#FILTERING_ALL01:
+
+```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=12}
+#Compute the relative expression of each gene per cell
+rel_expression <- t( t(counts(sce.filt)) / Matrix::colSums(counts(sce.filt))) * 100
+most_expressed <- sort(Matrix::rowSums( rel_expression ),T)[20:1] / ncol(sce.filt)
+
+par(mfrow=c(1,2),mar=c(4,6,1,1))
+boxplot( as.matrix(t(rel_expression[names(most_expressed),])),cex=.1, las=1, xlab="% total count per cell",col=scales::hue_pal()(20)[20:1],horizontal=TRUE)
+```
+
+#FILTERING_ALL02:
+
+#FILTERING_TITLE2:
+
+#FILTERING_ALL1:
+
+```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=16}
+selected_mito <- sce.filt$percent_mito < 0.25
+selected_ribo <- sce.filt$percent_ribo > 0.05
+
+# and subset the object to only keep those cells
+sce.filt <- sce.filt[, selected_mito & selected_ribo ]
+dim(sce.filt)
+```
+
+#FILTERING_ALL2:
+
+#FILTERING_TITLE4:
+
+#FILTERING_ALL5:
+
+```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=16}
+plot_grid(plotColData(sce.filt,y = "nFeatures",x = "sample_id",colour_by = "sample_id"),
+          plotColData(sce.filt,y = "nCount",x = "sample_id",colour_by = "sample_id"),
+          plotColData(sce.filt,y = "percent_mito",x = "sample_id",colour_by = "sample_id"),
+          plotColData(sce.filt,y = "percent_ribo",x = "sample_id",colour_by = "sample_id"),ncol = 4)
+```
+
+#CELLCYCLE_TITLE:
+
+#CELLCYCLE_ALL1:
+
+```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=4,fig.width=4}
+hs.pairs <- readRDS(system.file("exdata", "human_cycle_markers.rds", package="scran"))
+anno <- select(org.Hs.eg.db, keys=rownames(sce.filt), keytype="SYMBOL", column="ENSEMBL")
+ensembl <- anno$ENSEMBL[match(rownames(sce.filt), anno$SYMBOL)]
+
+#Use only genes related to biological process to speed up
+#https://www.ebi.ac.uk/QuickGO/term/GO:0007049 = cell cycle (BP,Biological Process)
+GOs <- na.omit(select(org.Hs.eg.db, keys=na.omit(ensembl), keytype="ENSEMBL", column="GO"))
+GOs <- GOs[GOs$GO == "GO:0007049","ENSEMBL"]
+hs.pairs <- lapply(hs.pairs,function(x){ x[rowSums( apply(x, 2, function(i) i %in% GOs)) >= 1,]})
+str(hs.pairs)
+cc.ensembl <- ensembl[ensembl %in% GOs] #This is the fastest (less genes), but less accurate too
+#cc.ensembl <- ensembl[ ensembl %in% unique(unlist(hs.pairs))]
+
+
+assignments <- cyclone(sce.filt[ensembl %in% cc.ensembl,], hs.pairs, gene.names= ensembl[ ensembl %in% cc.ensembl])
+sce.filt$G1.score <- assignments$scores$G1
+sce.filt$G2M.score <- assignments$scores$G2M
+sce.filt$S.score <- assignments$scores$S
+```
+
+#CELLCYCLE_ALL2:
+
+```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=16}
+plot_grid(plotColData(sce.filt,y = "G2M.score",x = "G1.score",colour_by = "sample_id"),
+          plotColData(sce.filt,y = "G2M.score",x = "sample_id",colour_by = "sample_id"),
+          plotColData(sce.filt,y = "G1.score",x = "sample_id",colour_by = "sample_id"),
+          plotColData(sce.filt,y = "S.score",x = "sample_id",colour_by = "sample_id"),ncol = 4)
+```
+
+#CELLCYCLE_ALL3:
+
+#CELLCYCLE_ALL4:
+
+```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=16}
+saveRDS(sce.filt,"data/3pbmc_qc.rds")
+```
+
+
+
+
+
+
