@@ -25,23 +25,17 @@ Lecture slides will be provided as links as they get completed.
 
 | Time | Description (link) | Link | Lecturer |
 | ---- | ------------------ | ---- | -------- |
-| 09.00-09.15 | **Course introduction** | <a href="slides2019/course_intro_Asa_Bjorklund_2019.pdf">
-<img border="0" src="https://www.svgrepo.com/show/1216/presentation.svg" width="20" height="20"></a> | Åsa Björklund |
-| 09.15-10.00 | **scRNAseq methodologies and ESCG platform** | <a href="slides2019/Eukaryotic_Single_Cell_Transcriptomics_HG_2019.pdf">
-<img border="0" src="https://www.svgrepo.com/show/1216/presentation.svg" width="20" height="20"></a> | Henrik Gezelius |
-| 10.30-11.20 | **Read alignment and quantification** | <a href="slides2019/read_alignments_2019_J_Reimegard.pdf">
-<img border="0" src="https://www.svgrepo.com/show/1216/presentation.svg" width="20" height="20"></a> | Johan Reimegård |
-| 11.20-12.10 |  **scRNAseq quality control** | <a href="slides2019/scRNAseq_QC_Asa_Bjorklund_2019.pdf">
-<img border="0" src="https://www.svgrepo.com/show/1216/presentation.svg" width="20" height="20"></a> | Åsa Björklund |
+| 09.00-09.15 | **Course introduction** | <a href="slides2019/course_intro_Asa_Bjorklund_2019.pdf"><img border="0" src="https://www.svgrepo.com/show/1216/presentation.svg" width="20" height="20"></a> | Åsa Björklund |
+| 09.15-10.00 | **scRNAseq methodologies and ESCG platform** | <a href="slides2019/Eukaryotic_Single_Cell_Transcriptomics_HG_2019.pdf"><img border="0" src="https://www.svgrepo.com/show/1216/presentation.svg" width="20" height="20"></a> | Henrik Gezelius |
+| 10.00-10.30 | Cofee Break	 |||
+| 10.30-11.20 | **Read alignment and quantification** | <a href="slides2019/read_alignments_2019_J_Reimegard.pdf"><img border="0" src="https://www.svgrepo.com/show/1216/presentation.svg" width="20" height="20"></a> | Johan Reimegård |
+| 11.20-12.10 |  **scRNAseq quality control** | <a href="slides2019/scRNAseq_QC_Asa_Bjorklund_2019.pdf"><img border="0" src="https://www.svgrepo.com/show/1216/presentation.svg" width="20" height="20"></a> | Åsa Björklund |
 | 12.10-13.15 | Lunch	 |||
-| 13.15-14.00 | **Dimensionality reduction** | <a href="slides2019/Dimensionality_reduction_P_Czarnewski_2019.pdf">
-<img border="0" src="https://www.svgrepo.com/show/1216/presentation.svg" width="20" height="20"></a> | Paulo Czarnewski |   
-| 14.00-14.15 | **Wrap up of todays lectures** | <a href="https://goo.gl/forms/fr3owaquQgo72E2K3">
-<img border="0" src="https://www.svgrepo.com/show/1216/presentation.svg" width="20" height="20"></a> | Åsa Björklund  |
-| 14.15-14.30 | **Intro to exercises** | <a href="slides2019/exercises_intro_Asa_Bjorklund_2019.pdf">
-<img border="0" src="https://www.svgrepo.com/show/1216/presentation.svg" width="20" height="20"></a> | Åsa Björklund |
-| 14.30-17.00 | **Practical Exercises** | <a href="exercises.md">
-<img border="0" src="https://www.svgrepo.com/show/759/exercise.svg" width="20" height="20"></a> | Åsa,Paulo,Johan |
+| 13.15-14.00 | **Dimensionality reduction** | <a href="slides2019/Dimensionality_reduction_P_Czarnewski_2019.pdf"><img border="0" src="https://www.svgrepo.com/show/1216/presentation.svg" width="20" height="20"></a> | Paulo Czarnewski |   
+| 14.00-14.15 | **Wrap up of todays lectures** | <a href="https://goo.gl/forms/fr3owaquQgo72E2K3"><img border="0" src="https://www.svgrepo.com/show/1216/presentation.svg" width="20" height="20"></a> | Åsa Björklund  |
+| 14.15-14.30 | **Intro to exercises** | <a href="slides2019/exercises_intro_Asa_Bjorklund_2019.pdf"><img border="0" src="https://www.svgrepo.com/show/1216/presentation.svg" width="20" height="20"></a> | Åsa Björklund |
+| 14.30-15.00 | Cofee Break	 |||
+| 15.00-17.00 | **Practical Exercises** | <a href="exercises.md"><img border="0" src="https://www.svgrepo.com/show/759/exercise.svg" width="20" height="20"></a> | Åsa,Paulo,Johan |
 | 18.00- | **Course dinner at [Shanti Touch of Bengal](https://shanti.se/touch-of-bengal)  || |
 
 <br/>
