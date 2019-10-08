@@ -5,7 +5,8 @@ title:  'Schedule - scRNAseq course'
 
 <br/>
 
-# Schedule
+##### <img border="0" src="https://www.svgrepo.com/show/158264/schedule.svg" width="40" height="40"> Schedule
+***
 
 This course is given at Scilifelab Solna, Rooms Air & Fire, ground floor to the left from the main entrance. 
 
