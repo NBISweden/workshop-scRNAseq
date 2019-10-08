@@ -73,13 +73,14 @@ Due to limited space the course can accommodate maximum of 25 participants. If w
 
 <br/>
 
-##### Schedule
+##### <img border="0" src="https://www.svgrepo.com/show/158264/schedule.svg" width="40" height="40"> Schedule
 
 Course schedule can be found here: [Schedule]() (TBA)
 
 <br/>
 
-##### Exercises
+
+##### <img border="0" src="https://www.svgrepo.com/show/6672/exercise.svg" width="40" height="40"> Exercises
 
 All exercises for the afternoon sessions can be found at [Exercises](). (TBA)
 
@@ -87,7 +88,7 @@ For working on Uppmax: to use the allocations we have for the course, please loo
 
 <br/>
 
-##### Precourse material
+##### <img border="0" src="https://www.svgrepo.com/show/19652/maths-class-materials-cross-of-a-pencil-and-a-ruler.svg" width="40" height="40"> Precourse material
 
 Please read carefully the [Precourse material](precourse) before the course start. 
 
@@ -99,14 +100,14 @@ Please read carefully the [Precourse material](precourse) before the course star
 
 <br/>
 
-##### Course leaders
+##### <img border="0" src="https://www.svgrepo.com/show/38706/group-of-people.svg" width="40" height="40"> Course leaders
 
 * [Åsa Björklund](http://nbis.se/about/staff/asa-bjorklund/)
 * [Paulo Czarnewski](https://nbis.se/about/staff/paulo-czarnewski/)
 
 <br/>
 
-##### Useful links
+##### <img border="0" src="https://www.svgrepo.com/show/19262/link.svg" width="40" height="40"> Useful links
 
 Here are some useful links to tools, courses etc. 
 
@@ -122,7 +123,7 @@ Here are some useful links to tools, courses etc.
 
 <br/>
 
-##### Past courses
+##### <img border="0" src="https://www.svgrepo.com/show/83468/navigation-history-interface-symbol-of-a-clock-with-an-arrow.svg" width="40" height="40"> Past courses
 
 [Stockholm February 4-6, 2019](https://github.com/NBISweden/workshop-scRNAseq/tree/feb2019)
 
