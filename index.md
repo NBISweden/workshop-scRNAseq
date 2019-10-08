@@ -111,7 +111,7 @@ Do you have any questions regarding the course, please email to asa.bjorklund@sc
 ##### <img border="0" src="https://www.svgrepo.com/show/19262/link.svg" width="40" height="40"> Useful links
 ***
 
-* [Single cell RNA-seq course at from Hemberg lab](https://scrnaseq-course.cog.sanger.ac.uk/website/ index.html
+* [Single cell RNA-seq course at from Hemberg lab](https://scrnaseq-course.cog.sanger.ac.uk/website/index.html)
 * [Single cell RNA-seq course at Broad](https://broadinstitute.github.io/2019_scWorkshop/)
 * [Repository listing many scRNA-seq tools](https://github.com/seandavi/awesome-single-cell)
 * [SingleCellExperiment objects for many datasets](https://hemberg-lab.github.io/scRNA.seq.datasets/)
