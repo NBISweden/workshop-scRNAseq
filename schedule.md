@@ -28,7 +28,7 @@ Lecture slides will be provided as links as they get completed.
 | 14.15 | **Intro to exercises** | <a href="slides2019/exercises_intro_Asa_Bjorklund_2019.pdf"><img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"></a> | Åsa Björklund |
 | 14.30 | Cofee Break	|
 | 15.00 | **Practical Exercises** | <a href="exercises.md"><img border="0" src="https://www.svgrepo.com/show/6672/exercise.svg" width="20" height="20"></a> | Åsa,Paulo,Johan |
-| 18.00 | **Course dinner at [Shanti Touch of Bengal](https://shanti.se/touch-of-bengal)  || |
+| 18.00 | **Course dinner at [Shanti Touch of Bengal](https://shanti.se/touch-of-bengal)**  || |
 
 <br/>
 
