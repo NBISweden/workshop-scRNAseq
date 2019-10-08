@@ -3,7 +3,8 @@ layout: default
 title:  'Precourse Material - scRNAseq course'
 ---
 
-# Pre-course Material
+##### <img border="0" src="https://www.svgrepo.com/show/19652/maths-class-materials-cross-of-a-pencil-and-a-ruler.svg" width="40" height="40"> Precourse material
+***
 
 1.   If you do not already have an Uppmax account, create and Uppmax account following these [instructions](files/Apply_for_Uppmax_account.pdf). OBS! It may take a few days to recieve the account, so proceed with this point as soon as possible.
 
