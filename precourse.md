@@ -6,6 +6,45 @@ title:  'Precourse Material - scRNAseq course'
 ##### <img border="0" src="https://www.svgrepo.com/show/19652/maths-class-materials-cross-of-a-pencil-and-a-ruler.svg" width="40" height="40"> Precourse material
 ***
 
+
+##### <img border="0" src="https://www.svgrepo.com/show/4795/installation-symbol.svg" width="20" height="20"> Installations
+
+We have conda recipies for all R packages in one file and for the Scanpy tutorial in another. If you have never worked with conda before, please read the [conda instructions](conda_instructions.md).
+
+OBS! Need to fix some paths in instruction.
+Also info on Docker?
+
+<br/>
+
+##### <img border="0" src="https://www.svgrepo.com/show/20109/database.svg" width="20" height="20"> Dataset
+
+We will run all tutorials with a set of 3 PBMC 10x datasets from the 10X Genomics website, with different types of library preps.
+
+These can be fetched using commands:
+
+      mkdir data  
+      cd data
+      curl -O http://cf.10xgenomics.com/samples/cell-exp/3.0.0/pbmc_1k_v2/pbmc_1k_v2_filtered_feature_bc_matrix.h5
+      curl -O http://cf.10xgenomics.com/samples/cell-exp/3.0.0/pbmc_1k_v3/pbmc_1k_v3_filtered_feature_bc_matrix.h5
+      curl -O http://cf.10xgenomics.com/samples/cell-exp/3.0.0/pbmc_1k_protein_v3/pbmc_1k_protein_v3_filtered_feature_bc_matrix.h5
+
+All code is written so that you stand in the folder where the scripts are when you run the code and fetch data from the data folder with path `../data/` and all output files goes into folder `../write/lab_name/` where `lab_name` can be either of `scran`, `scanpy` or `seurat`.
+
+So also create the folder 'write' and subfolders for the lab you are planning to run.
+
+   	cd ..
+	mkdir write
+	mkdir write/seurat
+	mkdir write/scran
+	mkdir write/scanpy	
+
+<br/>
+
+
+##### <img border="0" src="https://www.svgrepo.com/show/17086/server-client-exchange.svg" width="20" height="20"> Uppmax
+
+**Attention**: This step is no longer required for the course. It is only used in one of the lectures
+
 1.   If you do not already have an Uppmax account, create and Uppmax account following these [instructions](files/Apply_for_Uppmax_account.pdf). OBS! It may take a few days to recieve the account, so proceed with this point as soon as possible.
 
 2.   Log in to SUPR and request membership in the project g2019002. Account approval requires manual confirmation from the course organizers, so it may not happen immediately. 
