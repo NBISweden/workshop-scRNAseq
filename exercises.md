@@ -17,7 +17,9 @@ Please me sure you have completed the [<img border="0" src="https://www.svgrepo.
 ##### <img border="0" src="https://www.svgrepo.com/show/6672/exercise.svg" width="40" height="40"> MAIN exercises
 ***
 
-| Tutorial | Seurat (R) | Scater/Scran (R) | Scanpy (Python) |
+
+
+| Tutorial | <img border="0" src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/R_logo.svg/1448px-R_logo.svg.png" width="20" height="20"> Seurat | <img border="0" src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/R_logo.svg/1448px-R_logo.svg.png" width="20" height="20"> Scater/Scran | <img border="0" src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Python-logo-notext.svg/1024px-Python-logo-notext.svg.png" width="20" height="20"> Scanpy |
 | -------- | ---------- | ---------------- | --------------- |
 | QC | [Seurat_qc](labs/compiled/seurat/seurat_01_qc_compiled.md) | [Scater_qc](labs/compiled/scater/scater_01_qc_compiled.md) | [ScanPY_qc](labs/scanpy/qc_3pbmc.ipynb) |
 | Dimensionality reduction | [Seurat_dr](labs/compiled/seurat/seurat_02_dim_reduction_compiled.md) | [Scater_dr](labs/compiled/scater/scater_02_dim_reduction_compiled.md) | [ScanPY_dr](labs/scanpy/dim_reduction.ipynb) |
