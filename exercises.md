@@ -78,8 +78,9 @@ As you run into problems, we will try to fill in the [FAQ](labs/FAQ) with common
 | [Normalization Comparison](labs/norm_analysis_v2) | A tutorial for comparison scRNAseq and bulk RNAseq normalisation strategies. | [Tutorial for Normalisation](labs/norm_analysis_v2)  |
 | [SC3 package](labs/sc3_R35) | Tutorial with the SC3 consensus clustering package |
 | [Trajectory with Monocle2](labs/monocle_analysis) | A tutorial with mouse embryonic data using the Monocle package for pseudotime analysis |
-| [Differential expression_2](labs/Differential_gene_expression) \n [Differential expression_2](labs/Differential_gene_expression) | OBS! This old tutorial uses Seurat v2! For this tutorial we have included several different methods for differential expression tests on single cell data, including SCDE, MAST, SC3 and Seurat. The exercise has been split into 2 parts with evaluation of all results in the second part |
+| [Differential expression_2](labs/Differential_gene_expression) [Differential expression_2](labs/Differential_gene_expression) | OBS! This old tutorial uses Seurat v2! For this tutorial we have included several different methods for differential expression tests on single cell data, including SCDE, MAST, SC3 and Seurat. The exercise has been split into 2 parts with evaluation of all results in the second part |
 | [UPPMAX Sbatch](labs/sbatchScript) | One example of a sbatch script |
+| [Pagoda](labs/pagoda_ilc) | Pagoda patway wPCA for clustering of cells. OBS! several steps in this tutorial takes hours to run if you work with your own dataset, a good suggestion is to start with the first steps, knn.error.model, pagoda.varnorm and pagoda.pathway.wPCA and let it run while working on other tutorials. You can also run it with more than one core to speed things up |
 
 <br/>
 
