@@ -3,13 +3,14 @@ layout: default
 title: Exercises - scRNAseq course
 ---
 
-# Welcome to NBIS scRNA-seq tutorials
+##### <img border="0" src="https://www.svgrepo.com/show/6672/exercise.svg" width="40" height="40"> Exercises
+***
 
 Here we provide short tutorials on the different steps of scRNAseq analysis using either of the 3 most commonly used scRNAseq analysis pipelines, Seurat, Scran and Scanpy. 
 
 <br/>
 
-### Installations
+##### <img border="0" src="https://www.svgrepo.com/show/4795/installation-symbol.svg" width="20" height="20"> Installations
 
 We have conda recipies for all R packages in one file and for the Scanpy tutorial in another. If you have never worked with conda before, please read the [conda instructions](conda_instructions.md).
 
@@ -18,7 +19,7 @@ Also info on Docker?
 
 <br/>
 
-### Dataset
+##### <img border="0" src="https://www.svgrepo.com/show/20109/database.svg" width="20" height="20"> Dataset
 
 We will run all tutorials with a set of 3 PBMC 10x datasets from the 10X Genomics website, with different types of library preps.
 
