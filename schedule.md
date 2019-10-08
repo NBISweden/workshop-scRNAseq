@@ -15,6 +15,12 @@ Lecture slides will be provided as links as they get completed.
 
 **Monday 27th of January**  
 
+<br/>
+
+[![presentation](https://www.svgrepo.com/download/1216/presentation.svg)](slides2019/course_intro_Asa_Bjorklund_2019.pdf)
+
+<br/>
+
 | Time | Description (link) | Lecturer |
 | ---- | ------------------ | -------- |
 | **09.00-09.15** | [Course introduction](slides2019/course_intro_Asa_Bjorklund_2019.pdf) | Åsa Björklund |
@@ -68,3 +74,4 @@ Lecture slides will be provided as links as they get completed.
 Each day we will have cofee around 10.00 and at 15.00 during the exercises. Lunches will be at Svarta Räfven 12.15. 
 
 
+* Icons are provided from www.svgrepo.com
