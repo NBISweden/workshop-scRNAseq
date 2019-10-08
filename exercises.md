@@ -30,7 +30,7 @@ Please me sure you have completed the [<img border="0" src="https://www.svgrepo.
 
 <br/>
 
-##### <img border="0" src="https://www.svgrepo.com/show/48895/exercise.svg" width="40" height="40"> BONUS exercises
+##### <img border="0" src="https://www.svgrepo.com/show/759/exercise.svg" width="40" height="40"> BONUS exercises
 ***
 
 | Name (link) | Description |
