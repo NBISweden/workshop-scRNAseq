@@ -3,9 +3,8 @@ layout: default
 title:  'Precourse Material - scRNAseq course'
 ---
 
-##### <img border="0" src="https://www.svgrepo.com/show/19652/maths-class-materials-cross-of-a-pencil-and-a-ruler.svg" width="40" height="40"> Precourse material
+#### <img border="0" src="https://www.svgrepo.com/show/19652/maths-class-materials-cross-of-a-pencil-and-a-ruler.svg" width="40" height="40"> Precourse material
 ***
-
 
 ##### <img border="0" src="https://www.svgrepo.com/show/4795/installation-symbol.svg" width="20" height="20"> Installations
 
@@ -44,6 +43,7 @@ So also create the folder 'write' and subfolders for the lab you are planning to
 ##### <img border="0" src="https://www.svgrepo.com/show/17086/server-client-exchange.svg" width="20" height="20"> Uppmax
 
 **Attention**: This step is no longer required for the course. It is only used in one of the lectures
+
 
 1.   If you do not already have an Uppmax account, create and Uppmax account following these [instructions](files/Apply_for_Uppmax_account.pdf). OBS! It may take a few days to recieve the account, so proceed with this point as soon as possible.
 

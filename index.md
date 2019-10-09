@@ -3,22 +3,19 @@ layout: default
 title: Single cell RNA sequencing analysis course
 ---
 
-### Single cell RNA sequencing analysis course
+
+# Single cell RNA sequencing analysis course
 Scilifelab Solna, Rooms Air & Fire,  2020-01-27 - 2020-01-29 (and 2020-01-30 optional day)
 
-<br/>
+### Important dates
 
-##### <img border="0" src="https://www.svgrepo.com/show/20800/event-date-and-time-symbol.svg" width="40" height="40"> Important dates
-***
-
-Application open: September 20, 2019
+Application open: September 13, 2019
 
 Application deadline: December 16, 2019
 
 Confirmation to accepted students: December 20, 2019
 
 <br/>
-
 
 ##### <img border="0" src="https://www.svgrepo.com/show/410/list.svg" width="40" height="40"> Course content
 ***
@@ -38,7 +35,6 @@ On the fourth day we offer a "Bring your own data" day where you can analyse you
 
 <br/>
 
-
 ##### <img border="0" src="https://www.svgrepo.com/show/3874/contact-form.svg" width="40" height="40"> Application
 ***
 
@@ -54,11 +50,14 @@ A course fee* of 2000 SEK will be invoiced to accepted participants. This includ
 
 ###### Entry requirements
 
+
 Required for being able to follow the course and complete the computer exercises
 
 * Basic knowledge in R/Linux.
 * Be able to bring your own laptop with R installed for the practical computational exercises. Instructions on installation will be sent by email to accepted participants.
 * Some programming/scripting experience is required (preferably in R).
+
+
 * **Desirable**: Previous experience with RNA-seq analysis and/or participation in NGS/RNA-seq course is an advantage.
 
 Due to limited space the course can accommodate maximum of 25 participants. If we receive more applications, participants will be selected based on several criteria. Selection criteria include correct entry requirements, motivation to attend the course as well as gender and geographical balance.
@@ -71,7 +70,6 @@ Due to limited space the course can accommodate maximum of 25 participants. If w
 Course schedule can be found here: [Schedule]() (TBA)
 
 <br/>
-
 
 ##### <img border="0" src="https://www.svgrepo.com/show/6672/exercise.svg" width="40" height="40"> Exercises
 ***
