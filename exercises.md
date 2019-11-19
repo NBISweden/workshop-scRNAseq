@@ -35,17 +35,17 @@ Please me sure you have completed the [<img border="0" src="https://www.svgrepo.
 
 | Name (link) | Description |
 | ----------- | ----------- |
-| [Read-Pipeline](labs/Pipeline_exercise) | Snakemake pipeline for processing SmartSeq2 data, mapping reads, QC and expression estimates|
-| [biomaRt](labs/biomart) | For those not familiar with working with biomaRt, we suggest that you have a look at this example code for how to convert between different formats using biomaRt|
-| [PCA, tSNE and clustering](labs/PCA_and_clustering) | Basic PCA, tSNE and clustering using base R on mouse embryonic development data. |
-| [KNN-graphs](labs/igraph) | Construction of graphs from cell-cell similiarities using igraph|
+| [Read-Pipeline](oldlabs/Pipeline_exercise) | Snakemake pipeline for processing SmartSeq2 data, mapping reads, QC and expression estimates|
+| [biomaRt](oldlabs/biomart) | For those not familiar with working with biomaRt, we suggest that you have a look at this example code for how to convert between different formats using biomaRt|
+| [PCA, tSNE and clustering](oldlabs/PCA_and_clustering) | Basic PCA, tSNE and clustering using base R on mouse embryonic development data. |
+| [KNN-graphs](oldlabs/igraph) | Construction of graphs from cell-cell similiarities using igraph|
 | [Estimating Batch-Effects](https://bitbucket.org/scilifelab-lts/scrnaseq-labs/src/a228442debe7f8eff28cfdba875349025db9b7a3/batch_analysis.md?fileviewer=file-view-default) | A tutorial for estimating genome-wide and individual genes batch-effects |
-| [Normalization Comparison](labs/norm_analysis_v2) | A tutorial for comparison scRNAseq and bulk RNAseq normalisation strategies. | [Tutorial for Normalisation](labs/norm_analysis_v2)  |
-| [SC3 package](labs/sc3_R35) | Tutorial with the SC3 consensus clustering package |
-| [Trajectory with Monocle2](labs/monocle_analysis) | A tutorial with mouse embryonic data using the Monocle package for pseudotime analysis |
-| [Differential expression_2](labs/Differential_gene_expression) [Differential expression_2](labs/Differential_gene_expression) | OBS! This old tutorial uses Seurat v2! For this tutorial we have included several different methods for differential expression tests on single cell data, including SCDE, MAST, SC3 and Seurat. The exercise has been split into 2 parts with evaluation of all results in the second part |
-| [UPPMAX Sbatch](labs/sbatchScript) | One example of a sbatch script |
-| [Pagoda](labs/pagoda_ilc) | Pagoda patway wPCA for clustering of cells. OBS! several steps in this tutorial takes hours to run if you work with your own dataset, a good suggestion is to start with the first steps, knn.error.model, pagoda.varnorm and pagoda.pathway.wPCA and let it run while working on other tutorials. You can also run it with more than one core to speed things up |
+| [Normalization Comparison](oldlabs/norm_analysis_v2) | A tutorial for comparison scRNAseq and bulk RNAseq normalisation strategies. | [Tutorial for Normalisation](labs/norm_analysis_v2)  |
+| [SC3 package](oldlabs/sc3_R35) | Tutorial with the SC3 consensus clustering package |
+| [Trajectory with Monocle2](oldlabs/monocle_analysis) | A tutorial with mouse embryonic data using the Monocle package for pseudotime analysis |
+| [Differential expression_2](oldlabs/Differential_gene_expression) [Differential expression_2](labs/Differential_gene_expression) | OBS! This old tutorial uses Seurat v2! For this tutorial we have included several different methods for differential expression tests on single cell data, including SCDE, MAST, SC3 and Seurat. The exercise has been split into 2 parts with evaluation of all results in the second part |
+| [UPPMAX Sbatch](oldlabs/sbatchScript) | One example of a sbatch script |
+| [Pagoda](oldlabs/pagoda_ilc) | Pagoda patway wPCA for clustering of cells. OBS! several steps in this tutorial takes hours to run if you work with your own dataset, a good suggestion is to start with the first steps, knn.error.model, pagoda.varnorm and pagoda.pathway.wPCA and let it run while working on other tutorials. You can also run it with more than one core to speed things up |
 
 
 We will try to keep these tutorials up to date. If you find any errors or things that you think should be updated please contact Åsa (asa.bjorklund@scilifelab.se)
