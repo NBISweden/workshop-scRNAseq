@@ -13,6 +13,7 @@ output:
       smooth_scroll: true
     toc_depth: 3
     keep_md: yes
+    fig_caption: true
   html_notebook:
     self_contained: true
     highlight: tango
@@ -22,39 +23,46 @@ output:
       collapsed: false
       smooth_scroll: true
     toc_depth: 3
-    keep_md: yes
 ---
 
-# Load data
+# Dimensionality reduction
+
+Paulo Czarnewski
+
+
+ h1, .h1, h2, .h2, h3, .h3, h4, .h4 {
+    margin-top: 50px;
+}
+<style>
+p.caption {font-size: 0.9em;font-style: italic;color: grey;margin-right: 10%;margin-left: 10%;text-align: justify;}
+</style>
+
+## Data preparation
+***
 
 First, let's load all necessary libraries and the QC-filtered dataset from the previous step.
 
 
 ```r
-suppressMessages(require(scater))
-suppressMessages(require(scran))
-suppressMessages(require(cowplot))
-suppressMessages(require(cowplot))
-suppressMessages(require(ggplot2))
-suppressMessages(require(rafalib))
+suppressPackageStartupMessages({
+  library(scater)
+  library(scran)
+  library(cowplot)
+  library(ggplot2)
+  library(rafalib)
+  library(umap)
+})
 
 sce <- readRDS("data/3pbmc_qc.rds")
 ```
 
-## Feature selection
+### Feature selection
 
 Next, we first need to define which features/genes are important in our dataset to distinguish cell types. For this purpose, we need to find genes that are highly variable across cells, which in turn will also provide a good separation of the cell clusters.
 
 
 ```r
 sce <- computeSumFactors(sce, sizes=c(20, 40, 60, 80))
-```
-
-```
-## Warning in FUN(...): encountered negative size factor estimates
-```
-
-```r
 sce <- normalize(sce)
 var.fit <- trendVar(sce, use.spikes=FALSE,method="loess",loess.args=list(span=0.02))
 var.out <- decomposeVar(sce, var.fit)
@@ -65,7 +73,9 @@ plot(var.out$mean, var.out$total, pch=16, cex=0.4, xlab="Mean log-expression",
      ylab="Variance of log-expression")
 o <- order(var.out$mean)
 lines(var.out$mean[o], var.out$tech[o], col="dodgerblue", lwd=2)
-cutoff <- var.out$bio > 0.15
+
+cutoff_value <- 0.2
+cutoff <- var.out$bio > cutoff_value
 points(var.out$mean[cutoff], var.out$total[cutoff], col="red", pch=16,cex=.6)
 
 #plot mean over BIOLOGICAL variance
@@ -78,33 +88,40 @@ points(var.out$mean[cutoff], var.out$bio[cutoff], col="red", pch=16,cex=.6)
 ![](scater_02_dim_reduction_compiled_files/figure-html/unnamed-chunk-2-1.png)<!-- -->
 
 ```r
-hvg.out <- var.out[which(var.out$FDR <= 0.05 & var.out$bio >= 0.5),]
+hvg.out <- var.out[which(var.out$FDR <= 0.05 & var.out$bio >= cutoff_value),]
 hvg.out <- hvg.out[order(hvg.out$bio, decreasing=TRUE),]
-nrow(hvg.out)
 ```
 
-```
-## [1] 147
-```
+### Z-score transformation
 
-## Z-score transformation
-
-Now that the data is prepared, we now proceed with PCA. Since each gene has a different expression level, it means that genes with higher expression values will naturally have higher variation that will be captured by PCA. This means that we need to somehow give each gene a similar weight when performing PCA (see below). The common practice is to center and scale each gene before performing PCA. This exact scaling is called Z-score normalization it is very useful for PCA, clustering and plotting heatmaps. Additionally, we can use this function to remove any unwanted sources of variation from the dataset, such as `cell cycle`, `sequencing depth`, `percent mitocondria`, etc. 
+Now that the data is prepared, we now proceed with PCA. Since each gene has a different expression level, it means that genes with higher expression values will naturally have higher variation that will be captured by PCA. This means that we need to somehow give each gene a similar weight when performing PCA (see below). The common practice is to center and scale each gene before performing PCA. This exact scaling is called Z-score normalization it is very useful for PCA, clustering and plotting heatmaps. Additionally, we can use this function to remove any unwanted sources of variation from the dataset, such as `cell cycle`, `sequencing depth`, `percent mitocondria`. This is achieved by doing a generalized linear regression using these parameters as covariates in the model. Then the residuals of the model are taken as the "regressed data". Although not in the best way, batch effect regression can also be done here.
 
 
 ```r
-norm.exprs <- exprs(sce)[rownames(hvg.out),,drop=FALSE]
+# sce@assays$data@listData$scaled.data <- apply(exprs(sce)[rownames(hvg.out),,drop=FALSE],2,function(x) scale(x,T,T))
+# rownames(sce@assays$data@listData$scaled.data) <- rownames(hvg.out)
 ```
 
 
+## PCA
 ***
-# PCA
 
 Performing PCA has many useful applications and interpretations, which much depends on the data used. In the case of life sciences, we want to segregate samples based on gene expression patterns in the data.
 
+As said above, we use the `logcounts` and then set `scale_features` to TRUE in order to scale each gene.
+
 
 ```r
-sce <- runPCA(sce, exprs_values = "logcounts", ncomponents = 30, feature_set = rownames(hvg.out), scale_features = T)
+#Default Scater way
+sce <- runPCA(sce, exprs_values = "logcounts",  scale_features = T,
+              ncomponents = 30, feature_set = rownames(hvg.out),method = "prcomp")
+
+#For some reason Scater removes the dimnames of "logcounts" after PCA, so we put it back
+dimnames(sce@assays$data@listData$logcounts) <- dimnames(sce@assays$data@listData$counts)
+
+#2nd way:
+#sce <- runPCA(sce, exprs_values = "scaled.data", scale_features = FALSE,
+#              ncomponents = 30, feature_set = rownames(hvg.out) )
 ```
 
 We can plot the first 6 dimensions like so.
@@ -112,57 +129,21 @@ We can plot the first 6 dimensions like so.
 
 ```r
 plot_grid(ncol = 3,
-  plotReducedDim(sce,use_dimred = "PCA",colour_by = "sample_id",ncomponents = 1:2),
-  plotReducedDim(sce,use_dimred = "PCA",colour_by = "sample_id",ncomponents = 3:4),
-  plotReducedDim(sce,use_dimred = "PCA",colour_by = "sample_id",ncomponents = 5:6) )
-```
-
-```
-## Warning: 'add_ticks' is deprecated.
-## Use '+ geom_rug(...)' instead.
-
-## Warning: 'add_ticks' is deprecated.
-## Use '+ geom_rug(...)' instead.
-
-## Warning: 'add_ticks' is deprecated.
-## Use '+ geom_rug(...)' instead.
+  plotReducedDim(sce,use_dimred = "PCA",colour_by = "sample_id",ncomponents = 1:2,add_ticks = F),
+  plotReducedDim(sce,use_dimred = "PCA",colour_by = "sample_id",ncomponents = 3:4,add_ticks = F),
+  plotReducedDim(sce,use_dimred = "PCA",colour_by = "sample_id",ncomponents = 5:6,add_ticks = F) )
 ```
 
 ![](scater_02_dim_reduction_compiled_files/figure-html/unnamed-chunk-5-1.png)<!-- -->
 
-To identify which genes contribute the most to each PC, one can retreive the loading matrix information:
+To identify which genes (Seurat) or metadata paramters (Scater/Scran) contribute the most to each PC, one can retreive the loading matrix information. Unfortunatelly this is not implemented in Scater/Scran, so you will need to compute PCA using `logcounts`.
 
 
 ```r
-plot_grid(ncol = 2, 
-          plotExplanatoryPCs(sce),
-          plotExplanatoryVariables(sce))
-```
-
-```
-## Warning in getVarianceExplained(dummy, variables = variables, exprs_values
-## = "pc_space", : ignoring 'is_cell_control' with fewer than 2 unique levels
-```
-
-```
-## Warning in FUN(newX[, i], ...): no non-missing arguments to max; returning
-## -Inf
-```
-
-```
-## Warning in getVarianceExplained(object, ...): ignoring 'is_cell_control'
-## with fewer than 2 unique levels
-```
-
-```
-## Warning: Removed 190 rows containing non-finite values (stat_density).
+plot_grid(ncol = 2, plotExplanatoryPCs(sce))
 ```
 
 ![](scater_02_dim_reduction_compiled_files/figure-html/unnamed-chunk-6-1.png)<!-- -->
-
-The same list of genes can also be visualized as a heatmap.
-
-
 
 We can also plot the amount of variance explained by each PC.
 
@@ -173,97 +154,135 @@ plot(attr(sce@reducedDims$PCA,"percentVar")[1:50]*100,type="l",ylab="% variance"
 points(attr(sce@reducedDims$PCA,"percentVar")[1:50]*100,pch=21,bg="grey",cex=.5)
 ```
 
-![](scater_02_dim_reduction_compiled_files/figure-html/unnamed-chunk-8-1.png)<!-- -->
+![](scater_02_dim_reduction_compiled_files/figure-html/unnamed-chunk-7-1.png)<!-- -->
 
 Based on this plot, we can see that the top 7 PCs retain a lot of information, while other PCs contain pregressivelly less. However, it is still advisable to use more PCs since they might contain informaktion about rare cell types (such as platelets and DCs in this dataset)
 
+## tSNE
 ***
-# tSNE
 
 We can now run [BH-tSNE](https://arxiv.org/abs/1301.3342).
 
 
 ```r
+set.seed(42)
 sce <- runTSNE(sce, use_dimred = "PCA", n_dimred = 30, 
-               perplexity = 30,
-               rand_seed = 42)
-```
-
-```
-## Warning: 'rand.seed=' is deprecated.
-## Use 'set.seed' externally instead.
-```
-
-```r
+               perplexity = 30)
 #see ?Rtsne and ?runTSNE for more info
+reducedDimNames(sce)[reducedDimNames(sce)=="TSNE"] <- "tSNE_on_PCA"
 ```
 
-We can now plot the tSNE colored per dataset. We can start now clearly seeing the effect of batches present in the dataset.
+We can now plot the tSNE colored per dataset. We can start now clearly see the effect of batches present in the dataset.
 
 
 ```r
-plot_grid(ncol = 3,plotReducedDim(sce,use_dimred = "TSNE",colour_by = "sample_id"))
+plot_grid(ncol = 3,plotReducedDim(sce,use_dimred = "tSNE_on_PCA",colour_by = "sample_id",add_ticks = F))
 ```
 
-```
-## Warning: 'add_ticks' is deprecated.
-## Use '+ geom_rug(...)' instead.
-```
-
-![](scater_02_dim_reduction_compiled_files/figure-html/unnamed-chunk-10-1.png)<!-- -->
+![](scater_02_dim_reduction_compiled_files/figure-html/unnamed-chunk-9-1.png)<!-- -->
 
 
+## UMAP
 ***
-# UMAP
 
 We can now run [UMAP](https://arxiv.org/abs/1802.03426).
 
 
 ```r
 sce <- runUMAP(sce,use_dimred = "PCA", n_dimred = 30,   ncomponents = 2)
+
+#We need to rename it to not overide with other UMAP computations
+try(sce@reducedDims$UMAP_on_RNA <- NULL)
+reducedDimNames(sce)[reducedDimNames(sce)=="UMAP"] <- "UMAP_on_PCA"
 #see ?umap and ?runUMAP for more info
+```
+
+Another usefullness of UMAP is that it is not limitted by the number of dimensions the data cen be reduced into (unlike tSNE). We can simply reduce the dimentions altering the `n.components` parameter.
+
+
+```r
+sce <- runUMAP(sce,use_dimred = "PCA", n_dimred = 30,   ncomponents = 10)
+#see ?umap and ?runUMAP for more info
+
+#We need to rename it to not overide with other UMAP computations
+try(sce@reducedDims$UMAP10_on_RNA <- NULL)
+reducedDimNames(sce)[reducedDimNames(sce)=="UMAP"] <- "UMAP10_on_PCA"
 ```
 
 We can now plot the UMAP colored per dataset. Although less distinct as in the tSNE, we still see quite an effect of the different batches in the data.
 
 
 ```r
-plot_grid(ncol = 3,plotReducedDim(sce,use_dimred = "UMAP",colour_by = "sample_id"))
-```
-
-```
-## Warning: 'add_ticks' is deprecated.
-## Use '+ geom_rug(...)' instead.
+plot_grid(ncol = 3,
+          plotReducedDim(sce,use_dimred = "UMAP_on_PCA",colour_by = "sample_id",add_ticks = F)+
+            ggplot2::ggtitle(label ="UMAP_on_PCA"),
+          plotReducedDim(sce,use_dimred = "UMAP10_on_PCA",colour_by = "sample_id",ncomponents = 1:2,add_ticks = F)+
+            ggplot2::ggtitle(label ="UMAP10_on_PCA"),
+          plotReducedDim(sce,use_dimred = "UMAP10_on_PCA",colour_by = "sample_id",ncomponents = 3:4,add_ticks = F)+
+            ggplot2::ggtitle(label ="UMAP10_on_PCA")
+)
 ```
 
 ![](scater_02_dim_reduction_compiled_files/figure-html/unnamed-chunk-12-1.png)<!-- -->
 
+
+## Using ScaledData and graphs for DR
 ***
 
+Althought running a sencond dimmensionality reduction (i.e tSNE or UMAP) on PCA would be a standard approach (because it allows higher computation efficiency), the options are actually limiteless. Below we will show a couple of other common options such as running directly on the scaled data (which was used for PCA) or on a graph built from scaled data. We will show from now on only UMAP, but the same applies for tSNE.
+
+### Using ScaledData for UMAP
+
+To run tSNE or UMAP on the scaled data, one firts needs to select the number of variables to use. This is because including dimentions that do contribute to the separation of your cell types will in the end mask those differences. Another reason for it is because running with all genes/features also will take longer or might be computationally unfeasible. Therefore we will use the scaled data of the highly variable genes.
 
 
+```r
+sce <- runUMAP(sce, exprs_values='logcounts', feature_set = rownames(hvg.out))
+
+#We need to rename it to not overide with other UMAP computations
+try(sce@reducedDims$UMAP_on_ScaleData <- NULL)
+reducedDimNames(sce)[reducedDimNames(sce)=="UMAP"] <- "UMAP_on_ScaleData"
+```
+
+To run tSNE or UMAP on the a graph, we first need to build a graph from the data. In fact, both tSNE and UMAP first build a graph from the data using a specified distance metrix and then optimize the embedding. Since a graph is just a matrix containing distances from cell to cell and as such, you can run either UMAP or tSNE using any other distance metric desired. Euclidean and Correlation are ususally the most commonly used.
+
+### Using a Graph for UMAP
+
+
+```r
+#Build Graph
+g <- buildKNNGraph(sce,k=30,use.dimred="PCA",assay.type="RNA")
+sce@reducedDims$KNN <- igraph::as_adjacency_matrix(g)
+
+
+#Run UMAP and rename it for comparisson
+# temp <- umap::umap.defaults
+# temp$input <- "dist"
+sce <- runUMAP(sce,use_dimred = "KNN", ncomponents = 2, input="data")
+try(sce@reducedDims$UMAP_on_Graph <- NULL)
+reducedDimNames(sce)[reducedDimNames(sce)=="UMAP"] <- "UMAP_on_Graph"
+```
+
+
+We can now plot the UMAP comparing both on PCA vs ScaledSata vs Graph.
 
 
 ```r
 plot_grid(ncol = 3,
-  plotReducedDim(sce,use_dimred = "PCA",colour_by = "sample_id"),
-  plotReducedDim(sce,use_dimred = "TSNE",colour_by = "sample_id"),
-  plotReducedDim(sce,use_dimred = "UMAP",colour_by = "sample_id")
+  plotReducedDim(sce, use_dimred = "UMAP_on_PCA", colour_by = "sample_id",add_ticks = F)+ 
+    ggplot2::ggtitle(label ="UMAP_on_PCA"),
+  plotReducedDim(sce, use_dimred = "UMAP_on_ScaleData", colour_by = "sample_id",add_ticks = F)+
+    ggplot2::ggtitle(label ="UMAP_on_ScaleData"),
+  plotReducedDim(sce, use_dimred = "UMAP_on_Graph", colour_by = "sample_id",add_ticks = F)+
+    ggplot2::ggtitle(label ="UMAP_on_Graph")
 )
 ```
 
-```
-## Warning: 'add_ticks' is deprecated.
-## Use '+ geom_rug(...)' instead.
+![](scater_02_dim_reduction_compiled_files/figure-html/unnamed-chunk-15-1.png)<!-- -->
 
-## Warning: 'add_ticks' is deprecated.
-## Use '+ geom_rug(...)' instead.
+## Ploting genes of interest
+***
 
-## Warning: 'add_ticks' is deprecated.
-## Use '+ geom_rug(...)' instead.
-```
-
-![](scater_02_dim_reduction_compiled_files/figure-html/unnamed-chunk-13-1.png)<!-- -->
 
 Let's plot some marker genes for different celltypes onto the embedding. Some genes are:
 
@@ -282,137 +301,16 @@ FCER1A, CST3 | DCs
 ```r
 plotlist <- list()
 for(i in c("CD3E","CD4","CD8A","NKG7","GNLY","MS4A1","CD14","LYZ","MS4A7","FCGR3A","CST3","FCER1A")){
-plotlist[[i]] <-plotReducedDim(sce,use_dimred = "UMAP",colour_by = i,by_exprs_values = "logcounts") + scale_fill_gradientn(colours = colorRampPalette(c("grey90","orange3","firebrick","firebrick","red","red" ))(10)) + ggtitle(label = i)+ theme(plot.title = element_text(size=20)) }
+  plotlist[[i]] <- plotReducedDim(sce,use_dimred = "UMAP_on_PCA",colour_by = i,by_exprs_values = "logcounts",add_ticks = F) +
+  scale_fill_gradientn(colours = colorRampPalette(c("grey90","orange3","firebrick","firebrick","red","red" ))(10)) +
+  ggtitle(label = i)+ theme(plot.title = element_text(size=20)) }
+plot_grid(ncol=3, plotlist = plotlist)
 ```
 
-```
-## Warning: 'add_ticks' is deprecated.
-## Use '+ geom_rug(...)' instead.
-```
-
-```
-## Scale for 'fill' is already present. Adding another scale for 'fill',
-## which will replace the existing scale.
-```
-
-```
-## Warning: 'add_ticks' is deprecated.
-## Use '+ geom_rug(...)' instead.
-```
-
-```
-## Scale for 'fill' is already present. Adding another scale for 'fill',
-## which will replace the existing scale.
-```
-
-```
-## Warning: 'add_ticks' is deprecated.
-## Use '+ geom_rug(...)' instead.
-```
-
-```
-## Scale for 'fill' is already present. Adding another scale for 'fill',
-## which will replace the existing scale.
-```
-
-```
-## Warning: 'add_ticks' is deprecated.
-## Use '+ geom_rug(...)' instead.
-```
-
-```
-## Scale for 'fill' is already present. Adding another scale for 'fill',
-## which will replace the existing scale.
-```
-
-```
-## Warning: 'add_ticks' is deprecated.
-## Use '+ geom_rug(...)' instead.
-```
-
-```
-## Scale for 'fill' is already present. Adding another scale for 'fill',
-## which will replace the existing scale.
-```
-
-```
-## Warning: 'add_ticks' is deprecated.
-## Use '+ geom_rug(...)' instead.
-```
-
-```
-## Scale for 'fill' is already present. Adding another scale for 'fill',
-## which will replace the existing scale.
-```
-
-```
-## Warning: 'add_ticks' is deprecated.
-## Use '+ geom_rug(...)' instead.
-```
-
-```
-## Scale for 'fill' is already present. Adding another scale for 'fill',
-## which will replace the existing scale.
-```
-
-```
-## Warning: 'add_ticks' is deprecated.
-## Use '+ geom_rug(...)' instead.
-```
-
-```
-## Scale for 'fill' is already present. Adding another scale for 'fill',
-## which will replace the existing scale.
-```
-
-```
-## Warning: 'add_ticks' is deprecated.
-## Use '+ geom_rug(...)' instead.
-```
-
-```
-## Scale for 'fill' is already present. Adding another scale for 'fill',
-## which will replace the existing scale.
-```
-
-```
-## Warning: 'add_ticks' is deprecated.
-## Use '+ geom_rug(...)' instead.
-```
-
-```
-## Scale for 'fill' is already present. Adding another scale for 'fill',
-## which will replace the existing scale.
-```
-
-```
-## Warning: 'add_ticks' is deprecated.
-## Use '+ geom_rug(...)' instead.
-```
-
-```
-## Scale for 'fill' is already present. Adding another scale for 'fill',
-## which will replace the existing scale.
-```
-
-```
-## Warning: 'add_ticks' is deprecated.
-## Use '+ geom_rug(...)' instead.
-```
-
-```
-## Scale for 'fill' is already present. Adding another scale for 'fill',
-## which will replace the existing scale.
-```
-
-```r
-plot_grid(ncol=4, plotlist = plotlist)
-```
-
-![](scater_02_dim_reduction_compiled_files/figure-html/unnamed-chunk-14-1.png)<!-- -->
+![](scater_02_dim_reduction_compiled_files/figure-html/unnamed-chunk-16-1.png)<!-- -->
 
 
-Here, we can conclude that our dataset contains a batch effect that needs to be corrected before proceeding to clustering and differential gene expression analysis. We can now save the object for use in the next step.
+We can finally save the object for use in future steps.
 
 
 ```r

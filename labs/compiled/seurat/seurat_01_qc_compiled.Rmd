@@ -13,6 +13,7 @@ output:
       smooth_scroll: true
     toc_depth: 3
     keep_md: yes
+    fig_caption: true
   html_notebook:
     self_contained: true
     highlight: tango
@@ -22,9 +23,7 @@ output:
       collapsed: false
       smooth_scroll: true
     toc_depth: 3
-    keep_md: yes
 ---
-
 
 ***
 # Get data
@@ -42,7 +41,6 @@ With data in place, now we can start loading libraries we will use in this tutor
 
 ```{r, message='hide',warning='hide',results='hold'}
 suppressMessages(require(Seurat))
-suppressMessages(require(scater))
 suppressMessages(require(Matrix))
 ```
 
@@ -93,10 +91,10 @@ alldata <- PercentageFeatureSet(alldata, "^MT-", col.name = "percent_mito")
 
 # Way2: Doing it manually
 total_counts_per_cell <- colSums(  alldata@assays$RNA@counts  )
-
 mito_genes <- rownames(alldata)[grep("^MT-",rownames(alldata))]
-head(mito_genes,10)
 alldata$percent_mito <- colSums(  alldata@assays$RNA@counts[mito_genes,]  ) / total_counts_per_cell
+
+head(mito_genes,10)
 ```
 
 In the same manner we will calculate the proportion gene expression that comes from ribosomal proteins.
@@ -125,10 +123,10 @@ As you can see, the v2 chemistry gives lower gene detection, but higher detectio
 
 ```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=16}
 cowplot::plot_grid(ncol = 4,
-  FeatureScatter(alldata, "nCount_RNA"  , "nFeature_RNA", group.by = "orig.ident", pt.size = .1),
-  FeatureScatter(alldata, "percent_mito", "nFeature_RNA", group.by = "orig.ident", pt.size = .1),
-  FeatureScatter(alldata, "percent_ribo", "nFeature_RNA", group.by = "orig.ident", pt.size = .1),
-  FeatureScatter(alldata, "percent_ribo", "percent_mito", group.by = "orig.ident", pt.size = .1)
+  FeatureScatter(alldata, "nCount_RNA"  , "nFeature_RNA", group.by = "orig.ident", pt.size = .5),
+  FeatureScatter(alldata, "percent_mito", "nFeature_RNA", group.by = "orig.ident", pt.size = .5),
+  FeatureScatter(alldata, "percent_ribo", "nFeature_RNA", group.by = "orig.ident", pt.size = .5),
+  FeatureScatter(alldata, "percent_ribo", "percent_mito", group.by = "orig.ident", pt.size = .5)
 )
 ```
 
@@ -185,6 +183,7 @@ selected_ribo <- WhichCells(data.filt, expression = percent_ribo > 0.05)
 # and subset the object to only keep those cells
 data.filt <- subset(data.filt, cells = selected_mito)
 data.filt <- subset(data.filt, cells = selected_ribo)
+dim(data.filt)
 ```
 
 As you can see, there is still quite a lot of variation in `percent_mito`, so it will have to be dealt with in the data analysis step. We can also notice that the `percent_ribo` are also highly variable, but that is expected since different cell types have different proportions of ribosomal content, according to their function.
@@ -203,9 +202,7 @@ VlnPlot(data.filt, group.by= "orig.ident", features = feats, pt.size = 0.1,ncol 
 
 We here perform cell cycle scoring. To score a gene list, the algorithm calculates the difference of mean expression of the given list and the mean expression of reference genes. To build the reference, the function randomly chooses a bunch of genes matching the distribution of the expression of the given list. Cell cycle scoring adds three slots in data, a score for S phase, a score for G2M phase and the predicted cell cycle phase.
 
-```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=4,fig.width=8}
-data.filt <- NormalizeData(data.filt)
-
+```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=8,fig.width=8}
 data.filt <- CellCycleScoring(object = data.filt,
                               g2m.features = cc.genes$g2m.genes,
                               s.features = cc.genes$s.genes)

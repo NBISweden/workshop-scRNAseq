@@ -1,5 +1,5 @@
 ---
-title: "Seurat"
+title: #INTEG_TITLE:
 author: "Åsa Björklund  &  Paulo Czarnewski"
 date: "Sept 13, 2019"
 output:
@@ -13,6 +13,7 @@ output:
       smooth_scroll: true
     toc_depth: 3
     keep_md: yes
+    fig_caption: true
   html_notebook:
     self_contained: true
     highlight: tango
@@ -22,11 +23,7 @@ output:
       collapsed: false
       smooth_scroll: true
     toc_depth: 3
-    keep_md: yes
 ---
-
-***
-# Data Integration
 
 In this tutorial we will look at different ways of integrating multiple single cell RNA-seq datasets. We will explore two different methods to correct for batch effects across datasets. We will also look at a quantitative measure to assess the quality of the integrated data. Seurat uses the data integration method presented in Comprehensive Integration of Single Cell Data, while Scran and Scanpy use a mutual Nearest neighbour method (MNN). Below you can find a list of the most recent methods for single data integration:
 
@@ -40,11 +37,13 @@ Scanorama | Python | scanorama | [Nat. Biotech.](https://www.nature.com/articles
 Let's first load necessary libraries and the data saved in the previous lab.
 
 ```{r, message='hide',warning='hide',results='hold'}
-suppressMessages(require(Seurat))
-suppressMessages(require(cowplot))
-suppressMessages(require(ggplot2))
+suppressPackageStartupMessages({
+  library(Seurat)
+  library(cowplot)
+  library(ggplot2)
+})
 
-alldata <- readRDS("data/3pbmc_qc_dm.rds")
+alldata <- readRDS("data/3pbmc_qc_dr.rds")
 print(names(alldata@reductions))
 ```
 
@@ -57,6 +56,9 @@ for (i in 1:length(alldata.list)) {
     alldata.list[[i]] <- NormalizeData(alldata.list[[i]], verbose = FALSE)
     alldata.list[[i]] <- FindVariableFeatures(alldata.list[[i]], selection.method = "vst", nfeatures = 2000,verbose = FALSE)
 }
+
+hvgs_per_dataset <- lapply(alldata.list, function(x) { x@assays$RNA@var.features })
+venn::venn(hvgs_per_dataset,opacity = .4,zcolor = scales::hue_pal()(3),cexsn = 1,cexil = 1,lwd=1,col="white",frame=F,borders = NA)
 ```
 
 We identify anchors using the FindIntegrationAnchors function, which takes a list of Seurat objects as input.
@@ -121,7 +123,7 @@ FeaturePlot(alldata.int, reduction = "UMAP_on_CCA",dims = 1:2,features = c("CD3E
 Finally, lets save the integrated data for further analysis.
 
 ```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=16}
-saveRDS(alldata,"data/integrated_3pbmc.rds")
+saveRDS(alldata.int,"data/3pbmc_qc_dr_int.rds")
 ```
 
 

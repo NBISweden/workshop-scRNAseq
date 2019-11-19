@@ -13,6 +13,7 @@ output:
       smooth_scroll: true
     toc_depth: 3
     keep_md: yes
+    fig_caption: true
   html_notebook:
     self_contained: true
     highlight: tango
@@ -22,7 +23,6 @@ output:
       collapsed: false
       smooth_scroll: true
     toc_depth: 3
-    keep_md: yes
 ---
 
 ***
@@ -43,8 +43,45 @@ With data in place, now we can start loading libraries we will use in this tutor
 
 ```r
 suppressMessages(require(scater))
+```
+
+```
+## Warning: package 'scater' was built under R version 3.5.2
+```
+
+```
+## Warning: package 'SingleCellExperiment' was built under R version 3.5.2
+```
+
+```
+## Warning: package 'GenomeInfoDb' was built under R version 3.5.2
+```
+
+```
+## Warning: package 'BiocParallel' was built under R version 3.5.2
+```
+
+```
+## Warning: package 'ggplot2' was built under R version 3.5.2
+```
+
+```r
 suppressMessages(require(scran))
+```
+
+```
+## Warning: package 'scran' was built under R version 3.5.2
+```
+
+```r
 suppressMessages(require(cowplot))
+```
+
+```
+## Warning: package 'cowplot' was built under R version 3.5.2
+```
+
+```r
 suppressMessages(require(org.Hs.eg.db))
 ```
 
@@ -106,90 +143,42 @@ head(sce@colData,10)
 
 ```
 ## DataFrame with 10 rows and 13 columns
-##                      sample_id    nCount nFeatures      size_factors
-##                    <character> <numeric> <integer>         <numeric>
-## AAACCCAAGGAGAGTA-1       v3.1k      8288      2620  1.35511215206541
-## AAACGCTTCAGCCCAG-1       v3.1k      5512      1808 0.901228062522265
-## AAAGAACAGACGACTG-1       v3.1k      4283      1562 0.700282981092682
-## AAAGAACCAATGGCAG-1       v3.1k      2754      1225 0.450287025432931
-## AAAGAACGTCTGCAAT-1       v3.1k      6592      1831  1.07781120975087
-## AAAGGATAGTAGACAT-1       v3.1k      8845      2048  1.44618327521942
-## AAAGGATCACCGGCTA-1       v3.1k      5344      1589 0.873759572953371
-## AAAGGATTCAGCTTGA-1       v3.1k     12683      3423  2.07370745953735
-## AAAGGATTCCGTTTCG-1       v3.1k     15917      3752  2.60247588373855
-## AAAGGGCTCATGCCCT-1       v3.1k      7262      1759  1.18735816219824
-##                    is_cell_control total_features_by_counts
-##                          <logical>                <integer>
-## AAACCCAAGGAGAGTA-1           FALSE                     2620
-## AAACGCTTCAGCCCAG-1           FALSE                     1808
-## AAAGAACAGACGACTG-1           FALSE                     1562
-## AAAGAACCAATGGCAG-1           FALSE                     1225
-## AAAGAACGTCTGCAAT-1           FALSE                     1831
-## AAAGGATAGTAGACAT-1           FALSE                     2048
-## AAAGGATCACCGGCTA-1           FALSE                     1589
-## AAAGGATTCAGCTTGA-1           FALSE                     3423
-## AAAGGATTCCGTTTCG-1           FALSE                     3752
-## AAAGGGCTCATGCCCT-1           FALSE                     1759
-##                    log10_total_features_by_counts total_counts
-##                                         <numeric>    <numeric>
-## AAACCCAAGGAGAGTA-1                3.4184670209466         8288
-## AAACGCTTCAGCCCAG-1               3.25743856685981         5512
-## AAAGAACAGACGACTG-1               3.19395897801919         4283
-## AAAGAACCAATGGCAG-1                3.0884904701824         2754
-## AAAGAACGTCTGCAAT-1               3.26292546933183         6592
-## AAAGGATAGTAGACAT-1               3.31154195840119         8845
-## AAAGGATCACCGGCTA-1               3.20139712432045         5344
-## AAAGGATTCAGCTTGA-1               3.53453375600512        12683
-## AAAGGATTCCGTTTCG-1               3.57437856441308        15917
-## AAAGGGCTCATGCCCT-1               3.24551266781415         7262
-##                    log10_total_counts pct_counts_in_top_50_features
-##                             <numeric>                     <numeric>
-## AAACCCAAGGAGAGTA-1   3.91850213963617              35.2919884169884
-## AAACGCTTCAGCCCAG-1   3.74138799247927              39.3142235123367
-## AAAGAACAGACGACTG-1   3.63184946215982               39.084753677329
-## AAAGAACCAATGGCAG-1    3.4401216031878              36.4197530864198
-## AAAGAACGTCTGCAAT-1    3.8190830757437              42.8549757281553
-## AAAGGATAGTAGACAT-1   3.94674693503358              46.8739400791408
-## AAAGGATCACCGGCTA-1    3.7279477095448              42.0284431137725
-## AAAGGATTCAGCTTGA-1   4.10325623335505              31.5382795868485
-## AAAGGATTCCGTTTCG-1   4.20188850036597              35.6474209964189
-## AAAGGGCTCATGCCCT-1    3.8611160441614              48.5403470118425
-##                    pct_counts_in_top_100_features
-##                                         <numeric>
-## AAACCCAAGGAGAGTA-1               44.5704633204633
-## AAACGCTTCAGCCCAG-1               54.4992743105951
-## AAAGAACAGACGACTG-1               51.4826056502451
-## AAAGAACCAATGGCAG-1               47.2403776325345
-## AAAGAACGTCTGCAAT-1               58.1310679611651
-## AAAGGATAGTAGACAT-1               64.4205765969474
-## AAAGGATCACCGGCTA-1               58.9446107784431
-## AAAGGATTCAGCTTGA-1               42.9078293779074
-## AAAGGATTCCGTTTCG-1               46.3026952315135
-## AAAGGGCTCATGCCCT-1               63.8804736987056
-##                    pct_counts_in_top_200_features
-##                                         <numeric>
-## AAACCCAAGGAGAGTA-1               54.1747104247104
-## AAACGCTTCAGCCCAG-1               63.9695210449927
-## AAAGAACAGACGACTG-1               61.5923418164838
-## AAAGAACCAATGGCAG-1               58.3514887436456
-## AAAGAACGTCTGCAAT-1               67.7639563106796
-## AAAGGATAGTAGACAT-1               71.8598078010175
-## AAAGGATCACCGGCTA-1               67.7956586826347
-## AAAGGATTCAGCTTGA-1               54.1906489001025
-## AAAGGATTCCGTTTCG-1               56.7255136018094
-## AAAGGGCTCATGCCCT-1               72.6383916276508
-##                    pct_counts_in_top_500_features
-##                                         <numeric>
-## AAACCCAAGGAGAGTA-1               67.4107142857143
-## AAACGCTTCAGCCCAG-1               75.8345428156749
-## AAAGAACAGACGACTG-1               75.2042960541676
-## AAAGAACCAATGGCAG-1               73.6746550472041
-## AAAGAACGTCTGCAAT-1               78.5345873786408
-## AAAGGATAGTAGACAT-1               80.5992085924251
-## AAAGGATCACCGGCTA-1               79.6220059880239
-## AAAGGATTCAGCTTGA-1               66.8532681542222
-## AAAGGATTCCGTTTCG-1               68.4802412514921
-## AAAGGGCTCATGCCCT-1               82.3189204076012
+##                      sample_id    nCount nFeatures      size_factors is_cell_control total_features_by_counts
+##                    <character> <numeric> <integer>         <numeric>       <logical>                <integer>
+## AAACCCAAGGAGAGTA-1       v3.1k      8288      2620  1.35511215206541           FALSE                     2620
+## AAACGCTTCAGCCCAG-1       v3.1k      5512      1808 0.901228062522265           FALSE                     1808
+## AAAGAACAGACGACTG-1       v3.1k      4283      1562 0.700282981092682           FALSE                     1562
+## AAAGAACCAATGGCAG-1       v3.1k      2754      1225 0.450287025432931           FALSE                     1225
+## AAAGAACGTCTGCAAT-1       v3.1k      6592      1831  1.07781120975087           FALSE                     1831
+## AAAGGATAGTAGACAT-1       v3.1k      8845      2048  1.44618327521942           FALSE                     2048
+## AAAGGATCACCGGCTA-1       v3.1k      5344      1589 0.873759572953371           FALSE                     1589
+## AAAGGATTCAGCTTGA-1       v3.1k     12683      3423  2.07370745953735           FALSE                     3423
+## AAAGGATTCCGTTTCG-1       v3.1k     15917      3752  2.60247588373855           FALSE                     3752
+## AAAGGGCTCATGCCCT-1       v3.1k      7262      1759  1.18735816219824           FALSE                     1759
+##                    log10_total_features_by_counts total_counts log10_total_counts pct_counts_in_top_50_features
+##                                         <numeric>    <numeric>          <numeric>                     <numeric>
+## AAACCCAAGGAGAGTA-1                3.4184670209466         8288   3.91850213963617              35.2919884169884
+## AAACGCTTCAGCCCAG-1               3.25743856685981         5512   3.74138799247927              39.3142235123367
+## AAAGAACAGACGACTG-1               3.19395897801919         4283   3.63184946215982               39.084753677329
+## AAAGAACCAATGGCAG-1                3.0884904701824         2754    3.4401216031878              36.4197530864198
+## AAAGAACGTCTGCAAT-1               3.26292546933183         6592    3.8190830757437              42.8549757281553
+## AAAGGATAGTAGACAT-1               3.31154195840119         8845   3.94674693503358              46.8739400791408
+## AAAGGATCACCGGCTA-1               3.20139712432045         5344    3.7279477095448              42.0284431137725
+## AAAGGATTCAGCTTGA-1               3.53453375600512        12683   4.10325623335505              31.5382795868485
+## AAAGGATTCCGTTTCG-1               3.57437856441308        15917   4.20188850036597              35.6474209964189
+## AAAGGGCTCATGCCCT-1               3.24551266781415         7262    3.8611160441614              48.5403470118425
+##                    pct_counts_in_top_100_features pct_counts_in_top_200_features pct_counts_in_top_500_features
+##                                         <numeric>                      <numeric>                      <numeric>
+## AAACCCAAGGAGAGTA-1               44.5704633204633               54.1747104247104               67.4107142857143
+## AAACGCTTCAGCCCAG-1               54.4992743105951               63.9695210449927               75.8345428156749
+## AAAGAACAGACGACTG-1               51.4826056502451               61.5923418164838               75.2042960541676
+## AAAGAACCAATGGCAG-1               47.2403776325345               58.3514887436456               73.6746550472041
+## AAAGAACGTCTGCAAT-1               58.1310679611651               67.7639563106796               78.5345873786408
+## AAAGGATAGTAGACAT-1               64.4205765969474               71.8598078010175               80.5992085924251
+## AAAGGATCACCGGCTA-1               58.9446107784431               67.7956586826347               79.6220059880239
+## AAAGGATTCAGCTTGA-1               42.9078293779074               54.1906489001025               66.8532681542222
+## AAAGGATTCCGTTTCG-1               46.3026952315135               56.7255136018094               68.4802412514921
+## AAAGGGCTCATGCCCT-1               63.8804736987056               72.6383916276508               82.3189204076012
 ```
 
 
@@ -210,8 +199,7 @@ head(mito_genes,10)
 ```
 
 ```
-##  [1] "MT-ND1"  "MT-ND2"  "MT-CO1"  "MT-CO2"  "MT-ATP8" "MT-ATP6" "MT-CO3" 
-##  [8] "MT-ND3"  "MT-ND4L" "MT-ND4"
+##  [1] "MT-ND1"  "MT-ND2"  "MT-CO1"  "MT-CO2"  "MT-ATP8" "MT-ATP6" "MT-CO3"  "MT-ND3"  "MT-ND4L" "MT-ND4"
 ```
 
 In the same manner we will calculate the proportion gene expression that comes from ribosomal proteins.
@@ -225,8 +213,7 @@ head(ribo_genes,10)
 ```
 
 ```
-##  [1] "RPL22"   "RPL11"   "RPS6KA1" "RPS8"    "RPL5"    "RPS27"   "RPS6KC1"
-##  [8] "RPS7"    "RPS27A"  "RPL31"
+##  [1] "RPL22"   "RPL11"   "RPS6KA1" "RPS8"    "RPL5"    "RPS27"   "RPS6KC1" "RPS7"    "RPS27A"  "RPL31"
 ```
 
 ***
