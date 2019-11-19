@@ -21,11 +21,11 @@ Please me sure you have completed the [<img border="0" src="https://www.svgrepo.
 
 | Tutorial | <img border="0" src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/R_logo.svg/1448px-R_logo.svg.png" width="20" height="20"> Seurat | <img border="0" src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/R_logo.svg/1448px-R_logo.svg.png" width="20" height="20"> Scater/Scran | <img border="0" src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Python-logo-notext.svg/1024px-Python-logo-notext.svg.png" width="20" height="20"> Scanpy |
 | -------- | ---------- | ---------------- | --------------- |
-| <img border="0" src="https://cdn0.iconfinder.com/data/icons/business-and-finance-4-5/68/188-512.png" width="30" height="30"> Quality Control | [Seurat_qc](labs/compiled/seurat/seurat_01_qc_compiled.md) | [Scater_qc](labs/compiled/scater/scater_01_qc_compiled.md) | [ScanPY_qc](labs/scanpy/qc_3pbmc.ipynb) |
-| <img border="0" src="https://static.thenounproject.com/png/1551503-200.png" width="30" height="30"> Dimensionality reduction | [Seurat_dr](labs/compiled/seurat/seurat_02_dim_reduction_compiled.md) | [Scater_dr](labs/compiled/scater/scater_02_dim_reduction_compiled.md) | [Scanpy_dr](labs/scanpy/dim_reduction.ipynb) |
-| <img border="0" src="http://s16574.pcdn.co/wp-content/uploads/2018/05/cluster-icon.png" width="30" height="30"> Data integration | [Seurat_integr](labs/compiled/seurat/seurat_03_integration_compiled.md) | [Scater_integr](labs/compiled/scater/scater_03_integration_compiled.md) | [Scanpy_integr](labs/scanpy/batch_correction_mnn.ipynb) |
-| <img border="0" src="https://cdn0.iconfinder.com/data/icons/network-analysis-7/64/cluster-positive-negative-group-collection-512.png" width="30" height="30"> Clustering | [Seurat_clust](labs/compiled/seurat/lab_seurat.html) | [Scater_clust](labs/compiled/scater/lab_scran.html) | [Scanpy_clust](labs/scanpy/qc_3pbmc.ipynb) |
-| <img border="0" src="https://static.thenounproject.com/png/1517975-200.png" width="30" height="30"> Differential expression | [Seurat_dge](labs/compiled/seurat/lab_seurat.html) | [Scater_dge](labs/compiled/scater/lab_scran.html) | [Scanpy_dge](labs/scanpy/qc_3pbmc.ipynb) |
+| <img border="0" src="https://cdn0.iconfinder.com/data/icons/business-and-finance-4-5/68/188-512.png" width="30" height="30"> Quality Control | [Seurat_qc](labs/compiled/seurat/seurat_01_qc_compiled.md) | [Scater_qc](labs/compiled/scater/scater_01_qc_compiled.md) | [ScanPY_qc](labs/scanpy/scanpy_01_qc.ipynb) |
+| <img border="0" src="https://static.thenounproject.com/png/1551503-200.png" width="30" height="30"> Dimensionality reduction | [Seurat_dr](labs/compiled/seurat/seurat_02_dim_reduction_compiled.md) | [Scater_dr](labs/compiled/scater/scater_02_dim_reduction_compiled.md) | [Scanpy_dr](labs/scanpy/scanpy_02_dim_reduction.ipynb) |
+| <img border="0" src="http://s16574.pcdn.co/wp-content/uploads/2018/05/cluster-icon.png" width="30" height="30"> Data integration | [Seurat_integr](labs/compiled/seurat/seurat_03_integration_compiled.md) | [Scater_integr](labs/compiled/scater/scater_03_integration_compiled.md) | [Scanpy_integr](labs/scanpy/scanpy_03_integration.ipynb) |
+| <img border="0" src="https://cdn0.iconfinder.com/data/icons/network-analysis-7/64/cluster-positive-negative-group-collection-512.png" width="30" height="30"> Clustering | [Seurat_clust](labs/compiled/seurat/seurat_04_clustering_compiled.html) | [Scater_clust](labs/compiled/scater/scater_04_clustering_compiled.html) | [Scanpy_clust](labs/scanpy/scanpy_04_clustering.ipynb) |
+| <img border="0" src="https://static.thenounproject.com/png/1517975-200.png" width="30" height="30"> Differential expression | [Seurat_dge](labs/compiled/seurat/lab_seurat.html) | [Scater_dge](labs/compiled/scater/lab_scran.html) | [Scanpy_dge](labs/scanpy/scanpy_05_dge.ipynb) |
 | <img border="0" src="https://cdn2.vectorstock.com/i/1000x1000/49/51/route-location-icon-vector-16394951.jpg" width="30" height="30"> Trajectory inference | [Monocle_ti](labs/compiled/monocle/monocle.html) | [Slingshot_ti](labs/compiled/slingshot/slingshot.html) | [PAGA_ti](labs/paga/paga.ipynb) |
 
 <br/>
@@ -37,7 +37,7 @@ Please me sure you have completed the [<img border="0" src="https://www.svgrepo.
 | ----------- | ----------- |
 | [Read-Pipeline](labs/Pipeline_exercise) | Snakemake pipeline for processing SmartSeq2 data, mapping reads, QC and expression estimates|
 | [biomaRt](labs/biomart) | For those not familiar with working with biomaRt, we suggest that you have a look at this example code for how to convert between different formats using biomaRt|
-| [PCA, tSNE and clustering](labs/PCA_and_clustering) | Basic PCA, tSNE and clustering using base R on mouse embryonic development data. | 
+| [PCA, tSNE and clustering](labs/PCA_and_clustering) | Basic PCA, tSNE and clustering using base R on mouse embryonic development data. |
 | [KNN-graphs](labs/igraph) | Construction of graphs from cell-cell similiarities using igraph|
 | [Estimating Batch-Effects](https://bitbucket.org/scilifelab-lts/scrnaseq-labs/src/a228442debe7f8eff28cfdba875349025db9b7a3/batch_analysis.md?fileviewer=file-view-default) | A tutorial for estimating genome-wide and individual genes batch-effects |
 | [Normalization Comparison](labs/norm_analysis_v2) | A tutorial for comparison scRNAseq and bulk RNAseq normalisation strategies. | [Tutorial for Normalisation](labs/norm_analysis_v2)  |
@@ -48,9 +48,9 @@ Please me sure you have completed the [<img border="0" src="https://www.svgrepo.
 | [Pagoda](labs/pagoda_ilc) | Pagoda patway wPCA for clustering of cells. OBS! several steps in this tutorial takes hours to run if you work with your own dataset, a good suggestion is to start with the first steps, knn.error.model, pagoda.varnorm and pagoda.pathway.wPCA and let it run while working on other tutorials. You can also run it with more than one core to speed things up |
 
 
-We will try to keep these tutorials up to date. If you find any errors or things that you think should be updated please contact Åsa (asa.bjorklund@scilifelab.se) 
-  	
-	
+We will try to keep these tutorials up to date. If you find any errors or things that you think should be updated please contact Åsa (asa.bjorklund@scilifelab.se)
+
+
 <br/>
 
 ##### <img border="0" src="https://www.svgrepo.com/show/83019/faq-button.svg" width="40" height="40"> FAQ
@@ -59,5 +59,3 @@ We will try to keep these tutorials up to date. If you find any errors or things
 As you run into problems, we will try to fill in the [FAQ](labs/FAQ) with common questions.
 
 <br/>
-
-	
