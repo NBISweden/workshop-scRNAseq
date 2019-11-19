@@ -13,6 +13,7 @@ output:
       smooth_scroll: true
     toc_depth: 3
     keep_md: yes
+    fig_caption: true
   html_notebook:
     self_contained: true
     highlight: tango
@@ -22,9 +23,7 @@ output:
       collapsed: false
       smooth_scroll: true
     toc_depth: 3
-    keep_md: yes
 ---
-
 
 ***
 # Get data
@@ -48,30 +47,6 @@ suppressMessages(require(Seurat))
 
 ```
 ## Warning: package 'Seurat' was built under R version 3.5.2
-```
-
-```r
-suppressMessages(require(scater))
-```
-
-```
-## Warning: package 'scater' was built under R version 3.5.2
-```
-
-```
-## Warning: package 'SingleCellExperiment' was built under R version 3.5.2
-```
-
-```
-## Warning: package 'GenomeInfoDb' was built under R version 3.5.2
-```
-
-```
-## Warning: package 'BiocParallel' was built under R version 3.5.2
-```
-
-```
-## Warning: package 'ggplot2' was built under R version 3.5.2
 ```
 
 ```r
@@ -150,15 +125,14 @@ alldata <- PercentageFeatureSet(alldata, "^MT-", col.name = "percent_mito")
 
 # Way2: Doing it manually
 total_counts_per_cell <- colSums(  alldata@assays$RNA@counts  )
-
 mito_genes <- rownames(alldata)[grep("^MT-",rownames(alldata))]
-head(mito_genes,10)
 alldata$percent_mito <- colSums(  alldata@assays$RNA@counts[mito_genes,]  ) / total_counts_per_cell
+
+head(mito_genes,10)
 ```
 
 ```
-##  [1] "MT-ND1"  "MT-ND2"  "MT-CO1"  "MT-CO2"  "MT-ATP8" "MT-ATP6" "MT-CO3" 
-##  [8] "MT-ND3"  "MT-ND4L" "MT-ND4"
+##  [1] "MT-ND1"  "MT-ND2"  "MT-CO1"  "MT-CO2"  "MT-ATP8" "MT-ATP6" "MT-CO3"  "MT-ND3"  "MT-ND4L" "MT-ND4"
 ```
 
 In the same manner we will calculate the proportion gene expression that comes from ribosomal proteins.
@@ -175,8 +149,7 @@ alldata$percent_ribo <- colSums(  alldata@assays$RNA@counts[ribo_genes,]  ) / to
 ```
 
 ```
-##  [1] "RPL22"   "RPL11"   "RPS6KA1" "RPS8"    "RPL5"    "RPS27"   "RPS6KC1"
-##  [8] "RPS7"    "RPS27A"  "RPL31"
+##  [1] "RPL22"   "RPL11"   "RPS6KA1" "RPS8"    "RPL5"    "RPS27"   "RPS6KC1" "RPS7"    "RPS27A"  "RPL31"
 ```
 
 ***
@@ -197,10 +170,10 @@ As you can see, the v2 chemistry gives lower gene detection, but higher detectio
 
 ```r
 cowplot::plot_grid(ncol = 4,
-  FeatureScatter(alldata, "nCount_RNA"  , "nFeature_RNA", group.by = "orig.ident", pt.size = .1),
-  FeatureScatter(alldata, "percent_mito", "nFeature_RNA", group.by = "orig.ident", pt.size = .1),
-  FeatureScatter(alldata, "percent_ribo", "nFeature_RNA", group.by = "orig.ident", pt.size = .1),
-  FeatureScatter(alldata, "percent_ribo", "percent_mito", group.by = "orig.ident", pt.size = .1)
+  FeatureScatter(alldata, "nCount_RNA"  , "nFeature_RNA", group.by = "orig.ident", pt.size = .5),
+  FeatureScatter(alldata, "percent_mito", "nFeature_RNA", group.by = "orig.ident", pt.size = .5),
+  FeatureScatter(alldata, "percent_ribo", "nFeature_RNA", group.by = "orig.ident", pt.size = .5),
+  FeatureScatter(alldata, "percent_ribo", "percent_mito", group.by = "orig.ident", pt.size = .5)
 )
 ```
 
@@ -273,6 +246,11 @@ selected_ribo <- WhichCells(data.filt, expression = percent_ribo > 0.05)
 # and subset the object to only keep those cells
 data.filt <- subset(data.filt, cells = selected_mito)
 data.filt <- subset(data.filt, cells = selected_ribo)
+dim(data.filt)
+```
+
+```
+## [1] 16157  2599
 ```
 
 As you can see, there is still quite a lot of variation in `percent_mito`, so it will have to be dealt with in the data analysis step. We can also notice that the `percent_ribo` are also highly variable, but that is expected since different cell types have different proportions of ribosomal content, according to their function.
@@ -296,8 +274,6 @@ We here perform cell cycle scoring. To score a gene list, the algorithm calculat
 
 
 ```r
-data.filt <- NormalizeData(data.filt)
-
 data.filt <- CellCycleScoring(object = data.filt,
                               g2m.features = cc.genes$g2m.genes,
                               s.features = cc.genes$s.genes)

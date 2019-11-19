@@ -1,216 +1,173 @@
 ---
-title: "Seurat: Differential gene expression"
 #CSS_ALL:
 ---
 
-***
-# `r l("DATA",text,"TITLE")`
+#CHUNK_OPT:
 
-`r l("DATA",text,"ALL1")`
+#CLUST_TITLE:
 
+#CLUST_ALL:
 
-```{bash, results='hide'}
-mkdir data
-curl -o data/pbmc_1k_v2_filtered_feature_bc_matrix.h5 -O http://cf.10xgenomics.com/samples/cell-exp/3.0.0/pbmc_1k_v2/pbmc_1k_v2_filtered_feature_bc_matrix.h5
-curl -o data/pbmc_1k_v3_filtered_feature_bc_matrix.h5 -O http://cf.10xgenomics.com/samples/cell-exp/3.0.0/pbmc_1k_v3/pbmc_1k_v3_filtered_feature_bc_matrix.h5
-curl -o data/pbmc_1k_protein_v3_filtered_feature_bc_matrix.h5 -O http://cf.10xgenomics.com/samples/cell-exp/3.0.0/pbmc_1k_protein_v3/pbmc_1k_protein_v3_filtered_feature_bc_matrix.h5
-```
-
-`r l("DATA",text,"ALL2")`
+#CLUST_ALL2:
 
 ```{r, message='hide',warning='hide',results='hold'}
-suppressMessages(require(Seurat))
-suppressMessages(require(scater))
-suppressMessages(require(Matrix))
+suppressPackageStartupMessages({
+  library(Seurat)
+  library(cowplot)
+  library(ggplot2)
+  library(pheatmap)
+  library(rafalib)
+})
+
+alldata <- readRDS("data/3pbmc_qc_dr_int.rds")
 ```
 
-`r l("DATA",text,"ALL3")`
+#CLUST_TITLE2:
 
+#CLUST_ALL3:
 
-```{r,message='hide',warning='hide',results='hold'}
-v3.1k <- Read10X_h5("data/pbmc_1k_v3_filtered_feature_bc_matrix.h5", use.names = T)
-v2.1k <- Read10X_h5("data/pbmc_1k_v2_filtered_feature_bc_matrix.h5", use.names = T)
-p3.1k <- Read10X_h5("data/pbmc_1k_protein_v3_filtered_feature_bc_matrix.h5", use.names = T)
-p3.1k <- p3.1k$`Gene Expression`
+#CLUST_TITLE2.1:
+
+#CLUST_ALL4:
+
+#CLUST_SEURAT:
+
+```{r, message='hide',warning='hide',results='hold'}
+alldata <- FindNeighbors(alldata,
+                         reduction = "PCA_on_CCA",
+                         dims = 1:30,
+                         k.param = 60,
+                         prune.SNN = 1/15)
+
+names(alldata@graphs)
 ```
 
-***
-# `r l("OBJ",text,"TITLE")`
+#CLUST_ALL4.1:
 
-`r l("OBJ",text,"ALL1")`
+```{r, message='hide',warning='hide',results='hold',fig.asp=1,fig.width=4}
 
-```{r}
-sdata.v2.1k <- CreateSeuratObject(v2.1k, project = "v2.1k")
-sdata.v3.1k <- CreateSeuratObject(v3.1k, project = "v3.1k")
-sdata.p3.1k <- CreateSeuratObject(p3.1k, project = "p3.1k")
-
-# Merge datasets into one single seurat object
-alldata <- merge(sdata.v2.1k, c(sdata.v3.1k,sdata.p3.1k), add.cell.ids=c("v2.1k","v3.1k","p3.1k"))
-
-# Add in a metadata column that indicates v2 vs v3 chemistry
-alldata$Chemistry <- ifelse(alldata$orig.ident == "v2.1k","v2","v3")
+pheatmap(alldata@graphs$CCA_nn[1:200,1:200],
+         col=c("white","black"),border_color = "grey90",
+         legend = F,cluster_rows = F,cluster_cols = F,fontsize = 2)
 ```
 
-`r l("OBJ",text,"ALL2")`
+#CLUST_TITLE2.2:
 
-```{r ,  results='hold'}
-as.data.frame(alldata@assays$RNA@counts[1:10,1:2])
-head(alldata@meta.data,10)
-```
+#CLUST_ALL4.2:
 
+#CLUST_SEURAT2:
 
-***
-# `r l("QC",text,"TITLE")[1]`
+```{r,results='hide',block.title=TRUE,fig.height=2.9,fig.width=10}
+alldata <- FindClusters(alldata, graph.name = "CCA_snn", resolution = .5 , algorithm = 1)
+alldata <- FindClusters(alldata, graph.name = "CCA_snn", resolution = 1  , algorithm = 1)
+alldata <- FindClusters(alldata, graph.name = "CCA_snn", resolution = 2  , algorithm = 1)
 
-`r l("QC",text,"ALL1")`
-
-`r l("QC",text,"ALL1.1")`
-
-```{r, results='hold'}
-# Way1: Doing it using Seurat function
-alldata <- PercentageFeatureSet(alldata, "^MT-", col.name = "percent_mito")
-
-# Way2: Doing it manually
-total_counts_per_cell <- colSums(  alldata@assays$RNA@counts  )
-
-mito_genes <- rownames(alldata)[grep("^MT-",rownames(alldata))]
-head(mito_genes,10)
-alldata$percent_mito <- colSums(  alldata@assays$RNA@counts[mito_genes,]  ) / total_counts_per_cell
-```
-
-`r l("QC",text,"ALL2")`
-
-```{r, results='hold'}
-# Way1: Doing it using Seurat function
-alldata <- PercentageFeatureSet(alldata, "^RP[SL]", col.name = "percent_ribo")
-
-# Way2: Doing it manually
-ribo_genes <- rownames(alldata)[grep("^RP[SL]",rownames(alldata))]
-head(ribo_genes,10)
-alldata$percent_ribo <- colSums(  alldata@assays$RNA@counts[ribo_genes,]  ) / total_counts_per_cell
-```
-
-***
-# `r l("QC",text,"TITLE2")`
-
-`r l("QC",text,"ALL3")`
-
-```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=16}
-feats <- c("nFeature_RNA","nCount_RNA","percent_mito","percent_ribo")
-VlnPlot(alldata, group.by= "orig.ident", features = feats, pt.size = 0.1,ncol = 4) + NoLegend()
-```
-
-
-`r l("QC",text,"ALL4")`
-
-```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=16}
-cowplot::plot_grid(ncol = 4,
-  FeatureScatter(alldata, "nCount_RNA"  , "nFeature_RNA", group.by = "orig.ident", pt.size = .1),
-  FeatureScatter(alldata, "percent_mito", "nFeature_RNA", group.by = "orig.ident", pt.size = .1),
-  FeatureScatter(alldata, "percent_ribo", "nFeature_RNA", group.by = "orig.ident", pt.size = .1),
-  FeatureScatter(alldata, "percent_ribo", "percent_mito", group.by = "orig.ident", pt.size = .1)
+plot_grid(ncol = 3,
+  DimPlot(alldata, reduction = "UMAP_on_CCA", group.by = "CCA_snn_res.0.5")+ggtitle("louvain_0.5"),
+  DimPlot(alldata, reduction = "UMAP_on_CCA", group.by = "CCA_snn_res.1")+ggtitle("louvain_1"),
+  DimPlot(alldata, reduction = "UMAP_on_CCA", group.by = "CCA_snn_res.2")+ggtitle("louvain_2")
 )
 ```
 
+
+#CLUST_TITLE3:
+
+#CLUST_ALL7:
+
+```{r,results='hide',block.title=TRUE,fig.height=2.9}
+alldata$kmeans_5 <- kmeans(x = alldata@reductions[["PCA_on_CCA"]]@cell.embeddings,centers = 5)$cluster
+alldata$kmeans_10 <- kmeans(x = alldata@reductions[["PCA_on_CCA"]]@cell.embeddings,centers = 10)$cluster
+alldata$kmeans_15 <- kmeans(x = alldata@reductions[["PCA_on_CCA"]]@cell.embeddings,centers = 15)$cluster
+
+plot_grid(ncol = 3,
+  DimPlot(alldata, reduction = "UMAP_on_CCA", group.by = "kmeans_5")+ggtitle("kmeans_5"),
+  DimPlot(alldata, reduction = "UMAP_on_CCA", group.by = "kmeans_10")+ggtitle("kmeans_10"),
+  DimPlot(alldata, reduction = "UMAP_on_CCA", group.by = "kmeans_15")+ggtitle("kmeans_15")
+)
+```
+
+
+#CLUST_TITLE4:
+
+#CLUST_TITLE4.1:
+
+#CLUST_ALL8.1:
+
+```{r,results='hide',block.title=TRUE,fig.height=5}
+d <- dist( alldata@reductions[["PCA_on_CCA"]]@cell.embeddings,
+           method="euclidean")
+```
+
+#CLUST_ALL8.2:
+
+```{r,results='hide',block.title=TRUE,fig.height=5,fig.width=5}
+#Compute sample correlations
+sample_cor <- cor( Matrix::t(alldata@reductions[["PCA_on_CCA"]]@cell.embeddings) )
+
+#Transform the scale from correlations
+sample_cor <- (1 - sample_cor) / 2
+
+#Convert it to a distance object
+d2 <- as.dist(sample_cor)
+```
+
+#CLUST_TITLE4.1:
+
+#CLUST_ALL8.3:
+
+```{r,results='hide',block.title=TRUE,fig.height=5,fig.width=10}
+#euclidean
+h_euclidean <- hclust(d, method="ward.D2")
+
+#correlation
+h_correlation <- hclust(d2, method="ward.D2")
+```
+
+#CLUST_ALL8.4:
+
+```{r,results='hide',block.title=TRUE,fig.height=6}
+#euclidean distance
+alldata$hc_euclidean_5 <- cutree(h_euclidean,k = 5)
+alldata$hc_euclidean_10 <- cutree(h_euclidean,k = 10)
+alldata$hc_euclidean_15 <- cutree(h_euclidean,k = 15)
+
+#correlation distance
+alldata$hc_corelation_5 <- cutree(h_correlation,k = 5)
+alldata$hc_corelation_10 <- cutree(h_correlation,k = 10)
+alldata$hc_corelation_15 <- cutree(h_correlation,k = 15)
+
+
+plot_grid(ncol = 3,
+  DimPlot(alldata, reduction = "UMAP_on_CCA", group.by = "hc_euclidean_5")+ggtitle("hc_euc_5"),
+  DimPlot(alldata, reduction = "UMAP_on_CCA", group.by = "hc_euclidean_10")+ggtitle("hc_euc_10"),
+  DimPlot(alldata, reduction = "UMAP_on_CCA", group.by = "hc_euclidean_15")+ggtitle("hc_euc_15"),
+  
+  DimPlot(alldata, reduction = "UMAP_on_CCA", group.by = "hc_corelation_5")+ggtitle("hc_cor_5"),
+  DimPlot(alldata, reduction = "UMAP_on_CCA", group.by = "hc_corelation_10")+ggtitle("hc_cor_10"),
+  DimPlot(alldata, reduction = "UMAP_on_CCA", group.by = "hc_corelation_15")+ggtitle("hc_cor_15")
+)
+```
+
+
+#CLUST_ALL9:
+
+```{r}
+saveRDS(alldata,"data/3pbmc_qc_dr_int_cl.rds")
+```
+
+
+### Additional Materials
 ***
-# `r l("FILTERING",text,"TITLE")`
+<style>
+div.blue { background-color:#e6f0ff; border-radius: 5px; padding: 20px;}
+</style>
+<div class = "blue">
+If you would like to learn more about building graphs and clustering, please follow this other tutorial
+</div>
 
-## `r l("FILTERING",text,"TITLE1")`
 
-`r l("FILTERING",text,"ALL0")`
+#SESSION_INFO:
 
-```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=4}
-selected_c <- WhichCells(alldata, expression = nFeature_RNA > 200)
-selected_f <- rownames(alldata)[ Matrix::rowSums(alldata) > 3]
-
-data.filt <- subset(alldata, features=selected_f, cells=selected_c)
-dim(data.filt)
+```{r}
+sessionInfo()
 ```
-
-`r l("FILTERING",text,"ALL3")`
-
-```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=16}
-#start with cells with many genes detected.
-high.det.v3 <- WhichCells(data.filt, expression = nFeature_RNA > 4100)
-high.det.v2 <- WhichCells(data.filt, expression = nFeature_RNA > 2000 & orig.ident == "v2.1k")
-
-# remove these cells
-data.filt <- subset(data.filt, cells=setdiff(WhichCells(data.filt),c(high.det.v2,high.det.v3)))
-
-# check number of cells
-ncol(data.filt)
-```
-
-`r l("FILTERING",text,"ALL01")`
-
-```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=12}
-#Compute the relative expression of each gene per cell
-rel_expression <- t( t(data.filt@assays$RNA@counts) / Matrix::colSums(data.filt@assays$RNA@counts)) * 100
-most_expressed <- sort(Matrix::rowSums( rel_expression ),T)[20:1] / ncol(data.filt)
-
-par(mfrow=c(1,2),mar=c(4,6,1,1))
-boxplot( as.matrix(t(rel_expression[names(most_expressed),])),cex=.1, las=1, xlab="% total count per cell",col=scales::hue_pal()(20)[20:1],horizontal=TRUE)
-```
-
-`r l("FILTERING",text,"ALL02")`
-
-## `r l("FILTERING",text,"TITLE2")`
-
-`r l("FILTERING",text,"ALL1")`
-
-```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=16}
-selected_mito <- WhichCells(data.filt, expression = percent_mito < 0.25)
-selected_ribo <- WhichCells(data.filt, expression = percent_ribo > 0.05)
-
-# and subset the object to only keep those cells
-data.filt <- subset(data.filt, cells = selected_mito)
-data.filt <- subset(data.filt, cells = selected_ribo)
-```
-
-`r l("FILTERING",text,"ALL2")`
-
-## `r l("FILTERING",text,"TITLE4")`
-
-`r l("FILTERING",text,"ALL5")`
-
-
-```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=16}
-feats <- c("nFeature_RNA","nCount_RNA","percent_mito","percent_ribo")
-cowplot::plot_grid(ncol = 1,
-VlnPlot(data.filt, group.by= "orig.ident", features = feats, pt.size = 0.1,ncol = 4) + NoLegend())
-```
-
-
-
-# `r l("CELLCYCLE",text,"TITLE")`
-
-`r l("CELLCYCLE",text,"ALL1")`
-
-```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=4,fig.width=8}
-data.filt <- NormalizeData(data.filt)
-
-data.filt <- CellCycleScoring(object = data.filt,
-                              g2m.features = cc.genes$g2m.genes,
-                              s.features = cc.genes$s.genes)
-```
-
-`r l("CELLCYCLE",text,"ALL2")`
-
-```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=16}
-VlnPlot(data.filt, features = c("S.Score","G2M.Score"), group.by= "orig.ident",ncol = 4, pt.size = .1)
-```
-
-
-`r l("CELLCYCLE",text,"ALL3")`
-
-`r l("CELLCYCLE",text,"ALL4")`
-
-```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=16}
-saveRDS(data.filt,"data/qc_filtered_3pbmc.rds")
-```
-
-
-
-
-
-

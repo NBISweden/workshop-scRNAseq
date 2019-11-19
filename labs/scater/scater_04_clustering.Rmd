@@ -1,0 +1,191 @@
+---
+#CSS_ALL:
+---
+
+#CHUNK_OPT:
+
+#CLUST_TITLE:
+
+#CLUST_ALL:
+
+#CLUST_ALL2:
+
+```{r, message='hide',warning='hide',results='hold'}
+suppressPackageStartupMessages({
+  library(scater)
+  library(scran)
+  library(cowplot)
+  library(ggplot2)
+  library(rafalib)
+  library(pheatmap)
+  library(igraph)
+})
+
+sce <- readRDS("data/3pbmc_qc_dr_int.rds")
+```
+
+#CLUST_TITLE2:
+
+#CLUST_ALL3:
+
+#CLUST_TITLE2.1:
+
+#CLUST_ALL4:
+
+#CLUST_SEURAT:
+
+```{r, message='hide',warning='hide',results='hold'}
+#These 2 lines are for demonstration purposes only
+g <- buildKNNGraph(sce,k=30,use.dimred="MNN",assay.type="RNA")
+sce@reducedDims$KNN <- igraph::as_adjacency_matrix(g)
+
+#These 2 lines are the most recommended
+g <- buildSNNGraph(sce,k=30,use.dimred="MNN",assay.type="RNA")
+sce@reducedDims$SNN <- igraph::as_adjacency_matrix(g)
+```
+
+#CLUST_ALL4.1:
+
+```{r, message='hide',warning='hide',results='hold',fig.asp=1,fig.width=4}
+pheatmap(sce@reducedDims$KNN[1:200,1:200],
+         col=c("white","black"),border_color = "grey90",
+         legend = F,cluster_rows = F,cluster_cols = F,fontsize = 2)
+```
+
+#CLUST_TITLE2.2:
+
+#CLUST_ALL4.2:
+
+#CLUST_SEURAT2:
+
+```{r,results='hide',block.title=TRUE,fig.height=2.8,fig.width=10}
+g <- buildSNNGraph(sce,k=5,use.dimred="MNN",assay.type="RNA")
+sce$louvain_SNNk5 <- factor( cluster_louvain(g)$membership )
+
+g <- buildSNNGraph(sce,k=10,use.dimred="MNN",assay.type="RNA",)
+sce$louvain_SNNk10 <- factor( cluster_louvain(g)$membership )
+
+g <- buildSNNGraph(sce,k=15,use.dimred="MNN",assay.type="RNA")
+sce$louvain_SNNk15 <- factor( cluster_louvain(g)$membership )
+
+plot_grid(ncol = 3,
+  plotReducedDim(sce,use_dimred = "UMAP_on_MNN",colour_by = "louvain_SNNk5",add_ticks = F)+
+    ggplot2::ggtitle(label ="louvain_SNNk5"),
+  plotReducedDim(sce,use_dimred = "UMAP_on_MNN",colour_by = "louvain_SNNk10",add_ticks = F)+
+    ggplot2::ggtitle(label ="louvain_SNNk10"),
+  plotReducedDim(sce,use_dimred = "UMAP_on_MNN",colour_by = "louvain_SNNk15",add_ticks = F)+
+    ggplot2::ggtitle(label ="louvain_SNNk15")
+)
+```
+
+
+#CLUST_TITLE3:
+
+#CLUST_ALL7:
+
+```{r,results='hide',block.title=TRUE,fig.height=2.9}
+sce$kmeans_5 <- factor( kmeans(x = sce@reducedDims$MNN,centers = 5)$cluster )
+sce$kmeans_10 <- factor(kmeans(x = sce@reducedDims$MNN,centers = 10)$cluster)
+sce$kmeans_15 <- factor(kmeans(x = sce@reducedDims$MNN,centers = 15)$cluster)
+
+plot_grid(ncol = 3,
+  plotReducedDim(sce,use_dimred = "UMAP_on_MNN",colour_by = "kmeans_5",add_ticks = F)+
+    ggplot2::ggtitle(label ="louvain_SNNk5"),
+  plotReducedDim(sce,use_dimred = "UMAP_on_MNN",colour_by = "kmeans_10",add_ticks = F)+
+    ggplot2::ggtitle(label ="louvain_SNNk10"),
+  plotReducedDim(sce,use_dimred = "UMAP_on_MNN",colour_by = "kmeans_15",add_ticks = F)+
+    ggplot2::ggtitle(label ="louvain_SNNk15")
+)
+```
+
+
+#CLUST_TITLE4:
+
+#CLUST_TITLE4.1:
+
+#CLUST_ALL8.1:
+
+```{r,results='hide',block.title=TRUE,fig.height=5}
+d <- dist( sce@reducedDims$MNN,
+           method="euclidean")
+```
+
+#CLUST_ALL8.2:
+
+```{r,results='hide',block.title=TRUE,fig.height=5,fig.width=5}
+#Compute sample correlations
+sample_cor <- cor( Matrix::t(sce@reducedDims$MNN) )
+
+#Transform the scale from correlations
+sample_cor <- (1 - sample_cor) / 2
+
+#Convert it to a distance object
+d2 <- as.dist(sample_cor)
+```
+
+#CLUST_TITLE4.2:
+
+#CLUST_ALL8.3:
+
+```{r,results='hide',block.title=TRUE,fig.height=5,fig.width=10}
+#euclidean
+h_euclidean <- hclust(d, method="ward.D2")
+
+#correlation
+h_correlation <- hclust(d2, method="ward.D2")
+```
+
+#CLUST_ALL8.4:
+
+```{r,results='hide',block.title=TRUE,fig.height=6}
+#euclidean distance
+sce$hc_euclidean_5 <- factor( cutree(h_euclidean,k = 5) )
+sce$hc_euclidean_10 <- factor( cutree(h_euclidean,k = 10) )
+sce$hc_euclidean_15 <- factor( cutree(h_euclidean,k = 15) )
+
+#correlation distance
+sce$hc_corelation_5 <- factor( cutree(h_correlation,k = 5) )
+sce$hc_corelation_10 <- factor( cutree(h_correlation,k = 10) )
+sce$hc_corelation_15 <- factor( cutree(h_correlation,k = 15) )
+
+
+plot_grid(ncol = 3,
+  plotReducedDim(sce,use_dimred = "UMAP_on_MNN",colour_by = "hc_euclidean_5",add_ticks = F)+
+    ggplot2::ggtitle(label ="louvain_SNNk5"),
+  plotReducedDim(sce,use_dimred = "UMAP_on_MNN",colour_by = "hc_euclidean_10",add_ticks = F)+
+    ggplot2::ggtitle(label ="louvain_SNNk10"),
+  plotReducedDim(sce,use_dimred = "UMAP_on_MNN",colour_by = "hc_euclidean_15",add_ticks = F)+
+    ggplot2::ggtitle(label ="louvain_SNNk15"),
+  
+  plotReducedDim(sce,use_dimred = "UMAP_on_MNN",colour_by = "hc_corelation_5",add_ticks = F)+
+    ggplot2::ggtitle(label ="louvain_SNNk5"),
+  plotReducedDim(sce,use_dimred = "UMAP_on_MNN",colour_by = "hc_corelation_10",add_ticks = F)+
+    ggplot2::ggtitle(label ="louvain_SNNk10"),
+  plotReducedDim(sce,use_dimred = "UMAP_on_MNN",colour_by = "hc_corelation_15",add_ticks = F)+
+    ggplot2::ggtitle(label ="louvain_SNNk15")
+)
+```
+
+
+#CLUST_ALL9:
+
+```{r}
+saveRDS(alldata,"data/3pbmc_qc_dr_int_cl.rds")
+```
+
+
+### Additional Materials
+***
+<style>
+div.blue { background-color:#e6f0ff; border-radius: 5px; padding: 20px;}
+</style>
+<div class = "blue">
+If you would like to learn more about building graphs and clustering, please follow this other tutorial
+</div>
+
+
+#SESSION_INFO:
+
+```{r}
+sessionInfo()
+```

@@ -4,7 +4,6 @@ editor_options:
   chunk_output_type: console
 ---
 
-
 #CSS_ALL:author: "Åsa Björklund  &  Paulo Czarnewski"
 #CSS_ALL:date: "Sept 13, 2019"
 #CSS_ALL:output:
@@ -18,6 +17,7 @@ editor_options:
 #CSS_ALL:      smooth_scroll: true
 #CSS_ALL:    toc_depth: 3
 #CSS_ALL:    keep_md: yes
+#CSS_ALL:    fig_caption: true
 #CSS_ALL:  html_notebook:
 #CSS_ALL:    self_contained: true
 #CSS_ALL:    highlight: tango
@@ -27,9 +27,16 @@ editor_options:
 #CSS_ALL:      collapsed: false
 #CSS_ALL:      smooth_scroll: true
 #CSS_ALL:    toc_depth: 3
-#CSS_ALL:    keep_md: yes
 
-self_contained: false
+
+#CHUNK_OPT:```{r setup, include=FALSE}
+#CHUNK_OPT:knitr::opts_chunk$set(message='hide', warning='hide', result='hold',fig.width=12)
+#CHUNK_OPT:```
+#CHUNK_OPT:<style>
+#CHUNK_OPT:h1, .h1, h2, .h2, h3, .h3, h4, .h4 { margin-top: 50px }
+#CHUNK_OPT:p.caption {font-size: 0.9em;font-style: italic;color: grey;margin-right: 10%;margin-left: 10%;text-align: justify}
+#CHUNK_OPT:</style>
+
 
 #define path to this script (wherever it is)
 ```{r setup, include=FALSE}
@@ -41,6 +48,19 @@ dir.create("compiled/seurat",recursive = T)
 dir.create("compiled/scater",recursive = T)
 dir.create("compiled/scanpy",recursive = T)
 ```
+
+
+
+
+
+
+#------------------#
+#   SESSION INFO   #
+#------------------#
+#SESSION_INFO:### Session Info
+#SESSION_INFO:***
+#-----------
+
 
 
 #----------------------------#
@@ -154,20 +174,22 @@ dir.create("compiled/scanpy",recursive = T)
 
 #-----------
 ```{r setup, include=FALSE}
-lab <- readLines(paste0(script_path,"/scater/scater_01_qc.Rmd"))
-lab_text <- readLines(paste0(script_path,"/knit_labs.Rmd"))
-
-u <- grep("[#].*[_].*[:]",lab,value = T)[ grep("[#].*[_].*[:]",lab,value = T) %in% sub(":.*",":",grep("[#].*[_].*[:]",lab_text,value = T)) ]
-
-t_lab <- lab
-for( i in u ){
-  j <- grep(i,t_lab)
-  temp2 <- sub(i,"",lab_text[grepl(i,lab_text)])
-  t_lab <- c( t_lab[1:(j-1)] , temp2 , t_lab[(j+1):length(t_lab)] )
+for( pipeline in c("seurat","scater")){
+  lab <- readLines(paste0(script_path,"/",pipeline,"/",pipeline,"_01_qc.Rmd"))
+  lab_text <- readLines(paste0(script_path,"/knit_labs.Rmd"))
+  
+  u <- grep("[#].*[_].*[:]",lab,value = T)[ grep("[#].*[_].*[:]",lab,value = T) %in% sub(":.*",":",grep("[#].*[_].*[:]",lab_text,value = T)) ]
+  
+  t_lab <- lab
+  for( i in u ){
+    j <- grep(i,t_lab)
+    temp2 <- sub(i,"",lab_text[grepl(i,lab_text)])
+    t_lab <- c( t_lab[1:(j-1)] , temp2 , t_lab[(j+1):length(t_lab)] )
+  }
+  
+  writeLines(t_lab,paste0(script_path,"/compiled/",pipeline,"/",pipeline,"_01_qc_compiled.Rmd"))
+  rmarkdown::render(paste0(script_path,"/compiled/",pipeline,"/",pipeline,"_01_qc_compiled.Rmd"))
 }
-
-writeLines(t_lab,paste0(script_path,"/compiled/scater/scater_01_qc_compiled.Rmd"))
-#rmarkdown::render(paste0(script_path,"/compiled/seurat/seurat_01_qc_compiled.Rmd"))
 ```
 
 
@@ -182,66 +204,69 @@ writeLines(t_lab,paste0(script_path,"/compiled/scater/scater_01_qc_compiled.Rmd"
 #   DIMENSIONALITY REDUCTION   #
 #------------------------------#
 
-#DIMRED_TITLE:# Load data
+#DIMRED_MAIN:# Dimensionality reduction
+#DIMRED_MAIN:
+#DIMRED_MAIN:Paulo Czarnewski
+
+#DIMRED_TITLE:## Data preparation
+#DIMRED_TITLE:***
 
 #DIMRED_ALL1:First, let's load all necessary libraries and the QC-filtered dataset from the previous step.
 
-#DIMRED_ALL1.1:## Feature selection
-
+#DIMRED_ALL1.1:### Feature selection
 #DIMRED_ALL2:Next, we first need to define which features/genes are important in our dataset to distinguish cell types. For this purpose, we need to find genes that are highly variable across cells, which in turn will also provide a good separation of the cell clusters.
 
-#DIMRED_ALL3:## Z-score transformation
-
-#DIMRED_ALL4:Now that the data is prepared, we now proceed with PCA. Since each gene has a different expression level, it means that genes with higher expression values will naturally have higher variation that will be captured by PCA. This means that we need to somehow give each gene a similar weight when performing PCA (see below). The common practice is to center and scale each gene before performing PCA. This exact scaling is called Z-score normalization it is very useful for PCA, clustering and plotting heatmaps. Additionally, we can use this function to remove any unwanted sources of variation from the dataset, such as `cell cycle`, `sequencing depth`, `percent mitocondria`, etc. 
-
+#DIMRED_ALL3:### Z-score transformation
+#DIMRED_ALL4:Now that the data is prepared, we now proceed with PCA. Since each gene has a different expression level, it means that genes with higher expression values will naturally have higher variation that will be captured by PCA. This means that we need to somehow give each gene a similar weight when performing PCA (see below). The common practice is to center and scale each gene before performing PCA. This exact scaling is called Z-score normalization it is very useful for PCA, clustering and plotting heatmaps. Additionally, we can use this function to remove any unwanted sources of variation from the dataset, such as `cell cycle`, `sequencing depth`, `percent mitocondria`. This is achieved by doing a generalized linear regression using these parameters as covariates in the model. Then the residuals of the model are taken as the "regressed data". Although not in the best way, batch effect regression can also be done here.
+#DIMRED_SCATER1:However, unlike the Seurat, this step is implemented inside the PCA function below. Here we will show you how to add the scaledData back to the object. 
 
 #---------#
 #   PCA   #
 #---------#
-#PCA_TITLE:# PCA
-
+#PCA_TITLE:## PCA
+#PCA_TITLE:***
 #PCA_ALL1:Performing PCA has many useful applications and interpretations, which much depends on the data used. In the case of life sciences, we want to segregate samples based on gene expression patterns in the data.
 #PCA_SEURAT:To run PCA you can use the function `RunPCA()`.
-#PCA_SCRAN:To run PCA you can use the function `runPCA()`.
+#PCA_SCRAN:As said above, we use the `logcounts` and then set `scale_features` to TRUE in order to scale each gene.
 #PCA_SCANPY:To run PCA, you can use the function `pca()`.
-
 #PCA_ALL2:We can plot the first 6 dimensions like so.
-
-#PCA_ALL3:To identify which genes contribute the most to each PC, one can retreive the loading matrix information:
-#PCA_ALL4:The same list of genes can also be visualized as a heatmap.
+#PCA_ALL3:To identify which genes (Seurat) or metadata paramters (Scater/Scran) contribute the most to each PC, one can retreive the loading matrix information. Unfortunatelly this is not implemented in Scater/Scran, so you will need to compute PCA using `logcounts`.
 #PCA_ALL5:We can also plot the amount of variance explained by each PC.
 #PCA_ALL6:Based on this plot, we can see that the top 7 PCs retain a lot of information, while other PCs contain pregressivelly less. However, it is still advisable to use more PCs since they might contain informaktion about rare cell types (such as platelets and DCs in this dataset)
-
-
 
 #----------#
 #   tSNE   #
 #----------#
-#tSNE_TITLE:# tSNE
-
+#tSNE_TITLE:## tSNE
+#tSNE_TITLE:***
 #tSNE_ALL1:We can now run [BH-tSNE](https://arxiv.org/abs/1301.3342).
-
-#tSNE_ALL2:We can now plot the tSNE colored per dataset. We can start now clearly seeing the effect of batches present in the dataset.
-
-
+#tSNE_ALL2:We can now plot the tSNE colored per dataset. We can start now clearly see the effect of batches present in the dataset.
 
 #----------#
 #   UMAP   #
 #----------#
-#UMAP_TITLE:# UMAP
-
+#UMAP_TITLE:## UMAP
+#UMAP_TITLE:***
 #UMAP_ALL1:We can now run [UMAP](https://arxiv.org/abs/1802.03426).
+#UMAP_ALL2:Another usefullness of UMAP is that it is not limitted by the number of dimensions the data cen be reduced into (unlike tSNE). We can simply reduce the dimentions altering the `n.components` parameter.
+#UMAP_ALL2.1:We can now plot the UMAP colored per dataset. Although less distinct as in the tSNE, we still see quite an effect of the different batches in the data.
+#UMAP_ALL2.2:We can now plot PCA, UMAP and tSNE side by side for comparison. Here, we can conclude that our dataset contains a batch effect that needs to be corrected before proceeding to clustering and differential gene expression analysis.
 
-#UMAP_ALL2:We can now plot the UMAP colored per dataset. Although less distinct as in the tSNE, we still see quite an effect of the different batches in the data.
 
+#DIMRED_TITLE2:## Using ScaledData and graphs for DR
+#DIMRED_TITLE2:***
+#DIMRED_ALL5:Althought running a sencond dimmensionality reduction (i.e tSNE or UMAP) on PCA would be a standard approach (because it allows higher computation efficiency), the options are actually limiteless. Below we will show a couple of other common options such as running directly on the scaled data (which was used for PCA) or on a graph built from scaled data. We will show from now on only UMAP, but the same applies for tSNE.
 
+#DIMRED_ALL5.0:### Using ScaledData for UMAP
+#DIMRED_ALL5.1:To run tSNE or UMAP on the scaled data, one firts needs to select the number of variables to use. This is because including dimentions that do contribute to the separation of your cell types will in the end mask those differences. Another reason for it is because running with all genes/features also will take longer or might be computationally unfeasible. Therefore we will use the scaled data of the highly variable genes.
 
-#DIMRED_TITLE2:
+#DIMRED_ALL5.2.1:### Using a Graph for UMAP
+#DIMRED_ALL5.2:To run tSNE or UMAP on the a graph, we first need to build a graph from the data. In fact, both tSNE and UMAP first build a graph from the data using a specified distance metrix and then optimize the embedding. Since a graph is just a matrix containing distances from cell to cell and as such, you can run either UMAP or tSNE using any other distance metric desired. Euclidean and Correlation are ususally the most commonly used.
+#DIMRED_ALL5.3:We can now plot the UMAP comparing both on PCA vs ScaledSata vs Graph.
 
-#DIMRED_ALL5:
-
+#DIMRED_TITLE3:## Ploting genes of interest
+#DIMRED_TITLE3:***
 #DIMRED_ALL6:Let's plot some marker genes for different celltypes onto the embedding. Some genes are:
-
 #MARKER_TABLE:Markers	| Cell Type
 #MARKER_TABLE:--- | ---
 #MARKER_TABLE:CD3E	| T cells
@@ -252,25 +277,26 @@ writeLines(t_lab,paste0(script_path,"/compiled/scater/scater_01_qc_compiled.Rmd"
 #MARKER_TABLE:CD14, LYZ, CST3, MS4A7	| CD14+ Monocytes
 #MARKER_TABLE:FCGR3A, LYZ, CST3, MS4A7	| FCGR3A+  Monocytes
 #MARKER_TABLE:FCER1A, CST3 | DCs
-
-
-#DIMRED_ALL7:Here, we can conclude that our dataset contains a batch effect that needs to be corrected before proceeding to clustering and differential gene expression analysis. We can now save the object for use in the next step.
+#DIMRED_ALL7:We can finally save the object for use in future steps.
 
 
 ```{r setup, include=FALSE}
-lab <- readLines(paste0(script_path,"/scater/scater_02_dim_reduction.Rmd"))
-lab_text <- readLines(paste0(script_path,"/knit_labs.Rmd"))
-
-u <- grep("[#].*[_].*[:]",lab,value = T)[ grep("[#].*[_].*[:]",lab,value = T) %in% sub(":.*",":",grep("[#].*[_].*[:]",lab_text,value = T)) ]
-
-t_lab <- lab
-for( i in u ){
-  j <- grep(i,t_lab)
-  temp2 <- sub(i,"",lab_text[grepl(i,lab_text)])
-  t_lab <- c( t_lab[1:(j-1)] , temp2 , t_lab[(j+1):length(t_lab)] )
+for( pipeline in c("seurat","scater")){
+  lab <- readLines(paste0(script_path,"/",pipeline,"/",pipeline,"_02_dim_reduction.Rmd"))
+  lab_text <- readLines(paste0(script_path,"/knit_labs.Rmd"))
+  
+  u <- grep("[#].*[_].*[:]",lab,value = T)[ grep("[#].*[_].*[:]",lab,value = T) %in% sub(":.*",":",grep("[#].*[_].*[:]",lab_text,value = T)) ]
+  
+  t_lab <- lab
+  for( i in u ){
+    j <- grep(i,t_lab)
+    temp2 <- sub(i,"",lab_text[grepl(i,lab_text)])
+    t_lab <- c( t_lab[1:(j-1)] , temp2 , t_lab[(j+1):length(t_lab)] )
+  }
+  
+  writeLines(t_lab,paste0(script_path,"/compiled/",pipeline,"/",pipeline,"_02_dim_reduction_compiled.Rmd"))
+  rmarkdown::render(paste0(script_path,"/compiled/",pipeline,"/",pipeline,"_02_dim_reduction_compiled.Rmd"))
 }
-
-writeLines(t_lab,paste0(script_path,"/compiled/scater/scater_02_dim_reduction_compiled.Rmd"))
 ```
 #-----------
 
@@ -287,7 +313,10 @@ writeLines(t_lab,paste0(script_path,"/compiled/scater/scater_02_dim_reduction_co
 #----------------------#
 #   DATA INTEGRATION   #
 #----------------------#
-#INTEG_TITLE:# Data Integration
+
+#INTEG_TITLE:# Dataset integration
+#INTEG_TITLE:
+#INTEG_TITLE:Paulo Czarnewski
 
 #INTEG_ALL1:In this tutorial we will look at different ways of integrating multiple single cell RNA-seq datasets. We will explore two different methods to correct for batch effects across datasets. We will also look at a quantitative measure to assess the quality of the integrated data. Seurat uses the data integration method presented in Comprehensive Integration of Single Cell Data, while Scran and Scanpy use a mutual Nearest neighbour method (MNN). Below you can find a list of the most recent methods for single data integration:
 
@@ -303,12 +332,15 @@ writeLines(t_lab,paste0(script_path,"/compiled/scater/scater_02_dim_reduction_co
 #INTEG_ALL3:We split the combined object into a list, with each dataset as an element. We perform standard preprocessing (log-normalization), and identify variable features individually for each dataset based on a variance stabilizing transformation ("vst").
 
 #INTEG_SEURAT1:We identify anchors using the FindIntegrationAnchors function, which takes a list of Seurat objects as input.
-
 #INTEG_SEURAT2:We then pass these anchors to the IntegrateData function, which returns a Seurat object.
-
 #INTEG_SEURAT3:We can observe that a new assay slot is now created under the name `CCA`.
-
 #INTEG_SEURAT4:After running IntegrateData, the Seurat object will contain a new Assay with the integrated (or ‘batch-corrected’) expression matrix. Note that the original (uncorrected values) are still stored in the object in the “RNA” assay, so you can switch back and forth. We can then use this new integrated matrix for downstream analysis and visualization. Here we scale the integrated data, run PCA, and visualize the results with UMAP and TSNE. The integrated datasets cluster by cell type, instead of by technology.
+
+
+#INTEG_SCRAN1:The mutual nearest neighbors (MNN) approach within the scran package utilizes a novel approach to adjust for batch effects. The `fastMNN()` function returns a representation of the data with reduced dimensionality, which can be used in a similar fashion to other lower-dimensional representations such as PCA. In particular, this representation can be used for downstream methods such as clustering. The BNPARAM can be used to specify the specific nearest neighbors method to use from the BiocNeighbors package. Here we make use of the [Annoy library](https://github.com/spotify/annoy) via the `BiocNeighbors::AnnoyParam()` argument. We save the reduced-dimension MNN representation into the reducedDims slot of our sce object.
+#INTEG_SCRAN2:**NOTE**: `fastMNN()` does not produce a batch-corrected expression matrix. 
+#INTEG_SCRAN3:We can observe that a new assay slot is now created under the name `MNN`.
+#INTEG_SCRAN4:Thus, the result from `fastMNN()` should solely be treated as a reduced dimensionality representation, suitable for direct plotting, TSNE/UMAP, clustering, and trajectory analysis that relies on such results.
 
 
 #INTEG_ALL4:We can now plot the count and the integrated space reduced dimensions.
@@ -316,19 +348,22 @@ writeLines(t_lab,paste0(script_path,"/compiled/scater/scater_02_dim_reduction_co
 #INTEG_ALL5:Finally, lets save the integrated data for further analysis.
 
 ```{r setup, include=FALSE}
-lab <- readLines(paste0(script_path,"/seurat/seurat_03_integration.Rmd"))
-lab_text <- readLines(paste0(script_path,"/knit_labs.Rmd"))
-
-u <- grep("[#].*[_].*[:]",lab,value = T)[ grep("[#].*[_].*[:]",lab,value = T) %in% sub(":.*",":",grep("[#].*[_].*[:]",lab_text,value = T)) ]
-
-t_lab <- lab
-for( i in u ){
-  j <- grep(i,t_lab)
-  temp2 <- sub(i,"",lab_text[grepl(i,lab_text)])
-  t_lab <- c( t_lab[1:(j-1)] , temp2 , t_lab[(j+1):length(t_lab)] )
+for( pipeline in c("seurat","scater")){
+  lab <- readLines(paste0(script_path,"/",pipeline,"/",pipeline,"_03_integration.Rmd"))
+  lab_text <- readLines(paste0(script_path,"/knit_labs.Rmd"))
+  
+  u <- grep("[#].*[_].*[:]",lab,value = T)[ grep("[#].*[_].*[:]",lab,value = T) %in% sub(":.*",":",grep("[#].*[_].*[:]",lab_text,value = T)) ]
+  
+  t_lab <- lab
+  for( i in u ){
+    j <- grep(i,t_lab)
+    temp2 <- sub(i,"",lab_text[grepl(i,lab_text)])
+    t_lab <- c( t_lab[1:(j-1)] , temp2 , t_lab[(j+1):length(t_lab)] )
+  }
+  
+  writeLines(t_lab,paste0(script_path,"/compiled/",pipeline,"/",pipeline,"_03_integration_compiled.Rmd"))
+  rmarkdown::render(paste0(script_path,"/compiled/",pipeline,"/",pipeline,"_03_integration_compiled.Rmd"))
 }
-
-writeLines(t_lab,paste0(script_path,"/compiled/seurat/seurat_03_integration_compiled.Rmd"))
 ```
 
 #-----------
@@ -343,25 +378,124 @@ writeLines(t_lab,paste0(script_path,"/compiled/seurat/seurat_03_integration_comp
 
 
 
-
-#----------------#
-#   KNN-GRAPHS   #
-#----------------#
-#KNN_ALL:
-
-#-----------
-
-
-
-
-
-
 #----------------#
 #   CLUSTERING   #
 #----------------#
-#CLUST_ALL:
+#CLUST_TITLE:# Clustering
+#CLUST_TITLE:
+#CLUST_ALL:In this tutorial we will continue the analysis of the integrated dataset. We will use the integrated PCA to perform the clustering. First we will construct a $k$-nearest neighbour graph in order to perform a clustering on the graph. We will also show how to perform hierarchical clustering and k-means clustering on PCA space. In the end, we will compare the results from different clustering techniques.
+#CLUST_ALL2:Let's first load all necessary libraries and also the integrated dataset from the previous step.
+
+
+
+#----------------------#
+#   Graph clustering   #
+#----------------------#
+#CLUST_TITLE2:## Graph clustering
+#CLUST_TITLE2:***
+#CLUST_ALL3:The procedure of clustering on a Graph can be generalized as 3 main steps:
+#CLUST_ALL3:
+#CLUST_ALL3:1) Build a kNN graph from the data
+#CLUST_ALL3:
+#CLUST_ALL3:2) Prune spurious connections from kNN graph (optional step). This is a SNN graph.
+#CLUST_ALL3:
+#CLUST_ALL3:3) Find groups of cells that maximizes the connections within the group compared other groups.
+
+
+#CLUST_TITLE2.1:### Building kNN / SNN graph
+#CLUST_TITLE2.1:
+#CLUST_ALL4:The first step into graph clustering is to construct a k-nn graph, in case you don't have one. For this, we will use the PCA space. Thus, as done for dimensionality reduction, we will use ony the top *N* PCA dimensions for this purpose (the same used for computing UMAP / tSNE).
+#CLUST_SEURAT:As we can see above, the **Seurat** function `FindNeighbors` already computes both the KNN and SNN graphs, in which we can control the minimal percentage of shared neighbours to be kept. See `?FindNeighbors` for additional options.
+
+#CLUST_ALL4.1:We can take a look at the kNN graph. It is a matrix where every connection between cells is represented as $1$s. This is called a **unweighted** graph (default in Seurat). Some cell connections can however have more importance than others, in that case the scale of the graph from $0$ to a maximum distance. Usually, the smaller the distance, the closer two points are, and stronger is their connection. This is called a **weighted** graph. Both weighted and unweighted graphs are suitable for clustering, but clustering on unweighted graphs is faster for large datasets (> 100k cells).
+
+
+#CLUST_TITLE2.2:### Clustering on a graph
+#CLUST_TITLE2.2:
+#CLUST_ALL4.2:Once the graph is built, we can now perform graph clustering. The clustering is done respective to a resolution which can be interpreted as how coarse you want your cluster to be. Higher resolution means higher number of clusters.
+#CLUST_SEURAT2:In **Seurat**, the function `FindClusters` will do a graph-based clustering using "Louvain" algorithim by default (`algorithm = 1`). TO use the leiden algorithm, you need to set it to `algorithm = 4`. See `?FindClusters` for additional options.
+
+
+
+#------------------------#
+#   K-means clustering   #
+#------------------------#
+#CLUST_TITLE3:## K-means clustering
+#CLUST_TITLE3:***
+#CLUST_ALL7:K-means is a generic clustering algorithm that has been used in many application areas. In R, it can be applied via the kmeans function. Typically, it is applied to a reduced dimension representation of the expression data (most often PCA, because of the interpretability of the low-dimensional distances). We need to define the number of clusters in advance. Since the results depend on the initialization of the cluster centers, it is typically recommended to run K-means with multiple starting configurations (via the nstart argument).
+
+
+
+
+#-----------------------------#
+#   Hierarchical clustering   #
+#-----------------------------#
+#CLUST_TITLE4:## Hierarchical clustering
+#CLUST_TITLE4:***
+#CLUST_ALL8:Hierarchical clustering is another generic form of clustering that can be applied also to scRNA-seq data. As K-means, it is typically applied to a reduced dimension representation of the data. Hierarchical clustering returns an entire hierarchy of partitionings (a dendrogram) that can be cut at different levels. Hierarchical clustering is done in two steps:
+#CLUST_ALL8:
+#CLUST_ALL8:* Step1: Define the distances between samples. The most common are Euclidean distance (a.k.a. straight line between two points) or correlation coefficients.
+#CLUST_ALL8:* Step2: Define the deprogram among all samples using **Bottom-up** or **Top-down** approach. **Bottom-up** is where samples start with their own cluster which end up merged pair-by-pair until only one cluster is left. **Top-down** is where samples start all in the same cluster that end up being split by 2 until each sample has its own cluster.
+
+#CLUST_TITLE4.1:### Defining distance between cells
+#CLUST_ALL8.1:The base R `stats` package already contains a function `dist` that calculates distances between all pairs of samples. Since we want to compute distances between samples, rather than among genes, we need to transpose the data before applying it to the `dist` function. This can be done by simply adding the transpose function `t()` to the data. The distance methods available  in `dist` are: "euclidean", "maximum", "manhattan", "canberra", "binary" or "minkowski".
+
+#CLUST_ALL8.2:As you might have realized, correlation is not a method implemented in the `dist` function. However, we can create our own distances and transform them to a distance object. We can first compute sample correlations using the `cor` function.
+
+#CLUST_ALL8.2:As you already know, correlation range from -1 to 1, where 1 indicates that two samples are closest, -1 indicates that two samples are the furthest and 0 is somewhat in between. This, however, creates a problem in defining distances because a distance of 0 indicates that two samples are closest, 1 indicates that two samples are the furthest and distance of -1 is not meaningful. We thus need to transform the correlations to a positive scale (a.k.a. **adjacency**):
+#CLUST_ALL8.2:
+#CLUST_ALL8.2:\[adj = \frac{1- cor}{2}\]
+#CLUST_ALL8.2:
+#CLUST_ALL8.2:Once we transformed the correlations to a 0-1 scale, we can simply convert it to a distance object using `as.dist` function. The transformation does not need to have a maximum of 1, but it is more intuitive to have it at 1, rather than at any other number.
+
+#CLUST_TITLE4.2:### Clustering cells
+#CLUST_ALL8.3:After having calculated the distances between samples calculated, we can now proceed with the hierarchical clustering per-se. We will use the function `hclust` for this purpose, in which we can simply run it with the distance objects created above. The methods available are: "ward.D", "ward.D2", "single", "complete", "average", "mcquitty", "median" or "centroid". It is possible to plot the dendrogram for all cells, but this is very time consuming and we will omit for this tutorial.
+
+#CLUST_ALL8.4: Once your dendrogram is created, the next step is to define which samples belong to a particular cluster. After identifying the dendrogram, we can now literally cut the tree at a fixed threshold (with `cutree`) at different levels to define the clusters. We can either define the number of clusters or decide on a height. We can simply try different clustering levels.
+
+#CLUST_ALL9:Finally, lets save the integrated data for further analysis.
+
+
+
+
+#--------------------------------------#
+#   K-means + Hierachical clustering   #
+#--------------------------------------#
+#CLUST_TITLE5:### K-means + Hierachical clustering
+#CLUST_TITLE5:***
+
+
+
+
+#------------------------------------#
+#   Testing Clustering robusteness   #
+#------------------------------------#
+#CLUST_TITLE6:### Testing Clustering robusteness
+#CLUST_TITLE6:***
+
+
+
+```{r setup, include=FALSE}
+for( pipeline in c("seurat","scater")){
+  lab <- readLines(paste0(script_path,"/",pipeline,"/",pipeline,"_04_clustering.Rmd"))
+  lab_text <- readLines(paste0(script_path,"/knit_labs.Rmd"))
+  
+  u <- grep("[#].*[_].*[:]",lab,value = T)[ grep("[#].*[_].*[:]",lab,value = T) %in% sub(":.*",":",grep("[#].*[_].*[:]",lab_text,value = T)) ]
+  
+  t_lab <- lab
+  for( i in u ){
+    j <- grep(i,t_lab)
+    temp2 <- sub(i,"",lab_text[grepl(i,lab_text)])
+    t_lab <- c( t_lab[1:(j-1)] , temp2 , t_lab[(j+1):length(t_lab)] )
+  }
+  
+  writeLines(t_lab,paste0(script_path,"/compiled/",pipeline,"/",pipeline,"_04_clustering_compiled.Rmd"))
+  rmarkdown::render(paste0(script_path,"/compiled/",pipeline,"/",pipeline,"_04_clustering_compiled.Rmd"))
+}
+```
 
 #-----------
+
 
 
 

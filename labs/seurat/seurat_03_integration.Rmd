@@ -1,10 +1,9 @@
 ---
-title: "Seurat"
+title: #INTEG_TITLE:
 #CSS_ALL:
 ---
 
-***
-#INTEG_TITLE:
+#CHUNK_OPT:
 
 #INTEG_ALL1:
 
@@ -13,11 +12,13 @@ title: "Seurat"
 #INTEG_ALL2:
 
 ```{r, message='hide',warning='hide',results='hold'}
-suppressMessages(require(Seurat))
-suppressMessages(require(cowplot))
-suppressMessages(require(ggplot2))
+suppressPackageStartupMessages({
+  library(Seurat)
+  library(cowplot)
+  library(ggplot2)
+})
 
-alldata <- readRDS("data/3pbmc_qc_dm.rds")
+alldata <- readRDS("data/3pbmc_qc_dr.rds")
 print(names(alldata@reductions))
 ```
 
@@ -30,6 +31,9 @@ for (i in 1:length(alldata.list)) {
     alldata.list[[i]] <- NormalizeData(alldata.list[[i]], verbose = FALSE)
     alldata.list[[i]] <- FindVariableFeatures(alldata.list[[i]], selection.method = "vst", nfeatures = 2000,verbose = FALSE)
 }
+
+hvgs_per_dataset <- lapply(alldata.list, function(x) { x@assays$RNA@var.features })
+venn::venn(hvgs_per_dataset,opacity = .4,zcolor = scales::hue_pal()(3),cexsn = 1,cexil = 1,lwd=1,col="white",frame=F,borders = NA)
 ```
 
 #INTEG_SEURAT1:
@@ -85,11 +89,15 @@ FeaturePlot(alldata.int, reduction = "UMAP_on_CCA",dims = 1:2,features = c("CD3E
 #INTEG_ALL5:
 
 ```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=16}
-saveRDS(alldata,"data/integrated_3pbmc.rds")
+saveRDS(alldata.int,"data/3pbmc_qc_dr_int.rds")
 ```
 
 
+#SESSION_INFO:
 
+```{r}
+sessionInfo()
+```
 
 
 

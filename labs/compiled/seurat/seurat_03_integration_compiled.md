@@ -1,5 +1,5 @@
 ---
-title: "Seurat"
+title: #INTEG_TITLE:
 author: "Åsa Björklund  &  Paulo Czarnewski"
 date: "Sept 13, 2019"
 output:
@@ -13,6 +13,7 @@ output:
       smooth_scroll: true
     toc_depth: 3
     keep_md: yes
+    fig_caption: true
   html_notebook:
     self_contained: true
     highlight: tango
@@ -22,11 +23,7 @@ output:
       collapsed: false
       smooth_scroll: true
     toc_depth: 3
-    keep_md: yes
 ---
-
-***
-# Data Integration
 
 In this tutorial we will look at different ways of integrating multiple single cell RNA-seq datasets. We will explore two different methods to correct for batch effects across datasets. We will also look at a quantitative measure to assess the quality of the integrated data. Seurat uses the data integration method presented in Comprehensive Integration of Single Cell Data, while Scran and Scanpy use a mutual Nearest neighbour method (MNN). Below you can find a list of the most recent methods for single data integration:
 
@@ -41,34 +38,18 @@ Let's first load necessary libraries and the data saved in the previous lab.
 
 
 ```r
-suppressMessages(require(Seurat))
-```
+suppressPackageStartupMessages({
+  library(Seurat)
+  library(cowplot)
+  library(ggplot2)
+})
 
-```
-## Warning: package 'Seurat' was built under R version 3.5.2
-```
-
-```r
-suppressMessages(require(cowplot))
-```
-
-```
-## Warning: package 'cowplot' was built under R version 3.5.2
-```
-
-```
-## Warning: package 'ggplot2' was built under R version 3.5.2
-```
-
-```r
-suppressMessages(require(ggplot2))
-
-alldata <- readRDS("data/3pbmc_qc_dm.rds")
+alldata <- readRDS("data/3pbmc_qc_dr.rds")
 print(names(alldata@reductions))
 ```
 
 ```
-## [1] "PCA_on_RNA"  "TSNE_on_RNA" "UMAP_on_RNA"
+## [1] "PCA_on_RNA"        "TSNE_on_RNA"       "UMAP_on_RNA"       "UMAP10_on_RNA"     "UMAP_on_ScaleData" "UMAP_on_Graph"
 ```
 
 We split the combined object into a list, with each dataset as an element. We perform standard preprocessing (log-normalization), and identify variable features individually for each dataset based on a variance stabilizing transformation ("vst").
@@ -76,12 +57,55 @@ We split the combined object into a list, with each dataset as an element. We pe
 
 ```r
 alldata.list <- SplitObject(alldata, split.by = "orig.ident")
+```
 
+```
+## Warning: All object keys must be alphanumeric characters, followed by an underscore ('_'), setting key to 'umap10onrna_'
+```
+
+```
+## Warning: All object keys must be alphanumeric characters, followed by an underscore ('_'), setting key to 'umaponscaledata_'
+```
+
+```
+## Warning: All object keys must be alphanumeric characters, followed by an underscore ('_'), setting key to 'umapongraph_'
+```
+
+```
+## Warning: All object keys must be alphanumeric characters, followed by an underscore ('_'), setting key to 'umap10onrna_'
+```
+
+```
+## Warning: All object keys must be alphanumeric characters, followed by an underscore ('_'), setting key to 'umaponscaledata_'
+```
+
+```
+## Warning: All object keys must be alphanumeric characters, followed by an underscore ('_'), setting key to 'umapongraph_'
+```
+
+```
+## Warning: All object keys must be alphanumeric characters, followed by an underscore ('_'), setting key to 'umap10onrna_'
+```
+
+```
+## Warning: All object keys must be alphanumeric characters, followed by an underscore ('_'), setting key to 'umaponscaledata_'
+```
+
+```
+## Warning: All object keys must be alphanumeric characters, followed by an underscore ('_'), setting key to 'umapongraph_'
+```
+
+```r
 for (i in 1:length(alldata.list)) {
     alldata.list[[i]] <- NormalizeData(alldata.list[[i]], verbose = FALSE)
     alldata.list[[i]] <- FindVariableFeatures(alldata.list[[i]], selection.method = "vst", nfeatures = 2000,verbose = FALSE)
 }
+
+hvgs_per_dataset <- lapply(alldata.list, function(x) { x@assays$RNA@var.features })
+venn::venn(hvgs_per_dataset,opacity = .4,zcolor = scales::hue_pal()(3),cexsn = 1,cexil = 1,lwd=1,col="white",frame=F,borders = NA)
 ```
+
+![](seurat_03_integration_compiled_files/figure-html/unnamed-chunk-2-1.png)<!-- -->
 
 We identify anchors using the FindIntegrationAnchors function, which takes a list of Seurat objects as input.
 
@@ -308,7 +332,7 @@ Finally, lets save the integrated data for further analysis.
 
 
 ```r
-saveRDS(alldata,"data/integrated_3pbmc.rds")
+saveRDS(alldata.int,"data/3pbmc_qc_dr_int.rds")
 ```
 
 
