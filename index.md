@@ -1,10 +1,10 @@
 ---
 layout: default
-title: Single cell RNA sequencing analysis course
+title: Single cell RNA-seq analysis course
 ---
 
 
-# Single cell RNA sequencing analysis course
+# Single cell RNA-seq analysis course
 Scilifelab Solna, Rooms Air & Fire,  2020-01-27 - 2020-01-29 (and 2020-01-30 optional day)
 
 ### Important dates
