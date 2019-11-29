@@ -259,17 +259,17 @@ for( pipeline in c("seurat","scater")){
 #tSNE_TITLE:***
 #tSNE_ALL1:We can now run [BH-tSNE](https://arxiv.org/abs/1301.3342).
 
-#tSNE_ALL2:We can now plot the tSNE colored per dataset. We can start now clearly see the effect of batches present in the dataset.
+#tSNE_ALL2:We can now plot the tSNE colored per dataset. We can clearly see the effect of batches present in the dataset.
 
 #----------#
 #   UMAP   #
 #----------#
 #UMAP_TITLE:## UMAP
 #UMAP_TITLE:***
-#UMAP_ALL1:We can now run [UMAP](https://arxiv.org/abs/1802.03426).
+#UMAP_ALL1:We can now run [UMAP](https://arxiv.org/abs/1802.03426) for cell embeddings.
 
 #UMAP_1_SCANPY:### Calculate neighborhood graph
-#UMAP_1_SCANPY:The UMAP implementation in SCANPY uses a neighborhood graph as the distance matrix, so we need to first calculate the graph. 
+#UMAP_1.1_SCANPY:The UMAP implementation in SCANPY uses a neighborhood graph as the distance matrix, so we need to first calculate the graph. 
 
 #UMAP_2_SCANPY:Now we can run UMAP.
 #UMAP_ALL2:Another usefullness of UMAP is that it is not limitted by the number of dimensions the data cen be reduced into (unlike tSNE). We can simply reduce the dimentions altering the `n.components` parameter.
@@ -356,6 +356,8 @@ for( pipeline in c("seurat","scater")){
 
 #INTEG_ALL2:Let's first load necessary libraries and the data saved in the previous lab.
 
+
+
 #INTEG_ALL3:We split the combined object into a list, with each dataset as an element. We perform standard preprocessing (log-normalization), and identify variable features individually for each dataset based on a variance stabilizing transformation ("vst").
 
 #INTEG_SEURAT1:We identify anchors using the FindIntegrationAnchors function, which takes a list of Seurat objects as input.
@@ -369,8 +371,25 @@ for( pipeline in c("seurat","scater")){
 #INTEG_SCRAN3:We can observe that a new assay slot is now created under the name `MNN`.
 #INTEG_SCRAN4:Thus, the result from `fastMNN()` should solely be treated as a reduced dimensionality representation, suitable for direct plotting, TSNE/UMAP, clustering, and trajectory analysis that relies on such results.
 
+#INTEG_1_SCANPY:As the stored AnnData object contains scaled data based on variable genes, we need to make a new object with the raw counts and normalized it again. Variable gene selection should not be performed on the scaled data object, only do normalization and log transformation before variable genes selection. 
+#INTEG_2_SCANPY:### Detect variable genes
+#INTEG_3_SCANPY:Variable genes can be detected across the full dataset, but then we run the risk of getting many batch-specific genes that will drive a lot of the variation. Or we can select variable genes from each batch separately to get only celltype variation. Here, we will do both as an example of how it can be done. 
+#INTEG_4_SCANPY:First we will select genes based on the full dataset.
+#INTEG_5_SCANPY:Detect variable genes in each dataset separately using the `batch_key` parameter.
+#INTEG_6_SCANPY: Compare overlap of variable genes with batches or with all data.
+#INTEG_7_SCANPY:### Data integration
+#INTEG_8_SCANPY:First we need to create individual AnnData objects from each of the datasets.
+#INTEG_8_SCANPY:Then perform batch correction with MNN.
+#INTEG_9_SCANPY:*OBS!* To run mnn, the package mnnpy needs to be installed with `pip install mnnpy`.
+#INTEG_10_SCANPY:The mnn_correct function returns a tuple with the AnnData object, list of cell pairs and of angles.Hence, cdata[0] is the new AnnData object. <br> We get corrected expression values for all genes even though only the selected genes were used for finding neighbor cells. For later analysis we want to do dimensionality reduction etc. on the variable genes only, so we will subset the data to only include the variable genes.
+#INTEG_11_SCANPY:Now lets run dimensionality reduction on the new integrated object. tSNE and UMAP is run on the new embeddings created by MNN.
+#INTEG_12_SCANPY:##Combat
+#INTEG_13_SCANPY:Batch correction can also be performed with combat.<br>Note that ComBat batch correction requires a dense matrix format as input (which is already the case in this example).
+#INTEG_14_SCANPY: Variable gene selection, pca and umap with combat data.
 
-#INTEG_ALL4:We can now plot the count and the integrated space reduced dimensions.
+
+
+#INTEG_ALL4:We can now plot the un-integrated and the integrated space reduced dimensions.
 
 #INTEG_ALL5:Finally, lets save the integrated data for further analysis.
 
