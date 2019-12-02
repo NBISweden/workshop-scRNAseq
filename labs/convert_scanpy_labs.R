@@ -16,15 +16,13 @@ option_list <- list(
 opt <- parse_args(OptionParser(option_list=option_list))
 
 
-
-
 #define path to this script 
 initial.options <- commandArgs(trailingOnly = FALSE)
 script_path <- dirname(sub("--file=","",initial.options[grep("--file=",initial.options)]))
 setwd(script_path)
 
 #opt <- list()
-#opt$file <- "scanpy_01_qc.ipynb"
+#opt$file <- "scanpy_04_clustering.ipynb"
 #script_path <- "."
 
 # create output dir
@@ -42,7 +40,7 @@ if (opt$file == "all"){
   }
 }
 
-# red the ref text
+# read the ref text
 lab_text <- readLines(paste0(script_path,"/knit_labs.Rmd"))
 
 # function to replace text in cells
@@ -58,26 +56,24 @@ replace.tags <- function(in_text, ref_text){
       print(sprintf("No matched tag for %s",t))
     }
   }
-  t_lab <- in_text
+  t_lab <- as.list(in_text)
   for( tag in ipy_tags[matched_tags] ){
     j <- grep(tag,t_lab)
     replace <- lab_text[grepl(tag,ref_text)]
-    if (length(replace) > 1){
-      replace <- paste(replace, collapse = " <br>")
-    }
-    new_text <- gsub(tag,"",replace)
-    t_lab[j] <- sub(tag,new_text,t_lab[j])
+    replace <- gsub(tag,"",replace)
+    # add \n to each line
+    replace <- paste0(replace, "\n")
+    t_lab[[j]] <- replace
   }
-  return(t_lab)
+  return(unlist(t_lab))
 }
-
 
 for (file in scripts){
   infile <- file.path(indir,file)
   print(sprintf("Parsing data from %s",infile))
   json <- RJSONIO::fromJSON(infile)
 
-  json_temp <- json
+  #json_temp <- json
 
   # loop through all json cells
   for (i in 1:length(json$cells)){
@@ -107,4 +103,8 @@ for (file in scripts){
 
 #jupyter nbconvert --execute --to notebook --ExecutePreprocessor.timeout=360 --inplace scanpy_01_qc.ipynb
 #jupyter nbconvert --execute --to html_toc --ExecutePreprocessor.timeout=360 scanpy_01_qc.ipynb
+
+
+
+
 
