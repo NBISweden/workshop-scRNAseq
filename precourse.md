@@ -6,7 +6,10 @@ title:  'Precourse Material - scRNAseq course'
 #### <img border="0" src="https://www.svgrepo.com/show/19652/maths-class-materials-cross-of-a-pencil-and-a-ruler.svg" width="40" height="40"> Precourse material
 ***
 
+<br/>
+
 ##### <img border="0" src="https://www.svgrepo.com/show/4795/installation-symbol.svg" width="20" height="20"> Installations
+***
 
 We have conda recipies for all R packages in one file and for the Scanpy tutorial in another. If you have never worked with conda before, please read the [conda instructions](conda_instructions.md).
 
@@ -16,6 +19,7 @@ Also info on Docker?
 <br/>
 
 ##### <img border="0" src="https://www.svgrepo.com/show/20109/database.svg" width="20" height="20"> Dataset
+***
 
 We will run all tutorials with a set of 3 PBMC 10x datasets from the 10X Genomics website, with different types of library preps.
 
@@ -34,7 +38,7 @@ All code is written so that you stand in the folder where the scripts are when y
 So also create the folder 'write' and subfolders for the lab you are planning to run.
 
 ```
- 	cd ..
+cd ..
 mkdir write
 mkdir write/seurat
 mkdir write/scran
@@ -45,6 +49,7 @@ mkdir write/scanpy
 
 
 ##### <img border="0" src="https://www.svgrepo.com/show/17086/server-client-exchange.svg" width="20" height="20"> Uppmax
+***
 
 **Attention**: This step is no longer required for the course. It is only used in one of the lectures
 
