@@ -1,13 +1,18 @@
-# Convert Scanpy labs to include tag text
-# render as new ipynb and html.
+# Convert labs to include tag text
+# render as new ipynb and html for scanpy
+# render as new Rmd and html for scater/seurat
 
 # OBS! Requires jupyter_contrib_nbextensions to be installed.
 
+# to run conversion of all labs just run
+# Rscript convert_all_labs.R -f all -t all
+
+
 # input is either --file all, of --file filename
+# flag -t should be scater, scran, seurat or all
 
 library(optparse)
 library(RJSONIO)
-library(knitr)
 
 #parse input
 option_list <- list( 
@@ -29,10 +34,10 @@ setwd(script_path)
 #opt$file <- "scanpy_04_clustering.ipynb"
 #script_path <- "."
 
-opt <- list()
-opt$file <- "scater_01_qc.Rmd"
-opt$type <- "scater"
-script_path <- "."
+#opt <- list()
+#opt$file <- "scater_01_qc.Rmd"
+#opt$type <- "scater"
+#script_path <- "."
 
 # read the ref text
 lab_text <- readLines(paste0(script_path,"/knit_labs.Rmd"))
@@ -41,21 +46,22 @@ lab_text <- readLines(paste0(script_path,"/knit_labs.Rmd"))
 # Scanpy
 ######################################
 
-if (type == "all" | type == "scanpy"){
-# create output dir
-outdir <- "compiled/scanpy"
-dir.create(outdir,recursive = T, showWarnings = F)
+if (opt$type == "all" | opt$type == "scanpy"){
+  
+  # create output dir
+  outdir <- "compiled/scanpy"
+  dir.create(outdir,recursive = T, showWarnings = F)
 
-# check for input files
-indir <- "scanpy"
-if (opt$file == "all"){
-  scripts <- dir(indir, pattern = "*.ipynb")
-}else {
-  scripts <- opt$file
-  if (!file.exists(file.path(indir,scripts))){
-    stop(sprintf("File %s does not exist in dir %s",scripts,indir))
+  # check for input files
+  indir <- "scanpy"
+  if (opt$file == "all"){
+    scripts <- dir(indir, pattern = "*.ipynb")
+  }else {
+    scripts <- opt$file
+    if (!file.exists(file.path(indir,scripts))){
+      stop(sprintf("File %s does not exist in dir %s",scripts,indir))
+    }
   }
-}
 
 
 
@@ -115,7 +121,7 @@ for (file in scripts){
   print("Convert to html...")
   system(render_html)
 }
-
+}
 
 #jupyter nbconvert --execute --to notebook --ExecutePreprocessor.timeout=360 --inplace scanpy_01_qc.ipynb
 #jupyter nbconvert --execute --to html_toc --ExecutePreprocessor.timeout=360 scanpy_01_qc.ipynb
@@ -135,7 +141,6 @@ if (opt$type == "seurat"){
 }else if (opt$type != "scanpy"){
   stop(sprintf("Error! No pipeline %s, please specify one of scater, scanpy or seurat"))
 }
-
 
 
 for( pipeline in pipelines){
@@ -172,3 +177,5 @@ for( pipeline in pipelines){
     rmarkdown::render(out_script)
   }
 }
+
+
