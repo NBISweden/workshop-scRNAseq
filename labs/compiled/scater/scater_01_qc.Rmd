@@ -25,13 +25,21 @@ output:
     toc_depth: 3
 ---
 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(message='hide', warning='hide', result='hold',fig.width=12)
+```
+<style>
+h1, .h1, h2, .h2, h3, .h3, h4, .h4 { margin-top: 50px }
+p.caption {font-size: 0.9em;font-style: italic;color: grey;margin-right: 10%;margin-left: 10%;text-align: justify}
+</style>
+
 ***
 # Get data
 
 In this tutorial, we will be using 3 publicly available dataset downloaded from 10X Genomics repository. They can be downloaded using the following bash commands. Simply create a folder called `data` and then use `curl` to pull the data from the 10X database.
 
 ```{bash, results='hide'}
-mkdir data
+mkdir -p data
 curl -o data/pbmc_1k_v2_filtered_feature_bc_matrix.h5 -O http://cf.10xgenomics.com/samples/cell-exp/3.0.0/pbmc_1k_v2/pbmc_1k_v2_filtered_feature_bc_matrix.h5
 curl -o data/pbmc_1k_v3_filtered_feature_bc_matrix.h5 -O http://cf.10xgenomics.com/samples/cell-exp/3.0.0/pbmc_1k_v3/pbmc_1k_v3_filtered_feature_bc_matrix.h5
 curl -o data/pbmc_1k_protein_v3_filtered_feature_bc_matrix.h5 -O http://cf.10xgenomics.com/samples/cell-exp/3.0.0/pbmc_1k_protein_v3/pbmc_1k_protein_v3_filtered_feature_bc_matrix.h5
@@ -56,7 +64,7 @@ p3.1k <- p3.1k$`Gene Expression`
 ```
 
 ***
-# Create Object
+# Create one merged object
 
 We can now load the expression matricies into objects and then merge them into a single merged object. Each analysis workflow (Seurat, Scater, Scranpy, etc) has its own way of storing data. We will add dataset labels as cell.ids just in case you have overlapping barcodes between the datasets. After that we add a column `Chemistry` in the metadata for plotting later on.
 
@@ -64,7 +72,7 @@ We can now load the expression matricies into objects and then merge them into a
 sce <- SingleCellExperiment( assays = list(counts = cbind(v3.1k,v2.1k,p3.1k)) )
 dim(sce)
 cpm(sce) <- calculateCPM(sce)
-sce <- normalize(sce)
+sce <- scater::normalize(sce)
 ```
 
  Here it is how the count matrix and the metatada look like for every cell.
@@ -73,7 +81,7 @@ sce <- normalize(sce)
 #Adding metadata
 sce@colData$sample_id <- unlist(sapply(c("v3.1k","v2.1k","p3.1k"),function(x) rep(x,ncol(get(x)))))
 sce@colData$nCount <- Matrix::colSums(counts(sce))
-sce@colData$nFeatures <- Matrix::colSums(counts(sce)>0)
+sce@colData$nFeatures <- Matrix::colSums(counts(sce)>0) 
 sce@colData$size_factors <- scater::librarySizeFactors(sce)
 
 sce <- calculateQCMetrics(sce)
@@ -85,7 +93,7 @@ head(sce@colData,10)
 ***
 # Calculate QC
 
-Having the data in a suitable format, we can start calculating some quality metrics. We can for example calculate the percentage of mitocondrial and ribossomal genes per cell and add to the metadata. This will be helpfull to visualize them across different metadata parameteres (i.e. datasetID and chemistry version). There are several ways of doing this, and here manually calculate the proportion of mitochondrial reads and add to the metadata table.
+Having the data in a suitable format, we can start calculating some quality metrics. We can for example calculate the percentage of mitocondrial and ribosomal genes per cell and add to the metadata. This will be helpfull to visualize them across different metadata parameteres (i.e. datasetID and chemistry version). There are several ways of doing this, and here manually calculate the proportion of mitochondrial reads and add to the metadata table.
 
 Citing from "Simple Single Cell" workflows (Lun, McCarthy & Marioni, 2017): "High proportions are indicative of poor-quality cells (Islam et al. 2014; Ilicic et al. 2016), possibly because of loss of cytoplasmic RNA from perforated cells. The reasoning is that mitochondria are larger than individual transcript molecules and less likely to escape through tears in the cell membrane."
 
@@ -144,7 +152,7 @@ sce.filt <- sce[selected_f , selected_c]
 dim(sce.filt)
 ```
 
-Additionaly, Extremely high number of detected genes could indicate doublets. However, depending on the cell type composition in your sample, you may have cells with higher number of genes (and also higher counts) from one cell type. In these datasets, there is also a clear difference between the v2 vs v3 10x chemistry with regards to gene detection, so it may not be fair to apply the same cutoffs to all of them. Also, in the protein assay data there is a lot of cells with few detected genes giving a bimodal distribution. This type of distribution is not seen in the other 2 datasets. Considering that they are all PBMC datasets it makes sense to regard this distribution as low quality libraries. Filter the cells with high gene detection (putative doublets) with cutoffs 4100 for v3 chemistry and 2000 for v2. Here, we will filter the cells with low gene detection (low quality libraries) with less than 1000 genes for v2 and < 500 for v2.
+ Extremely high number of detected genes could indicate doublets. However, depending on the cell type composition in your sample, you may have cells with higher number of genes (and also higher counts) from one cell type. <br>In these datasets, there is also a clear difference between the v2 vs v3 10x chemistry with regards to gene detection, so it may not be fair to apply the same cutoffs to all of them. Also, in the protein assay data there is a lot of cells with few detected genes giving a bimodal distribution. This type of distribution is not seen in the other 2 datasets. Considering that they are all PBMC datasets it makes sense to regard this distribution as low quality libraries. Filter the cells with high gene detection (putative doublets) with cutoffs 4100 for v3 chemistry and 2000 for v2. <br>Here, we will filter the cells with low gene detection (low quality libraries) with less than 1000 genes for v2 and < 500 for v2.
 
 ```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=16}
 high.det.v3 <- sce.filt$nFeatures > 4100
@@ -159,6 +167,8 @@ ncol(sce.filt)
 
 Additionally, we can also see which genes contribute the most to such reads. We can for instance plot the percentage of counts per gene.
 
+In scater, you can also use the function `plotHighestExprs()` to plot the gene contribution, but the function is quite slow. 
+
 ```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=12}
 #Compute the relative expression of each gene per cell
 rel_expression <- t( t(counts(sce.filt)) / Matrix::colSums(counts(sce.filt))) * 100
@@ -166,13 +176,14 @@ most_expressed <- sort(Matrix::rowSums( rel_expression ),T)[20:1] / ncol(sce.fil
 
 par(mfrow=c(1,2),mar=c(4,6,1,1))
 boxplot( as.matrix(t(rel_expression[names(most_expressed),])),cex=.1, las=1, xlab="% total count per cell",col=scales::hue_pal()(20)[20:1],horizontal=TRUE)
+
 ```
 
-As you can see, MALAT1 constitutes up to 30% of the UMIs from a single cell and the other top genes are mitochondrial and ribosomal genes. Let us assemble some information about such genes, which are important for quality control and downstream filtering.
+As you can see, MALAT1 constitutes up to 30% of the UMIs from a single cell and the other top genes are mitochondrial and ribosomal genes. It is quite common that nuclear lincRNAs have correlation with quality and mitochondrial reads, so high detection of MALAT1 may be a technical issue. Let us assemble some information about such genes, which are important for quality control and downstream filtering.
 
 ## Mito/Ribo filtering
 
-We also have quite a lot of cells with high proportion of mitochondrial and ribosomal reads. It could be wise to remove those cells, if we have enough cells left after filtering. Another option would be to either remove all mitochondrial reads from the dataset and hope that the remaining genes still have enough biological signal. A third option would be to just regress out the `percent_mito` variable during scaling. In this case we had as much as 99.7% mitochondrial reads in some of the cells, so it is quite unlikely that there is much cell type signature left in those. Looking at the plots, make reasonable decisions on where to draw the cutoff. In this case, the bulk of the cells are below 25% mitochondrial reads and that will be used as a cutoff.
+We also have quite a lot of cells with high proportion of mitochondrial and low proportion ofribosomal reads. It could be wise to remove those cells, if we have enough cells left after filtering. <br>Another option would be to either remove all mitochondrial reads from the dataset and hope that the remaining genes still have enough biological signal. <br>A third option would be to just regress out the `percent_mito` variable during scaling. In this case we had as much as 99.7% mitochondrial reads in some of the cells, so it is quite unlikely that there is much cell type signature left in those. <br>Looking at the plots, make reasonable decisions on where to draw the cutoff. In this case, the bulk of the cells are below 25% mitochondrial reads and that will be used as a cutoff. We will also remove cells with less than 5% ribosomal reads. 
 
 ```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=16}
 selected_mito <- sce.filt$percent_mito < 0.25
@@ -231,14 +242,21 @@ plot_grid(plotColData(sce.filt,y = "G2M.score",x = "G1.score",colour_by = "sampl
 ```
 
 In this case it looks like we only have a few cycling cells in the datasets.
-
+# Save data 
 Finally, lets save the QC-filtered data for further analysis.
+
+#CELLCYCLE_ALL4:
 
 ```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=16}
 saveRDS(sce.filt,"data/3pbmc_qc.rds")
 ```
 
+### Session Info
+***
 
+```{r}
+sessionInfo()
+```
 
 
 
