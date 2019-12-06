@@ -11,7 +11,7 @@ title: "Scater/Scran: Quality control"
 #DATA_ALL1:
 
 ```{bash, results='hide'}
-mkdir data
+mkdir -p data
 curl -o data/pbmc_1k_v2_filtered_feature_bc_matrix.h5 -O http://cf.10xgenomics.com/samples/cell-exp/3.0.0/pbmc_1k_v2/pbmc_1k_v2_filtered_feature_bc_matrix.h5
 curl -o data/pbmc_1k_v3_filtered_feature_bc_matrix.h5 -O http://cf.10xgenomics.com/samples/cell-exp/3.0.0/pbmc_1k_v3/pbmc_1k_v3_filtered_feature_bc_matrix.h5
 curl -o data/pbmc_1k_protein_v3_filtered_feature_bc_matrix.h5 -O http://cf.10xgenomics.com/samples/cell-exp/3.0.0/pbmc_1k_protein_v3/pbmc_1k_protein_v3_filtered_feature_bc_matrix.h5
@@ -44,7 +44,7 @@ p3.1k <- p3.1k$`Gene Expression`
 sce <- SingleCellExperiment( assays = list(counts = cbind(v3.1k,v2.1k,p3.1k)) )
 dim(sce)
 cpm(sce) <- calculateCPM(sce)
-sce <- normalize(sce)
+sce <- scater::normalize(sce)
 ```
 
 #OBJ_ALL2:
@@ -53,7 +53,7 @@ sce <- normalize(sce)
 #Adding metadata
 sce@colData$sample_id <- unlist(sapply(c("v3.1k","v2.1k","p3.1k"),function(x) rep(x,ncol(get(x)))))
 sce@colData$nCount <- Matrix::colSums(counts(sce))
-sce@colData$nFeatures <- Matrix::colSums(counts(sce)>0)
+sce@colData$nFeatures <- Matrix::colSums(counts(sce)>0) 
 sce@colData$size_factors <- scater::librarySizeFactors(sce)
 
 sce <- calculateQCMetrics(sce)
@@ -139,6 +139,8 @@ ncol(sce.filt)
 
 #FILTERING_ALL01:
 
+#FILTERING_SCATER01:
+
 ```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=12}
 #Compute the relative expression of each gene per cell
 rel_expression <- t( t(counts(sce.filt)) / Matrix::colSums(counts(sce.filt))) * 100
@@ -146,6 +148,7 @@ most_expressed <- sort(Matrix::rowSums( rel_expression ),T)[20:1] / ncol(sce.fil
 
 par(mfrow=c(1,2),mar=c(4,6,1,1))
 boxplot( as.matrix(t(rel_expression[names(most_expressed),])),cex=.1, las=1, xlab="% total count per cell",col=scales::hue_pal()(20)[20:1],horizontal=TRUE)
+
 ```
 
 #FILTERING_ALL02:
