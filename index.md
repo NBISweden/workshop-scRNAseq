@@ -108,6 +108,7 @@ If you have any questions regarding the course, please email to Åsa Björklund 
 ***
 
 * [Single cell RNA-seq course at from Hemberg lab](https://scrnaseq-course.cog.sanger.ac.uk/website/index.html)
+* [Single cell RNA-seq course in Python](https://chanzuckerberg.github.io/scRNA-python-workshop/intro/about)
 * [Single cell RNA-seq course at Broad](https://broadinstitute.github.io/2019_scWorkshop/)
 * [Repository listing many scRNA-seq tools](https://github.com/seandavi/awesome-single-cell)
 * [SingleCellExperiment objects for many datasets](https://hemberg-lab.github.io/scRNA.seq.datasets/)

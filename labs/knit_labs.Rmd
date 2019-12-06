@@ -497,7 +497,9 @@ for( pipeline in c("seurat","scater")){
 #CLUST_ALL8:Hierarchical clustering is another generic form of clustering that can be applied also to scRNA-seq data. As K-means, it is typically applied to a reduced dimension representation of the data. Hierarchical clustering returns an entire hierarchy of partitionings (a dendrogram) that can be cut at different levels. Hierarchical clustering is done in two steps:
 #CLUST_ALL8:
 #CLUST_ALL8:* Step1: Define the distances between samples. The most common are Euclidean distance (a.k.a. straight line between two points) or correlation coefficients.
-#CLUST_ALL8:* Step2: Define the deprogram among all samples using **Bottom-up** or **Top-down** approach. **Bottom-up** is where samples start with their own cluster which end up merged pair-by-pair until only one cluster is left. **Top-down** is where samples start all in the same cluster that end up being split by 2 until each sample has its own cluster.
+#CLUST_ALL8:* Step2: Define a measure of distances between clusters, called *linkage* criteria. It can for example be average distances between clusters. Commonly used methods are `single`, `complete`, `average`, `median`, `centroid` and `ward`.
+#CLUST_ALL8:* Step3: Define the deprogram among all samples using **Bottom-up** or **Top-down** approach. **Bottom-up** is where samples start with their own cluster which end up merged pair-by-pair until only one cluster is left. **Top-down** is where samples start all in the same cluster that end up being split by 2 until each sample has its own cluster.
+
 
 #CLUST_TITLE4.1:### Defining distance between cells
 #CLUST_ALL8.1:The base R `stats` package already contains a function `dist` that calculates distances between all pairs of samples. Since we want to compute distances between samples, rather than among genes, we need to transpose the data before applying it to the `dist` function. This can be done by simply adding the transpose function `t()` to the data. The distance methods available  in `dist` are: "euclidean", "maximum", "manhattan", "canberra", "binary" or "minkowski".
@@ -509,6 +511,11 @@ for( pipeline in c("seurat","scater")){
 #CLUST_ALL8.2:\[adj = \frac{1- cor}{2}\]
 #CLUST_ALL8.2:
 #CLUST_ALL8.2:Once we transformed the correlations to a 0-1 scale, we can simply convert it to a distance object using `as.dist` function. The transformation does not need to have a maximum of 1, but it is more intuitive to have it at 1, rather than at any other number.
+
+
+#CLUST_SCANPY8.2: The function `AgglomerativeClustering` has the option of running with disntance metrics “euclidean”, “l1”, “l2”, “manhattan”, “cosine”, or “precomputed". However, with ward linkage only euklidean distances works. Here we will try out euclidean distance and ward linkage calculated in PCA space.
+
+
 
 #CLUST_TITLE4.2:### Clustering cells
 #CLUST_ALL8.3:After having calculated the distances between samples calculated, we can now proceed with the hierarchical clustering per-se. We will use the function `hclust` for this purpose, in which we can simply run it with the distance objects created above. The methods available are: "ward.D", "ward.D2", "single", "complete", "average", "mcquitty", "median" or "centroid". It is possible to plot the dendrogram for all cells, but this is very time consuming and we will omit for this tutorial.
