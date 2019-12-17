@@ -30,7 +30,7 @@ editor_options:
 
 
 #CHUNK_OPT:```{r setup, include=FALSE}
-#CHUNK_OPT:knitr::opts_chunk$set(message='hide', warning='hide', result='hold',fig.width=12)
+#CHUNK_OPT:knitr::opts_chunk$set(message=FALSE, warning=FALSE, result='hold',fig.width=12,tidy=TRUE)
 #CHUNK_OPT:```
 #CHUNK_OPT:<style>
 #CHUNK_OPT:h1, .h1, h2, .h2, h3, .h3, h4, .h4 { margin-top: 50px }
@@ -501,10 +501,61 @@ for( pipeline in c("seurat","scater")){
 
 
 
-#-----------------#
-#   DGE-MARKERS   #
-#-----------------#
-#DGEM_ALL:
+
+
+#----------------------------------#
+#   Differential gene expression   #
+#----------------------------------#
+#DGE_TITLE:# Differential gene expression
+#DGE_ALL:In this tutorial we will cover about Differetial gene expression, which comprises an extensive range of topics and methods. In single cell, differential expresison can have multiple functionalities such as of identifying marker genes for cell populations, as well as differentially regulated genes across conditions (healthy vs control). We will also exercise on how to account the batch information in your test.
+#DGE_ALL2:We can first load the data from the clustering session. Moreover, we can already decide which clustering resolution to use. First let's define using the `louvain_2` clustering to identifying differentially expressed genes.  
+
+
+#DGE_TITLE1:## Cell marker genes
+#DGE_TITLE1:***
+
+#DGE_ALL3:Let us first compute a ranking for the highly differential genes in each cluster. There are many different tests and parameters to be chosen that can be used to refine your results. When looking for marker genes, we want genes that are positivelly expressed in a cell type and possibly not expressed in the others.
+
+#DGE_ALL4:We can now select the top 25 up regulated genes for plotting.
+
+#DGE_ALL4.1:We can visualize them as a heatmap. Here we are selecting the top 5.
+
+#DGE_ALL4.2:Another way is by representing the overal group expression and detection rates in a dot-plot.
+
+#DGE_ALL4.3:We can also plot a violin plot for each gene.
+
+#DGE_ALL5:<style>
+#DGE_ALL5:div.blue { background-color:#e6f0ff; border-radius: 5px; padding: 10px;}
+#DGE_ALL5:</style>
+#DGE_ALL5:<div class = "blue">
+#DGE_ALL5:**Your turn**
+#DGE_ALL5:
+#DGE_ALL5:Take a screen shot of those results and re-run the same code above with another test: "wilcox" (Wilcoxon Rank Sum test), "bimod" (Likelihood-ratio test), "roc" (Identifies 'markers' of gene expression using ROC analysis),"t" (Student's t-test),"negbinom" (negative binomial generalized linear model),"poisson" (poisson generalized linear model), "LR" (logistic regression), "MAST" (hurdle model), "DESeq2" (negative binomial distribution).
+#DGE_ALL5:</div>
+
+#DGE_TITLE2:## Differential expression across conditions
+#DGE_TITLE2:***
+
+#DGE_ALL6:The second way of computing differential expression is to answer which genes are differentially expressed within a cluster. For example, in our case we have libraries comming from 2 different library preparation methods (batches) and we would like to know which genes are influenced the most in a particular cell type. The same concenpt applies if you have instead two or more biological groups (control vs treated, time#0 vs time#1 vs time#2, etc).
+#DGE_ALL6:
+#DGE_ALL6:For this end, we will first subset our data for the desired cell cluster, then change the cell identities to the variable of comparison (which now in our case is the "Chemistry").
+
+#DGE_ALL6.1:We can now plot the expression across the "Chemistry".
+
+#DGE_ALL6.2:We can clearly see some patterns across them. Those are the genes that impact the most on your batches (see the dimensionality reduction and integration exercises for more details). We can plot those genes using the integrated and non-integrated UMAP for ilustration.
+
+#DGE_ALL6.3:<style>
+#DGE_ALL6.3:div.blue { background-color:#e6f0ff; border-radius: 5px; padding: 10px;}
+#DGE_ALL6.3:</style>
+#DGE_ALL6.3:<div class = "blue">
+#DGE_ALL6.3:**Your turn**
+#DGE_ALL6.3:
+#DGE_ALL6.3:1) Are the differentially expressed genes across `Chemistry` different for each cluster, or are they all the same genes? Change the cluster to use above and check.
+#DGE_ALL6.3:2) How would you visualize the results from the previous question?
+#DGE_ALL6.3:</div>
+
+
+#DGE_ALL10:Finally, lets save the integrated data for further analysis.
 
 #-----------
 
@@ -518,6 +569,24 @@ for( pipeline in c("seurat","scater")){
 #--------------------#
 #DGEC_ALL:
 
+```{r setup, include=FALSE}
+for( pipeline in c("seurat","scater")){
+  lab <- readLines(paste0(script_path,"/",pipeline,"/",pipeline,"_05_dge.Rmd"))
+  lab_text <- readLines(paste0(script_path,"/knit_labs.Rmd"))
+  
+  u <- grep("[#].*[_].*[:]",lab,value = T)[ grep("[#].*[_].*[:]",lab,value = T) %in% sub(":.*",":",grep("[#].*[_].*[:]",lab_text,value = T)) ]
+  
+  t_lab <- lab
+  for( i in u ){
+    j <- grep(i,t_lab)
+    temp2 <- sub(i,"",lab_text[grepl(i,lab_text)])
+    t_lab <- c( t_lab[1:(j-1)] , temp2 , t_lab[(j+1):length(t_lab)] )
+  }
+  
+  writeLines(t_lab,paste0(script_path,"/compiled/",pipeline,"/",pipeline,"_05_dge.Rmd"))
+  rmarkdown::render(paste0(script_path,"/compiled/",pipeline,"/",pipeline,"_05_dge.Rmd"))
+}
+```
 #-----------
 
 

@@ -1,213 +1,222 @@
 ---
-title: "Seurat: Differential gene expression"
 #CSS_ALL:
 ---
 
-***
-# `r l("DATA",text,"TITLE")`
+#CHUNK_OPT:
 
-`r l("DATA",text,"ALL1")`
+#DGE_TITLE:
 
+#DGE_ALL:
 
-```{bash, results='hide'}
-mkdir data
-curl -o data/pbmc_1k_v2_filtered_feature_bc_matrix.h5 -O http://cf.10xgenomics.com/samples/cell-exp/3.0.0/pbmc_1k_v2/pbmc_1k_v2_filtered_feature_bc_matrix.h5
-curl -o data/pbmc_1k_v3_filtered_feature_bc_matrix.h5 -O http://cf.10xgenomics.com/samples/cell-exp/3.0.0/pbmc_1k_v3/pbmc_1k_v3_filtered_feature_bc_matrix.h5
-curl -o data/pbmc_1k_protein_v3_filtered_feature_bc_matrix.h5 -O http://cf.10xgenomics.com/samples/cell-exp/3.0.0/pbmc_1k_protein_v3/pbmc_1k_protein_v3_filtered_feature_bc_matrix.h5
-```
-
-`r l("DATA",text,"ALL2")`
-
-```{r, message='hide',warning='hide',results='hold'}
-suppressMessages(require(Seurat))
-suppressMessages(require(scater))
-suppressMessages(require(Matrix))
-```
-
-`r l("DATA",text,"ALL3")`
-
-
-```{r,message='hide',warning='hide',results='hold'}
-v3.1k <- Read10X_h5("data/pbmc_1k_v3_filtered_feature_bc_matrix.h5", use.names = T)
-v2.1k <- Read10X_h5("data/pbmc_1k_v2_filtered_feature_bc_matrix.h5", use.names = T)
-p3.1k <- Read10X_h5("data/pbmc_1k_protein_v3_filtered_feature_bc_matrix.h5", use.names = T)
-p3.1k <- p3.1k$`Gene Expression`
-```
-
-***
-# `r l("OBJ",text,"TITLE")`
-
-`r l("OBJ",text,"ALL1")`
+#DGE_ALL2:
 
 ```{r}
-sdata.v2.1k <- CreateSeuratObject(v2.1k, project = "v2.1k")
-sdata.v3.1k <- CreateSeuratObject(v3.1k, project = "v3.1k")
-sdata.p3.1k <- CreateSeuratObject(p3.1k, project = "p3.1k")
+suppressPackageStartupMessages({
+  library(Seurat)
+  library(venn)
+  library(dplyr)
+  library(cowplot)
+  library(ggplot2)
+  library(pheatmap)
+  library(rafalib)
+})
 
-# Merge datasets into one single seurat object
-alldata <- merge(sdata.v2.1k, c(sdata.v3.1k,sdata.p3.1k), add.cell.ids=c("v2.1k","v3.1k","p3.1k"))
+alldata <- readRDS("data/3pbmc_qc_dr_int_cl.rds")
 
-# Add in a metadata column that indicates v2 vs v3 chemistry
-alldata$Chemistry <- ifelse(alldata$orig.ident == "v2.1k","v2","v3")
+#Set the identity as louvain_2 clustering
+print(alldata@active.ident[1:10])
+alldata <- SetIdent(alldata, value = "kmeans_5")
+print(alldata@active.ident[1:10])
 ```
 
-`r l("OBJ",text,"ALL2")`
+#DGE_TITLE1:
 
-```{r ,  results='hold'}
-as.data.frame(alldata@assays$RNA@counts[1:10,1:2])
-head(alldata@meta.data,10)
+#DGE_ALL3:
+
+```{r}
+#Compute differentiall expression
+markers_genes <- FindAllMarkers(alldata,
+                               logfc.threshold = 0.2,
+                               test.use = "wilcox",
+                               min.pct = 0.1,
+                               min.diff.pct = 0.2,
+                               only.pos = TRUE,
+                               max.cells.per.ident = 50,
+                               assay = "RNA")
 ```
 
+#DGE_ALL4:
 
-***
-# `r l("QC",text,"TITLE")[1]`
-
-`r l("QC",text,"ALL1")`
-
-`r l("QC",text,"ALL1.1")`
-
-```{r, results='hold'}
-# Way1: Doing it using Seurat function
-alldata <- PercentageFeatureSet(alldata, "^MT-", col.name = "percent_mito")
-
-# Way2: Doing it manually
-total_counts_per_cell <- colSums(  alldata@assays$RNA@counts  )
-
-mito_genes <- rownames(alldata)[grep("^MT-",rownames(alldata))]
-head(mito_genes,10)
-alldata$percent_mito <- colSums(  alldata@assays$RNA@counts[mito_genes,]  ) / total_counts_per_cell
+```{r}
+markers_genes %>% group_by(cluster)  %>% top_n(-25, p_val_adj) -> top25
+top25
 ```
 
-`r l("QC",text,"ALL2")`
+#DGE_ALL4:
 
-```{r, results='hold'}
-# Way1: Doing it using Seurat function
-alldata <- PercentageFeatureSet(alldata, "^RP[SL]", col.name = "percent_ribo")
-
-# Way2: Doing it manually
-ribo_genes <- rownames(alldata)[grep("^RP[SL]",rownames(alldata))]
-head(ribo_genes,10)
-alldata$percent_ribo <- colSums(  alldata@assays$RNA@counts[ribo_genes,]  ) / total_counts_per_cell
+```{r}
+mypar(1,5,mar=c(4,6,3,1))
+for(i in unique(top25$cluster)){
+  barplot( sort( setNames(top25$avg_logFC, top25$gene) [top25$cluster == i], F),
+           horiz = T,las=1 ,main=paste0(i," vs. rest"),border = "white", yaxs="i" )
+  abline(v=c(0,0.25),lty=c(1,2))
+}
 ```
 
-***
-# `r l("QC",text,"TITLE2")`
+#DGE_ALL4.1:
 
-`r l("QC",text,"ALL3")`
+```{r}
+markers_genes %>% group_by(cluster)  %>% top_n(-5, p_val_adj) -> top5
 
-```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=16}
-feats <- c("nFeature_RNA","nCount_RNA","percent_mito","percent_ribo")
-VlnPlot(alldata, group.by= "orig.ident", features = feats, pt.size = 0.1,ncol = 4) + NoLegend()
+alldata <- ScaleData(alldata, features = as.character(unique(top5$gene)), assay = "RNA")
+DoHeatmap(alldata, features = as.character(unique(top5$gene)),group.by = "kmeans_5", assay = "RNA")
 ```
 
+#DGE_ALL4.2:
 
-`r l("QC",text,"ALL4")`
-
-```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=16}
-cowplot::plot_grid(ncol = 4,
-  FeatureScatter(alldata, "nCount_RNA"  , "nFeature_RNA", group.by = "orig.ident", pt.size = .1),
-  FeatureScatter(alldata, "percent_mito", "nFeature_RNA", group.by = "orig.ident", pt.size = .1),
-  FeatureScatter(alldata, "percent_ribo", "nFeature_RNA", group.by = "orig.ident", pt.size = .1),
-  FeatureScatter(alldata, "percent_ribo", "percent_mito", group.by = "orig.ident", pt.size = .1)
-)
+```{r}
+DotPlot(alldata, features = as.character(unique(top5$gene)),group.by = "kmeans_5",assay = "RNA")+coord_flip()
 ```
 
-***
-# `r l("FILTERING",text,"TITLE")`
+#DGE_ALL4.3:
 
-## `r l("FILTERING",text,"TITLE1")`
-
-`r l("FILTERING",text,"ALL0")`
-
-```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=4}
-selected_c <- WhichCells(alldata, expression = nFeature_RNA > 200)
-selected_f <- rownames(alldata)[ Matrix::rowSums(alldata) > 3]
-
-data.filt <- subset(alldata, features=selected_f, cells=selected_c)
-dim(data.filt)
+```{r,fig.height=10,fig.width=10}
+VlnPlot(alldata, features = as.character(unique(top5$gene)), ncol = 5, group.by = "kmeans_5",assay = "RNA")
 ```
 
-`r l("FILTERING",text,"ALL3")`
+#DGE_ALL5:
 
-```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=16}
-#start with cells with many genes detected.
-high.det.v3 <- WhichCells(data.filt, expression = nFeature_RNA > 4100)
-high.det.v2 <- WhichCells(data.filt, expression = nFeature_RNA > 2000 & orig.ident == "v2.1k")
+#DGE_TITLE2:
 
-# remove these cells
-data.filt <- subset(data.filt, cells=setdiff(WhichCells(data.filt),c(high.det.v2,high.det.v3)))
+#DGE_ALL6:
 
-# check number of cells
-ncol(data.filt)
+```{r,fig.height=10,fig.width=10}
+cell_selection <- subset(alldata, cells = colnames(alldata)[ alldata$kmeans_5 == 4 ])
+cell_selection <- SetIdent(cell_selection, value = "Chemistry")
+#Compute differentiall expression
+DGE_cell_selection <- FindAllMarkers(cell_selection,
+                               logfc.threshold = 0.2,
+                               test.use = "wilcox",
+                               min.pct = 0.1,
+                               min.diff.pct = 0.2,
+                               only.pos = TRUE,
+                               max.cells.per.ident = 50,
+                               assay = "RNA")
 ```
 
-`r l("FILTERING",text,"ALL01")`
+#DGE_ALL6.1:
 
-```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=12}
-#Compute the relative expression of each gene per cell
-rel_expression <- t( t(data.filt@assays$RNA@counts) / Matrix::colSums(data.filt@assays$RNA@counts)) * 100
-most_expressed <- sort(Matrix::rowSums( rel_expression ),T)[20:1] / ncol(data.filt)
+```{r}
+DGE_cell_selection %>% group_by(cluster)  %>% top_n(-5, p_val_adj) -> top5_cell_selection
 
-par(mfrow=c(1,2),mar=c(4,6,1,1))
-boxplot( as.matrix(t(rel_expression[names(most_expressed),])),cex=.1, las=1, xlab="% total count per cell",col=scales::hue_pal()(20)[20:1],horizontal=TRUE)
+VlnPlot(cell_selection, features = as.character(unique(top5_cell_selection$gene)),
+        ncol = 5,group.by = "Chemistry",assay = "RNA")
 ```
 
-`r l("FILTERING",text,"ALL02")`
+#DGE_ALL6.2:
 
-## `r l("FILTERING",text,"TITLE2")`
-
-`r l("FILTERING",text,"ALL1")`
-
-```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=16}
-selected_mito <- WhichCells(data.filt, expression = percent_mito < 0.25)
-selected_ribo <- WhichCells(data.filt, expression = percent_ribo > 0.05)
-
-# and subset the object to only keep those cells
-data.filt <- subset(data.filt, cells = selected_mito)
-data.filt <- subset(data.filt, cells = selected_ribo)
-```
-
-`r l("FILTERING",text,"ALL2")`
-
-## `r l("FILTERING",text,"TITLE4")`
-
-`r l("FILTERING",text,"ALL5")`
-
-
-```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=16}
-feats <- c("nFeature_RNA","nCount_RNA","percent_mito","percent_ribo")
-cowplot::plot_grid(ncol = 1,
-VlnPlot(data.filt, group.by= "orig.ident", features = feats, pt.size = 0.1,ncol = 4) + NoLegend())
+```{r,fig.asp=.28}
+FeaturePlot(alldata, reduction = "UMAP_on_CCA",dims = 1:2,
+            features = c("JUND","RPS17","CD81"),order = T,ncol = 3)
 ```
 
 
 
-# `r l("CELLCYCLE",text,"TITLE")`
 
-`r l("CELLCYCLE",text,"ALL1")`
+```{r,fig.asp=.28}
+sum(DGE_non_batch$gene %in% DGE_cell_selection$gene)
 
-```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=4,fig.width=8}
-data.filt <- NormalizeData(data.filt)
 
-data.filt <- CellCycleScoring(object = data.filt,
-                              g2m.features = cc.genes$g2m.genes,
-                              s.features = cc.genes$s.genes)
+DGE_non_batch <- FindAllMarkers(alldata,
+                               logfc.threshold = 0.2,
+                               test.use = "LR",
+                               min.pct = 0.1,
+                               min.diff.pct = -Inf,
+                               only.pos = FALSE,
+                               max.cells.per.ident = 50,
+                               assay = "RNA")
+
+DGE_batch <- FindAllMarkers(alldata,
+                               logfc.threshold = 0.2,
+                               test.use = "LR",
+                               min.pct = 0.1,
+                               min.diff.pct = -Inf,
+                               only.pos = FALSE,
+                               max.cells.per.ident = 50,
+                               assay = "RNA",
+                               latent.vars = c("Chemistry") )
+
+
+
+unique(DGE_non_batch$gene[DGE_non_batch$gene %in% DGE_cell_selection$gene])
+
+unique(DGE_batch$gene[DGE_batch$gene %in% DGE_cell_selection$gene])
+
+
+DGE_non_batch["RPL30",]
+DGE_batch["RPL30",]
 ```
 
-`r l("CELLCYCLE",text,"ALL2")`
 
-```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=16}
-VlnPlot(data.filt, features = c("S.Score","G2M.Score"), group.by= "orig.ident",ncol = 4, pt.size = .1)
+
+```{r,fig.asp=.28}
+alldata$cluster_chemistry <- paste0(alldata$kmeans_5,"_",alldata$Chemistry)
+VlnPlot(alldata, features = c("CD81","REL","RPL14") ,assay = "RNA",group.by = "cluster_chemistry",pt.size = .1)
 ```
 
 
-`r l("CELLCYCLE",text,"ALL3")`
 
-`r l("CELLCYCLE",text,"ALL4")`
 
-```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=16}
-saveRDS(data.filt,"data/qc_filtered_3pbmc.rds")
+
+```{r,fig.asp=1}
+gplots::venn(list(non_batch=unique(DGE_non_batch$gene),
+                batch_accounted=unique(DGE_batch$gene) ))
+message(" \n\n Genes that should've be considered differentialy expressed")
+DGE_batch$gene [ ! (DGE_batch$gene %in% DGE_non_batch$gene) ] [1:20]
+
+message(" \n\n Genes that should've NOT be considered differentialy expressed (explained by batch)")
+DGE_non_batch$gene [ ! (DGE_non_batch$gene %in% DGE_batch$gene) ] [1:20]
 ```
+
+
+
+
+```{r}
+VlnPlot(alldata, features = c(DGE_batch$gene [ ! (DGE_batch$gene %in% DGE_non_batch$gene) ][1:3] , 
+                              DGE_non_batch$gene [ ! (unique(DGE_non_batch$gene) %in% unique(DGE_batch$gene)) ][1:3] ),
+        assay = "RNA",group.by = "cluster_chemistry",ncol=3)
+```
+
+
+
+
+
+
+#DGE_ALL10:
+
+```{r}
+saveRDS(alldata,"data/3pbmc_qc_dr_int_cl_dge.rds")
+```
+
+
+#SESSION_INFO:
+
+```{r}
+sessionInfo()
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
