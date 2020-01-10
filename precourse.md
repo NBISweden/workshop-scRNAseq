@@ -29,7 +29,7 @@ curl -O http://cf.10xgenomics.com/samples/cell-exp/3.0.0/pbmc_1k_v3/pbmc_1k_v3_f
 curl -O http://cf.10xgenomics.com/samples/cell-exp/3.0.0/pbmc_1k_protein_v3/pbmc_1k_protein_v3_filtered_feature_bc_matrix.h5
 ```
 
-##### <img border="0" src="https://www.svgrepo.com/show/20109/database.svg" width="20" height="20"> Code
+##### <img border="0" src="https://www.svgrepo.com/show/26279/code-file.svg" width="20" height="20"> Code
 
 All code is also available as R-markdown scripts at the course Github space. If you want a local copy of all course material you can simply clone it with git using:
 
