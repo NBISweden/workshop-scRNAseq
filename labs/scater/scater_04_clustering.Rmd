@@ -32,8 +32,6 @@ sce <- readRDS("data/3pbmc_qc_dr_int.rds")
 
 #CLUST_ALL4:
 
-#CLUST_SEURAT:
-
 ```{r, message='hide',warning='hide',results='hold'}
 #These 2 lines are for demonstration purposes only
 g <- buildKNNGraph(sce,k=30,use.dimred="MNN",assay.type="RNA")
@@ -41,16 +39,26 @@ sce@reducedDims$KNN <- igraph::as_adjacency_matrix(g)
 
 #These 2 lines are the most recommended
 g <- buildSNNGraph(sce,k=30,use.dimred="MNN",assay.type="RNA")
-sce@reducedDims$SNN <- igraph::as_adjacency_matrix(g)
+sce@reducedDims$SNN  <- as_adjacency_matrix(g, attr = "weight")
 ```
 
 #CLUST_ALL4.1:
 
 ```{r, message='hide',warning='hide',results='hold',fig.asp=1,fig.width=4}
+#plot the KNN graph
 pheatmap(sce@reducedDims$KNN[1:200,1:200],
          col=c("white","black"),border_color = "grey90",
          legend = F,cluster_rows = F,cluster_cols = F,fontsize = 2)
+
+#or the SNN graph
+pheatmap(sce@reducedDims$SNN[1:200,1:200],
+        col = colorRampPalette(c("white","yellow","red","black"))(20), 
+        border_color = "grey90",
+         legend = T,cluster_rows = F,cluster_cols = F,fontsize = 2)
 ```
+
+#CLUST_SCATER2: 
+
 
 #CLUST_TITLE2.2:
 
@@ -90,11 +98,11 @@ sce$kmeans_15 <- factor(kmeans(x = sce@reducedDims$MNN,centers = 15)$cluster)
 
 plot_grid(ncol = 3,
   plotReducedDim(sce,use_dimred = "UMAP_on_MNN",colour_by = "kmeans_5",add_ticks = F)+
-    ggplot2::ggtitle(label ="louvain_SNNk5"),
+    ggplot2::ggtitle(label ="KMeans5"),
   plotReducedDim(sce,use_dimred = "UMAP_on_MNN",colour_by = "kmeans_10",add_ticks = F)+
-    ggplot2::ggtitle(label ="louvain_SNNk10"),
+    ggplot2::ggtitle(label ="KMeans10"),
   plotReducedDim(sce,use_dimred = "UMAP_on_MNN",colour_by = "kmeans_15",add_ticks = F)+
-    ggplot2::ggtitle(label ="louvain_SNNk15")
+    ggplot2::ggtitle(label ="KMeans15")
 )
 ```
 
@@ -151,18 +159,18 @@ sce$hc_corelation_15 <- factor( cutree(h_correlation,k = 15) )
 
 plot_grid(ncol = 3,
   plotReducedDim(sce,use_dimred = "UMAP_on_MNN",colour_by = "hc_euclidean_5",add_ticks = F)+
-    ggplot2::ggtitle(label ="louvain_SNNk5"),
+    ggplot2::ggtitle(label ="HC_euclidean_5"),
   plotReducedDim(sce,use_dimred = "UMAP_on_MNN",colour_by = "hc_euclidean_10",add_ticks = F)+
-    ggplot2::ggtitle(label ="louvain_SNNk10"),
+    ggplot2::ggtitle(label ="HC_euclidean_10"),
   plotReducedDim(sce,use_dimred = "UMAP_on_MNN",colour_by = "hc_euclidean_15",add_ticks = F)+
-    ggplot2::ggtitle(label ="louvain_SNNk15"),
+    ggplot2::ggtitle(label ="HC_euclidean_15"),
   
   plotReducedDim(sce,use_dimred = "UMAP_on_MNN",colour_by = "hc_corelation_5",add_ticks = F)+
-    ggplot2::ggtitle(label ="louvain_SNNk5"),
+    ggplot2::ggtitle(label ="HC_correlation_5"),
   plotReducedDim(sce,use_dimred = "UMAP_on_MNN",colour_by = "hc_corelation_10",add_ticks = F)+
-    ggplot2::ggtitle(label ="louvain_SNNk10"),
+    ggplot2::ggtitle(label ="HC_correlation_10"),
   plotReducedDim(sce,use_dimred = "UMAP_on_MNN",colour_by = "hc_corelation_15",add_ticks = F)+
-    ggplot2::ggtitle(label ="louvain_SNNk15")
+    ggplot2::ggtitle(label ="HC_correlation_15")
 )
 ```
 
@@ -170,7 +178,7 @@ plot_grid(ncol = 3,
 #CLUST_ALL9:
 
 ```{r}
-saveRDS(alldata,"data/3pbmc_qc_dr_int_cl.rds")
+saveRDS(sce,"data/3pbmc_qc_dr_int_cl.rds")
 ```
 
 

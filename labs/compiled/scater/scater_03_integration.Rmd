@@ -1,0 +1,169 @@
+---
+title: #INTEG_TITLE:
+author: "Åsa Björklund  &  Paulo Czarnewski"
+date: "Sept 13, 2019"
+output:
+  html_document:
+    self_contained: true
+    highlight: tango
+    df_print: paged
+    toc: yes
+    toc_float:
+      collapsed: false
+      smooth_scroll: true
+    toc_depth: 3
+    keep_md: yes
+    fig_caption: true
+  html_notebook:
+    self_contained: true
+    highlight: tango
+    df_print: paged
+    toc: yes
+    toc_float:
+      collapsed: false
+      smooth_scroll: true
+    toc_depth: 3
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(message='hide', warning='hide', result='hold',fig.width=12)
+```
+<style>
+h1, .h1, h2, .h2, h3, .h3, h4, .h4 { margin-top: 50px }
+p.caption {font-size: 0.9em;font-style: italic;color: grey;margin-right: 10%;margin-left: 10%;text-align: justify}
+</style>
+
+In this tutorial we will look at different ways of integrating multiple single cell RNA-seq datasets. We will explore two different methods to correct for batch effects across datasets. We will also look at a quantitative measure to assess the quality of the integrated data. Seurat uses the data integration method presented in Comprehensive Integration of Single Cell Data, while Scran and Scanpy use a mutual Nearest neighbour method (MNN). Below you can find a list of the most recent methods for single data integration:
+
+Markdown | Language | Library | Ref
+--- | --- | --- | ---
+CCA | R | Seurat | [Cell](https://www.sciencedirect.com/science/article/pii/S0092867419305598?via%3Dihub)
+MNN | R/Python | Scater/Scanpy | [Nat. Biotech.](https://www.nature.com/articles/nbt.4091)
+Conos | R | conos | [Nat. Methods](https://www.nature.com/articles/s41592-019-0466-z?error=cookies_not_supported&code=5680289b-6edb-40ad-9934-415dac4fdb2f)
+Scanorama | Python | scanorama | [Nat. Biotech.](https://www.nature.com/articles/s41587-019-0113-3)
+
+Let's first load necessary libraries and the data saved in the previous lab.
+
+```{r, message='hide',warning='hide',results='hold'}
+suppressPackageStartupMessages({
+  library(scater)
+  library(scran)
+  library(cowplot)
+  library(ggplot2)
+  library(rafalib)
+  library(venn)
+})
+
+sce <- readRDS("data/3pbmc_qc_dm.rds")
+print(names(sce@reducedDims))
+```
+
+We split the combined object into a list, with each dataset as an element. We perform standard preprocessing (log-normalization), and identify variable features individually for each dataset based on a variance stabilizing transformation ("vst").
+
+```{r, message='hide',warning='hide',results='hold',fig.height=2.9}
+sce.list <- lapply( unique(sce$sample_id), function(x){
+  x <- sce[ , sce$sample_id == x ] })
+
+
+mypar(1,3)
+hvgs_per_dataset <- lapply( sce.list, function(x){
+  x <- computeSumFactors(x, sizes=c(20, 40, 60, 80))
+  x <- normalize(x)
+  var.fit <- trendVar(x, use.spikes=FALSE,method="loess",loess.args=list(span=0.05))
+  var.out <- decomposeVar(x, var.fit)
+  hvg.out <- var.out[which(var.out$FDR <= 0.05 & var.out$bio >= 0.2),]
+  hvg.out <- hvg.out[order(hvg.out$bio, decreasing=TRUE),]
+  return(rownames(hvg.out))
+})
+names(hvgs_per_dataset) <- unique(sce$sample_id)
+
+venn::venn(hvgs_per_dataset,opacity = .4,zcolor = scales::hue_pal()(3),cexsn = 1,cexil = 1,lwd=1,col="white",borders = NA)
+```
+
+The mutual nearest neighbors (MNN) approach within the scran package utilizes a novel approach to adjust for batch effects. The `fastMNN()` function returns a representation of the data with reduced dimensionality, which can be used in a similar fashion to other lower-dimensional representations such as PCA. In particular, this representation can be used for downstream methods such as clustering. The BNPARAM can be used to specify the specific nearest neighbors method to use from the BiocNeighbors package. Here we make use of the [Annoy library](https://github.com/spotify/annoy) via the `BiocNeighbors::AnnoyParam()` argument. We save the reduced-dimension MNN representation into the reducedDims slot of our sce object.
+
+```{r, message='hide',warning='hide',results='hold'}
+mnn_out <- fastMNN(sce.list[[1]], sce.list[[2]], sce.list[[3]],
+                   subset.row = unique(unlist(hvgs_per_dataset)),
+                   k = 20, d = 50, approximate = TRUE,
+                   # BPPARAM = BiocParallel::MulticoreParam(4),
+                   BNPARAM = BiocNeighbors::AnnoyParam())
+```
+
+**NOTE**: `fastMNN()` does not produce a batch-corrected expression matrix. 
+
+```{r, message='hide',warning='hide',results='hold'}
+mnn_out <- t(mnn_out$corrected)
+colnames(mnn_out) <- unlist(lapply(sce.list,function(x){colnames(x)}))
+mnn_out <- mnn_out[,colnames(sce)]
+rownames(mnn_out) <- paste0("dim",1:50)
+reducedDim(sce, "MNN") <- t(mnn_out)
+```
+
+We can observe that a new assay slot is now created under the name `MNN`.
+
+```{r, message='hide',warning='hide',results='hold'}
+names(sce@reducedDims)
+```
+
+Thus, the result from `fastMNN()` should solely be treated as a reduced dimensionality representation, suitable for direct plotting, TSNE/UMAP, clustering, and trajectory analysis that relies on such results.
+
+```{r, message='hide',warning='hide',results='hold'}
+set.seed(42)
+sce <- runTSNE(sce, use_dimred = "MNN", n_dimred = 50, perplexity = 30)
+reducedDimNames(sce)[reducedDimNames(sce)=="TSNE"] <- "tSNE_on_MNN"
+
+
+sce <- runUMAP(sce,use_dimred = "MNN", n_dimred = 50, ncomponents = 2)
+reducedDimNames(sce)[reducedDimNames(sce)=="UMAP"] <- "UMAP_on_MNN"
+```
+
+We can now plot the un-integrated and the integrated space reduced dimensions.
+
+```{r, message='hide',warning='hide',results='hold',fig.asp=.55}
+plot_grid(ncol = 3,
+  plotReducedDim(sce,use_dimred = "PCA",colour_by = "sample_id",add_ticks = F, point_size = 0.6)+ ggplot2::ggtitle(label ="PCA"),
+  plotReducedDim(sce,use_dimred = "tSNE_on_PCA",colour_by = "sample_id",add_ticks = F, point_size = 0.6)+ ggplot2::ggtitle(label ="tSNE_on_PCA"),
+  plotReducedDim(sce,use_dimred = "UMAP_on_PCA",colour_by = "sample_id",add_ticks = F, point_size = 0.6)+ ggplot2::ggtitle(label ="UMAP_on_PCA"),
+  
+  plotReducedDim(sce,use_dimred = "MNN",colour_by = "sample_id",add_ticks = F, point_size = 0.6)+ ggplot2::ggtitle(label ="MNN"),
+  plotReducedDim(sce,use_dimred = "tSNE_on_MNN",colour_by = "sample_id",add_ticks = F, point_size = 0.6)+ ggplot2::ggtitle(label ="tSNE_on_MNN"),
+  plotReducedDim(sce,use_dimred = "UMAP_on_MNN",colour_by = "sample_id",add_ticks = F, point_size = 0.6)+ ggplot2::ggtitle(label ="UMAP_on_MNN")
+)
+```
+
+Let's plot some marker genes for different celltypes onto the embedding. Some genes are:
+
+Markers	| Cell Type
+--- | ---
+CD3E	| T cells
+CD3E CD4	| CD4+ T cells
+CD3E CD8A	| CD8+ T cells
+GNLY, NKG7	| NK cells
+MS4A1	| B cells
+CD14, LYZ, CST3, MS4A7	| CD14+ Monocytes
+FCGR3A, LYZ, CST3, MS4A7	| FCGR3A+  Monocytes
+FCER1A, CST3 | DCs
+
+```{r,message='hide',warning='hide', results='hold',results='hold',fig.asp=1.1}
+plotlist <- list()
+for(i in c("CD3E","CD4","CD8A","NKG7","GNLY","MS4A1","CD14","LYZ","MS4A7","FCGR3A","CST3","FCER1A")){
+  plotlist[[i]] <- plotReducedDim(sce,use_dimred = "UMAP_on_MNN",colour_by = i,by_exprs_values = "logcounts",add_ticks = F, point_size = 0.6) +
+  scale_fill_gradientn(colours = colorRampPalette(c("grey90","orange3","firebrick","firebrick","red","red" ))(10)) +
+  ggtitle(label = i)+ theme(plot.title = element_text(size=20)) }
+plot_grid(ncol=3, plotlist = plotlist)
+```
+
+Finally, lets save the integrated data for further analysis.
+
+```{r}
+saveRDS(sce,"data/3pbmc_qc_dr_int.rds")
+```
+
+### Session Info
+***
+
+```{r}
+sessionInfo()
+```
+
