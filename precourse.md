@@ -8,7 +8,7 @@ title:  'Precourse Material - scRNAseq course'
 
 ##### <img border="0" src="https://www.svgrepo.com/show/4795/installation-symbol.svg" width="20" height="20"> Installations
 
-We have conda recipies for all R packages in one file and for the Scanpy tutorial in another. If you have never worked with conda before, please read the [conda instructions](conda_instructions.md).
+We have conda recipies for all R and Python packages in one [file](labs/environment_r.yml). If you have never worked with conda before, please read the [conda instructions](conda_instructions.md).
 
 OBS! Need to fix some paths in instruction.
 Also info on Docker?
@@ -17,9 +17,9 @@ Also info on Docker?
 
 ##### <img border="0" src="https://www.svgrepo.com/show/20109/database.svg" width="20" height="20"> Dataset
 
-We will run all tutorials with a set of 3 PBMC 10x datasets from the 10X Genomics website, with different types of library preps.
+We will run all tutorials with a set of 3 PBMC 10x datasets from the 10X Genomics website, with different types of library preps. One dataset was done with 10x version2, one with 10x version3 and one with 10x version 3 combined with CITE-seq protein detection. 
 
-These can be fetched using commands:
+These can be fetched using commands (which are also included in the initial labs):
 
 ```
 mkdir data  
@@ -29,24 +29,22 @@ curl -O http://cf.10xgenomics.com/samples/cell-exp/3.0.0/pbmc_1k_v3/pbmc_1k_v3_f
 curl -O http://cf.10xgenomics.com/samples/cell-exp/3.0.0/pbmc_1k_protein_v3/pbmc_1k_protein_v3_filtered_feature_bc_matrix.h5
 ```
 
-All code is written so that you stand in the folder where the scripts are when you run the code and fetch data from the data folder with path `../data/` and all output files goes into folder `../write/lab_name/` where `lab_name` can be either of `scran`, `scanpy` or `seurat`.
+##### <img border="0" src="https://www.svgrepo.com/show/20109/database.svg" width="20" height="20"> Code
 
-So also create the folder 'write' and subfolders for the lab you are planning to run.
+All code is also available as R-markdown scripts at the course Github space. If you want a local copy of all course material you can simply clone it with git using:
 
+````
+git clone https://github.com/NBISweden/workshop-scRNAseq.git
 ```
- 	cd ..
-mkdir write
-mkdir write/seurat
-mkdir write/scran
-mkdir write/scanpy
-```
+
+Or download manually from the github site https://github.com/NBISweden/workshop-scRNAseq. 
 
 <br/>
 
 
 ##### <img border="0" src="https://www.svgrepo.com/show/17086/server-client-exchange.svg" width="20" height="20"> Uppmax
 
-**Attention**: This step is no longer required for the course. It is only used in one of the lectures
+**Attention**: This step is no longer required for the course. It is only used for the optional pipeline exercise.
 
 
 1.   If you do not already have an Uppmax account, create and Uppmax account following these [instructions](files/Apply_for_Uppmax_account.pdf). OBS! It may take a few days to recieve the account, so proceed with this point as soon as possible.
@@ -59,20 +57,4 @@ mkdir write/scanpy
 
 5.   Make sure that you can read and write in the course folder by creating a file with your uppmax user name in the `/proj/g2019002/completed` folder. If you cannot write to the folder, the most likely reason is that you have not requested access to the course project via [SUPR](https://supr.snic.se/), see point 2. OBS! It may take an hour or so from the time your access is approved before you can actually write to the folder. We will check before the course that all students have logged in and done this, so do not forget!
 
-6.  Install R on your own computer, instructions can be found [here](https://scilifelab.github.io/courses/r_programming/1703/precourse).  
 
-7.  Install Rstudio on your own computer to run all your commands (This is optional). Rstudio is a very powerful GUI for structuring your R code in a good way.
-
-8.  If you feel that you need to touch up on your R-skills before the course start, we recommend that you go through some basic tutorials before the course starts. A list of useful tutorials can be found [here](https://scilifelab.github.io/courses/r_programming/1703/precourse).
-
-9.  In R install the programs listed below. We will work with several R programs during the course and it takes a while to install so if you can do it before you will not have to waste time installing during the exercise time.
-
-*   SCDE package - [website](http://hms-dbmi.github.io/scde/package.html), [bioconductor](http://bioconductor.org/packages/release/bioc/html/scde.html)
-*   Scater package - [website](https://github.com/davismcc/scater), [bioconductor](http://bioconductor.org/packages/release/bioc/html/scater.html)
-*   SC3 package - [website](https://github.com/hemberg-lab/SC3), [bioconductor](https://bioconductor.org/packages/release/bioc/html/SC3.html)
-*   SCRAN package - [website](https://github.com/elswob/SCRAN), [bioconductor](http://bioconductor.org/packages/release/bioc/html/scran.html)
-*   Seurat package - [website](http://satijalab.org/seurat/install.html) - OBS! the exercises were designed for Seurat v2 and may not work with Seurat v3.
-*   MAST package - [website](https://github.com/RGLab/MAST), [bioconductor](https://bioconductor.org/packages/release/bioc/html/MAST.html)
-*   Monocle package - [website](http://cole-trapnell-lab.github.io/monocle-release/), [bioconductor](https://bioconductor.org/packages/release/bioc/html/monocle.html)   
-
-OBS! If you run in to trouble during installations, please have a look at the troubleshooting pages for installations that most of the packages have. If you still do not succeed in installing them, please email to Åsa Björklund (asa.bjorklund at scilifelab dot se) and she will try to help you out if possible.
