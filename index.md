@@ -67,14 +67,14 @@ Due to limited space the course can accommodate maximum of 25 participants. If w
 ##### <img border="0" src="https://www.svgrepo.com/show/158264/schedule.svg" width="40" height="40"> Schedule
 ***
 
-Course schedule can be found here: [Schedule]() (TBA)
+Course schedule can be found here: [schedule]() (TBA)
 
 <br/>
 
 ##### <img border="0" src="https://www.svgrepo.com/show/6672/exercise.svg" width="40" height="40"> Exercises
 ***
 
-All exercises for the afternoon sessions can be found at [Exercises](). (TBA)
+All exercises for the afternoon sessions can be found at [Exercises](exercises.md). (TBA)
 
 For working on Uppmax: to use the allocations we have for the course, please look [here](login.md).
 
@@ -83,7 +83,7 @@ For working on Uppmax: to use the allocations we have for the course, please loo
 ##### <img border="0" src="https://www.svgrepo.com/show/19652/maths-class-materials-cross-of-a-pencil-and-a-ruler.svg" width="40" height="40"> Precourse material
 ***
 
-Please read carefully the [Precourse material](precourse) before the course start. 
+Please read carefully the [Precourse material](precourse.md) before the course start. 
 
 <br/>
 
