@@ -1,0 +1,157 @@
+---
+#CSS_ALL:
+---
+
+#CHUNK_OPT:
+
+#DGE_TITLE:
+
+#DGE_ALL:
+
+#DGE_ALL2:
+
+```{r}
+suppressPackageStartupMessages({
+  library(scater)
+  library(scran)
+  #library(venn)
+  library(cowplot)
+  library(ggplot2)
+  library(rafalib)
+  library(pheatmap)
+  library(igraph)
+  library(dplyr)
+})
+
+sce <- readRDS("data/3pbmc_qc_dr_int_cl.rds")
+```
+
+#DGE_TITLE1:
+
+#DGE_ALL3:
+
+```{r}
+#Compute differentiall expression
+markers_genes <- findMarkers( x = sce,
+                              clusters = sce$kmeans_5,
+                              lfc=.5,
+                              pval.type = "all",
+                              direction = "up")
+
+#List of dataFrames with the results for each cluster
+markers_genes
+
+#Visualizing the expression of one
+markers_genes[["1"]]
+```
+
+#DGE_ALL4:
+
+```{r}
+#Colect the top 25 genes for each cluster and put the into a single table
+top25 <- lapply( names(markers_genes), function(x) { temp <- markers_genes[[x]][1:25, 1:2] ; temp$gene <- rownames(markers_genes[[x]])[1:25] ; temp$cluster <- x ; return(temp) } )
+top25 <- as_tibble(do.call(rbind, top25))
+top25
+```
+
+#DGE_ALL4:
+
+```{r}
+mypar(1,5,mar=c(4,6,3,1))
+for(i in unique(top25$cluster)){
+  barplot( sort( setNames(-log10(top25$p.value), top25$gene) [top25$cluster == i], F),
+           horiz = T,las=1 ,main=paste0(i," vs. rest"),border = "white", yaxs="i",xlab="-log10FC" )
+  abline(v=c(0,-log10(0.05)),lty=c(1,2))
+}
+```
+
+#DGE_ALL4.1:
+
+```{r}
+as_tibble(top25) %>% group_by(cluster)  %>% top_n(-5, p.value) -> top5
+
+scater::plotHeatmap(sce[,order(sce$kmeans_5)], features = unique(top5$gene) ,
+                    center=T , zlim = c(-3,3) ,
+                    colour_columns_by= "kmeans_5",
+                    show_colnames=F , cluster_cols=F,
+                    fontsize_row=6,
+                    color=colorRampPalette(c("purple","black","yellow"))(90)
+                    )
+```
+
+#DGE_ALL4.3:
+
+```{r,fig.height=10,fig.width=10}
+scater::plotExpression(sce, features = unique(top5$gene), x = "kmeans_5", ncol = 5, colour_by = "kmeans_5", scales="free")
+```
+
+
+#DGE_TITLE2:
+
+#DGE_ALL6:
+
+```{r,fig.height=10,fig.width=10}
+#Filter cells from that cluster
+cell_selection <- sce[ , sce$kmeans_5 == 4 ]
+cell_selection$Chemistry <- ifelse(cell_selection$sample_id == "v2.1k","v2","v3")
+
+#Compute differentiall expression
+DGE_cell_selection <- findMarkers( x = cell_selection,
+                              clusters = cell_selection$Chemistry,
+                              lfc=.5,
+                              pval.type = "all",
+                              direction = "down")
+top5_cell_selection <- lapply( names(DGE_cell_selection), function(x) { temp <- DGE_cell_selection[[x]][1:5, 1:2] ; temp$gene <- rownames(DGE_cell_selection[[x]])[1:5] ; temp$cluster <- x ; return(temp) } )
+top5_cell_selection <- as_tibble(do.call(rbind, top5_cell_selection))
+top5_cell_selection
+```
+
+#DGE_ALL6.1:
+
+```{r,fig.height=4,fig.width=10}
+scater::plotExpression(cell_selection, features = unique(top5_cell_selection$gene), x = "Chemistry", ncol = 5, colour_by = "Chemistry")
+```
+
+#DGE_ALL6.2:
+
+```{r,fig.asp=.28}
+plotlist <- list()
+for(i in c("JUND","RPS17","GNAS")){
+  plotlist[[i]] <- plotReducedDim(sce,use_dimred = "UMAP_on_PCA",colour_by = i,by_exprs_values = "logcounts",add_ticks = F) +
+  scale_fill_gradientn(colours = colorRampPalette(c("grey90","orange3","firebrick","firebrick","red","red" ))(10)) +
+  ggtitle(label = i)+ theme(plot.title = element_text(size=20)) }
+plot_grid(ncol=3, plotlist = plotlist)
+```
+
+
+#DGE_ALL10:
+
+```{r}
+saveRDS(sce,"data/3pbmc_qc_dr_int_cl_dge.rds")
+```
+
+
+#SESSION_INFO:
+
+```{r}
+sessionInfo()
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
