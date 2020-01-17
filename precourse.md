@@ -63,3 +63,7 @@ Or download manually from the github site https://github.com/NBISweden/workshop-
 4.   If you still feel uncertain how to work in a terminal please take time to do the first three parts in the “Unix tutorial for beginners” that can be found here http://www.ee.surrey.ac.uk/Teaching/Unix/ before the course starts. Otherwise you will not be able to take in the practical parts.  
 
 5.   Make sure that you can read and write in the course folder by creating a file with your uppmax user name in the `/proj/g2019002/completed` folder. If you cannot write to the folder, the most likely reason is that you have not requested access to the course project via [SUPR](https://supr.snic.se/), see point 2. OBS! It may take an hour or so from the time your access is approved before you can actually write to the folder. We will check before the course that all students have logged in and done this, so do not forget!
+
+<br/>
+
+<div style="text-align: right; font-size: 5px"> Icons are provided from [www.svgrepo.com](www.svgrepo.com) </div>

@@ -61,3 +61,5 @@ We will try to keep these tutorials up to date. If you find any errors or things
 As you run into problems, we will try to fill in the [FAQ](labs/FAQ) with common questions.
 
 <br/>
+
+<div style="text-align: right; font-size: 5px"> Icons are provided from [www.svgrepo.com](www.svgrepo.com) </div>

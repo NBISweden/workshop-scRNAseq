@@ -40,7 +40,7 @@ On the fourth day we offer a "Bring your own data" day where you can analyse you
 
 ###### How to apply
 
-Fill in this [application](https://forms.gle/6VFVTFep6iYk7wLr9) by December 16th and please indicate whether you are planning to participate on the optional day of January 30th. 
+Fill in this [application](https://forms.gle/6VFVTFep6iYk7wLr9) by December 16th and please indicate whether you are planning to participate on the optional day of January 30th.
 
 ###### Course fee
 
@@ -83,7 +83,7 @@ For working on Uppmax: to use the allocations we have for the course, please loo
 ##### <img border="0" src="https://www.svgrepo.com/show/19652/maths-class-materials-cross-of-a-pencil-and-a-ruler.svg" width="40" height="40"> Precourse material
 ***
 
-Please read carefully the [Precourse material](precourse.md) before the course start. 
+Please read carefully the [Precourse material](precourse.md) before the course start.
 
 <br/>
 
@@ -113,7 +113,7 @@ If you have any questions regarding the course, please email to Åsa Björklund 
 * [Repository listing many scRNA-seq tools](https://github.com/seandavi/awesome-single-cell)
 * [SingleCellExperiment objects for many datasets](https://hemberg-lab.github.io/scRNA.seq.datasets/)
 * [Conquer datasets - many different datasets based on a salmon pipeline](http://imlspenticton.uzh.ch:3838/conquer/)
-* [The Human Cell Atlas project](https://www.humancellatlas.org/) 
+* [The Human Cell Atlas project](https://www.humancellatlas.org/)
 * [The github repository for this course. Also contains the R markdown scripts that was used to generate all the exercises](https://github.com/NBISweden/workshop-scRNAseq)
 * [Bitbucket repository for QC report scripts](https://bitbucket.org/asbj/qc-summary_scrnaseq)
 * [Bitbucket repository for the NBIS scRNAseq pipeline](https://bitbucket.org/scilifelab-lts/lts-workflows-sm-scrnaseq)
@@ -127,3 +127,6 @@ If you have any questions regarding the course, please email to Åsa Björklund 
 * [Stockholm May 21-23, 2018](https://nbisweden.github.io/workshop-archive/workshop-scRNAseq/2018-05-21/)
 * [Uppsala October 2-4, 2017](https://scilifelab.github.io/courses/scrnaseq/1710/)
 
+<br/>
+
+<div style="text-align: right; font-size: 5px"> Icons are provided from [www.svgrepo.com](www.svgrepo.com) </div>
