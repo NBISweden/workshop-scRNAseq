@@ -18,10 +18,6 @@ All scripts (Rmarkdown or ipython notebooks) can be found at our github repo in 
 
 Please me sure you have completed the [<img border="0" src="https://www.svgrepo.com/show/19652/maths-class-materials-cross-of-a-pencil-and-a-ruler.svg" width="20" height="20">**Precourse material**](precourse.md) as well as the [<img border="0" src="https://hackernoon.com/hn-images/1*rW03Wtue71AKfxnx6XN_iQ.png" width="20" height="20">**Conda instructions**](conda_instructions.md)
 
-<br/>
-
-<br/>
-
 | Tutorial | <img border="0" src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/R_logo.svg/1448px-R_logo.svg.png" width="20" height="20"> Seurat | <img border="0" src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/R_logo.svg/1448px-R_logo.svg.png" width="20" height="20"> Scater/Scran | <img border="0" src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Python-logo-notext.svg/1024px-Python-logo-notext.svg.png" width="20" height="20"> Scanpy |
 | -------- | ---------- | ---------------- | --------------- |
 | <img border="0" src="https://cdn0.iconfinder.com/data/icons/business-and-finance-4-5/68/188-512.png" width="30" height="30"> Quality Control | [Seurat_qc](labs/compiled/seurat/seurat_01_qc.md) | [Scater_qc](labs/compiled/scater/scater_01_qc.md) | [ScanPY_qc](labs/compiled/scanpy/scanpy_01_qc.html) |
@@ -39,8 +35,6 @@ Please me sure you have completed the [<img border="0" src="https://www.svgrepo.
 ***
 
 Please note that the exercises listed below belong to past courses and might not be completely updated. Nonetheless, they provide even more details and options to analyse single cell data.
-
-<br/>
 
 | Name (link) | Description |
 | ----------- | ----------- |
