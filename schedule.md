@@ -79,7 +79,7 @@ Lecture slides will be provided as links as they get completed.
 
 | Time  | Description         | Lecturer  |
 | ----- | ------------------- | --------- |
-| 09.00 | Bring your own data (until 12.00) | Åsa, Paulo |   
+| 09.00 | Bring your own data (until 16.00) | Åsa, Paulo |   
 
 <br/>
 
