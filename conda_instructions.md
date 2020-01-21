@@ -17,7 +17,7 @@ you can use in order to reproduce all your results. Two of the required software
 
 Briefly, you need to:  
 
-1. Install Conda and download the `.yaml` file
+1. Install Conda and download the `.yml` file
 2. Create and activate the environment
 3. Deactivate the environment after running your analyses
 
@@ -30,9 +30,9 @@ You can [read more](https://nbis-reproducible-research.readthedocs.io/en/latest/
 
 You should start by installing Conda. We suggest installing either Miniconda, or Anaconda if storage is
 not an issue. After [installing Conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html),
-download the course Conda file and put it in your working folder. Note that there is a separate [environment.yaml for Mac](https://raw.githubusercontent.com/NBISweden/excelerate-scRNAseq/master/environment.yaml) and for [environment_centos7.yaml for Linux](https://raw.githubusercontent.com/NBISweden/excelerate-scRNAseq/master/environment_centos7.yaml).
+download the course [Conda file](labs/environment_r.yml) and put it in your working folder. 
 
-After this, you should have a file named `environment.yaml` in your directory (it does not matter where, you can save on Downloads folder for example).
+After this, you should have a file named `environment_R.yml` in your directory (it does not matter where, you can save on Downloads folder for example).
 
 <br/>
 
@@ -40,10 +40,10 @@ After this, you should have a file named `environment.yaml` in your directory (i
 ***
 
 In terminal, `cd` to the folder where you saved the environment file and create an environment called `scRNAseq2020` from the
-`environment.yaml` file:
+`environment_r.yml` file:
 
 ```
-conda env create -p scRNAseq2020 -f environment.yaml
+conda env create -p scRNAseq2020 -f environment_r.yaml
 ```
 
 Several messages will show up on your screen and will tell you about the installation process. This may take a few minutes depending on how many packages are to be installed.
