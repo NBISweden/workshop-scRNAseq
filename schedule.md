@@ -67,7 +67,7 @@ Lecture slides will be provided as links as they get completed.
 | 14.00 | **Coffee Break** | |
 | 14.30 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> Invited seminar: Single-cell multi-omics  (Protein + RNA) | Johan Reimegård |
 | 15.00 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> Invited seminar: Spatial transcriptomics | Lars Borm |
-| 15.30 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> Cell type prediction| Oscar Franzen |
+| 15.30 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> Invited seminar: Cell type prediction| Oscar Franzen |
 | 16.00 | [Wrap up of todays lectures](https://goo.gl/forms/LabSH8u7S2IQVZKj1) | Åsa Björklund |
 | 16.15 | **Course Summary** | Åsa Björklund |
 
@@ -85,7 +85,7 @@ Lecture slides will be provided as links as they get completed.
 
 <br/>
 
-Each day we will have cofee around 10.00 and at 15.00 during the exercises. Lunches will be at Svarta Räfven 12.15.
+Each day we will have cofee around 10.00 and at 15.00 during the exercises. Lunches will be at Nanna Svarz aroun 12.00 each day.
 
 <br/>
 
