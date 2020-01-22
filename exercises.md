@@ -30,7 +30,7 @@ Please me sure you have completed the [<img border="0" src="https://www.svgrepo.
 | <img border="0" src="http://s16574.pcdn.co/wp-content/uploads/2018/05/cluster-icon.png" width="30" height="30"> Data integration | [Seurat_integr](labs/compiled/seurat/seurat_03_integration.md) | [Scater_integr](labs/compiled/scater/scater_03_integration.md) | [Scanpy_integr](labs/compiled/scanpy/scanpy_03_integration.html) |
 | <img border="0" src="https://cdn0.iconfinder.com/data/icons/network-analysis-7/64/cluster-positive-negative-group-collection-512.png" width="30" height="30"> Clustering | [Seurat_clust](labs/compiled/seurat/seurat_04_clustering.html) | [Scater_clust](labs/compiled/scater/scater_04_clustering.html) | [Scanpy_clust](labs/compiled/scanpy/scanpy_04_clustering.html) |
 | <img border="0" src="https://static.thenounproject.com/png/1517975-200.png" width="30" height="30"> Differential expression | [Seurat_dge](labs/compiled/seurat/seurat_05_dge.html) | [Scater_dge](labs/compiled/scater/lab_scran.html) | [Scanpy_dge](labs/compiled/scanpy/scanpy_05_dge.html) |
-| <img border="0" src="https://cdn2.vectorstock.com/i/1000x1000/49/51/route-location-icon-vector-16394951.jpg" width="30" height="30"> Trajectory inference | [Monocle_ti](labs/compiled/monocle/monocle.html) | [Slingshot_ti](labs/compiled/slingshot/slingshot.html) | [PAGA_ti](labs/paga/paga.ipynb) |
+| <img border="0" src="https://www.flaticon.com/premium-icon/icons/svg/658/658114.svg" width="30" height="30"> Trajectory inference | [Monocle_ti](labs/compiled/monocle/monocle.html) | [Slingshot_ti](labs/compiled/slingshot/slingshot.html) | [PAGA_ti](labs/paga/paga.ipynb) |
 
 <br/>
 
