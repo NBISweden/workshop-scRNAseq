@@ -30,7 +30,7 @@ You can [read more](https://nbis-reproducible-research.readthedocs.io/en/latest/
 
 You should start by installing Conda. We suggest installing either Miniconda, or Anaconda if storage is
 not an issue. After [installing Conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html),
-download the course [Conda file](labs/environment_r.yml) and put it in your working folder. 
+download the course [Conda file](labs/environment_r.yml) and put it in your working folder.
 
 After this, you should have a file named `environment_R.yml` in your directory (it does not matter where, you can save on Downloads folder for example).
 
@@ -94,4 +94,47 @@ After you've ran all your analyses, deactivate the environment by typing:
 
 ```
 conda deactivate
+```
+
+<br/>
+
+<br/>
+
+### Alternative option (VIRTUALBOX)
+
+If by any means you see that the installations are not working as it should on your computer, you can try to create a virtual machine to run UBUNTU and install everything there.
+
+1. Download and install on your machine VIRTUALBOX
+https://www.virtualbox.org
+
+2. Download the ISO disk of UBUNTU
+https://ubuntu.com/download/desktop
+
+3. On VIRTUALBOX, click on `Settings` (yellow engine) > `General` > `Advanced` and make sure that both settings **Shared Clipboard** and **Drag'n'Drop** are set to `Bidirectional`.
+
+4. Completely close VIRTUALBOX and start it again to apply changes.
+
+5. On VIRTUALBOX, create a machine called Ubuntu and add the image above
+- set the memory to the maximum allowed in the GREEN bar
+- set the hard disk to be dynamic allocated
+- all other things can be default
+
+6. Proceed with the Ubuntu installation as recommended. You can set to do "Minimal Installation" and deactivate to get updates during installation.
+
+7. Inside UBUNTU, Download conda:
+https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+
+8. Inside UBUNTU, open the TERMINAL and type the commands below. Follow the instructions for the installation there.
+```
+cd ~/Downloads
+sh Miniconda3-latest-Linux-x86_64.sh
+```
+
+9. Close Terminal to apply the CONDA updates. Then you can create a course folder, download the environment file and create the environment:
+
+```
+mkdir ~/Desktop/course
+cd ~/Desktop/course
+wget https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/master/labs/environment_r.yml
+conda env create -n scRNAseq2020 -f environment_r.yml
 ```
