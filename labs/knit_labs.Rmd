@@ -632,19 +632,7 @@ for( pipeline in c("seurat","scater")){
 
 #DGE_ALL10:Finally, lets save the integrated data for further analysis.
 
-#-----------
 
-
-
-
-
-
-#--------------------#
-#   DGE-CONDITIONS   #
-#--------------------#
-#DGEC_ALL:
-
-<<<<<<< HEAD
 ```{r setup, include=FALSE}
 for( pipeline in c("seurat","scater")){
   lab <- readLines(paste0(script_path,"/",pipeline,"/",pipeline,"_05_dge.Rmd"))
@@ -663,14 +651,38 @@ for( pipeline in c("seurat","scater")){
   rmarkdown::render(paste0(script_path,"/compiled/",pipeline,"/",pipeline,"_05_dge.Rmd"))
 }
 ```
-=======
 
-
-
->>>>>>> 171c4c465a29f687c5e10ab8b830cae3e4beb2dd
 #-----------
 
 
+
+#-------------------------------------#
+#   Trajectory inference: Slingshot   #
+#-------------------------------------#
+```{r setup, include=FALSE}
+#These steps must be run with the specific Slingshot environment, not the normal one!!!
+
+for( pipeline in c("slingshot")){
+  lab <- readLines(paste0(script_path,"/trajectory/",pipeline,".Rmd"))
+  lab_text <- readLines(paste0(script_path,"/knit_labs.Rmd"))
+  
+  u <- grep("[#].*[_].*[:]",lab,value = T)[ grep("[#].*[_].*[:]",lab,value = T) %in% sub(":.*",":",grep("[#].*[_].*[:]",lab_text,value = T)) ]
+  
+  t_lab <- lab
+  for( i in u ){
+    j <- grep(i,t_lab)
+    temp2 <- sub(i,"",lab_text[grepl(i,lab_text)])
+    t_lab <- c( t_lab[1:(j-1)] , temp2 , t_lab[(j+1):length(t_lab)] )
+  }
+  
+  PATH <- paste0(script_path,"/compiled/",pipeline)
+  if(!dir.exists(PATH)){dir.create(PATH, recursive = T)}
+  writeLines(t_lab,paste0(script_path,"/compiled/",pipeline,"/",pipeline,".Rmd"))
+  rmarkdown::render(paste0(script_path,"/compiled/",pipeline,"/",pipeline,".Rmd"))
+}
+```
+
+#-----------
 
 
 
