@@ -100,7 +100,7 @@ conda deactivate
 
 <br/>
 
-### Alternative option (VIRTUALBOX)
+#### Alternative option (VIRTUALBOX)
 
 If by any means you see that the installations are not working as it should on your computer, you can try to create a virtual machine to run UBUNTU and install everything there.
 
@@ -122,7 +122,9 @@ https://ubuntu.com/download/desktop
 6. Proceed with the Ubuntu installation as recommended. You can set to do "Minimal Installation" and deactivate to get updates during installation.
 
 7. Inside UBUNTU, Download conda:
-https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+```
+wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+```
 
 8. Inside UBUNTU, open the TERMINAL and type the commands below. Follow the instructions for the installation there.
 ```
@@ -131,7 +133,6 @@ sh Miniconda3-latest-Linux-x86_64.sh
 ```
 
 9. Close Terminal to apply the CONDA updates. Then you can create a course folder, download the environment file and create the environment:
-
 ```
 mkdir ~/Desktop/course
 cd ~/Desktop/course
