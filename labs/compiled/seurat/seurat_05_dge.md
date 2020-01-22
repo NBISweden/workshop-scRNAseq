@@ -39,26 +39,27 @@ We can first load the data from the clustering session. Moreover, we can already
 
 ```r
 suppressPackageStartupMessages({
-  library(Seurat)
-  library(dplyr)
-  library(cowplot)
-  library(ggplot2)
-  library(pheatmap)
-  library(rafalib)
+    library(Seurat)
+    library(venn)
+    library(dplyr)
+    library(cowplot)
+    library(ggplot2)
+    library(pheatmap)
+    library(rafalib)
 })
 
 alldata <- readRDS("data/3pbmc_qc_dr_int_cl.rds")
 
-#Set the identity as louvain_2 clustering
+# Set the identity as louvain_2 clustering
 print(alldata@active.ident[1:10])
 ```
 
 ```
-## p3.1k_AAACCCAAGTGGTCAG-1 p3.1k_AAAGGTATCAACTACG-1 p3.1k_AAAGTCCAGCGTGTCC-1 p3.1k_AACACACTCAAGAGTA-1 p3.1k_AACACACTCGACGAGA-1 p3.1k_AACAGGGCAGGAGGTT-1 
-##                       10                        0                        0                        3                        1                        1 
-## p3.1k_AACAGGGCAGTGTATC-1 p3.1k_AACAGGGTCAGAATAG-1 p3.1k_AACCTGAAGATGGTCG-1 p3.1k_AACGGGATCGTTATCT-1 
-##                        9                        9                        8                        0 
-## Levels: 0 1 2 3 4 5 6 7 8 9 10 11 12
+## p3.1k_AAACCCAAGTGGTCAG-1 p3.1k_AAAGGTATCAACTACG-1 p3.1k_AAAGTCCAGCGTGTCC-1 p3.1k_AACACACTCAAGAGTA-1 p3.1k_AACACACTCGACGAGA-1 p3.1k_AACAGGGCAGGAGGTT-1 p3.1k_AACAGGGCAGTGTATC-1 
+##                        1                        3                        3                        1                        2                        2                        2 
+## p3.1k_AACAGGGTCAGAATAG-1 p3.1k_AACCTGAAGATGGTCG-1 p3.1k_AACGGGATCGTTATCT-1 
+##                        2                        3                        3 
+## Levels: 1 3 2 4 5
 ```
 
 ```r
@@ -67,10 +68,10 @@ print(alldata@active.ident[1:10])
 ```
 
 ```
-## p3.1k_AAACCCAAGTGGTCAG-1 p3.1k_AAAGGTATCAACTACG-1 p3.1k_AAAGTCCAGCGTGTCC-1 p3.1k_AACACACTCAAGAGTA-1 p3.1k_AACACACTCGACGAGA-1 p3.1k_AACAGGGCAGGAGGTT-1 
-##                        1                        3                        3                        1                        2                        2 
-## p3.1k_AACAGGGCAGTGTATC-1 p3.1k_AACAGGGTCAGAATAG-1 p3.1k_AACCTGAAGATGGTCG-1 p3.1k_AACGGGATCGTTATCT-1 
-##                        2                        2                        3                        3 
+## p3.1k_AAACCCAAGTGGTCAG-1 p3.1k_AAAGGTATCAACTACG-1 p3.1k_AAAGTCCAGCGTGTCC-1 p3.1k_AACACACTCAAGAGTA-1 p3.1k_AACACACTCGACGAGA-1 p3.1k_AACAGGGCAGGAGGTT-1 p3.1k_AACAGGGCAGTGTATC-1 
+##                        1                        3                        3                        1                        2                        2                        2 
+## p3.1k_AACAGGGTCAGAATAG-1 p3.1k_AACCTGAAGATGGTCG-1 p3.1k_AACGGGATCGTTATCT-1 
+##                        2                        3                        3 
 ## Levels: 1 3 2 4 5
 ```
 
@@ -81,42 +82,15 @@ Let us first compute a ranking for the highly differential genes in each cluster
 
 
 ```r
-#Compute differentiall expression
-markers_genes <- FindAllMarkers(alldata,
-                               logfc.threshold = 0.2,
-                               test.use = "wilcox",
-                               min.pct = 0.1,
-                               min.diff.pct = 0.2,
-                               only.pos = TRUE,
-                               max.cells.per.ident = 50,
-                               assay = "RNA")
-```
-
-```
-## Calculating cluster 1
-```
-
-```
-## Calculating cluster 3
-```
-
-```
-## Calculating cluster 2
-```
-
-```
-## Calculating cluster 4
-```
-
-```
-## Calculating cluster 5
+# Compute differentiall expression
+markers_genes <- FindAllMarkers(alldata, logfc.threshold = 0.2, test.use = "wilcox", min.pct = 0.1, min.diff.pct = 0.2, only.pos = TRUE, max.cells.per.ident = 50, assay = "RNA")
 ```
 
 We can now select the top 25 up regulated genes for plotting.
 
 
 ```r
-markers_genes %>% group_by(cluster)  %>% top_n(-25, p_val_adj) -> top25
+top25 <- markers_genes %>% group_by(cluster) %>% top_n(-25, p_val_adj)
 top25
 ```
 
@@ -130,52 +104,44 @@ We can now select the top 25 up regulated genes for plotting.
 
 
 ```r
-mypar(1,5,mar=c(4,6,3,1))
-for(i in unique(top25$cluster)){
-  barplot( sort( setNames(top25$avg_logFC, top25$gene) [top25$cluster == i], F),
-           horiz = T,las=1 ,main=paste0(i," vs. rest"),border = "white", yaxs="i" )
-  abline(v=c(0,0.25),lty=c(1,2))
+mypar(1, 5, mar = c(4, 6, 3, 1))
+for (i in unique(top25$cluster)) {
+    barplot(sort(setNames(top25$avg_logFC, top25$gene)[top25$cluster == i], F), horiz = T, las = 1, main = paste0(i, " vs. rest"), border = "white", yaxs = "i")
+    abline(v = c(0, 0.25), lty = c(1, 2))
 }
 ```
 
-![](seurat_05_dge_files/figure-html/unnamed-chunk-169-1.png)<!-- -->
+![](seurat_05_dge_files/figure-html/unnamed-chunk-4-1.png)<!-- -->
 
 We can visualize them as a heatmap. Here we are selecting the top 5.
 
 
 ```r
-markers_genes %>% group_by(cluster)  %>% top_n(-5, p_val_adj) -> top5
+top5 <- markers_genes %>% group_by(cluster) %>% top_n(-5, p_val_adj)
 
 alldata <- ScaleData(alldata, features = as.character(unique(top5$gene)), assay = "RNA")
+DoHeatmap(alldata, features = as.character(unique(top5$gene)), group.by = "kmeans_5", assay = "RNA")
 ```
 
-```
-## Centering and scaling data matrix
-```
-
-```r
-DoHeatmap(alldata, features = as.character(unique(top5$gene)),group.by = "kmeans_5", assay = "RNA")
-```
-
-![](seurat_05_dge_files/figure-html/unnamed-chunk-170-1.png)<!-- -->
+![](seurat_05_dge_files/figure-html/unnamed-chunk-5-1.png)<!-- -->
 
 Another way is by representing the overal group expression and detection rates in a dot-plot.
 
 
 ```r
-DotPlot(alldata, features = as.character(unique(top5$gene)),group.by = "kmeans_5",assay = "RNA")+coord_flip()
+DotPlot(alldata, features = as.character(unique(top5$gene)), group.by = "kmeans_5", assay = "RNA") + coord_flip()
 ```
 
-![](seurat_05_dge_files/figure-html/unnamed-chunk-171-1.png)<!-- -->
+![](seurat_05_dge_files/figure-html/unnamed-chunk-6-1.png)<!-- -->
 
 We can also plot a violin plot for each gene.
 
 
 ```r
-VlnPlot(alldata, features = as.character(unique(top5$gene)), ncol = 5, group.by = "kmeans_5",assay = "RNA")
+VlnPlot(alldata, features = as.character(unique(top5$gene)), ncol = 5, group.by = "kmeans_5", assay = "RNA")
 ```
 
-![](seurat_05_dge_files/figure-html/unnamed-chunk-172-1.png)<!-- -->
+![](seurat_05_dge_files/figure-html/unnamed-chunk-7-1.png)<!-- -->
 
 <style>
 div.blue { background-color:#e6f0ff; border-radius: 5px; padding: 10px;}
@@ -195,67 +161,37 @@ For this end, we will first subset our data for the desired cell cluster, then c
 
 
 ```r
-cell_selection <- subset(alldata, cells = colnames(alldata)[ alldata$kmeans_5 == 4 ])
+cell_selection <- subset(alldata, cells = colnames(alldata)[alldata$kmeans_5 == 4])
 cell_selection <- SetIdent(cell_selection, value = "Chemistry")
-#Compute differentiall expression
-DGE_cell_selection <- FindAllMarkers(cell_selection,
-                               logfc.threshold = 0.2,
-                               test.use = "wilcox",
-                               min.pct = 0.1,
-                               min.diff.pct = 0.2,
-                               only.pos = TRUE,
-                               max.cells.per.ident = 50,
-                               assay = "RNA")
-```
-
-```
-## Calculating cluster v3
-```
-
-```
-## Calculating cluster v2
+# Compute differentiall expression
+DGE_cell_selection <- FindAllMarkers(cell_selection, logfc.threshold = 0.2, test.use = "wilcox", min.pct = 0.1, min.diff.pct = 0.2, only.pos = TRUE, max.cells.per.ident = 50, assay = "RNA")
 ```
 
 We can now plot the expression across the "Chemistry".
 
 
 ```r
-DGE_cell_selection %>% group_by(cluster)  %>% top_n(-5, p_val_adj) -> top5_cell_selection
+top5_cell_selection <- DGE_cell_selection %>% group_by(cluster) %>% top_n(-5, p_val_adj)
 
-VlnPlot(cell_selection, features = as.character(unique(top5_cell_selection$gene)),
-        ncol = 5,group.by = "Chemistry",assay = "RNA")
+VlnPlot(cell_selection, features = as.character(unique(top5_cell_selection$gene)), ncol = 5, group.by = "Chemistry", assay = "RNA")
 ```
 
-![](seurat_05_dge_files/figure-html/unnamed-chunk-174-1.png)<!-- -->
+![](seurat_05_dge_files/figure-html/unnamed-chunk-9-1.png)<!-- -->
 
 We can clearly see some patterns across them. Those are the genes that impact the most on your batches (see the dimensionality reduction and integration exercises for more details). We can plot those genes using the integrated and non-integrated UMAP for ilustration.
 
 
 ```r
-FeaturePlot(alldata, reduction = "UMAP_on_CCA",dims = 1:2,
-            features = c("JUND","RPS17","CD81"),order = T,ncol = 3)
+FeaturePlot(alldata, reduction = "UMAP_on_CCA", dims = 1:2, features = c("JUND", "RPS17", "CD81"), order = T, ncol = 3)
 ```
 
-```
-## Warning: Could not find JUND in the default search locations, found in RNA assay instead
-```
-
-```
-## Warning: Could not find RPS17 in the default search locations, found in RNA assay instead
-```
-
-```
-## Warning: Could not find CD81 in the default search locations, found in RNA assay instead
-```
-
-![](seurat_05_dge_files/figure-html/unnamed-chunk-175-1.png)<!-- -->
-
+![](seurat_05_dge_files/figure-html/unnamed-chunk-10-1.png)<!-- -->
 
 Finally, lets save the integrated data for further analysis.
 
 
 ```r
-saveRDS(alldata,"data/3pbmc_qc_dr_int_cl.rds")
+saveRDS(alldata, "data/3pbmc_qc_dr_int_cl_dge.rds")
 ```
 
 
@@ -269,37 +205,42 @@ sessionInfo()
 
 ```
 ## R version 3.5.1 (2018-07-02)
-## Platform: x86_64-apple-darwin13.4.0 (64-bit)
+## Platform: x86_64-apple-darwin15.6.0 (64-bit)
 ## Running under: macOS High Sierra 10.13.6
 ## 
 ## Matrix products: default
 ## BLAS: /System/Library/Frameworks/Accelerate.framework/Versions/A/Frameworks/vecLib.framework/Versions/A/libBLAS.dylib
-## LAPACK: /Users/paulo.barenco/miniconda3/envs/rlabs/lib/R/lib/libRblas.dylib
+## LAPACK: /Library/Frameworks/R.framework/Versions/3.5/Resources/lib/libRlapack.dylib
 ## 
 ## locale:
 ## [1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
 ## 
 ## attached base packages:
-## [1] stats     graphics  grDevices utils     datasets  methods   base     
+## [1] parallel  stats4    stats     graphics  grDevices utils     datasets  methods   base     
 ## 
 ## other attached packages:
-## [1] dplyr_0.8.3     rafalib_1.0.0   pheatmap_1.0.12 ggplot2_3.2.1   cowplot_1.0.0   Seurat_3.0.1   
+##  [1] venn_1.7                    Seurat_3.0.2                dplyr_0.8.0.1               igraph_1.2.4.1              pheatmap_1.0.12             rafalib_1.0.0              
+##  [7] cowplot_0.9.4               scran_1.10.2                scater_1.10.1               ggplot2_3.1.1               SingleCellExperiment_1.4.1  SummarizedExperiment_1.12.0
+## [13] DelayedArray_0.8.0          BiocParallel_1.16.6         matrixStats_0.54.0          Biobase_2.42.0              GenomicRanges_1.34.0        GenomeInfoDb_1.18.2        
+## [19] IRanges_2.16.0              S4Vectors_0.20.1            BiocGenerics_0.28.0        
 ## 
 ## loaded via a namespace (and not attached):
-##  [1] tsne_0.1-3          nlme_3.1-141        bitops_1.0-6        RColorBrewer_1.1-2  httr_1.4.1          sctransform_0.2.0   tools_3.5.1        
-##  [8] backports_1.1.5     R6_2.4.1            irlba_2.3.3         KernSmooth_2.23-15  lazyeval_0.2.2      colorspace_1.4-1    withr_2.1.2        
-## [15] npsurv_0.4-0        gridExtra_2.3       tidyselect_0.2.5    compiler_3.5.1      plotly_4.9.1        labeling_0.3        caTools_1.17.1.2   
-## [22] scales_1.0.0        lmtest_0.9-37       ggridges_0.5.1      pbapply_1.4-2       stringr_1.4.0       digest_0.6.22       rmarkdown_1.17     
-## [29] R.utils_2.9.0       pkgconfig_2.0.3     htmltools_0.4.0     bibtex_0.4.2        htmlwidgets_1.5.1   rlang_0.4.1         rstudioapi_0.10    
-## [36] zoo_1.8-6           jsonlite_1.6        ica_1.0-2           gtools_3.8.1        R.oo_1.23.0         magrittr_1.5        Matrix_1.2-17      
-## [43] Rcpp_1.0.3          munsell_0.5.0       ape_5.3             reticulate_1.13     lifecycle_0.1.0     R.methodsS3_1.7.1   stringi_1.4.3      
-## [50] yaml_2.2.0          gbRd_0.4-11         MASS_7.3-51.4       gplots_3.0.1.1      Rtsne_0.15          plyr_1.8.4          grid_3.5.1         
-## [57] parallel_3.5.1      gdata_2.18.0        listenv_0.7.0       ggrepel_0.8.1       crayon_1.3.4        lattice_0.20-38     splines_3.5.1      
-## [64] SDMTools_1.1-221.1  zeallot_0.1.0       knitr_1.26          pillar_1.4.2        igraph_1.2.4.1      future.apply_1.3.0  reshape2_1.4.3     
-## [71] codetools_0.2-16    glue_1.3.1          evaluate_0.14       lsei_1.2-0          metap_1.1           data.table_1.11.6   vctrs_0.2.0        
-## [78] png_0.1-7           Rdpack_0.11-0       gtable_0.3.0        RANN_2.6.1          purrr_0.3.3         tidyr_1.0.0         future_1.15.0      
-## [85] assertthat_0.2.1    xfun_0.11           rsvd_1.0.2          survival_2.44-1.1   viridisLite_0.3.0   tibble_2.1.3        cluster_2.1.0      
-## [92] globals_0.12.4      fitdistrplus_1.0-14 ROCR_1.0-7
+##   [1] Rtsne_0.15               ggbeeswarm_0.6.0         colorspace_1.4-1         ggridges_0.5.1           dynamicTreeCut_1.63-1    XVector_0.22.0           BiocNeighbors_1.0.0     
+##   [8] rstudioapi_0.10          listenv_0.7.0            npsurv_0.4-0             ggrepel_0.8.0            codetools_0.2-16         splines_3.5.1            R.methodsS3_1.7.1       
+##  [15] lsei_1.2-0               knitr_1.26               jsonlite_1.6             ica_1.0-2                cluster_2.0.9            png_0.1-7                R.oo_1.22.0             
+##  [22] sctransform_0.2.0        HDF5Array_1.10.1         httr_1.4.0               compiler_3.5.1           assertthat_0.2.1         Matrix_1.2-17            lazyeval_0.2.2          
+##  [29] limma_3.38.3             formatR_1.6              htmltools_0.4.0          tools_3.5.1              rsvd_1.0.0               gtable_0.3.0             glue_1.3.1              
+##  [36] GenomeInfoDbData_1.2.0   RANN_2.6.1               reshape2_1.4.3           Rcpp_1.0.3               gdata_2.18.0             ape_5.3                  nlme_3.1-139            
+##  [43] DelayedMatrixStats_1.4.0 gbRd_0.4-11              lmtest_0.9-37            xfun_0.11                stringr_1.4.0            globals_0.12.4           irlba_2.3.3             
+##  [50] gtools_3.8.1             statmod_1.4.30           future_1.12.0            edgeR_3.24.3             zlibbioc_1.28.0          MASS_7.3-51.4            zoo_1.8-5               
+##  [57] scales_1.0.0             rhdf5_2.26.2             RColorBrewer_1.1-2       yaml_2.2.0               reticulate_1.12          pbapply_1.4-0            gridExtra_2.3           
+##  [64] stringi_1.4.3            caTools_1.17.1.2         bibtex_0.4.2             Rdpack_0.11-0            SDMTools_1.1-221.1       rlang_0.4.1              pkgconfig_2.0.2         
+##  [71] bitops_1.0-6             evaluate_0.14            lattice_0.20-38          ROCR_1.0-7               purrr_0.3.2              Rhdf5lib_1.4.3           htmlwidgets_1.3         
+##  [78] labeling_0.3             tidyselect_0.2.5         plyr_1.8.4               magrittr_1.5             R6_2.4.1                 gplots_3.0.1.1           pillar_1.3.1            
+##  [85] withr_2.1.2              fitdistrplus_1.0-14      survival_2.44-1.1        RCurl_1.95-4.12          tsne_0.1-3               tibble_2.1.1             future.apply_1.2.0      
+##  [92] crayon_1.3.4             KernSmooth_2.23-15       plotly_4.9.0             rmarkdown_1.17           viridis_0.5.1            locfit_1.5-9.1           grid_3.5.1              
+##  [99] data.table_1.12.2        metap_1.1                digest_0.6.22            tidyr_0.8.3              R.utils_2.8.0            munsell_0.5.0            beeswarm_0.2.3          
+## [106] viridisLite_0.3.0        vipor_0.4.5
 ```
 
 
