@@ -100,15 +100,58 @@ conda deactivate
 
 <br/>
 
+
+
+#### Alternative option on Windows (WLS)
+
+Unfortunately, not all packages available on conda are compatible with windows machines. The good news is that is changed on windows10, in which they offer native linux support via the Windows Subsystem for Linux (WSL and WSL2). This allows you to run linux/bash commands from within windows without the need of a virtual machine nor a dual-boot setup (i.e. having 2 operational systems). However, WSL does not offer a complete support for graphical interfaces (such as RStudio in our case), so we need an additional steps to make that happen.
+
+1. On Windows10, install the WSL if you don't have it. Follow the instructions here:
+[https://docs.microsoft.com/en-us/windows/wsl/install-win10](https://docs.microsoft.com/en-us/windows/wsl/install-win10)
+
+2. Once you have that installed, you can download and install MobaXterm (which is the enhanced terminal with graphical capacity):
+[https://mobaxterm.mobatek.net](https://mobaxterm.mobatek.net)
+
+3. Inside MobaXterm, you will probably will see that your WSL is already listed on the left panel as an available connection. Just double-click it and you will be accessing it via MobaXterm. If by any chance you don't see it there, close MobaXterm and go to the WSL terminal, because probably the WSL is not allowing SSH connections. You can follow this [link](https://www.illuminiastudios.com/dev-diaries/ssh-on-windows-subsystem-for-linux/) for the instructions on how to do it. You need to complete until the step `Start or restart the SSH service`, while the further steps are optional, but might be useful.
+
+4. Inside MobaXterm, download Conda with the command:
+```
+wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+```
+
+5. Inside MobaXterm, type the commands below to install Conda. Follow the instructions for the installation there.
+```
+cd ~/Downloads
+sh Miniconda3-latest-Linux-x86_64.sh
+```
+
+6. Close Terminal to apply the CONDA updates. Then you can create a course folder, download the environment file and create the environment:
+```
+mkdir ~/Desktop/course
+cd ~/Desktop/course
+wget https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/master/labs/environment_r.yml
+conda env create -n scRNAseq2020 -f environment_r.yml
+```
+
+7. You can then follow the instructions above to activate/deactivate the environment.
+```
+conda activate scRNAseq2020
+rstudio &
+```
+
+<br/>
+
+<br/>
+
 #### Alternative option (VIRTUALBOX)
 
 If by any means you see that the installations are not working as it should on your computer, you can try to create a virtual machine to run UBUNTU and install everything there.
 
 1. Download and install on your machine VIRTUALBOX
-https://www.virtualbox.org
+[https://www.virtualbox.org](https://www.virtualbox.org)
 
 2. Download the ISO disk of UBUNTU
-https://ubuntu.com/download/desktop
+[https://ubuntu.com/download/desktop](https://ubuntu.com/download/desktop)
 
 3. On VIRTUALBOX, click on `Settings` (yellow engine) > `General` > `Advanced` and make sure that both settings **Shared Clipboard** and **Drag'n'Drop** are set to `Bidirectional`.
 
@@ -138,4 +181,10 @@ mkdir ~/Desktop/course
 cd ~/Desktop/course
 wget https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/master/labs/environment_r.yml
 conda env create -n scRNAseq2020 -f environment_r.yml
+```
+
+10. You can then follow the instructions above to activate/deactivate the environment.
+```
+conda activate scRNAseq2020
+rstudio &
 ```
