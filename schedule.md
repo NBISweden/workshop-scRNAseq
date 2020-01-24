@@ -38,17 +38,18 @@ Lecture slides will be provided as links as they get completed.
 
 | Time  | Description         | Lecturer  |
 | ----- | ------------------- | --------- |
-| 09.00 | <img border="0" src="https://www.svgrepo.com/show/6672/exercise.svg" width="20" height="20"> [Exercises: Dimensionality reduction](exercises.md) | Åsa, Paulo |
+| 09.00 | <img border="0" src="https://www.svgrepo.com/show/6672/exercise.svg" width="20" height="20"> [Exercises: Dimensionality reduction](exercises.md) | Åsa, Paulo, Nikolay, Rui |
 | 10.00 | **Coffee Break**	| |
 | 10.30 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> Batch correction + Data integration | Paulo Czarnewski |   
-| 11.15 | <img border="0" src="https://www.svgrepo.com/show/6672/exercise.svg" width="20" height="20"> [Exercises: Data integration](exercises.md) | Åsa, Paulo |
+| 11.15 | <img border="0" src="https://www.svgrepo.com/show/6672/exercise.svg" width="20" height="20"> [Exercises: Data integration](exercises.md) | Åsa, Paulo, Nikolay, Rui |
 | 12.00 | **Lunch** | |
 | 13.00 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [Clustering techniques and scRNAseq toolkits](slides2019/scRNAseq_toolkits_Asa_Bjorklund_2019.pdf) | Åsa Björklund |   
-| 13.45 | <img border="0" src="https://www.svgrepo.com/show/6672/exercise.svg" width="20" height="20"> [Exercises: Clustering](exercises.md) | Åsa, Paulo |
+| 13.45 | <img border="0" src="https://www.svgrepo.com/show/6672/exercise.svg" width="20" height="20"> [Exercises: Clustering](exercises.md) | Åsa, Paulo, Nikolay, Rui |
 | 14.45 | **Coffee Break**	| |
-| 15.15 | <img border="0" src="https://www.svgrepo.com/show/6672/exercise.svg" width="20" height="20"> [Exercises: Clustering (continued)](exercises.md) | Åsa, Paulo |
+| 15.15 | <img border="0" src="https://www.svgrepo.com/show/6672/exercise.svg" width="20" height="20"> [Exercises: Clustering (continued)](exercises.md) | Åsa, Paulo, Nikolay, Rui |
+| 16.00 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> Invited seminar: Ins and outs of UMAP and tSNE | Nikoaly Oskolkov |
 | 16.30 | [Wrap up of todays lectures](https://goo.gl/forms/vDBBZrSyExz3Lh4K2) | Åsa Björklund  |
-| 18.00 | ** Course dinner at [Grappa](http://www.grappabar.nu) ** |
+| 18.00 | ** Course dinner at [Shanti - Touch of bengal](https://shanti.se/touch-of-bengal) ** |
 
 <br/>
 
