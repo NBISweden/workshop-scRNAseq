@@ -27,7 +27,7 @@ Lecture slides will be provided as links as they get completed.
 | 13.15 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [Intro to exercises](lectures/exercises_intro_Asa_Bjorklund_2019.pdf) | Åsa Björklund |
 | 13.30 | <img border="0" src="https://www.svgrepo.com/show/6672/exercise.svg" width="20" height="20"> [Exercises: Quality control](exercises.md) | Åsa, Paulo, Anna |
 | 15.00 | **Coffee Break**	| |
-| 15.30 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [Dimensionality reduction](lectures/Dimensionality_reduction_P_Czarnewski_2019.pdf) | Paulo Czarnewski |   
+| 15.30 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [Dimensionality reduction](lectures/dimensionality_reduction_paulo_czarnewski.pdf) | Paulo Czarnewski |   
 | 16.30 | [Wrap up of todays lectures](https://goo.gl/forms/fr3owaquQgo72E2K3) | Åsa Björklund  |
 
 <br/>
@@ -62,7 +62,7 @@ Lecture slides will be provided as links as they get completed.
 | 09.00 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> Differential expression | Olga Dethlefsen |   
 | 09.45 | **Coffee Break** | |
 | 10.15 | <img border="0" src="https://www.svgrepo.com/show/6672/exercise.svg" width="20" height="20"> [Exercises: Differential expression](exercises.md) | Åsa, Paulo, Olga |
-| 11.15 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [Trajectory inference] | Paulo Czarnewski |   
+| 11.15 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [Trajectory inference analysis](lectures/trajectory_inference_analysis_paulo_czarnewski.pdf) | Paulo Czarnewski |   
 | 12.00 | **Lunch** | |
 | 13.00 | <img border="0" src="https://www.svgrepo.com/show/6672/exercise.svg" width="20" height="20"> [Exercises: Trajectory inference](exercises.md) | Åsa, Paulo, Olga|
 | 14.00 | **Coffee Break** | |
