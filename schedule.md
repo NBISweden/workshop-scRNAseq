@@ -28,7 +28,7 @@ Lecture slides will be provided as links as they get completed.
 | 13.30 | <img border="0" src="https://www.svgrepo.com/show/6672/exercise.svg" width="20" height="20"> [Exercises: Quality control](exercises.md) | Åsa, Paulo, Anna |
 | 15.00 | **Coffee Break**	| |
 | 15.30 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [Dimensionality reduction](lectures/dimensionality_reduction_paulo_czarnewski.pdf) | Paulo Czarnewski |   
-| 16.30 | [Wrap up of todays lectures](https://goo.gl/forms/fr3owaquQgo72E2K3) | Åsa Björklund  |
+| 16.30 | [Wrap up of todays lectures](https://forms.gle/NHUSBHCwdkP4yjtK6) | Åsa & Paulo |
 
 <br/>
 
@@ -48,7 +48,7 @@ Lecture slides will be provided as links as they get completed.
 | 14.45 | **Coffee Break**	| |
 | 15.15 | <img border="0" src="https://www.svgrepo.com/show/6672/exercise.svg" width="20" height="20"> [Exercises: Clustering (continued)](exercises.md) | Åsa, Paulo, Nikolay, Rui |
 | 16.00 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> Invited seminar: Ins and outs of UMAP and tSNE | Nikoaly Oskolkov |
-| 16.30 | [Wrap up of todays lectures](https://goo.gl/forms/vDBBZrSyExz3Lh4K2) | Åsa Björklund  |
+| 16.30 | [Wrap up of todays lectures](https://forms.gle/Q1FQYhGSVWn2BoGh6) | Åsa & Paulo |
 | 18.00 | ** Course dinner at [Shanti - Touch of bengal](https://shanti.se/touch-of-bengal) ** |
 
 <br/>
@@ -69,7 +69,7 @@ Lecture slides will be provided as links as they get completed.
 | 14.30 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> Invited seminar: Single-cell multi-omics  (Protein + RNA) | Johan Reimegård |
 | 15.00 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> Invited seminar: Spatial transcriptomics | Lars Borm |
 | 15.30 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> Invited seminar: Cell type prediction| Oscar Franzen |
-| 16.00 | [Wrap up of todays lectures](https://goo.gl/forms/LabSH8u7S2IQVZKj1) | Åsa Björklund |
+| 16.00 | [Wrap up of todays lectures](https://forms.gle/CH49iMiVqNmLm4fj8) | Åsa & Paulo |
 | 16.15 | **Course Summary** | Åsa Björklund |
 
 <br/>
