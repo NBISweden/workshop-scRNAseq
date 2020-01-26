@@ -40,13 +40,13 @@ Let's first load all necessary libraries and also the integrated dataset from th
 
 ```r
 suppressPackageStartupMessages({
-  library(scater)
-  library(scran)
-  library(cowplot)
-  library(ggplot2)
-  library(rafalib)
-  library(pheatmap)
-  library(igraph)
+    library(scater)
+    library(scran)
+    library(cowplot)
+    library(ggplot2)
+    library(rafalib)
+    library(pheatmap)
+    library(igraph)
 })
 
 sce <- readRDS("data/3pbmc_qc_dr_int.rds")
@@ -70,38 +70,36 @@ The first step into graph clustering is to construct a k-nn graph, in case you d
 
 
 ```r
-#These 2 lines are for demonstration purposes only
-g <- buildKNNGraph(sce,k=30,use.dimred="MNN",assay.type="RNA")
+# These 2 lines are for demonstration purposes only
+g <- buildKNNGraph(sce, k = 30, use.dimred = "MNN", assay.type = "RNA")
 sce@reducedDims$KNN <- igraph::as_adjacency_matrix(g)
 
-#These 2 lines are the most recommended
-g <- buildSNNGraph(sce,k=30,use.dimred="MNN",assay.type="RNA")
-sce@reducedDims$SNN  <- as_adjacency_matrix(g, attr = "weight")
+# These 2 lines are the most recommended
+g <- buildSNNGraph(sce, k = 30, use.dimred = "MNN", assay.type = "RNA")
+sce@reducedDims$SNN <- as_adjacency_matrix(g, attr = "weight")
 ```
 
 We can take a look at the kNN graph. It is a matrix where every connection between cells is represented as $1$s. This is called a **unweighted** graph (default in Seurat). Some cell connections can however have more importance than others, in that case the scale of the graph from $0$ to a maximum distance. Usually, the smaller the distance, the closer two points are, and stronger is their connection. This is called a **weighted** graph. Both weighted and unweighted graphs are suitable for clustering, but clustering on unweighted graphs is faster for large datasets (> 100k cells).
 
 
 ```r
-#plot the KNN graph
-pheatmap(sce@reducedDims$KNN[1:200,1:200],
-         col=c("white","black"),border_color = "grey90",
-         legend = F,cluster_rows = F,cluster_cols = F,fontsize = 2)
+# plot the KNN graph
+pheatmap(sce@reducedDims$KNN[1:200, 1:200], col = c("white", "black"), border_color = "grey90", 
+    legend = F, cluster_rows = F, cluster_cols = F, fontsize = 2)
 ```
 
 ![](scater_04_clustering_files/figure-html/unnamed-chunk-3-1.png)<!-- -->
 
 ```r
-#or the SNN graph
-pheatmap(sce@reducedDims$SNN[1:200,1:200],
-        col = colorRampPalette(c("white","yellow","red","black"))(20), 
-        border_color = "grey90",
-         legend = T,cluster_rows = F,cluster_cols = F,fontsize = 2)
+# or the SNN graph
+pheatmap(sce@reducedDims$SNN[1:200, 1:200], col = colorRampPalette(c("white", "yellow", 
+    "red", "black"))(20), border_color = "grey90", legend = T, cluster_rows = F, 
+    cluster_cols = F, fontsize = 2)
 ```
 
 ![](scater_04_clustering_files/figure-html/unnamed-chunk-3-2.png)<!-- -->
 
-#CLUST_SCATER2: 
+As you can see, the way Scran computes the SNN graph is different to Seurat. It gives edges to all cells that shares a neighbor, but weights the edges by how similar the neighbors are. Hence, the SNN graph has more edges than the KNN graph.
 
 
 ### Clustering on a graph
@@ -109,27 +107,23 @@ pheatmap(sce@reducedDims$SNN[1:200,1:200],
 
 Once the graph is built, we can now perform graph clustering. The clustering is done respective to a resolution which can be interpreted as how coarse you want your cluster to be. Higher resolution means higher number of clusters.
 
-In **Seurat**, the function `FindClusters` will do a graph-based clustering using "Louvain" algorithim by default (`algorithm = 1`). TO use the leiden algorithm, you need to set it to `algorithm = 4`. See `?FindClusters` for additional options.
 
 
 ```r
-g <- buildSNNGraph(sce,k=5,use.dimred="MNN",assay.type="RNA")
-sce$louvain_SNNk5 <- factor( cluster_louvain(g)$membership )
+g <- buildSNNGraph(sce, k = 5, use.dimred = "MNN", assay.type = "RNA")
+sce$louvain_SNNk5 <- factor(cluster_louvain(g)$membership)
 
-g <- buildSNNGraph(sce,k=10,use.dimred="MNN",assay.type="RNA",)
-sce$louvain_SNNk10 <- factor( cluster_louvain(g)$membership )
+g <- buildSNNGraph(sce, k = 10, use.dimred = "MNN", assay.type = "RNA", )
+sce$louvain_SNNk10 <- factor(cluster_louvain(g)$membership)
 
-g <- buildSNNGraph(sce,k=15,use.dimred="MNN",assay.type="RNA")
-sce$louvain_SNNk15 <- factor( cluster_louvain(g)$membership )
+g <- buildSNNGraph(sce, k = 15, use.dimred = "MNN", assay.type = "RNA")
+sce$louvain_SNNk15 <- factor(cluster_louvain(g)$membership)
 
-plot_grid(ncol = 3,
-  plotReducedDim(sce,use_dimred = "UMAP_on_MNN",colour_by = "louvain_SNNk5",add_ticks = F)+
-    ggplot2::ggtitle(label ="louvain_SNNk5"),
-  plotReducedDim(sce,use_dimred = "UMAP_on_MNN",colour_by = "louvain_SNNk10",add_ticks = F)+
-    ggplot2::ggtitle(label ="louvain_SNNk10"),
-  plotReducedDim(sce,use_dimred = "UMAP_on_MNN",colour_by = "louvain_SNNk15",add_ticks = F)+
-    ggplot2::ggtitle(label ="louvain_SNNk15")
-)
+plot_grid(ncol = 3, plotReducedDim(sce, use_dimred = "UMAP_on_MNN", colour_by = "louvain_SNNk5", 
+    add_ticks = F) + ggplot2::ggtitle(label = "louvain_SNNk5"), plotReducedDim(sce, 
+    use_dimred = "UMAP_on_MNN", colour_by = "louvain_SNNk10", add_ticks = F) + ggplot2::ggtitle(label = "louvain_SNNk10"), 
+    plotReducedDim(sce, use_dimred = "UMAP_on_MNN", colour_by = "louvain_SNNk15", 
+        add_ticks = F) + ggplot2::ggtitle(label = "louvain_SNNk15"))
 ```
 
 ![](scater_04_clustering_files/figure-html/unnamed-chunk-4-1.png)<!-- -->
@@ -142,18 +136,15 @@ K-means is a generic clustering algorithm that has been used in many application
 
 
 ```r
-sce$kmeans_5 <- factor( kmeans(x = sce@reducedDims$MNN,centers = 5)$cluster )
-sce$kmeans_10 <- factor(kmeans(x = sce@reducedDims$MNN,centers = 10)$cluster)
-sce$kmeans_15 <- factor(kmeans(x = sce@reducedDims$MNN,centers = 15)$cluster)
+sce$kmeans_5 <- factor(kmeans(x = sce@reducedDims$MNN, centers = 5)$cluster)
+sce$kmeans_10 <- factor(kmeans(x = sce@reducedDims$MNN, centers = 10)$cluster)
+sce$kmeans_15 <- factor(kmeans(x = sce@reducedDims$MNN, centers = 15)$cluster)
 
-plot_grid(ncol = 3,
-  plotReducedDim(sce,use_dimred = "UMAP_on_MNN",colour_by = "kmeans_5",add_ticks = F)+
-    ggplot2::ggtitle(label ="KMeans5"),
-  plotReducedDim(sce,use_dimred = "UMAP_on_MNN",colour_by = "kmeans_10",add_ticks = F)+
-    ggplot2::ggtitle(label ="KMeans10"),
-  plotReducedDim(sce,use_dimred = "UMAP_on_MNN",colour_by = "kmeans_15",add_ticks = F)+
-    ggplot2::ggtitle(label ="KMeans15")
-)
+plot_grid(ncol = 3, plotReducedDim(sce, use_dimred = "UMAP_on_MNN", colour_by = "kmeans_5", 
+    add_ticks = F) + ggplot2::ggtitle(label = "KMeans5"), plotReducedDim(sce, use_dimred = "UMAP_on_MNN", 
+    colour_by = "kmeans_10", add_ticks = F) + ggplot2::ggtitle(label = "KMeans10"), 
+    plotReducedDim(sce, use_dimred = "UMAP_on_MNN", colour_by = "kmeans_15", add_ticks = F) + 
+        ggplot2::ggtitle(label = "KMeans15"))
 ```
 
 ![](scater_04_clustering_files/figure-html/unnamed-chunk-5-1.png)<!-- -->
@@ -168,8 +159,7 @@ The base R `stats` package already contains a function `dist` that calculates di
 
 
 ```r
-d <- dist( sce@reducedDims$MNN,
-           method="euclidean")
+d <- dist(sce@reducedDims$MNN, method = "euclidean")
 ```
 
 As you might have realized, correlation is not a method implemented in the `dist` function. However, we can create our own distances and transform them to a distance object. We can first compute sample correlations using the `cor` function.
@@ -181,13 +171,13 @@ Once we transformed the correlations to a 0-1 scale, we can simply convert it to
 
 
 ```r
-#Compute sample correlations
-sample_cor <- cor( Matrix::t(sce@reducedDims$MNN) )
+# Compute sample correlations
+sample_cor <- cor(Matrix::t(sce@reducedDims$MNN))
 
-#Transform the scale from correlations
-sample_cor <- (1 - sample_cor) / 2
+# Transform the scale from correlations
+sample_cor <- (1 - sample_cor)/2
 
-#Convert it to a distance object
+# Convert it to a distance object
 d2 <- as.dist(sample_cor)
 ```
 
@@ -197,11 +187,11 @@ After having calculated the distances between samples calculated, we can now pro
 
 
 ```r
-#euclidean
-h_euclidean <- hclust(d, method="ward.D2")
+# euclidean
+h_euclidean <- hclust(d, method = "ward.D2")
 
-#correlation
-h_correlation <- hclust(d2, method="ward.D2")
+# correlation
+h_correlation <- hclust(d2, method = "ward.D2")
 ```
 
  Once your dendrogram is created, the next step is to define which samples belong to a particular cluster. After identifying the dendrogram, we can now literally cut the tree at a fixed threshold (with `cutree`) at different levels to define the clusters. We can either define the number of clusters or decide on a height. We can simply try different clustering levels.
@@ -243,7 +233,7 @@ Finally, lets save the integrated data for further analysis.
 
 
 ```r
-saveRDS(sce,"data/3pbmc_qc_dr_int_cl.rds")
+saveRDS(sce, "data/3pbmc_qc_dr_int_cl.rds")
 ```
 
 ## Check QC-stats
@@ -298,13 +288,13 @@ sessionInfo()
 ## [25] scales_1.0.0             HDF5Array_1.10.1         getopt_1.20.3           
 ## [28] tibble_2.1.3             withr_2.1.2              lazyeval_0.2.2          
 ## [31] magrittr_1.5             crayon_1.3.4             evaluate_0.14           
-## [34] beeswarm_0.2.3           tools_3.5.1              stringr_1.4.0           
-## [37] Rhdf5lib_1.4.3           munsell_0.5.0            locfit_1.5-9.1          
-## [40] compiler_3.5.1           rlang_0.4.2              rhdf5_2.26.2            
-## [43] grid_3.5.1               RCurl_1.95-4.12          BiocNeighbors_1.0.0     
-## [46] labeling_0.3             bitops_1.0-6             rmarkdown_1.17          
-## [49] gtable_0.3.0             reshape2_1.4.3           R6_2.4.1                
-## [52] gridExtra_2.3            knitr_1.26               dplyr_0.8.3             
-## [55] stringi_1.4.3            ggbeeswarm_0.6.0         Rcpp_1.0.3              
-## [58] tidyselect_0.2.5         xfun_0.11
+## [34] beeswarm_0.2.3           tools_3.5.1              formatR_1.7             
+## [37] stringr_1.4.0            Rhdf5lib_1.4.3           munsell_0.5.0           
+## [40] locfit_1.5-9.1           compiler_3.5.1           rlang_0.4.2             
+## [43] rhdf5_2.26.2             grid_3.5.1               RCurl_1.95-4.12         
+## [46] BiocNeighbors_1.0.0      labeling_0.3             bitops_1.0-6            
+## [49] rmarkdown_1.17           gtable_0.3.0             reshape2_1.4.3          
+## [52] R6_2.4.1                 gridExtra_2.3            knitr_1.26              
+## [55] dplyr_0.8.3              stringi_1.4.3            ggbeeswarm_0.6.0        
+## [58] Rcpp_1.0.3               tidyselect_0.2.5         xfun_0.11
 ```
