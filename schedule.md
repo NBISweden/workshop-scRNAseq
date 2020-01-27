@@ -22,7 +22,7 @@ Lecture slides will be provided as links as they get completed.
 | 09.15 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [scRNAseq methodologies and ESCG platform](lectures/single_cell_methodologies_ESCG_facility_Karolina_Wallenborg.pdf) | Karolina Wallenborg |
 | 10.00 | **Coffee Break**	| |
 | 10.30 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [scRNAseq Quality Control](lectures/scRNAseq_QC_Asa_Bjorklund_2020.pdf) | Åsa Björklund |
-| 11.15 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [Data normalization](lectures//scRNAseq_normalization_Asa_Bjorklund_2020.pdf) | Åsa Björklund |
+| 11.15 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [Data normalization](lectures/scRNAseq_normalization_Asa_Bjorklund_2020.pdf) | Åsa Björklund |
 | 12.10 | **Lunch** | |
 | 13.15 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [Intro to exercises](lectures/exercises_intro_Asa_Bjorklund_2020.pdf) | Åsa Björklund |
 | 13.30 | <img border="0" src="https://www.svgrepo.com/show/6672/exercise.svg" width="20" height="20"> [Exercises: Quality control](exercises.md) | Åsa, Paulo, Anna |
