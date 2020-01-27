@@ -26,7 +26,7 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(message='hide', warning='hide', result='hold',fig.width=12)
+knitr::opts_chunk$set(message=FALSE, warning=FALSE, result='hold',fig.width=12,tidy=TRUE)
 ```
 <style>
 h1, .h1, h2, .h2, h3, .h3, h4, .h4 { margin-top: 50px }
@@ -204,6 +204,28 @@ Lets plot the same QC-stats another time.
 feats <- c("nFeature_RNA","nCount_RNA","percent_mito","percent_ribo")
 cowplot::plot_grid(ncol = 1,
 VlnPlot(data.filt, group.by= "orig.ident", features = feats, pt.size = 0.1,ncol = 4) + NoLegend())
+```
+
+## Filter genes
+
+As the level of expression of mitochondrial and MALAT1 genes are judged as mainly technical, it can be wise to remove them from the dataset bofore any further analysis. 
+
+```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=4,fig.width=4}
+dim(data.filt)
+
+# Filter MALAT1
+data.filt <- data.filt[ ! grepl("MALAT1", rownames(data.filt)), ]
+
+# Filter Mitocondrial
+data.filt <- data.filt[ ! grepl("^MT-", rownames(data.filt)), ]
+
+# Filter Ribossomal gene (optional if that is a problem on your data)
+data.filt <- data.filt[ ! grepl("^RP[SL]", rownames(data.filt)), ]
+
+# Filter Hemoglobin gene (optional if that is a problem on your data)
+data.filt <- data.filt[ ! grepl("^HB[AB]", rownames(data.filt)), ]
+
+dim(data.filt)
 ```
 
 # Calculate cell-cycle scores
