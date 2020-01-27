@@ -43,7 +43,7 @@ In terminal, `cd` to the folder where you saved the environment file and create 
 `environment_r.yml` file:
 
 ```
-conda env create -p scRNAseq2020 -f environment_r.yaml
+conda env create -p scRNAseq2020 -f environment_r.yml
 ```
 
 Several messages will show up on your screen and will tell you about the installation process. This may take a few minutes depending on how many packages are to be installed.
