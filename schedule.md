@@ -19,7 +19,7 @@ Lecture slides will be provided as links as they get completed.
 | Time  | Description         | Lecturer  |
 | ----- | ------------------- | --------- |
 | 09.00 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [Course introduction](lectures/course_intro_Asa_Bjorklund_2020.pdf) | Åsa Björklund |
-| 09.15 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [scRNAseq methodologies and ESCG platform](lectures/single_cell_methodologies_ESCG_facility_Karolina_Wallenborg.pdf) | Karolina Wallenborg |
+| 09.15 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [scRNAseq methodologies and ESCG platform](lectures/single_cell_methodologies_Karolina_Wallenborg_2020) | Karolina Wallenborg |
 | 10.00 | **Coffee Break**	| |
 | 10.30 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [scRNAseq Quality Control](lectures/scRNAseq_QC_Asa_Bjorklund_2020.pdf) | Åsa Björklund |
 | 11.15 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [Data normalization](lectures/scRNAseq_normalization_Asa_Bjorklund_2020.pdf) | Åsa Björklund |
@@ -40,7 +40,7 @@ Lecture slides will be provided as links as they get completed.
 | ----- | ------------------- | --------- |
 | 09.00 | <img border="0" src="https://www.svgrepo.com/show/6672/exercise.svg" width="20" height="20"> [Exercises: Dimensionality reduction](exercises.md) | Åsa, Paulo, Nikolay, Rui |
 | 10.00 | **Coffee Break**	| |
-| 10.30 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> Batch correction + Data integration | Paulo Czarnewski |   
+| 10.30 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [Batch correction + Data integration](lectures/data_integration_paulo_czarnewski_2020.pdf) | Paulo Czarnewski |   
 | 11.15 | <img border="0" src="https://www.svgrepo.com/show/6672/exercise.svg" width="20" height="20"> [Exercises: Data integration](exercises.md) | Åsa, Paulo, Nikolay, Rui |
 | 12.00 | **Lunch** | |
 | 13.00 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [Clustering techniques and scRNAseq toolkits](lectures/scRNAseq_clustering_Asa_Bjorklund_2020.pdf) | Åsa Björklund |   
