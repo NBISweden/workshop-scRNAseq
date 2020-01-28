@@ -6,8 +6,8 @@ If your R does not find the correct python version, it will complain that `umap-
 
 In this example the conda env is named `sc_course`.
 
-   library(reticulate)
-   reticulate:use_conda("sc_course")
+      library(reticulate)
+      reticulate:use_conda("sc_course")
 
 Then check what python you have in R:
 
