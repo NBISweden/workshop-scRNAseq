@@ -86,7 +86,7 @@ Lecture slides will be provided as links as they get completed.
 
 <br/>
 
-Each day we will have cofee around 10.00 and at 15.00 during the exercises. Lunches will be at Nanna Svarz aroun 12.00 each day.
+Each day we will have coffee around 10.00 and at 15.00 during the exercises. Lunches will be at Nanna Svarz aroun 12.00 each day.
 
 <br/>
 
