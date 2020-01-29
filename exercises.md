@@ -32,6 +32,7 @@ Environments being used in the course:
 * [seurat_scran_scanpy_paga](https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/master/labs/environment_r.yml)
 * [slingshot](https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/master/labs/trajectory/environment_slingshot.yml)
 
+Dataset for slingshot: [GSE72857_umitab.rds](https://github.com/NBISweden/workshop-scRNAseq/blob/master/labs/compiled/slingshot/data/GSE72857_umitab.rds?raw=true)
 
 <br/>
 
