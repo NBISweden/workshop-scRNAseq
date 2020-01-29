@@ -59,7 +59,7 @@ Lecture slides will be provided as links as they get completed.
 
 | Time  | Description         | Lecturer  |
 | ----- | ------------------- | --------- |
-| 09.00 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> Differential expression | Olga Dethlefsen |   
+| 09.00 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [Differential expression](lectures/differenatial_expression_olga_dethlefsen_2020.pdf) | Olga Dethlefsen |   
 | 09.45 | **Coffee Break** | |
 | 10.15 | <img border="0" src="https://www.svgrepo.com/show/6672/exercise.svg" width="20" height="20"> [Exercises: Differential expression](exercises.md) | Åsa, Paulo, Olga, Johan |
 | 11.15 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [Trajectory inference analysis](lectures/trajectory_inference_analysis_paulo_czarnewski.pdf) | Paulo Czarnewski |   

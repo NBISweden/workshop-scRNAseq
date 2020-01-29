@@ -88,6 +88,7 @@ data <- runPCA(data, subset_row=top.hvgs)
 g <- buildSNNGraph(data, k=5, use.dimred="PCA", assay.type="RNA")
 data$louvain_SNNk5 <- factor( igraph::cluster_louvain(g)$membership )
 data <- runUMAP(data, dimred = "PCA", n_dimred = 50,   ncomponents = 2, spread=2, min_dist = .1, n_neighbors=10, metric="cosine")
+data$kmeans_15 <- factor(kmeans(x = data@reducedDims$PCA, centers = 15)$cluster)
 
 #Plot the clusters
 plotReducedDim(data, dimred = "UMAP",colour_by = "louvain_SNNk5")
@@ -122,6 +123,8 @@ data <- ScaleData(data)
 data <- RunPCA(data)
 data <- FindNeighbors(data)
 data <- FindClusters(data,resolution = 1)
+data$kmeans_15 <- kmeans(x = alldata@reductions[["PCA"]]@cell.embeddings,centers = 15)$cluster
+
 data <- RunUMAP(data, n.neighbors = 10, dims = 1:50,spread = 2,min.dist = 0.3 )
 
 #Plot the clusters
