@@ -61,26 +61,26 @@ Lecture slides will be provided as links as they get completed.
 | ----- | ------------------- | --------- |
 | 09.00 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> Differential expression | Olga Dethlefsen |   
 | 09.45 | **Coffee Break** | |
-| 10.15 | <img border="0" src="https://www.svgrepo.com/show/6672/exercise.svg" width="20" height="20"> [Exercises: Differential expression](exercises.md) | Åsa, Paulo, Olga |
+| 10.15 | <img border="0" src="https://www.svgrepo.com/show/6672/exercise.svg" width="20" height="20"> [Exercises: Differential expression](exercises.md) | Åsa, Paulo, Olga, Johan |
 | 11.15 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [Trajectory inference analysis](lectures/trajectory_inference_analysis_paulo_czarnewski.pdf) | Paulo Czarnewski |   
 | 12.00 | **Lunch** | |
-| 13.00 | <img border="0" src="https://www.svgrepo.com/show/6672/exercise.svg" width="20" height="20"> [Exercises: Trajectory inference](exercises.md) | Åsa, Paulo, Olga|
+| 13.00 | <img border="0" src="https://www.svgrepo.com/show/6672/exercise.svg" width="20" height="20"> [Exercises: Trajectory inference](exercises.md) | Åsa, Paulo, Olga, Johan|
 | 14.00 | **Coffee Break** | |
 | 14.30 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> Invited seminar: Single-cell multi-omics  (Protein + RNA) | Johan Reimegård |
 | 15.00 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> Invited seminar: Spatial transcriptomics | Lars Borm |
 | 15.30 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> Invited seminar: Cell type prediction| Oscar Franzen |
 | 16.00 | [Wrap up of todays lectures](https://forms.gle/CH49iMiVqNmLm4fj8) | Åsa & Paulo |
-| 16.15 | **Course Summary** | Åsa Björklund |
+| 16.15 | **Course Summary** | Åsa & Paulo |
 
 <br/>
 
 <br/>
 
-###### Wednesday 30th of January  
+###### Thursday 30th of January  
 
 | Time  | Description         | Lecturer  |
 | ----- | ------------------- | --------- |
-| 09.00 | Bring your own data (until 16.00) | Åsa, Paulo |   
+| 09.00 | Bring your own data (until 16.00) | Åsa, Paulo, Johan, Rui |   
 
 <br/>
 
