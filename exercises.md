@@ -27,7 +27,7 @@ Please me sure you have completed the [<img border="0" src="https://www.svgrepo.
 | <img border="0" src="https://static.thenounproject.com/png/1517975-200.png" width="30" height="30"> Differential expression | [Seurat_dge](labs/compiled/seurat/seurat_05_dge.html) ([.Rmd](https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/master/labs/compiled/seurat/seurat_05_dge.Rmd)) | [Scater_dge](labs/compiled/scater/scater_05_dge.html) ([.Rmd](https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/master/labs/compiled/scater/scater_05_dge.Rmd)) | [Scanpy_dge](labs/compiled/scanpy/scanpy_05_dge.html) ([.ipynb](https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/master/labs/compiled/scanpy/scanpy_05_dge.ipynb)) |
 | <img border="0" src="https://cdn2.vectorstock.com/i/1000x1000/49/51/route-location-icon-vector-16394951.jpg" width="30" height="30"> Trajectory inference | [Slingshot_ti](labs/compiled/slingshot/slingshot.html) | [Slingshot_ti](labs/compiled/slingshot/slingshot.html) | [PAGA_ti](https://scanpy-tutorials.readthedocs.io/en/latest/paga-paul15.html) |
 
-Environments being used in the course
+Environments being used in the course:
 
 * [seurat_scran_scanpy_paga](https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/master/labs/environment_r.yml)
 * [slingshot](https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/master/labs/trajectory/environment_slingshot.yml)
