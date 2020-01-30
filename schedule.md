@@ -70,7 +70,7 @@ Lecture slides will be provided as links as they get completed.
 | 15.00 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [Invited seminar: Spatial transcriptomics](lectures/Spatial_transcriptomics_SciLife_2020.pdf) | Lars Borm |
 | 15.30 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> Invited seminar: PanglaoDB | Oscar Franzen |
 | 16.00 | [Wrap up of todays lectures](https://forms.gle/CH49iMiVqNmLm4fj8) | Åsa & Paulo |
-| 16.15 | **Course Summary** | Åsa & Paulo |
+| 16.15 | [Course Summary](lectures/course_summary_2020.pdf) | Åsa & Paulo |
 
 <br/>
 
