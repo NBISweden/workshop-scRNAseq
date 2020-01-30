@@ -82,6 +82,50 @@ Lecture slides will be provided as links as they get completed.
 | ----- | ------------------- | --------- |
 | 09.00 | Bring your own data (until 16.00) | Åsa, Paulo, Johan, Rui |   
 
+You can also download pre-processed datasets from [PanglaoDB](https://panglaodb.se/samples.html). Click on **view** for one dataset and then click on **[ RData ]** to download the compressed matrix. Put all the files into a single folder and then run the script below to merge them together:
+
+
+```
+#Set working directory where you downloaded the data
+setwd("~/Downloads")
+
+#get the names of all SRA files you downlaoded
+SRA_file_list <-  list.files(pattern = "SRA")
+
+#for each file, load the matrix and add it to the list of matrices
+file_list <- list()
+for(i in SRA_file_list){
+  load(i)
+  rownames(sm) <- sub( "_.*","",rownames(sm) )
+  rownames(sm) <- sub( "[.].*","",rownames(sm) )
+  sm <- Matrix::Matrix( rowsum(as.matrix(sm),rownames(sm)) ,sparse = T)
+  file_list[[i]] <- sm
+}
+
+#get a vector of all genes found in the matrix
+all_genes <- unique(unlist(lapply(file_list,function(x) return(rownames(x)))))
+all_cells <- unique(unlist(lapply(file_list,function(x) return(colnames(x)))))
+
+#create a empty matrix with all genes and all cells found
+combined_data <- Matrix::Matrix(0,nrow = length(all_genes),
+                    ncol = length(all_cells),
+                    sparse = T,
+                    dimnames = list(all_genes,all_cells))
+
+#fill the matrix with the values in each file
+for(i in names(file_list)){
+  combined_data [rownames(file_list[[i]]),colnames(file_list[[i]])] <- file_list[[i]]
+}
+
+#Remove intermediate files
+rm(all_genes,all_cells,file_list,sm,i,SRA_file_list)
+
+#This is now your combined data
+combined_data
+```
+
+
+
 <br/>
 
 <br/>
