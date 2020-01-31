@@ -36,14 +36,19 @@ Environments being used in the course (see [<img border="0" src="https://hackern
 * [seurat_scran_scanpy_paga](https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/master/labs/environment_r.yml)
 * [slingshot](https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/master/labs/trajectory/environment_slingshot.yml)
 
-The easiest way of getting started with the exercises is to download the `.Rmd` file and then open it with Rstudio. First activate your conda environment, then copy the link of a `.Rmd` file and then type:
-
+The easiest way of getting started with the exercises is to download the `.Rmd`/`.ipynb` file and then open it with Rstudio / Jypyter Notebooks. First activate your conda environment, then copy the link of a `.Rmd`/`.ipynb` file and then type:
 ```
 wget <LINK_TO_Exercise1.Rmd_FILE>
 rstudio Exercise1.Rmd &
 ```
 
-We highly recommend you to use the `Rmarkdown` file provided instead of copying and pasting from the rendered report. Keep in mind that the results may vary slightly depending on the parameters used.
+Or in python for `.ipynb`:
+```
+wget <LINK_TO_Exercise1.ipynb_FILE>
+jupyter notebook Exercise1.ipynb &
+```
+
+We highly recommend you to use the files provided instead of copying and pasting from the rendered report. Keep in mind that the results may vary slightly depending on the parameters used.
 
 <br/>
 
