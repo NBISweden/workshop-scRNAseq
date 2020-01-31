@@ -27,16 +27,13 @@ You can [read more](https://nbis-reproducible-research.readthedocs.io/en/latest/
 
 <br/>
 
-##### Install Conda and download the environment file
+##### <img border="0" src="https://www.svgrepo.com/show/4795/installation-symbol.svg" width="20" height="20"> Install Conda and download the environment file
 ***
 
 You should start by installing Conda. We suggest installing either Miniconda3 (NOT Anaconda). After [installing Conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html), download the course [Conda file](labs/environment_r.yml) and put it in your working folder.
 
-<br/>
 
-###### On MacOSX
-
-On terminal type:
+###### **On MacOSX**
 
 ```
 curl -o Miniconda3-latest-MacOSX-x86_64.sh https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh
@@ -45,11 +42,8 @@ sh Miniconda3-latest-MacOSX-x86_64.sh
 
 Follow the instructions on screen replying `yes` when necessary. Restart your terminal window to apply modifications.
 
-<br/>
 
-###### On Ubuntu
-
-On terminal type:
+###### **On Ubuntu**
 
 ```
 wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
@@ -58,9 +52,8 @@ sh Miniconda3-latest-Linux-x86_64.sh
 
 Follow the instructions on screen replying `yes` when necessary. Restart your terminal window to apply modifications.
 
-<br/>
 
-###### On Windows10
+###### **On Windows10**
 
 Several packages are not available for Windows. However, on windows10 we can run a Ubuntu subsystem to overcome this issue. Please follow the instructions `Alternative option on Windows (WLS)` below to install it.
 
@@ -68,7 +61,7 @@ Several packages are not available for Windows. However, on windows10 we can run
 
 <br/>
 
-##### Create an environment from file
+##### <img border="0" src="https://www.svgrepo.com/show/4795/installation-symbol.svg" width="20" height="20"> Create a Conda environment from file
 ***
 
 To download the `environment_r.yml` file using the command on Terminal:
@@ -106,7 +99,7 @@ Several messages will show up on your screen and will tell you about the install
 
 <br/>
 
-##### Activate the environment
+##### <img border="0" src="https://www.svgrepo.com/show/4795/installation-symbol.svg" width="20" height="20"> Activate the environment
 ***
 
 Once the environment is created, we need to activate it in order to use the softwares and packages inside it. To activate an environment type:
@@ -132,7 +125,7 @@ jupyter notebook ./labs/scapy/01_qc.ipynb &
 
 <br/>
 
-##### Deactivate the environment
+##### <img border="0" src="https://www.svgrepo.com/show/4795/installation-symbol.svg" width="20" height="20"> Deactivate the environment
 ***
 
 After you've ran all your analyses, you can deactivate the environment by typing:
@@ -146,7 +139,9 @@ conda deactivate
 <br/>
 
 
-#### Alternative option on Windows (WLS)
+
+##### <img border="0" src="https://upload.wikimedia.org/wikipedia/commons/5/5f/Windows_logo_-_2012.svg" width="20" height="20"> Alternative option on Windows (WLS)
+***
 
 Unfortunately, not all packages available on conda are compatible with windows machines. The good news is that is changed on windows10, in which they offer native linux support via the Windows Subsystem for Linux (WSL2). This allows you to run linux/bash commands from within windows without the need of a virtual machine nor a dual-boot setup (i.e. having 2 operational systems). However, WSL does not offer a complete support for graphical interfaces (such as RStudio in our case), so we need an additional steps to make that happen.
 
@@ -194,7 +189,9 @@ rstudio &
 
 <br/>
 
-#### Alternative option (VIRTUALBOX)
+
+##### <img border="0" src="https://upload.wikimedia.org/wikipedia/commons/d/d5/Virtualbox_logo.png" width="20" height="20"> Alternative option (VIRTUALBOX)
+***
 
 If by any means you see that the installations are not working as it should on your computer, you can try to create a virtual machine to run UBUNTU and install everything there.
 
