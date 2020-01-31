@@ -25,22 +25,63 @@ You can [read more](https://nbis-reproducible-research.readthedocs.io/en/latest/
 
 <br/>
 
+<br/>
+
 ##### Install Conda and download the environment file
 ***
 
-You should start by installing Conda. We suggest installing either Miniconda, or Anaconda if storage is
-not an issue. After [installing Conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html),
-download the course [Conda file](labs/environment_r.yml) and put it in your working folder.
+You should start by installing Conda. We suggest installing either Miniconda3 (NOT Anaconda). After [installing Conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html), download the course [Conda file](labs/environment_r.yml) and put it in your working folder.
 
-After this, you should have a file named `environment_R.yml` in your directory (it does not matter where, you can save on Downloads folder for example).
+<br/>
+
+###### On MacOSX
+
+On terminal type:
+
+```
+curl -o Miniconda3-latest-MacOSX-x86_64.sh https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh
+sh Miniconda3-latest-MacOSX-x86_64.sh
+```
+
+Follow the instructions on screen replying `yes` when necessary. Restart your terminal window to apply modifications.
+
+<br/>
+
+###### On Ubuntu
+
+On terminal type:
+
+```
+wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+sh Miniconda3-latest-Linux-x86_64.sh
+```
+
+Follow the instructions on screen replying `yes` when necessary. Restart your terminal window to apply modifications.
+
+<br/>
+
+###### On Windows10
+
+Several packages are not available for Windows. However, on windows10 we can run a Ubuntu subsystem to overcome this issue. Please follow the instructions `Alternative option on Windows (WLS)` below to install it.
+
+<br/>
 
 <br/>
 
 ##### Create an environment from file
 ***
 
-In terminal, `cd` to the folder where you saved the environment file and create an environment called `scRNAseq2020` from the
-`environment_r.yml` file:
+To download the `environment_r.yml` file using the command on Terminal:
+
+```
+#Ubuntu
+wget https://nbisweden.github.io/workshop-scRNAseq/labs/environment_r.yml
+
+#MacOSX
+curl -o environment_r.yml https://nbisweden.github.io/workshop-scRNAseq/labs/environment_r.yml
+```
+
+After this, you should have a file named `environment_r.yml` in your directory (it does not matter where, you can save on Downloads folder for example). Next, type:
 
 ```
 conda env create -p scRNAseq2020 -f environment_r.yml
@@ -63,13 +104,15 @@ Several messages will show up on your screen and will tell you about the install
 
 <br/>
 
+<br/>
+
 ##### Activate the environment
 ***
 
-To activate an environment type:
+Once the environment is created, we need to activate it in order to use the softwares and packages inside it. To activate an environment type:
 
 ```
-source activate ./scRNAseq2020
+source activate scRNAseq2020
 ```
 
 From this point on you can run any of the contents from the course. For instance, you can directly launch RStudio by
@@ -82,15 +125,17 @@ rstudio ./labs/compiled/my_script.Rmd &
 Similarly, you can open python notebooks by typing:
 
 ```
-jupyter notebook ./labs/scapy/01_qc.ipynb
+jupyter notebook ./labs/scapy/01_qc.ipynb &
 ```
+
+<br/>
 
 <br/>
 
 ##### Deactivate the environment
 ***
 
-After you've ran all your analyses, deactivate the environment by typing:
+After you've ran all your analyses, you can deactivate the environment by typing:
 
 ```
 conda deactivate
@@ -101,10 +146,9 @@ conda deactivate
 <br/>
 
 
-
 #### Alternative option on Windows (WLS)
 
-Unfortunately, not all packages available on conda are compatible with windows machines. The good news is that is changed on windows10, in which they offer native linux support via the Windows Subsystem for Linux (WSL and WSL2). This allows you to run linux/bash commands from within windows without the need of a virtual machine nor a dual-boot setup (i.e. having 2 operational systems). However, WSL does not offer a complete support for graphical interfaces (such as RStudio in our case), so we need an additional steps to make that happen.
+Unfortunately, not all packages available on conda are compatible with windows machines. The good news is that is changed on windows10, in which they offer native linux support via the Windows Subsystem for Linux (WSL2). This allows you to run linux/bash commands from within windows without the need of a virtual machine nor a dual-boot setup (i.e. having 2 operational systems). However, WSL does not offer a complete support for graphical interfaces (such as RStudio in our case), so we need an additional steps to make that happen.
 
 1. On Windows10, install the WSL if you don't have it. Follow the instructions here:
 [https://docs.microsoft.com/en-us/windows/wsl/install-win10](https://docs.microsoft.com/en-us/windows/wsl/install-win10)

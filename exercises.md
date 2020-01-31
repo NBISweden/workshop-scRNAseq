@@ -18,6 +18,8 @@ All scripts (Rmarkdown or ipython notebooks) can be found at our github repo in 
 
 Please me sure you have completed the [<img border="0" src="https://www.svgrepo.com/show/19652/maths-class-materials-cross-of-a-pencil-and-a-ruler.svg" width="20" height="20">**Precourse material**](precourse.md) as well as the [<img border="0" src="https://hackernoon.com/hn-images/1*rW03Wtue71AKfxnx6XN_iQ.png" width="20" height="20">**Conda instructions**](conda_instructions.md)
 
+Below you will find the link to the `.Rmd` that you should use as well as the rendered exercise report ("answers").
+
 | Tutorial | <img border="0" src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/R_logo.svg/1448px-R_logo.svg.png" width="20" height="20"> Seurat | <img border="0" src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/R_logo.svg/1448px-R_logo.svg.png" width="20" height="20"> Scater/Scran | <img border="0" src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Python-logo-notext.svg/1024px-Python-logo-notext.svg.png" width="20" height="20"> Scanpy |
 | -------- | ---------- | ---------------- | --------------- |
 | <img border="0" src="https://cdn0.iconfinder.com/data/icons/business-and-finance-4-5/68/188-512.png" width="30" height="30"> Quality Control | [Seurat_qc](labs/compiled/seurat/seurat_01_qc.md) ([.Rmd](https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/master/labs/compiled/seurat/seurat_01_qc.Rmd)) | [Scater_qc](labs/compiled/scater/scater_01_qc.md) ([.Rmd](https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/master/labs/compiled/scater/scater_01_qc.Rmd)) | [ScanPY_qc](labs/compiled/scanpy/scanpy_01_qc.html) ([.ipynb](https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/master/labs/compiled/scanpy/scanpy_01_qc.ipynb)) |
@@ -27,12 +29,21 @@ Please me sure you have completed the [<img border="0" src="https://www.svgrepo.
 | <img border="0" src="https://static.thenounproject.com/png/1517975-200.png" width="30" height="30"> Differential expression | [Seurat_dge](labs/compiled/seurat/seurat_05_dge.html) ([.Rmd](https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/master/labs/compiled/seurat/seurat_05_dge.Rmd)) | [Scater_dge](labs/compiled/scater/scater_05_dge.html) ([.Rmd](https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/master/labs/compiled/scater/scater_05_dge.Rmd)) | [Scanpy_dge](labs/compiled/scanpy/scanpy_05_dge.html) ([.ipynb](https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/master/labs/compiled/scanpy/scanpy_05_dge.ipynb)) |
 | <img border="0" src="https://cdn2.vectorstock.com/i/1000x1000/49/51/route-location-icon-vector-16394951.jpg" width="30" height="30"> Trajectory inference | [Slingshot_ti](labs/compiled/slingshot/slingshot.html) ([.Rmd](https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/master/labs/compiled/slingshot/slingshot.Rmd)) | [Slingshot_ti](labs/compiled/slingshot/slingshot.html) | [PAGA_ti](https://scanpy-tutorials.readthedocs.io/en/latest/paga-paul15.html) |
 
-Environments being used in the course:
+<br/>
+
+Environments being used in the course (see [<img border="0" src="https://hackernoon.com/hn-images/1*rW03Wtue71AKfxnx6XN_iQ.png" width="20" height="20">**Conda instructions**](conda_instructions.md) ):
 
 * [seurat_scran_scanpy_paga](https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/master/labs/environment_r.yml)
 * [slingshot](https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/master/labs/trajectory/environment_slingshot.yml)
 
-Dataset for slingshot: [GSE72857_umitab.rds](https://github.com/NBISweden/workshop-scRNAseq/blob/master/labs/compiled/slingshot/data/GSE72857_umitab.rds?raw=true)
+The easiest way of getting started with the exercises is to download the `.Rmd` file and then open it with Rstudio. First activate your conda environment, then copy the link of a `.Rmd` file and then type:
+
+```
+wget <LINK_TO_Exercise1.Rmd_FILE>
+rstudio Exercise1.Rmd &
+```
+
+We highly recommend you to use the `Rmarkdown` file provided instead of copying and pasting from the rendered report. Keep in mind that the results may vary slightly depending on the parameters used.
 
 <br/>
 
