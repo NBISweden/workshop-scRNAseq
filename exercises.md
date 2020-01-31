@@ -54,6 +54,15 @@ We highly recommend you to use the files provided instead of copying and pasting
 
 <br/>
 
+##### <img border="0" src="https://www.svgrepo.com/show/83019/faq-button.svg" width="40" height="40"> FAQ
+***
+
+As you run into problems, we will try to fill in the [FAQ](labs/FAQ) with common questions.
+
+<br/>
+
+<br/>
+
 ##### <img border="0" src="https://www.svgrepo.com/show/759/exercise.svg" width="40" height="40"> BONUS exercises
 ***
 
@@ -78,11 +87,5 @@ We will try to keep these tutorials up to date. If you find any errors or things
 
 <br/>
 
-##### <img border="0" src="https://www.svgrepo.com/show/83019/faq-button.svg" width="40" height="40"> FAQ
-***
-
-As you run into problems, we will try to fill in the [FAQ](labs/FAQ) with common questions.
-
-<br/>
 
 <div style="text-align: right; font-size: 5px"> Icons are provided from [www.svgrepo.com](www.svgrepo.com) </div>

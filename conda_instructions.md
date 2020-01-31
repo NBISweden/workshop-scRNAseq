@@ -164,7 +164,7 @@ cd ~/Downloads
 sh Miniconda3-latest-Linux-x86_64.sh
 ```
 
-6. Inside MobaXterm, type the commands below to install the X-server graphical packages that will be used to lauch RStudio.
+6. Inside MobaXterm, type the commands below to install the X-server graphical packages that will be used to launch RStudio.
 [https://docs.anaconda.com/anaconda/install/linux/](https://docs.anaconda.com/anaconda/install/linux/)
 ```
 sudo apt-get update
@@ -212,18 +212,26 @@ If by any means you see that the installations are not working as it should on y
 
 6. Proceed with the Ubuntu installation as recommended. You can set to do "Minimal Installation" and deactivate to get updates during installation.
 
-7. Inside UBUNTU, Download conda:
+
+7. Inside Ubuntu, open TERMINAL and type the commands below to install the X-server graphical packages that will be used to launch RStudio.
+[https://docs.anaconda.com/anaconda/install/linux/](https://docs.anaconda.com/anaconda/install/linux/)
+```
+sudo apt-get update
+sudo apt-get install libgl1-mesa-glx libegl1-mesa libxrandr2 libxrandr2 libxss1 libxcursor1 libxcomposite1 libasound2 libxi6 libxtst6
+```
+
+8. Inside UBUNTU, Download conda:
 ```
 wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
 ```
 
-8. Inside UBUNTU, open the TERMINAL and type the commands below. Follow the instructions for the installation there.
+9. Inside UBUNTU, open the TERMINAL and type the commands below. Follow the instructions for the installation there.
 ```
 cd ~/Downloads
 sh Miniconda3-latest-Linux-x86_64.sh
 ```
 
-9. Close Terminal to apply the CONDA updates. Then you can create a course folder, download the environment file and create the environment:
+10. Close Terminal to apply the CONDA updates. Then you can create a course folder, download the environment file and create the environment:
 ```
 mkdir ~/Desktop/course
 cd ~/Desktop/course
@@ -231,7 +239,7 @@ wget https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/master/labs/e
 conda env create -n scRNAseq2020 -f environment_r.yml
 ```
 
-10. You can then follow the instructions above to activate/deactivate the environment.
+11. You can then follow the instructions above to activate/deactivate the environment.
 ```
 conda activate scRNAseq2020
 rstudio &
