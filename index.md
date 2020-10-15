@@ -123,6 +123,7 @@ If you have any questions regarding the course, please email to Åsa Björklund 
 ##### <img border="0" src="https://www.svgrepo.com/show/83468/navigation-history-interface-symbol-of-a-clock-with-an-arrow.svg" width="40" height="40"> Past courses
 ***
 
+* [Stockholm January 27-30, 2020](https://nbisweden.github.io/workshop-archive/workshop-scRNAseq/2020-01-27/)
 * [Stockholm February 4-6, 2019](https://nbisweden.github.io/workshop-archive/workshop-scRNAseq/2019-02-04/)
 * [Stockholm May 21-23, 2018](https://nbisweden.github.io/workshop-archive/workshop-scRNAseq/2018-05-21/)
 * [Uppsala October 2-4, 2017](https://scilifelab.github.io/courses/scrnaseq/1710/)
