@@ -48,11 +48,11 @@ The course will cover the basic steps in single cell RNAseq (scRNAseq) processin
 ##### <img border="0" src="https://www.svgrepo.com/show/3874/contact-form.svg" width="40" height="40"> Application
 ***
 
-###### How to apply
+##### How to apply
 
 Fill in this [application](put new link!!) by December 16th.
 
-###### Course fee
+##### Course fee
 
 This online training event has no fee. However, if you accept a position at the workshop and do not participate (no-show) you will be invoiced 2000 SEK.
 
@@ -66,7 +66,7 @@ This is a national course. The course is open for PhD students, postdocs, group 
 Please note that NBIS training events do not provide any formal university credits. The training content is estimated to correspond to a certain number of credits, however the estimated credits are just guidelines. If formal credits are crucial, the student needs to confer with the home department before submitting a course application in order to establish whether the course is valid for formal credits or not.
 
 
-###### Entry requirements
+##### Entry requirements
 
 Practical exercises can be performed using R or Python, so we only accept students with previous experience in one of those programming languages.
 
