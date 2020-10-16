@@ -6,7 +6,7 @@ title: Single cell RNA-seq analysis course
 
 # Single cell RNA-seq analysis workshop 
 
-On-line course,  2021-01-25 - 2021-01-29 
+On-line course,  2021-01-25 - 2021-01-29 (9.00-16.00)
 
 National workshop open for PhD students, postdocs, researchers and other employees within Swedish academia. This course is run by the National Bioinformatics Infrastructure Sweden (NBIS).
 
