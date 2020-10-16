@@ -19,7 +19,7 @@ Application open: October 20, 2020
 
 Application deadline: December 16, 2020
 
-Confirmation to accepted students: December 22, 2019
+Confirmation to accepted students: December 22, 2020
 
 Responsible teachers: Åsa Björklund and Paulo Czarnewski.
 
@@ -50,7 +50,7 @@ The course will cover the basic steps in single cell RNAseq (scRNAseq) processin
 
 ##### How to apply
 
-Fill in this [application](put new link!!) by December 16th.
+Fill in this [application](https://forms.gle/dNZPunSwyZn2M9hG9) by December 16th.
 
 ##### Course fee
 
