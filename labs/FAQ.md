@@ -7,20 +7,31 @@ h1, .h1, h2, .h2, h3, .h3, h4, .h4 { margin-top: 50px }
 p.caption {font-size: 0.9em;font-style: italic;color: grey;margin-right: 10%;margin-left: 10%;text-align: justify}
 </style>
 
-# <img border="0" src="https://www.svgrepo.com/show/83019/faq-button.svg" width="40" height="40"> FAQ
+### <img border="0" src="https://www.svgrepo.com/show/83019/faq-button.svg" width="40" height="40"> FAQ
 ***
 
 <br/>
 
 
-## Error - umap-learn not found
+
+#### command line developer tools not found (OSX)
+***
+
+If you don't yet have Mac OSX command line developer tools, please install it using:
+```
+xcode-select --install
+```
+
+<br/>
+
+#### Error - umap-learn not found
 ***
 
 If your R does not find the correct python version, it will complain that `umap-learn` is not installed and ask you to install it. Here are some tips on how to find the correct python version that was installed in the conda environment.
 
 <br/>
 
-### Try selecting the correct conda env in R
+##### Try selecting the correct conda env in R
 
 In this example the conda environment is named `scRNAseq2020`.
 ```
@@ -39,7 +50,7 @@ If that still is not right, you may have an `r-reticulate` python installation a
 
 <br/>
 
-### Restart R and select python version
+##### Restart R and select python version
 
 OBS! Before doing anything else you need to select python version.
 
