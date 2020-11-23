@@ -1,5 +1,7 @@
 ---
 #CSS_ALL:
+editor_options: 
+  chunk_output_type: console
 ---
 
 #CHUNK_OPT:
@@ -18,7 +20,7 @@ suppressPackageStartupMessages({
   library(cowplot)
   library(ggplot2)
   library(pheatmap)
-  library(rafalib)
+  library(enrichR)
 })
 
 alldata <- readRDS("data/3pbmc_qc_dr_int_cl.rds")
@@ -119,6 +121,41 @@ VlnPlot(cell_selection, features = as.character(unique(top5_cell_selection$gene)
 FeaturePlot(alldata, reduction = "UMAP_on_CCA",dims = 1:2,
             features = c("JUND","RPS17","CD81"),order = T,ncol = 3)
 ```
+
+#DGE_TITLE3:## Differential expression across conditions
+#DGE_TITLE3:***
+
+#DGE_ALL7:
+
+```{r}
+# Load additional packages
+library(enrichR)
+
+# Check available databases to perform enrichment (then choose one)
+enrichR::listEnrichrDbs()
+
+# Perform enrichment
+enrich_results <- enrichr(
+  genes     = markers_genes$gene[markers_genes$cluster == "1"],
+  databases = "GO_Biological_Process_2017b" )[[1]]
+
+```
+
+#DGE_ALL7.1:
+
+```{r}
+par(mar = c(3, 20, 2, 1))
+barplot( height    = -log10(enrich_results$P.value)[20:1],
+         names.arg = enrich_results$Term[20:1],
+         horiz     = TRUE,
+         las       = 1,
+         border    = FALSE,
+         cex.names = .6 )
+abline(v = c(-log10(0.05)), lty = 2)
+abline(v = 0, lty = 1)
+```
+
+#DGE_ALL7.2
 
 #DGE_ALL10:
 
