@@ -3,7 +3,7 @@ layout: default
 title:  'Precourse Material - scRNAseq course'
 ---
 
-#### <img border="0" src="https://www.svgrepo.com/show/19652/maths-class-materials-cross-of-a-pencil-and-a-ruler.svg" width="50" height="50"> Precourse material {.tabset .tabset-fade}
+#### <img border="0" src="https://www.svgrepo.com/show/19652/maths-class-materials-cross-of-a-pencil-and-a-ruler.svg" width="50" height="50"> Precourse material
 ***
 
 <br/>
@@ -87,7 +87,7 @@ You can [read more](https://nbis-reproducible-research.readthedocs.io/en/latest/
 
 ***
 
-### <img border="0" src="https://www.svgrepo.com/show/4795/installation-symbol.svg" width="20" height="20"> Download and install Conda and Mamba {.tabset .tabset-fade}
+### <img border="0" src="https://www.svgrepo.com/show/4795/installation-symbol.svg" width="20" height="20"> Download and install Conda and Mamba
 
 Start by installing Conda. We suggest installing Miniconda3 and NOT Anaconda. After [installing Conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html).
 
@@ -95,7 +95,6 @@ Start by installing Conda. We suggest installing Miniconda3 and NOT Anaconda. Af
 
 #### **On Mac OS X**
 
-<div class="blue">
 
 <img border="0" src="https://logos-download.com/wp-content/uploads/2020/06/Apple_Mac_OS_Logo-700x670.png" width="50" height="50">
 
@@ -111,13 +110,11 @@ conda init
 conda install -n base -c conda-forge mamba
 ```
 
-</div>
 
 <br/>
 
 #### **On Ubuntu**
 
-<div class="blue">
 
 <img border="0" src="https://encrypted-tbn0.gstatic.com/images?q=tbn%3AANd9GcR2rSSpKVBohI4AXgBaUjFVYqO73ou2l9AOXw&usqp=CAU" width="50" height="50">
 
@@ -133,13 +130,11 @@ conda init
 conda install -n base -c conda-forge mamba
 ```
 
-</div>
 
 <br/>
 
 #### **On Windows 10**
 
-<div class="blue">
 
 <img border="0" src="https://seeklogo.com/images/W/windows-10-icon-logo-5BC5C69712-seeklogo.com.png" width="50" height="50">
 
@@ -184,13 +179,11 @@ sudo apt-get install libgl1-mesa-glx libegl1-mesa libxrandr2 libxrandr2 libxss1 
 
 8. Close and open all application and Inside MobaXterm, you will probably will see that your WSL is already listed on the left panel as an available connection. Just double-click it and you will be accessing it via MobaXterm.
 
-</div>
 
 <br/>
 
 #### VirtualBox
 
-<div class="blue">
 
 <img border="0" src="https://upload.wikimedia.org/wikipedia/commons/d/d5/Virtualbox_logo.png" width="50" height="50">
 
@@ -249,8 +242,6 @@ conda env create -f environment_scRNAseq2020.yml
 conda activate scRNAseq2020
 rstudio &
 ```
-
-</div>
 
 <br/>
 
@@ -324,7 +315,7 @@ conda deactivate
 
 ## Dataset
 
-<img border="0" src="https://www.svgrepo.com/show/20109/database.svg" width="40" height="40">
+<img border="0" src="https://www.svgrepo.com/show/20109/database.svg" width="50" height="50">
 
 We will run all tutorials with a set of 3 PBMC 10x datasets from the 10X Genomics website, with different types of library preps. One dataset was done with 10x version2, one with 10x version3 and one with 10x version 3 combined with CITE-seq protein detection.
 
@@ -342,7 +333,7 @@ curl -O http://cf.10xgenomics.com/samples/cell-exp/3.0.0/pbmc_1k_protein_v3/pbmc
 
 ## Code
 
-<img border="0" src="https://www.svgrepo.com/show/26279/code-file.svg" width="20" height="20">
+<img border="0" src="https://www.svgrepo.com/show/26279/code-file.svg" width="50" height="50">
 
 All code is also available as R-markdown scripts at the course Github space. If you want a local copy of all course material you can simply clone it with git using:
 
