@@ -10,6 +10,24 @@ title: "Seurat: Quality control"
 
 #DATA_ALL1:
 
+```{bash, results='hide'}
+mkdir -p data/raw
+
+# first check if the files are there
+count=$(ls -l data/raw/*.h5 | grep -v ^d | wc -l )
+echo $count
+
+# if not 4 files, fetch the files from github.
+if (("$count" <  4)); then
+  cd data/raw
+  curl  -O https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/raw/master/labs/data/covid_data_GSE149689/raw/Normal_PBMC_13.h5
+  curl  -O https://github.com/NBISweden/workshop-scRNAseq/raw/master/labs/data/covid_data_GSE149689/raw/Normal_PBMC_14.h5
+  curl  -O https://github.com/NBISweden/workshop-scRNAseq/raw/master/labs/data/covid_data_GSE149689/raw/nCoV_PBMC_15.h5
+  curl  -O https://github.com/NBISweden/workshop-scRNAseq/raw/master/labs/data/covid_data_GSE149689/raw/nCoV_PBMC_17.h5
+  cd ../..
+fi  
+```
+
 #DATA_ALL2:
 
 ```{r, message='hide',warning='hide',results='hold'}
@@ -21,16 +39,16 @@ suppressMessages(require(Matrix))
 
 ```{r,message='hide',warning='hide',results='hold'}
 cov.17 <- Seurat::Read10X_h5(
-  filename = "../data/covid_data_GSE149689/nCoV_PBMC_17.h5",
+  filename = "data/raw/nCoV_PBMC_17.h5",
   use.names = T)
 cov.15 <- Seurat::Read10X_h5(
-  filename = "../data/covid_data_GSE149689/nCoV_PBMC_15.h5",
+  filename = "data/raw/nCoV_PBMC_15.h5",
   use.names = T)
-ctl.14 <- Seurat::Read10X_h5(
-  filename = "../data/covid_data_GSE149689/Normal_PBMC_14.h5",
+ctrl.14 <- Seurat::Read10X_h5(
+  filename = "data/raw/Normal_PBMC_14.h5",
   use.names = T)
-ctl.13 <- Seurat::Read10X_h5(
-  filename = "../data/covid_data_GSE149689/Normal_PBMC_13.h5",
+ctrl.13 <- Seurat::Read10X_h5(
+  filename = "data/raw/Normal_PBMC_13.h5",
   use.names = T)
 
 ```
@@ -41,17 +59,26 @@ ctl.13 <- Seurat::Read10X_h5(
 #OBJ_ALL1:
 
 ```{r}
-sdata.v2.1k <- CreateSeuratObject(v2.1k, project = "v2.1k")
-sdata.v3.1k <- CreateSeuratObject(v3.1k, project = "v3.1k")
-sdata.p3.1k <- CreateSeuratObject(p3.1k, project = "p3.1k")
+sdata.cov15 <- CreateSeuratObject(cov.15,  project = "covid_15")
+sdata.cov17 <- CreateSeuratObject(cov.17,  project = "covid_17")
+sdata.ctrl13 <- CreateSeuratObject(ctrl.13,  project = "ctrl_13")
+sdata.ctrl14 <- CreateSeuratObject(ctrl.14,  project = "ctrl_14")
+
 
 # Merge datasets into one single seurat object
-alldata <- merge(sdata.v2.1k, c(sdata.v3.1k,sdata.p3.1k), add.cell.ids=c("v2.1k","v3.1k","p3.1k"))
+alldata <- merge(sdata.cov15, c(sdata.cov17, sdata.ctrl13, sdata.ctrl14), add.cell.ids=c("covid_15","covid_17","ctrl_13", "ctrl_14"))
 
-# Add in a metadata column that indicates v2 vs v3 chemistry
-alldata$Chemistry <- ifelse(alldata$orig.ident == "v2.1k","v2","v3")
 ```
 
+#OBJ_ALL1.1:
+
+```{r}
+# remove all objects that will not be used.
+rm(cov.15, cov.17, ctrl.13, ctrl.14, sdata.cov15, sdata.cov17, sdata.ctrl13, sdata.ctrl14)
+
+# run garbage collect to free up memory
+gc()
+```
 #OBJ_ALL2:
 
 ```{r ,  results='hold'}
@@ -91,14 +118,22 @@ head(ribo_genes,10)
 alldata$percent_ribo <- colSums(  alldata@assays$RNA@counts[ribo_genes,]  ) / total_counts_per_cell
 ```
 
+#QC_ALL2.2:
+
+```{r, results='hold'}
+# Percentage hemoglobin genes - includes all genes starting with HB except HBP.
+alldata <- PercentageFeatureSet(alldata, "^HB[^(P)]", col.name = "percent_hb")
+
+```
+
 ***
 #QC_TITLE2:
 
 #QC_ALL3:
 
-```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=16}
-feats <- c("nFeature_RNA","nCount_RNA","percent_mito","percent_ribo")
-VlnPlot(alldata, group.by= "orig.ident", features = feats, pt.size = 0.1,ncol = 4) + NoLegend()
+```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=8,fig.width=16}
+feats <- c("nFeature_RNA","nCount_RNA","percent_mito","percent_ribo", "percent_hb")
+VlnPlot(alldata, group.by= "orig.ident", features = feats, pt.size = 0.1,ncol = 3) + NoLegend()
 ```
 
 #QC_ALL4:
@@ -131,11 +166,13 @@ dim(data.filt)
 
 ```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=16}
 #start with cells with many genes detected.
-high.det.v3 <- WhichCells(data.filt, expression = nFeature_RNA > 4100)
-high.det.v2 <- WhichCells(data.filt, expression = nFeature_RNA > 2000 & orig.ident == "v2.1k")
+
+# skip for now and run DoubletFinder first!
+#high.det.v3 <- WhichCells(data.filt, expression = nFeature_RNA > 4100)
+#high.det.v2 <- WhichCells(data.filt, expression = nFeature_RNA > 2000 & orig.ident == "v2.1k")
 
 # remove these cells
-data.filt <- subset(data.filt, cells=setdiff(WhichCells(data.filt),c(high.det.v2,high.det.v3)))
+#data.filt <- subset(data.filt, cells=setdiff(WhichCells(data.filt),c(high.det.v2,high.det.v3)))
 
 # check number of cells
 ncol(data.filt)
@@ -143,13 +180,14 @@ ncol(data.filt)
 
 #FILTERING_ALL01:
 
-```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=12}
+```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=8,fig.width=12}
 #Compute the relative expression of each gene per cell
-rel_expression <- t( t(data.filt@assays$RNA@counts) / Matrix::colSums(data.filt@assays$RNA@counts)) * 100
-most_expressed <- sort(Matrix::rowSums( rel_expression ),T)[20:1] / ncol(data.filt)
+#Use sparse matrix operations, if your dataset is large, doing matrix devisions the regular way will take a very long time.
+C = data.filt@assays$RNA@counts
+C@x = C@x / rep.int(colSums(C), diff(C@p))
+most_expressed <- order(Matrix::rowSums( C ),decreasing = T)[20:1]
+boxplot( as.matrix(t(C[most_expressed,])),cex=.1, las=1, xlab="% total count per cell",col=scales::hue_pal()(20)[20:1],horizontal=TRUE)
 
-par(mfrow=c(1,2),mar=c(4,6,1,1))
-boxplot( as.matrix(t(rel_expression[names(most_expressed),])),cex=.1, las=1, xlab="% total count per cell",col=scales::hue_pal()(20)[20:1],horizontal=TRUE)
 ```
 
 #FILTERING_ALL02:
@@ -159,13 +197,15 @@ boxplot( as.matrix(t(rel_expression[names(most_expressed),])),cex=.1, las=1, xla
 #FILTERING_ALL1:
 
 ```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=16}
-selected_mito <- WhichCells(data.filt, expression = percent_mito < 0.25)
+selected_mito <- WhichCells(data.filt, expression = percent_mito < 0.20)
 selected_ribo <- WhichCells(data.filt, expression = percent_ribo > 0.05)
 
 # and subset the object to only keep those cells
 data.filt <- subset(data.filt, cells = selected_mito)
 data.filt <- subset(data.filt, cells = selected_ribo)
 dim(data.filt)
+
+table(data.filt$orig.ident)
 ```
 
 #FILTERING_ALL2:
@@ -174,10 +214,10 @@ dim(data.filt)
 
 #FILTERING_ALL5:
 
-```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=16}
-feats <- c("nFeature_RNA","nCount_RNA","percent_mito","percent_ribo")
+```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=8,fig.width=16}
+feats <- c("nFeature_RNA","nCount_RNA","percent_mito","percent_ribo", "percent_hb")
 cowplot::plot_grid(ncol = 1,
-VlnPlot(data.filt, group.by= "orig.ident", features = feats, pt.size = 0.1,ncol = 4) + NoLegend())
+VlnPlot(data.filt, group.by= "orig.ident", features = feats, pt.size = 0.1,ncol = 3) + NoLegend())
 ```
 
 #FILTERING_TITLE5:
@@ -194,19 +234,26 @@ data.filt <- data.filt[ ! grepl("MALAT1", rownames(data.filt)), ]
 data.filt <- data.filt[ ! grepl("^MT-", rownames(data.filt)), ]
 
 # Filter Ribossomal gene (optional if that is a problem on your data)
-data.filt <- data.filt[ ! grepl("^RP[SL]", rownames(data.filt)), ]
+# data.filt <- data.filt[ ! grepl("^RP[SL]", rownames(data.filt)), ]
 
 # Filter Hemoglobin gene (optional if that is a problem on your data)
-data.filt <- data.filt[ ! grepl("^HB[AB]", rownames(data.filt)), ]
+data.filt <- data.filt[ ! grepl("^HB[^(P)]", rownames(data.filt)), ]
 
 dim(data.filt)
 ```
+
+
+
 
 #CELLCYCLE_TITLE:
 
 #CELLCYCLE_ALL1:
 
 ```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=8,fig.width=8}
+# Before running CellCycleScoring the data need to be normalized and logtransformed.
+data.filt = NormalizeData(data.filt)
+
+
 data.filt <- CellCycleScoring(object = data.filt,
                               g2m.features = cc.genes$g2m.genes,
                               s.features = cc.genes$s.genes)
@@ -222,12 +269,68 @@ VlnPlot(data.filt, features = c("S.Score","G2M.Score"), group.by= "orig.ident",n
 
 #CELLCYCLE_ALL4:
 
-```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=16}
+
+#DOUBLET_TITLE:
+
+#DOUBLET_ALL1:
+
+#DOUBLET_SEURAT1.1:
+
+```{r}
+suppressMessages(require(DoubletFinder))
+
+data.filt = FindVariableFeatures(data.filt, verbose = F)
+data.filt = ScaleData(data.filt, vars.to.regress = c("nFeature_RNA", "percent_mito"), verbose = F)
+data.filt = RunPCA(data.filt, verbose = F, npcs = 20)
+data.filt = RunUMAP(data.filt, dims = 1:10, verbose = F)
+
+```
+
+#DOUBLET_SEURAT1.2:
+
+```{r doubletfinder, message=FALSE}
+# Can run parameter optimization with paramSweep, but skip for now.
+
+#sweep.res <- paramSweep_v3(data.filt)
+#sweep.stats <- summarizeSweep(sweep.res, GT = FALSE)
+#bcmvn <- find.pK(sweep.stats)
+#barplot(bcmvn$BCmetric, names.arg = bcmvn$pK, las=2)
+
+# define the expected number of doublet cellscells.
+nExp <- round(ncol(data.filt)* 0.04) # expect 4% doublets
+data.filt <- doubletFinder_v3(data.filt, pN=0.25, pK = 0.09, nExp = nExp, PCs = 1:10)
+```
+
+```{r}
+cowplot::plot_grid( ncol = 2,
+DimPlot(data.filt, group.by = "orig.ident") + NoAxes(),
+DimPlot(data.filt, group.by = "DF.classifications_0.25_0.09_172") + NoAxes()
+)
+```
+
+#DOUBLET_SEURAT1.3:
+
+```{r}
+VlnPlot(data.filt, features = "nFeature_RNA", group.by = "DF.classifications_0.25_0.09_172", pt.size = .1)
+
+```
+
+#DOUBLET_ALL2:
+
+```{r}
+data.filt = data.filt[,data.filt$DF.classifications_0.25_0.09_172 == "Singlet"]
+dim(data.filt)
+```
+
+#DOUBLET_ALL3:
+
+```{r save,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=16}
 
 dir.create('results', showWarnings = F)
 
 saveRDS(data.filt,"results/covid_qc.rds")
 ```
+
 
 #SESSION_INFO:
 
