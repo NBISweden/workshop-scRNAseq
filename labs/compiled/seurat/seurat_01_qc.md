@@ -104,8 +104,8 @@ gc()
 
 ```
 ##            used  (Mb) gc trigger  (Mb) max used  (Mb)
-## Ncells  2601337 139.0    5109562 272.9  4223313 225.6
-## Vcells 34179689 260.8   71409467 544.9 70246610 536.0
+## Ncells  2601337 139.0    5108928 272.9  4227594 225.8
+## Vcells 34179755 260.8   71409581 544.9 70246676 536.0
 ```
  Here it is how the count matrix and the metatada look like for every cell.
 
@@ -369,10 +369,6 @@ VlnPlot(data.filt, features = c("S.Score", "G2M.Score"), group.by = "orig.ident"
 ![](seurat_01_qc_files/figure-html/unnamed-chunk-19-1.png)<!-- -->
 
 In this case it looks like we only have a few cycling cells in the datasets.
-# Save data 
-Finally, lets save the QC-filtered data for further analysis. Create output directory `results` and save data to that folder.
-
-#CELLCYCLE_ALL4:
 
 
 # Predict doublets
@@ -380,6 +376,7 @@ Finally, lets save the QC-filtered data for further analysis. Create output dire
 Doublets/Mulitples of cells in the same well/droplet is a common issue in scRNAseq protocols. Especially in droplet-based methods whith overloading of cells. In a typical 10x experiment the proportion of doublets is linearly dependent on the amount of loaded cells. As  indicated from the Chromium user guide, doublet rates are about as follows:
 ![](../../figs/10x_doublet_rate.png)
 Most doublet detectors simulates doublets by merging cell counts and predicts doublets as cells that have similar embeddings as the simulated doublets. Most such packages need an assumption about the number/proportion of expected doublets in the dataset. The data you are using is subsampled, but the orignial datasets contained about 5 000 cells per sample, hence we can assume that they loaded about 9 000 cells and should have a doublet rate at about 4%.
+OBS! Ideally doublet prediction should be run on each sample separately, especially if your different samples have different proportions of celltypes. In this case, the data is subsampled so we have very few cells per sample and all samples are sorted PBMCs so it is okay to run them together. 
 
 Here, we will use `DoubletFinder` to predict doublet cells. But before doing doublet detection we need to run scaling, variable gene selection, pca and umap. These steps will be explored in more detail in coming exercises.
 
@@ -451,6 +448,7 @@ dim(data.filt)
 ## [1] 17551  4118
 ```
 
+# Save data
 Finally, lets save the QC-filtered data for further analysis. Create output directory `results` and save data to that folder.
 
 
