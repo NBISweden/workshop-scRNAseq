@@ -50,7 +50,7 @@ if (("$count" <  4)); then
   cd data/raw
   curl  -O https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/raw/master/labs/data/covid_data_GSE149689/raw/Normal_PBMC_13.h5
   curl  -O https://github.com/NBISweden/workshop-scRNAseq/raw/master/labs/data/covid_data_GSE149689/raw/Normal_PBMC_14.h5
-  curl  -O https://github.com/NBISweden/workshop-scRNAseq/raw/master/labs/data/covid_data_GSE149689/raw/nCoV_PBMC_15.h5
+  curl  -O https://github.com/NBISweden/workshop-scRNAseq/raw/master/labs/data/covid_data_GSE149689/raw/nCoV_PBMC_16.h5
   curl  -O https://github.com/NBISweden/workshop-scRNAseq/raw/master/labs/data/covid_data_GSE149689/raw/nCoV_PBMC_17.h5
   cd ../..
 fi  
@@ -66,18 +66,26 @@ suppressMessages(require(Matrix))
 We can first load the data individually by reading directly from HDF5 file format (.h5). 
 
 ```{r,message='hide',warning='hide',results='hold'}
-cov.17 <- Seurat::Read10X_h5(
-  filename = "data/raw/nCoV_PBMC_17.h5",
-  use.names = T)
 cov.15 <- Seurat::Read10X_h5(
   filename = "data/raw/nCoV_PBMC_15.h5",
   use.names = T)
-ctrl.14 <- Seurat::Read10X_h5(
-  filename = "data/raw/Normal_PBMC_14.h5",
+cov.1 <- Seurat::Read10X_h5(
+  filename = "data/raw/nCoV_PBMC_1.h5",
+  use.names = T)
+cov.17 <- Seurat::Read10X_h5(
+  filename = "data/raw/nCoV_PBMC_17.h5",
+  use.names = T)
+
+ctrl.5 <- Seurat::Read10X_h5(
+  filename = "data/raw/Normal_PBMC_5.h5",
   use.names = T)
 ctrl.13 <- Seurat::Read10X_h5(
   filename = "data/raw/Normal_PBMC_13.h5",
   use.names = T)
+ctrl.14 <- Seurat::Read10X_h5(
+  filename = "data/raw/Normal_PBMC_14.h5",
+  use.names = T)
+
 
 ```
 
@@ -88,13 +96,15 @@ We can now load the expression matricies into objects and then merge them into a
 
 ```{r}
 sdata.cov15 <- CreateSeuratObject(cov.15,  project = "covid_15")
+sdata.cov1 <- CreateSeuratObject(cov.1,  project = "covid_1")
 sdata.cov17 <- CreateSeuratObject(cov.17,  project = "covid_17")
+sdata.ctrl5 <- CreateSeuratObject(ctrl.13,  project = "ctrl_5")
 sdata.ctrl13 <- CreateSeuratObject(ctrl.13,  project = "ctrl_13")
 sdata.ctrl14 <- CreateSeuratObject(ctrl.14,  project = "ctrl_14")
 
 
 # Merge datasets into one single seurat object
-alldata <- merge(sdata.cov15, c(sdata.cov17, sdata.ctrl13, sdata.ctrl14), add.cell.ids=c("covid_15","covid_17","ctrl_13", "ctrl_14"))
+alldata <- merge(sdata.cov15, c(sdata.cov1, sdata.cov17, sdata.ctrl5, sdata.ctrl13, sdata.ctrl14), add.cell.ids=c("covid_15","covid_1","covid_17","ctrl_5","ctrl_13", "ctrl_14"))
 
 ```
 
@@ -102,7 +112,7 @@ Once you have created the merged Seurat object, the count matrices and individua
 
 ```{r}
 # remove all objects that will not be used.
-rm(cov.15, cov.17, ctrl.13, ctrl.14, sdata.cov15, sdata.cov17, sdata.ctrl13, sdata.ctrl14)
+rm(cov.15, cov.1, cov.17, ctrl.5, ctrl.13, ctrl.14, sdata.cov15, sdata.cov1, sdata.cov17, sdata.ctrl5, sdata.ctrl13, sdata.ctrl14)
 
 # run garbage collect to free up memory
 gc()
@@ -231,6 +241,7 @@ selected_ribo <- WhichCells(data.filt, expression = percent_ribo > 0.05)
 # and subset the object to only keep those cells
 data.filt <- subset(data.filt, cells = selected_mito)
 data.filt <- subset(data.filt, cells = selected_ribo)
+
 dim(data.filt)
 
 table(data.filt$orig.ident)
@@ -244,8 +255,8 @@ Lets plot the same QC-stats another time.
 
 ```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=8,fig.width=16}
 feats <- c("nFeature_RNA","nCount_RNA","percent_mito","percent_ribo", "percent_hb")
-cowplot::plot_grid(ncol = 1,
-VlnPlot(data.filt, group.by= "orig.ident", features = feats, pt.size = 0.1,ncol = 3) + NoLegend())
+
+VlnPlot(data.filt, group.by= "orig.ident", features = feats, pt.size = 0.1,ncol = 3) + NoLegend()
 ```
 
 ## Filter genes
@@ -331,23 +342,29 @@ data.filt <- doubletFinder_v3(data.filt, pN=0.25, pK = 0.09, nExp = nExp, PCs = 
 ```
 
 ```{r}
+
+# name of the DF prediction can change, so extract the correct column name.
+DF.name = colnames(data.filt@meta.data)[grepl("DF.classification", colnames(data.filt@meta.data))]
+
+
+
 cowplot::plot_grid( ncol = 2,
 DimPlot(data.filt, group.by = "orig.ident") + NoAxes(),
-DimPlot(data.filt, group.by = "DF.classifications_0.25_0.09_172") + NoAxes()
+DimPlot(data.filt, group.by = DF.name) + NoAxes()
 )
 ```
 
 We should expect that two cells have more detected genes than a single cell, lets check if our predicted doublets also have more detected genes in general.
 
 ```{r}
-VlnPlot(data.filt, features = "nFeature_RNA", group.by = "DF.classifications_0.25_0.09_172", pt.size = .1)
+VlnPlot(data.filt, features = "nFeature_RNA", group.by = DF.name, pt.size = .1)
 
 ```
 
 Now, lets remove all predicted doublets from our data.
 
 ```{r}
-data.filt = data.filt[,data.filt$DF.classifications_0.25_0.09_172 == "Singlet"]
+data.filt = data.filt[,data.filt@meta.data[,DF.name] == "Singlet"]
 dim(data.filt)
 ```
 
