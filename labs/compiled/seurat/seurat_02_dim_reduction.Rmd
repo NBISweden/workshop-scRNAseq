@@ -1,7 +1,7 @@
 ---
 title: "Dimensionality reduction"
 author: "Åsa Björklund  &  Paulo Czarnewski"
-date: "Sept 13, 2019"
+date: '`r format(Sys.Date(), "%B %d, %Y")`'
 output:
   html_document:
     self_contained: true
@@ -31,7 +31,7 @@ output:
 Paulo Czarnewski
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(message='hide', warning='hide', result='hold',fig.width=12)
+knitr::opts_chunk$set(message=FALSE, warning=FALSE, result='hold',fig.width=12,tidy=TRUE)
 ```
 <style>
 h1, .h1, h2, .h2, h3, .h3, h4, .h4 { margin-top: 50px }
@@ -51,7 +51,7 @@ suppressPackageStartupMessages({
   library(scran)
 })
 
-alldata <- readRDS("data/3pbmc_qc.rds")
+alldata <- readRDS("data/results/seurat_covid_qc.rds")
 ```
 
 ### Feature selection
@@ -59,7 +59,7 @@ alldata <- readRDS("data/3pbmc_qc.rds")
 Next, we first need to define which features/genes are important in our dataset to distinguish cell types. For this purpose, we need to find genes that are highly variable across cells, which in turn will also provide a good separation of the cell clusters.
 
 ```{r}
-suppressWarnings(suppressMessages(alldata <- FindVariableFeatures(alldata, selection.method = "vst", nfeatures = 850,verbose = FALSE,assay = "RNA")))
+suppressWarnings(suppressMessages(alldata <- FindVariableFeatures(alldata, selection.method = "vst", nfeatures = 2000 ,verbose = FALSE,assay = "RNA")))
 top20 <- head(VariableFeatures(alldata), 20)
 
 LabelPoints(plot = VariableFeaturePlot(alldata), points = top20, repel = TRUE)
@@ -70,7 +70,7 @@ LabelPoints(plot = VariableFeaturePlot(alldata), points = top20, repel = TRUE)
 Now that the data is prepared, we now proceed with PCA. Since each gene has a different expression level, it means that genes with higher expression values will naturally have higher variation that will be captured by PCA. This means that we need to somehow give each gene a similar weight when performing PCA (see below). The common practice is to center and scale each gene before performing PCA. This exact scaling is called Z-score normalization it is very useful for PCA, clustering and plotting heatmaps. <br>Additionally, we can use regression to remove any unwanted sources of variation from the dataset, such as `cell cycle`, `sequencing depth`, `percent mitocondria`. This is achieved by doing a generalized linear regression using these parameters as covariates in the model. Then the residuals of the model are taken as the "regressed data". Although perhaps not in the best way, batch effect regression can also be done here.
 
 ```{r}
-alldata <- ScaleData(alldata, vars.to.regress = "percent_mito", assay = "RNA")
+alldata <- ScaleData(alldata, vars.to.regress = c("percent_mito", "nFeature_RNA"), assay = "RNA")
 ```
 
 
@@ -80,29 +80,29 @@ alldata <- ScaleData(alldata, vars.to.regress = "percent_mito", assay = "RNA")
 Performing PCA has many useful applications and interpretations, which much depends on the data used. In the case of life sciences, we want to segregate samples based on gene expression patterns in the data.
 
 ```{r}
-alldata <- RunPCA(alldata, npcs = 50, reduction.name = "PCA_on_RNA", assay = "RNA",verbose = F)
+alldata <- RunPCA(alldata, npcs = 50, verbose = F)
 ```
 
 We then plot the first principal components.
 
 ```{r, fig.asp=.28}
 plot_grid(ncol = 3,
-  DimPlot(alldata, reduction = "PCA_on_RNA", group.by = "orig.ident",dims = 1:2),
-  DimPlot(alldata, reduction = "PCA_on_RNA", group.by = "orig.ident",dims = 3:4),
-  DimPlot(alldata, reduction = "PCA_on_RNA", group.by = "orig.ident",dims = 5:6) )
+  DimPlot(alldata, reduction = "pca", group.by = "orig.ident",dims = 1:2),
+  DimPlot(alldata, reduction = "pca", group.by = "orig.ident",dims = 3:4),
+  DimPlot(alldata, reduction = "pca", group.by = "orig.ident",dims = 5:6) )
 ```
 
 To identify which genes (Seurat) or metadata paramters (Scater/Scran) contribute the most to each PC, one can retreive the loading matrix information. Unfortunatelly this is not implemented in Scater/Scran, so you will need to compute PCA using `logcounts`.
 
 ```{r,fig.asp=.5}
-VizDimLoadings(alldata, dims = 1:5, reduction = "PCA_on_RNA",ncol = 5,balanced = T)
+VizDimLoadings(alldata, dims = 1:5, reduction = "pca",ncol = 5,balanced = T)
 ```
 
 
 We can also plot the amount of variance explained by each PC.
 
 ```{r,fig.asp=.3}
-ElbowPlot(alldata, reduction = "PCA_on_RNA",ndims = 50)
+ElbowPlot(alldata, reduction = "pca",ndims = 50)
 ```
 
 Based on this plot, we can see that the top 8 PCs retain a lot of information, while other PCs contain pregressivelly less. However, it is still advisable to use more PCs since they might contain informaktion about rare cell types (such as platelets and DCs in this dataset)
@@ -113,7 +113,7 @@ Based on this plot, we can see that the top 8 PCs retain a lot of information, w
 We can now run [BH-tSNE](https://arxiv.org/abs/1301.3342).
 
 ```{r,fig.asp=1}
-alldata <- RunTSNE(alldata, reduction = "PCA_on_RNA", dims = 1:30, reduction.name = "TSNE_on_RNA",
+alldata <- RunTSNE(alldata, reduction = "pca", dims = 1:30, 
                    perplexity=30,
                    max_iter=1000,
                    theta=0.5,
@@ -125,7 +125,7 @@ alldata <- RunTSNE(alldata, reduction = "PCA_on_RNA", dims = 1:30, reduction.nam
 We can now plot the tSNE colored per dataset. We can clearly see the effect of batches present in the dataset.
 
 ```{r,fig.asp=.28}
-plot_grid(ncol = 3,DimPlot(alldata, reduction = "TSNE_on_RNA", group.by = "orig.ident"))
+plot_grid(ncol = 3,DimPlot(alldata, reduction = "tsne", group.by = "orig.ident"))
 ```
 
 
@@ -136,7 +136,7 @@ plot_grid(ncol = 3,DimPlot(alldata, reduction = "TSNE_on_RNA", group.by = "orig.
 We can now run [UMAP](https://arxiv.org/abs/1802.03426) for cell embeddings.
 
 ```{r}
-alldata <- RunUMAP(alldata, reduction = "PCA_on_RNA", dims = 1:30,reduction.name = "UMAP_on_RNA",
+alldata <- RunUMAP(alldata, reduction = "pca", dims = 1:30,
                    n.components=2,
                    n.neighbors=30,
                    n.epochs=200,
@@ -146,11 +146,15 @@ alldata <- RunUMAP(alldata, reduction = "PCA_on_RNA", dims = 1:30,reduction.name
 #see ?RunUMAP for more info
 ```
 
+###TASK: We have now done Variable gene selection, PCA and UMAP with the settings we chose. Test a few different ways of selecting variable genes, number of PCs for UMAP and check how it influences your embedding.
+
 Another usefullness of UMAP is that it is not limitted by the number of dimensions the data cen be reduced into (unlike tSNE). We can simply reduce the dimentions altering the `n.components` parameter.
 
 ```{r}
-alldata <- RunUMAP(alldata, reduction.name = "UMAP10_on_RNA",
-                   reduction = "PCA_on_RNA", 
+# we can add in additional reductions, by defulat they are named "pca", "umap", "tsne" etc. But we can specify alternative names with reduction.name
+
+alldata <- RunUMAP(alldata, reduction.name = "UMAP10_on_PCA",
+                   reduction = "pca", 
                    dims = 1:30,
                    n.components=10,
                    n.neighbors=30,
@@ -165,9 +169,9 @@ We can now plot the UMAP colored per dataset. Although less distinct as in the t
 
 ```{r,fig.asp=.28}
 plot_grid(ncol = 3,
-  DimPlot(alldata, reduction = "UMAP_on_RNA", group.by = "orig.ident")+ ggplot2::ggtitle(label ="UMAP_on_RNA"),
-  DimPlot(alldata, reduction = "UMAP10_on_RNA", group.by = "orig.ident",dims = 1:2)+ ggplot2::ggtitle(label ="UMAP10_on_RNA"),
-  DimPlot(alldata, reduction = "UMAP10_on_RNA", group.by = "orig.ident",dims = 3:4)+ ggplot2::ggtitle(label ="UMAP10_on_RNA")
+  DimPlot(alldata, reduction = "umap", group.by = "orig.ident")+ ggplot2::ggtitle(label ="UMAP_on_PCA"),
+  DimPlot(alldata, reduction = "UMAP10_on_PCA", group.by = "orig.ident",dims = 1:2)+ ggplot2::ggtitle(label ="UMAP10_on_PCA"),
+  DimPlot(alldata, reduction = "UMAP10_on_PCA", group.by = "orig.ident",dims = 3:4)+ ggplot2::ggtitle(label ="UMAP10_on_PCA")
 )
 ```
 
@@ -175,9 +179,9 @@ We can now plot PCA, UMAP and tSNE side by side for comparison. Here, we can con
 
 ```{r,fig.asp=.28}
 plot_grid(ncol = 3,
-  DimPlot(alldata, reduction = "PCA_on_RNA", group.by = "orig.ident"),
-  DimPlot(alldata, reduction = "TSNE_on_RNA", group.by = "orig.ident"),
-  DimPlot(alldata, reduction = "UMAP_on_RNA", group.by = "orig.ident")
+  DimPlot(alldata, reduction = "pca", group.by = "orig.ident"),
+  DimPlot(alldata, reduction = "tsne", group.by = "orig.ident"),
+  DimPlot(alldata, reduction = "umap", group.by = "orig.ident")
 )
 ```
 
@@ -209,7 +213,7 @@ To run tSNE or UMAP on the a graph, we first need to build a graph from the data
 ```{r}
 #Build Graph
 alldata <- FindNeighbors(alldata,
-                         reduction = "PCA_on_RNA",
+                         reduction = "pca",
                          graph.name = "SNN",
                          assay = "RNA",
                          k.param = 20,
@@ -226,7 +230,7 @@ We can now plot the UMAP comparing both on PCA vs ScaledSata vs Graph.
 
 ```{r, fig.asp=.28}
 plot_grid(ncol = 3,
-  DimPlot(alldata, reduction = "UMAP_on_RNA", group.by = "orig.ident")+ ggplot2::ggtitle(label ="UMAP_on_RNA"),
+  DimPlot(alldata, reduction = "umap", group.by = "orig.ident")+ ggplot2::ggtitle(label ="UMAP_on_PCA"),
   DimPlot(alldata, reduction = "UMAP_on_ScaleData", group.by = "orig.ident")+ ggplot2::ggtitle(label ="UMAP_on_ScaleData"),
   DimPlot(alldata, reduction = "UMAP_on_Graph", group.by = "orig.ident")+ ggplot2::ggtitle(label ="UMAP_on_Graph")
 )
@@ -234,7 +238,6 @@ plot_grid(ncol = 3,
 
 ## Ploting genes of interest
 ***
-
 
 Let's plot some marker genes for different celltypes onto the embedding. Some genes are:
 
@@ -251,7 +254,7 @@ FCER1A, CST3 | DCs
 
 ```{r,fig.asp=.9}
 myfeatures <- c("CD3E","CD4","CD8A","NKG7","GNLY","MS4A1","CD14","LYZ","MS4A7","FCGR3A","CST3","FCER1A")
-FeaturePlot(alldata, reduction = "UMAP_on_RNA",dims = 1:2,
+FeaturePlot(alldata, reduction = "umap",dims = 1:2,
             features = myfeatures,ncol = 3,order = T)
 ```
 
@@ -259,7 +262,7 @@ FeaturePlot(alldata, reduction = "UMAP_on_RNA",dims = 1:2,
 We can finally save the object for use in future steps.
 
 ```{r}
-saveRDS(alldata,"data/3pbmc_qc_dr.rds")
+saveRDS(alldata,"data/results/covid_qc_dr.rds")
 ```
 
 
