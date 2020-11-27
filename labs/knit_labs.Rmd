@@ -88,7 +88,7 @@ dir.create("compiled/scanpy",recursive = T, showWarnings = F)
 #OBJ_TITLE:# Create one merged object
 #OBJ_ALL1:We can now load the expression matricies into objects and then merge them into a single merged object. Each analysis workflow (Seurat, Scater, Scranpy, etc) has its own way of storing data. We will add dataset labels as cell.ids just in case you have overlapping barcodes between the datasets. After that we add a column `Chemistry` in the metadata for plotting later on.
 
-#OBJ_ALL1.1:Once you have created the merged Seurat object, the count matrices and individual seurat objects are not needed anymore. It is a good idea to remove them and run garbage collect to free up some memory.
+#OBJ_ALL1.1:Once you have created the merged Seurat object, the count matrices and individual count matrices and objects are not needed anymore. It is a good idea to remove them and run garbage collect to free up some memory.
 
 #OBJ_ALL2: Here it is how the count matrix and the metatada look like for every cell.
 
@@ -108,25 +108,28 @@ dir.create("compiled/scanpy",recursive = T, showWarnings = F)
 
 #QC_ALL1.1:Citing from "Simple Single Cell" workflows (Lun, McCarthy & Marioni, 2017): "High proportions are indicative of poor-quality cells (Islam et al. 2014; Ilicic et al. 2016), possibly because of loss of cytoplasmic RNA from perforated cells. The reasoning is that mitochondria are larger than individual transcript molecules and less likely to escape through tears in the cell membrane."
 
-#QC_1_SCANPY: First, let Scanpy calculate some general qc-stats for genes and cells with the function `sc.pp.calculate_qc_metrics`, similar to `calculateQCmetrics` in Scater.
+#QC_1_SCANPY: First, let Scanpy calculate some general qc-stats for genes and cells with the function `sc.pp.calculate_qc_metrics`, similar to `calculateQCmetrics` in Scater. It can also calculate proportion of counts for specific gene populations, so first we need to define which genes are mitochondrial, ribosomal and hemoglogin.
 
-#QC_1.1_SCANPY: Note that you can also use the function `pp.calculate_qc_metrics` to compute the fraction of mitochondrial genes by setting `qc_vars = "mito"`. But here we do it another way:
+#QC_1.1_SCANPY: Here is an example on how to calculate proportion mitochondria in another way:
+
+#QC_1_SCATER: First, let Scran calculate some general qc-stats for genes and cells with the function `perCellQCMetrics`. It can also calculate proportion of counts for specific gene subsets, so first we need to define which genes are mitochondrial, ribosomal and hemoglogin.
+
+#QC_1.1_SCATER: Here is an example on how to calculate proportion mitochondria in another way:
 
 
 #QC_ALL2:In the same manner we will calculate the proportion gene expression that comes from ribosomal proteins.
 
 #QC_2_SCANPY: Now you can see that we have additional data in the scanpy `obs` slot.
 
-
 #QC_ALL2.2:And finally, with the same method we will calculate proportion hemoglobin genes, which can give an indication of red blood cell contamination. 
-
 
 #QC_TITLE2:# Plot QC
 
 #QC_ALL3:Now we can plot some of the QC-features as violin plots.
 
-#QC_ALL4:As you can see, there is quite some difference in quality for the 4 datasets, with the covid_15 sample having fewer cells with many detected genes and more mitochondrial content. As the ribosomal proteins are highly expressed they will make up a larger proportion of the transcriptional landscape when fewer of the lowly expressed genes are detected. And we can plot the different QC-measures as scatter plots.
+#QC_ALL4:As you can see, there is quite some difference in quality for the 4 datasets, with for instance the covid_15 sample having fewer cells with many detected genes and more mitochondrial content. As the ribosomal proteins are highly expressed they will make up a larger proportion of the transcriptional landscape when fewer of the lowly expressed genes are detected. And we can plot the different QC-measures as scatter plots.
 
+#QC_ALL4.4:###TASK: Plot additional QC stats that we have calculated as scatter plots. How are the different measures correlated? Can you explain why?
 
 #-----------
 
@@ -138,6 +141,8 @@ dir.create("compiled/scanpy",recursive = T, showWarnings = F)
 #FILTERING_TITLE:# Filtering
 
 #FILTERING_TITLE1:## Detection-based filtering
+
+#FILTERING_SCATER0:In scran, we can use the function `quickPerCellQC` to filter out outliers from distributions of qc stats, such as dected genes, gene subsets etc. But in this case, we will take one setting at a time and run through the steps of filtering cells.
 
 #FILTERING_ALL0:A standard approach is to filter cells with low amount of reads as well as genes that are present in at least a certain amount of cells. Here we will only consider cells with at least 200 detected genes and genes need to be expressed in at least 3 cells. Please note that those values are highly dependent on the library preparation method used.
 
@@ -165,7 +170,7 @@ dir.create("compiled/scanpy",recursive = T, showWarnings = F)
 
 #FILTERING_TITLE5:## Filter genes
 
-#FILTERING_ALL6:As the level of expression of mitochondrial and MALAT1 genes are judged as mainly technical, it can be wise to remove them from the dataset bofore any further analysis. 
+#FILTERING_ALL6:As the level of expression of mitochondrial and MALAT1 genes are judged as mainly technical, and hemoglobin genes mainly from RBC contamination, it can be wise to remove them from the dataset bofore any further analysis. 
 
 #FILTERING_ALL7:## Save data
 
@@ -189,6 +194,7 @@ dir.create("compiled/scanpy",recursive = T, showWarnings = F)
 
 #CELLCYCLE_ALL3:In this case it looks like we only have a few cycling cells in the datasets.
 
+#CELLCYCLE_SCATER3:Cyclone predicts most cells as G1, but also quite a lot of cells with high S-Phase scores. Compare to results with Seurat and Scanpy and see how different predictors will give clearly different results.
 
 #----------------#
 #   DOUBLET      #
@@ -202,11 +208,20 @@ dir.create("compiled/scanpy",recursive = T, showWarnings = F)
 
 #DOUBLET_ALL1:OBS! Ideally doublet prediction should be run on each sample separately, especially if your different samples have different proportions of celltypes. In this case, the data is subsampled so we have very few cells per sample and all samples are sorted PBMCs so it is okay to run them together. 
 
-#DOUBLET_SEURAT1.1:Here, we will use `DoubletFinder` to predict doublet cells. But before doing doublet detection we need to run scaling, variable gene selection, pca and umap. These steps will be explored in more detail in coming exercises.
+#DOUBLET_SEURAT1.1:Here, we will use `DoubletFinder` to predict doublet cells. But before doing doublet detection we need to run scaling, variable gene selection and pca, as well as UMAP for visualization. These steps will be explored in more detail in coming exercises.
 
 #DOUBLET_SEURAT1.2:Then we run doubletFinder, selecting first 10 PCs and a pK value of 0.9. To optimize the parameters, you can run the `paramSweep` function in the package.
 
-#DOUBLET_SEURAT1.3:We should expect that two cells have more detected genes than a single cell, lets check if our predicted doublets also have more detected genes in general.
+#DOUBLET_SCANPY1:For doublet detection, we will use the package `Scrublet`, so first we need to get the raw counts from `adata.raw.X` and run scrublet with that matrix. Then we add in the doublet prediction info into our anndata object.
+
+
+DOUBLET_SCATER1:There is a method to predict if a cluster consists of mainly doublets `findDoubletClusters()`, but we can also predict individual cells based on simulations using the function `computeDoubletDensity()` which we will do here.
+
+DOUBLET_SCATER1:Doublet detection will be performed using PCA, so we need to first normalize the data and run variable gene detection, as well as UMAP for visualization. These steps will be explored in more detail in coming exercises.
+
+#DOUBLET_ALL1.1:We should expect that two cells have more detected genes than a single cell, lets check if our predicted doublets also have more detected genes in general.
+
+#DOUBLET_SCANPY1.3:Now, lets run PCA and UMAP and plot doublet scores onto umap to check the doublet predictions. 
 
 #DOUBLET_ALL2:Now, lets remove all predicted doublets from our data.
 
