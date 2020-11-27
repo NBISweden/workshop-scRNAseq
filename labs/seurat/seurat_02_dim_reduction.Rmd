@@ -20,7 +20,7 @@ suppressPackageStartupMessages({
   library(scran)
 })
 
-alldata <- readRDS("data/3pbmc_qc.rds")
+alldata <- readRDS("data/results/seurat_covid_qc.rds")
 ```
 
 #DIMRED_ALL1.1:
@@ -28,7 +28,7 @@ alldata <- readRDS("data/3pbmc_qc.rds")
 #DIMRED_ALL2:
 
 ```{r}
-suppressWarnings(suppressMessages(alldata <- FindVariableFeatures(alldata, selection.method = "vst", nfeatures = 850,verbose = FALSE,assay = "RNA")))
+suppressWarnings(suppressMessages(alldata <- FindVariableFeatures(alldata, selection.method = "vst", nfeatures = 2000 ,verbose = FALSE,assay = "RNA")))
 top20 <- head(VariableFeatures(alldata), 20)
 
 LabelPoints(plot = VariableFeaturePlot(alldata), points = top20, repel = TRUE)
@@ -39,7 +39,7 @@ LabelPoints(plot = VariableFeaturePlot(alldata), points = top20, repel = TRUE)
 #DIMRED_ALL4:
 
 ```{r}
-alldata <- ScaleData(alldata, vars.to.regress = "percent_mito", assay = "RNA")
+alldata <- ScaleData(alldata, vars.to.regress = c("percent_mito", "nFeature_RNA"), assay = "RNA")
 ```
 
 
@@ -48,29 +48,29 @@ alldata <- ScaleData(alldata, vars.to.regress = "percent_mito", assay = "RNA")
 #PCA_ALL1:
 
 ```{r}
-alldata <- RunPCA(alldata, npcs = 50, reduction.name = "PCA_on_RNA", assay = "RNA",verbose = F)
+alldata <- RunPCA(alldata, npcs = 50, verbose = F)
 ```
 
 #PCA_ALL2:
 
 ```{r, fig.asp=.28}
 plot_grid(ncol = 3,
-  DimPlot(alldata, reduction = "PCA_on_RNA", group.by = "orig.ident",dims = 1:2),
-  DimPlot(alldata, reduction = "PCA_on_RNA", group.by = "orig.ident",dims = 3:4),
-  DimPlot(alldata, reduction = "PCA_on_RNA", group.by = "orig.ident",dims = 5:6) )
+  DimPlot(alldata, reduction = "pca", group.by = "orig.ident",dims = 1:2),
+  DimPlot(alldata, reduction = "pca", group.by = "orig.ident",dims = 3:4),
+  DimPlot(alldata, reduction = "pca", group.by = "orig.ident",dims = 5:6) )
 ```
 
 #PCA_ALL3:
 
 ```{r,fig.asp=.5}
-VizDimLoadings(alldata, dims = 1:5, reduction = "PCA_on_RNA",ncol = 5,balanced = T)
+VizDimLoadings(alldata, dims = 1:5, reduction = "pca",ncol = 5,balanced = T)
 ```
 
 
 #PCA_ALL5:
 
 ```{r,fig.asp=.3}
-ElbowPlot(alldata, reduction = "PCA_on_RNA",ndims = 50)
+ElbowPlot(alldata, reduction = "pca",ndims = 50)
 ```
 
 #PCA_ALL6:
@@ -80,7 +80,7 @@ ElbowPlot(alldata, reduction = "PCA_on_RNA",ndims = 50)
 #tSNE_ALL1:
 
 ```{r,fig.asp=1}
-alldata <- RunTSNE(alldata, reduction = "PCA_on_RNA", dims = 1:30, reduction.name = "TSNE_on_PCA",
+alldata <- RunTSNE(alldata, reduction = "pca", dims = 1:30, 
                    perplexity=30,
                    max_iter=1000,
                    theta=0.5,
@@ -92,7 +92,7 @@ alldata <- RunTSNE(alldata, reduction = "PCA_on_RNA", dims = 1:30, reduction.nam
 #tSNE_ALL2:
 
 ```{r,fig.asp=.28}
-plot_grid(ncol = 3,DimPlot(alldata, reduction = "TSNE_on_PCA", group.by = "orig.ident"))
+plot_grid(ncol = 3,DimPlot(alldata, reduction = "tsne", group.by = "orig.ident"))
 ```
 
 
@@ -102,7 +102,7 @@ plot_grid(ncol = 3,DimPlot(alldata, reduction = "TSNE_on_PCA", group.by = "orig.
 #UMAP_ALL1:
 
 ```{r}
-alldata <- RunUMAP(alldata, reduction = "PCA_on_RNA", dims = 1:30,reduction.name = "UMAP_on_PCA",
+alldata <- RunUMAP(alldata, reduction = "pca", dims = 1:30,
                    n.components=2,
                    n.neighbors=30,
                    n.epochs=200,
@@ -112,11 +112,15 @@ alldata <- RunUMAP(alldata, reduction = "PCA_on_RNA", dims = 1:30,reduction.name
 #see ?RunUMAP for more info
 ```
 
+#UMAP_ALL1.1:
+
 #UMAP_ALL2:
 
 ```{r}
-alldata <- RunUMAP(alldata, reduction.name = "UMAP10_on_RNA",
-                   reduction = "PCA_on_RNA", 
+# we can add in additional reductions, by defulat they are named "pca", "umap", "tsne" etc. But we can specify alternative names with reduction.name
+
+alldata <- RunUMAP(alldata, reduction.name = "UMAP10_on_PCA",
+                   reduction = "pca", 
                    dims = 1:30,
                    n.components=10,
                    n.neighbors=30,
@@ -131,9 +135,9 @@ alldata <- RunUMAP(alldata, reduction.name = "UMAP10_on_RNA",
 
 ```{r,fig.asp=.28}
 plot_grid(ncol = 3,
-  DimPlot(alldata, reduction = "UMAP_on_PCA", group.by = "orig.ident")+ ggplot2::ggtitle(label ="UMAP_on_PCA"),
-  DimPlot(alldata, reduction = "UMAP10_on_RNA", group.by = "orig.ident",dims = 1:2)+ ggplot2::ggtitle(label ="UMAP10_on_RNA"),
-  DimPlot(alldata, reduction = "UMAP10_on_RNA", group.by = "orig.ident",dims = 3:4)+ ggplot2::ggtitle(label ="UMAP10_on_RNA")
+  DimPlot(alldata, reduction = "umap", group.by = "orig.ident")+ ggplot2::ggtitle(label ="UMAP_on_PCA"),
+  DimPlot(alldata, reduction = "UMAP10_on_PCA", group.by = "orig.ident",dims = 1:2)+ ggplot2::ggtitle(label ="UMAP10_on_PCA"),
+  DimPlot(alldata, reduction = "UMAP10_on_PCA", group.by = "orig.ident",dims = 3:4)+ ggplot2::ggtitle(label ="UMAP10_on_PCA")
 )
 ```
 
@@ -141,9 +145,9 @@ plot_grid(ncol = 3,
 
 ```{r,fig.asp=.28}
 plot_grid(ncol = 3,
-  DimPlot(alldata, reduction = "PCA_on_RNA", group.by = "orig.ident"),
-  DimPlot(alldata, reduction = "TSNE_on_PCA", group.by = "orig.ident"),
-  DimPlot(alldata, reduction = "UMAP_on_PCA", group.by = "orig.ident")
+  DimPlot(alldata, reduction = "pca", group.by = "orig.ident"),
+  DimPlot(alldata, reduction = "tsne", group.by = "orig.ident"),
+  DimPlot(alldata, reduction = "umap", group.by = "orig.ident")
 )
 ```
 
@@ -174,7 +178,7 @@ alldata <- RunUMAP(alldata, reduction.name = "UMAP_on_ScaleData",
 ```{r}
 #Build Graph
 alldata <- FindNeighbors(alldata,
-                         reduction = "PCA_on_RNA",
+                         reduction = "pca",
                          graph.name = "SNN",
                          assay = "RNA",
                          k.param = 20,
@@ -191,7 +195,7 @@ alldata <- RunUMAP(alldata, reduction.name = "UMAP_on_Graph",
 
 ```{r, fig.asp=.28}
 plot_grid(ncol = 3,
-  DimPlot(alldata, reduction = "UMAP_on_PCA", group.by = "orig.ident")+ ggplot2::ggtitle(label ="UMAP_on_PCA"),
+  DimPlot(alldata, reduction = "umap", group.by = "orig.ident")+ ggplot2::ggtitle(label ="UMAP_on_PCA"),
   DimPlot(alldata, reduction = "UMAP_on_ScaleData", group.by = "orig.ident")+ ggplot2::ggtitle(label ="UMAP_on_ScaleData"),
   DimPlot(alldata, reduction = "UMAP_on_Graph", group.by = "orig.ident")+ ggplot2::ggtitle(label ="UMAP_on_Graph")
 )
@@ -205,7 +209,7 @@ plot_grid(ncol = 3,
 
 ```{r,fig.asp=.9}
 myfeatures <- c("CD3E","CD4","CD8A","NKG7","GNLY","MS4A1","CD14","LYZ","MS4A7","FCGR3A","CST3","FCER1A")
-FeaturePlot(alldata, reduction = "UMAP_on_PCA",dims = 1:2,
+FeaturePlot(alldata, reduction = "umap",dims = 1:2,
             features = myfeatures,ncol = 3,order = T)
 ```
 
@@ -213,7 +217,7 @@ FeaturePlot(alldata, reduction = "UMAP_on_PCA",dims = 1:2,
 #DIMRED_ALL7:
 
 ```{r}
-saveRDS(alldata,"data/3pbmc_qc_dr.rds")
+saveRDS(alldata,"data/results/covid_qc_dr.rds")
 ```
 
 
