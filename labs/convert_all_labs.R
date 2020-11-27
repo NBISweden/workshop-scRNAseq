@@ -117,7 +117,7 @@ for (file in scripts){
   system(render_nb)
 
   out_html <- sub(".ipynb",".html",outfile)  
-  render_html <- sprintf("jupyter nbconvert --execute --to html_toc --ExecutePreprocessor.timeout=360  %s", outfile)
+  render_html <- sprintf("jupyter nbconvert  --to html_toc --ExecutePreprocessor.timeout=360  %s", outfile)
   print("Convert to html...")
   system(render_html)
 }
