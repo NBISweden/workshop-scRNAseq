@@ -86,9 +86,18 @@ We can now load the expression matricies into objects and then merge them into a
 sdata.cov15 <- CreateSeuratObject(cov.15, project = "covid_15")
 sdata.cov1 <- CreateSeuratObject(cov.1, project = "covid_1")
 sdata.cov17 <- CreateSeuratObject(cov.17, project = "covid_17")
-sdata.ctrl5 <- CreateSeuratObject(ctrl.13, project = "ctrl_5")
+sdata.ctrl5 <- CreateSeuratObject(ctrl.5, project = "ctrl_5")
 sdata.ctrl13 <- CreateSeuratObject(ctrl.13, project = "ctrl_13")
 sdata.ctrl14 <- CreateSeuratObject(ctrl.14, project = "ctrl_14")
+
+# add metadata
+sdata.cov1$type = "Covid"
+sdata.cov15$type = "Covid"
+sdata.cov17$type = "Covid"
+sdata.ctrl5$type = "Ctrl"
+sdata.ctrl13$type = "Ctrl"
+sdata.ctrl14$type = "Ctrl"
+
 
 
 # Merge datasets into one single seurat object
@@ -111,8 +120,8 @@ gc()
 
 ```
 ##            used  (Mb) gc trigger  (Mb) max used  (Mb)
-## Ncells  2603596 139.1    5108104 272.9  4354577 232.6
-## Vcells 44555744 340.0  107043868 816.7 97607357 744.7
+## Ncells  2603656 139.1    5108165 272.9  4535480 242.3
+## Vcells 43391644 331.1  104630984 798.3 95393841 727.8
 ```
  Here it is how the count matrix and the metatada look like for every cell.
 
@@ -128,7 +137,7 @@ head(alldata@meta.data, 10)
   </script>
 </div><div data-pagedtable="false">
   <script data-pagedtable-source type="application/json">
-{"columns":[{"label":[""],"name":["_rn_"],"type":[""],"align":["left"]},{"label":["orig.ident"],"name":[1],"type":["chr"],"align":["left"]},{"label":["nCount_RNA"],"name":[2],"type":["dbl"],"align":["right"]},{"label":["nFeature_RNA"],"name":[3],"type":["int"],"align":["right"]}],"data":[{"1":"covid_15","2":"14911","3":"3526","_rn_":"covid_15_CTCCATGTCAACGTGT-15"},{"1":"covid_15","2":"338","3":"203","_rn_":"covid_15_CATAAGCAGGAACGAA-15"},{"1":"covid_15","2":"28486","3":"4542","_rn_":"covid_15_TTCACCGTCAGGAAGC-15"},{"1":"covid_15","2":"1318","3":"539","_rn_":"covid_15_CGTCCATGTCCGGACT-15"},{"1":"covid_15","2":"4805","3":"1493","_rn_":"covid_15_GTCCACTAGTCGCCCA-15"},{"1":"covid_15","2":"5386","3":"1617","_rn_":"covid_15_ATCCATTGTTGATGTC-15"},{"1":"covid_15","2":"686","3":"407","_rn_":"covid_15_AGAAGCGAGGGCCTCT-15"},{"1":"covid_15","2":"2155","3":"1116","_rn_":"covid_15_GAGGGTAGTAGGTTTC-15"},{"1":"covid_15","2":"1216","3":"128","_rn_":"covid_15_CAAGACTTCTGCTTTA-15"},{"1":"covid_15","2":"729","3":"356","_rn_":"covid_15_GCCAACGAGCTCTATG-15"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
+{"columns":[{"label":[""],"name":["_rn_"],"type":[""],"align":["left"]},{"label":["orig.ident"],"name":[1],"type":["chr"],"align":["left"]},{"label":["nCount_RNA"],"name":[2],"type":["dbl"],"align":["right"]},{"label":["nFeature_RNA"],"name":[3],"type":["int"],"align":["right"]},{"label":["type"],"name":[4],"type":["chr"],"align":["left"]}],"data":[{"1":"covid_15","2":"14911","3":"3526","4":"Covid","_rn_":"covid_15_CTCCATGTCAACGTGT-15"},{"1":"covid_15","2":"338","3":"203","4":"Covid","_rn_":"covid_15_CATAAGCAGGAACGAA-15"},{"1":"covid_15","2":"28486","3":"4542","4":"Covid","_rn_":"covid_15_TTCACCGTCAGGAAGC-15"},{"1":"covid_15","2":"1318","3":"539","4":"Covid","_rn_":"covid_15_CGTCCATGTCCGGACT-15"},{"1":"covid_15","2":"4805","3":"1493","4":"Covid","_rn_":"covid_15_GTCCACTAGTCGCCCA-15"},{"1":"covid_15","2":"5386","3":"1617","4":"Covid","_rn_":"covid_15_ATCCATTGTTGATGTC-15"},{"1":"covid_15","2":"686","3":"407","4":"Covid","_rn_":"covid_15_AGAAGCGAGGGCCTCT-15"},{"1":"covid_15","2":"2155","3":"1116","4":"Covid","_rn_":"covid_15_GAGGGTAGTAGGTTTC-15"},{"1":"covid_15","2":"1216","3":"128","4":"Covid","_rn_":"covid_15_CAAGACTTCTGCTTTA-15"},{"1":"covid_15","2":"729","3":"356","4":"Covid","_rn_":"covid_15_GCCAACGAGCTCTATG-15"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
   </script>
 </div>
 
@@ -226,7 +235,7 @@ dim(data.filt)
 ```
 
 ```
-## [1] 18082  7987
+## [1] 18147  7973
 ```
 
  Extremely high number of detected genes could indicate doublets. However, depending on the cell type composition in your sample, you may have cells with higher number of genes (and also higher counts) from one cell type. <br>In these datasets, there is also a clear difference between the v2 vs v3 10x chemistry with regards to gene detection, so it may not be fair to apply the same cutoffs to all of them. Also, in the protein assay data there is a lot of cells with few detected genes giving a bimodal distribution. This type of distribution is not seen in the other 2 datasets. Considering that they are all PBMC datasets it makes sense to regard this distribution as low quality libraries. Filter the cells with high gene detection (putative doublets) with cutoffs 4100 for v3 chemistry and 2000 for v2. <br>Here, we will filter the cells with low gene detection (low quality libraries) with less than 1000 genes for v2 and < 500 for v2.
@@ -247,7 +256,7 @@ ncol(data.filt)
 ```
 
 ```
-## [1] 7987
+## [1] 7973
 ```
 
 Additionally, we can also see which genes contribute the most to such reads. We can for instance plot the percentage of counts per gene.
@@ -287,10 +296,10 @@ table(data.filt$orig.ident)
 ```
 
 ```
-## [1] 18082  5876
+## [1] 18147  5762
 ## 
 ##  covid_1 covid_15 covid_17  ctrl_13  ctrl_14   ctrl_5 
-##      878      585     1042     1154     1063     1154
+##      878      585     1042     1154     1063     1040
 ```
 
  As you can see, a large proportion of sample covid_15 is filtered out. Also, there is still quite a lot of variation in `percent_mito`, so it will have to be dealt with in the data analysis step. We can also notice that the `percent_ribo` are also highly variable, but that is expected since different cell types have different proportions of ribosomal content, according to their function.
@@ -333,8 +342,8 @@ dim(data.filt)
 ```
 
 ```
-## [1] 18082  5876
-## [1] 18056  5876
+## [1] 18147  5762
+## [1] 18121  5762
 ```
 
 
@@ -414,7 +423,7 @@ data.filt <- doubletFinder_v3(data.filt, pN = 0.25, pK = 0.09, nExp = nExp, PCs 
 ```
 
 ```
-## [1] "Creating 1959 artificial doublets..."
+## [1] "Creating 1921 artificial doublets..."
 ## [1] "Creating Seurat object..."
 ## [1] "Normalizing Seurat object..."
 ## [1] "Finding variable genes..."
@@ -457,7 +466,7 @@ dim(data.filt)
 ```
 
 ```
-## [1] 18056  5641
+## [1] 18121  5532
 ```
 
 # Save data
