@@ -36,7 +36,7 @@ p.caption {font-size: 0.9em;font-style: italic;color: grey;margin-right: 10%;mar
 ***
 # Get data
 
-In this tutorial, we will run all tutorials with a set of 4 PBMC 10x datasets from 2 covid-19 patients and 2 healthy controls. They are part of the github repo and if you have cloned the repo they should be available in folder: `labs/data/covid_data_GSE149689`. Instructions on how to download them can also be found in the Precourse material. 
+In this tutorial, we will run all tutorials with a set of 6 PBMC 10x datasets from 3 covid-19 patients and 3 healthy controls, the samples have been subsampled to 1500 cells per sample. They are part of the github repo and if you have cloned the repo they should be available in folder: `labs/data/covid_data_GSE149689`. Instructions on how to download them can also be found in the Precourse material. 
 
 ```{bash, results='hide'}
 mkdir -p data/raw
@@ -108,7 +108,7 @@ alldata <- merge(sdata.cov15, c(sdata.cov1, sdata.cov17, sdata.ctrl5, sdata.ctrl
 
 ```
 
-Once you have created the merged Seurat object, the count matrices and individual seurat objects are not needed anymore. It is a good idea to remove them and run garbage collect to free up some memory.
+Once you have created the merged Seurat object, the count matrices and individual count matrices and objects are not needed anymore. It is a good idea to remove them and run garbage collect to free up some memory.
 
 ```{r}
 # remove all objects that will not be used.
@@ -174,16 +174,15 @@ feats <- c("nFeature_RNA","nCount_RNA","percent_mito","percent_ribo", "percent_h
 VlnPlot(alldata, group.by= "orig.ident", features = feats, pt.size = 0.1,ncol = 3) + NoLegend()
 ```
 
-As you can see, there is quite some difference in quality for the 4 datasets, with the covid_15 sample having fewer cells with many detected genes and more mitochondrial content. As the ribosomal proteins are highly expressed they will make up a larger proportion of the transcriptional landscape when fewer of the lowly expressed genes are detected. And we can plot the different QC-measures as scatter plots.
+As you can see, there is quite some difference in quality for the 4 datasets, with for instance the covid_15 sample having fewer cells with many detected genes and more mitochondrial content. As the ribosomal proteins are highly expressed they will make up a larger proportion of the transcriptional landscape when fewer of the lowly expressed genes are detected. And we can plot the different QC-measures as scatter plots.
 
 ```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=16}
-cowplot::plot_grid(ncol = 4,
-  FeatureScatter(alldata, "nCount_RNA"  , "nFeature_RNA", group.by = "orig.ident", pt.size = .5),
-  FeatureScatter(alldata, "percent_mito", "nFeature_RNA", group.by = "orig.ident", pt.size = .5),
-  FeatureScatter(alldata, "percent_ribo", "nFeature_RNA", group.by = "orig.ident", pt.size = .5),
-  FeatureScatter(alldata, "percent_ribo", "percent_mito", group.by = "orig.ident", pt.size = .5)
-)
+
+FeatureScatter(alldata, "nCount_RNA"  , "nFeature_RNA", group.by = "orig.ident", pt.size = .5)
+
 ```
+
+###TASK: Plot additional QC stats that we have calculated as scatter plots. How are the different measures correlated? Can you explain why?
 
 ***
 # Filtering
@@ -261,7 +260,7 @@ VlnPlot(data.filt, group.by= "orig.ident", features = feats, pt.size = 0.1,ncol 
 
 ## Filter genes
 
-As the level of expression of mitochondrial and MALAT1 genes are judged as mainly technical, it can be wise to remove them from the dataset bofore any further analysis. 
+As the level of expression of mitochondrial and MALAT1 genes are judged as mainly technical, and hemoglobin genes mainly from RBC contamination, it can be wise to remove them from the dataset bofore any further analysis. 
 
 ```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=4,fig.width=4}
 dim(data.filt)
@@ -314,7 +313,7 @@ Doublets/Mulitples of cells in the same well/droplet is a common issue in scRNAs
 Most doublet detectors simulates doublets by merging cell counts and predicts doublets as cells that have similar embeddings as the simulated doublets. Most such packages need an assumption about the number/proportion of expected doublets in the dataset. The data you are using is subsampled, but the orignial datasets contained about 5 000 cells per sample, hence we can assume that they loaded about 9 000 cells and should have a doublet rate at about 4%.
 OBS! Ideally doublet prediction should be run on each sample separately, especially if your different samples have different proportions of celltypes. In this case, the data is subsampled so we have very few cells per sample and all samples are sorted PBMCs so it is okay to run them together. 
 
-Here, we will use `DoubletFinder` to predict doublet cells. But before doing doublet detection we need to run scaling, variable gene selection, pca and umap. These steps will be explored in more detail in coming exercises.
+Here, we will use `DoubletFinder` to predict doublet cells. But before doing doublet detection we need to run scaling, variable gene selection and pca, as well as UMAP for visualization. These steps will be explored in more detail in coming exercises.
 
 ```{r}
 suppressMessages(require(DoubletFinder))
@@ -354,6 +353,7 @@ DimPlot(data.filt, group.by = DF.name) + NoAxes()
 )
 ```
 
+
 We should expect that two cells have more detected genes than a single cell, lets check if our predicted doublets also have more detected genes in general.
 
 ```{r}
@@ -373,9 +373,9 @@ Finally, lets save the QC-filtered data for further analysis. Create output dire
 
 ```{r save,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=16}
 
-dir.create('results', showWarnings = F)
+dir.create('data/results', showWarnings = F)
 
-saveRDS(data.filt,"results/covid_qc.rds")
+saveRDS(data.filt,"data/results/seurat_covid_qc.rds")
 ```
 
 

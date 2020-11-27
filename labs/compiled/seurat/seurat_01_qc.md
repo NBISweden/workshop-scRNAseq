@@ -1,7 +1,7 @@
 ---
 title: "Seurat: Quality control"
 author: "Åsa Björklund  &  Paulo Czarnewski"
-date: 'November 26, 2020'
+date: 'November 27, 2020'
 output:
   html_document:
     self_contained: true
@@ -34,7 +34,7 @@ p.caption {font-size: 0.9em;font-style: italic;color: grey;margin-right: 10%;mar
 ***
 # Get data
 
-In this tutorial, we will run all tutorials with a set of 4 PBMC 10x datasets from 2 covid-19 patients and 2 healthy controls. They are part of the github repo and if you have cloned the repo they should be available in folder: `labs/data/covid_data_GSE149689`. Instructions on how to download them can also be found in the Precourse material. 
+In this tutorial, we will run all tutorials with a set of 6 PBMC 10x datasets from 3 covid-19 patients and 3 healthy controls, the samples have been subsampled to 1500 cells per sample. They are part of the github repo and if you have cloned the repo they should be available in folder: `labs/data/covid_data_GSE149689`. Instructions on how to download them can also be found in the Precourse material. 
 
 
 ```bash
@@ -97,7 +97,7 @@ alldata <- merge(sdata.cov15, c(sdata.cov1, sdata.cov17, sdata.ctrl5, sdata.ctrl
     "ctrl_13", "ctrl_14"))
 ```
 
-Once you have created the merged Seurat object, the count matrices and individual seurat objects are not needed anymore. It is a good idea to remove them and run garbage collect to free up some memory.
+Once you have created the merged Seurat object, the count matrices and individual count matrices and objects are not needed anymore. It is a good idea to remove them and run garbage collect to free up some memory.
 
 
 ```r
@@ -111,8 +111,8 @@ gc()
 
 ```
 ##            used  (Mb) gc trigger  (Mb) max used  (Mb)
-## Ncells  2603617 139.1    5108144 272.9  4354597 232.6
-## Vcells 44555527 340.0  107043419 816.7 97607140 744.7
+## Ncells  2603596 139.1    5108104 272.9  4354577 232.6
+## Vcells 44555744 340.0  107043868 816.7 97607357 744.7
 ```
  Here it is how the count matrix and the metatada look like for every cell.
 
@@ -198,18 +198,16 @@ VlnPlot(alldata, group.by = "orig.ident", features = feats, pt.size = 0.1, ncol 
 
 ![](seurat_01_qc_files/figure-html/unnamed-chunk-10-1.png)<!-- -->
 
-As you can see, there is quite some difference in quality for the 4 datasets, with the covid_15 sample having fewer cells with many detected genes and more mitochondrial content. As the ribosomal proteins are highly expressed they will make up a larger proportion of the transcriptional landscape when fewer of the lowly expressed genes are detected. And we can plot the different QC-measures as scatter plots.
+As you can see, there is quite some difference in quality for the 4 datasets, with for instance the covid_15 sample having fewer cells with many detected genes and more mitochondrial content. As the ribosomal proteins are highly expressed they will make up a larger proportion of the transcriptional landscape when fewer of the lowly expressed genes are detected. And we can plot the different QC-measures as scatter plots.
 
 
 ```r
-cowplot::plot_grid(ncol = 4, FeatureScatter(alldata, "nCount_RNA", "nFeature_RNA", 
-    group.by = "orig.ident", pt.size = 0.5), FeatureScatter(alldata, "percent_mito", 
-    "nFeature_RNA", group.by = "orig.ident", pt.size = 0.5), FeatureScatter(alldata, 
-    "percent_ribo", "nFeature_RNA", group.by = "orig.ident", pt.size = 0.5), FeatureScatter(alldata, 
-    "percent_ribo", "percent_mito", group.by = "orig.ident", pt.size = 0.5))
+FeatureScatter(alldata, "nCount_RNA", "nFeature_RNA", group.by = "orig.ident", pt.size = 0.5)
 ```
 
 ![](seurat_01_qc_files/figure-html/unnamed-chunk-11-1.png)<!-- -->
+
+###TASK: Plot additional QC stats that we have calculated as scatter plots. How are the different measures correlated? Can you explain why?
 
 ***
 # Filtering
@@ -313,7 +311,7 @@ VlnPlot(data.filt, group.by = "orig.ident", features = feats, pt.size = 0.1, nco
 
 ## Filter genes
 
-As the level of expression of mitochondrial and MALAT1 genes are judged as mainly technical, it can be wise to remove them from the dataset bofore any further analysis. 
+As the level of expression of mitochondrial and MALAT1 genes are judged as mainly technical, and hemoglobin genes mainly from RBC contamination, it can be wise to remove them from the dataset bofore any further analysis. 
 
 
 ```r
@@ -387,7 +385,7 @@ Doublets/Mulitples of cells in the same well/droplet is a common issue in scRNAs
 Most doublet detectors simulates doublets by merging cell counts and predicts doublets as cells that have similar embeddings as the simulated doublets. Most such packages need an assumption about the number/proportion of expected doublets in the dataset. The data you are using is subsampled, but the orignial datasets contained about 5 000 cells per sample, hence we can assume that they loaded about 9 000 cells and should have a doublet rate at about 4%.
 OBS! Ideally doublet prediction should be run on each sample separately, especially if your different samples have different proportions of celltypes. In this case, the data is subsampled so we have very few cells per sample and all samples are sorted PBMCs so it is okay to run them together. 
 
-Here, we will use `DoubletFinder` to predict doublet cells. But before doing doublet detection we need to run scaling, variable gene selection, pca and umap. These steps will be explored in more detail in coming exercises.
+Here, we will use `DoubletFinder` to predict doublet cells. But before doing doublet detection we need to run scaling, variable gene selection and pca, as well as UMAP for visualization. These steps will be explored in more detail in coming exercises.
 
 
 ```r
@@ -440,6 +438,7 @@ cowplot::plot_grid(ncol = 2, DimPlot(data.filt, group.by = "orig.ident") + NoAxe
 
 ![](seurat_01_qc_files/figure-html/unnamed-chunk-21-1.png)<!-- -->
 
+
 We should expect that two cells have more detected genes than a single cell, lets check if our predicted doublets also have more detected genes in general.
 
 
@@ -466,9 +465,9 @@ Finally, lets save the QC-filtered data for further analysis. Create output dire
 
 
 ```r
-dir.create("results", showWarnings = F)
+dir.create("data/results", showWarnings = F)
 
-saveRDS(data.filt, "results/covid_qc.rds")
+saveRDS(data.filt, "data/results/seurat_covid_qc.rds")
 ```
 
 
