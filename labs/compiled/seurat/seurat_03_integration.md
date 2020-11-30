@@ -1,7 +1,7 @@
 ---
 title: #INTEG_TITLE:
 author: "Åsa Björklund  &  Paulo Czarnewski"
-date: "Sept 13, 2019"
+date: 'November 27, 2020'
 output:
   html_document:
     self_contained: true
@@ -45,18 +45,18 @@ Let's first load necessary libraries and the data saved in the previous lab.
 
 ```r
 suppressPackageStartupMessages({
-  library(Seurat)
-  library(cowplot)
-  library(ggplot2)
+    library(Seurat)
+    library(cowplot)
+    library(ggplot2)
 })
 
-alldata <- readRDS("data/3pbmc_qc_dr.rds")
+alldata <- readRDS("data/results/covid_qc_dr.rds")
 print(names(alldata@reductions))
 ```
 
 ```
-## [1] "PCA_on_RNA"        "TSNE_on_RNA"       "UMAP_on_RNA"      
-## [4] "UMAP10_on_RNA"     "UMAP_on_ScaleData" "UMAP_on_Graph"
+## [1] "pca"               "umap"              "tsne"             
+## [4] "UMAP10_on_PCA"     "UMAP_on_ScaleData" "UMAP_on_Graph"
 ```
 
 We split the combined object into a list, with each dataset as an element. We perform standard preprocessing (log-normalization), and identify variable features individually for each dataset based on a variance stabilizing transformation ("vst").
@@ -67,58 +67,107 @@ alldata.list <- SplitObject(alldata, split.by = "orig.ident")
 ```
 
 ```
-## Warning: All object keys must be alphanumeric characters, followed by an
-## underscore ('_'), setting key to 'umap10onrna_'
+## Warning: Keys should be one or more alphanumeric characters followed by an
+## underscore, setting key from umap10_on_pca_ to umap10onpca_
 ```
 
 ```
-## Warning: All object keys must be alphanumeric characters, followed by an
-## underscore ('_'), setting key to 'umaponscaledata_'
+## Warning: Keys should be one or more alphanumeric characters followed by an
+## underscore, setting key from umap_on_scaledata_ to umaponscaledata_
 ```
 
 ```
-## Warning: All object keys must be alphanumeric characters, followed by an
-## underscore ('_'), setting key to 'umapongraph_'
+## Warning: Keys should be one or more alphanumeric characters followed by an
+## underscore, setting key from umap_on_graph_ to umapongraph_
 ```
 
 ```
-## Warning: All object keys must be alphanumeric characters, followed by an
-## underscore ('_'), setting key to 'umap10onrna_'
+## Warning: Keys should be one or more alphanumeric characters followed by an
+## underscore, setting key from umap10_on_pca_ to umap10onpca_
 ```
 
 ```
-## Warning: All object keys must be alphanumeric characters, followed by an
-## underscore ('_'), setting key to 'umaponscaledata_'
+## Warning: Keys should be one or more alphanumeric characters followed by an
+## underscore, setting key from umap_on_scaledata_ to umaponscaledata_
 ```
 
 ```
-## Warning: All object keys must be alphanumeric characters, followed by an
-## underscore ('_'), setting key to 'umapongraph_'
+## Warning: Keys should be one or more alphanumeric characters followed by an
+## underscore, setting key from umap_on_graph_ to umapongraph_
 ```
 
 ```
-## Warning: All object keys must be alphanumeric characters, followed by an
-## underscore ('_'), setting key to 'umap10onrna_'
+## Warning: Keys should be one or more alphanumeric characters followed by an
+## underscore, setting key from umap10_on_pca_ to umap10onpca_
 ```
 
 ```
-## Warning: All object keys must be alphanumeric characters, followed by an
-## underscore ('_'), setting key to 'umaponscaledata_'
+## Warning: Keys should be one or more alphanumeric characters followed by an
+## underscore, setting key from umap_on_scaledata_ to umaponscaledata_
 ```
 
 ```
-## Warning: All object keys must be alphanumeric characters, followed by an
-## underscore ('_'), setting key to 'umapongraph_'
+## Warning: Keys should be one or more alphanumeric characters followed by an
+## underscore, setting key from umap_on_graph_ to umapongraph_
+```
+
+```
+## Warning: Keys should be one or more alphanumeric characters followed by an
+## underscore, setting key from umap10_on_pca_ to umap10onpca_
+```
+
+```
+## Warning: Keys should be one or more alphanumeric characters followed by an
+## underscore, setting key from umap_on_scaledata_ to umaponscaledata_
+```
+
+```
+## Warning: Keys should be one or more alphanumeric characters followed by an
+## underscore, setting key from umap_on_graph_ to umapongraph_
+```
+
+```
+## Warning: Keys should be one or more alphanumeric characters followed by an
+## underscore, setting key from umap10_on_pca_ to umap10onpca_
+```
+
+```
+## Warning: Keys should be one or more alphanumeric characters followed by an
+## underscore, setting key from umap_on_scaledata_ to umaponscaledata_
+```
+
+```
+## Warning: Keys should be one or more alphanumeric characters followed by an
+## underscore, setting key from umap_on_graph_ to umapongraph_
+```
+
+```
+## Warning: Keys should be one or more alphanumeric characters followed by an
+## underscore, setting key from umap10_on_pca_ to umap10onpca_
+```
+
+```
+## Warning: Keys should be one or more alphanumeric characters followed by an
+## underscore, setting key from umap_on_scaledata_ to umaponscaledata_
+```
+
+```
+## Warning: Keys should be one or more alphanumeric characters followed by an
+## underscore, setting key from umap_on_graph_ to umapongraph_
 ```
 
 ```r
 for (i in 1:length(alldata.list)) {
     alldata.list[[i]] <- NormalizeData(alldata.list[[i]], verbose = FALSE)
-    alldata.list[[i]] <- FindVariableFeatures(alldata.list[[i]], selection.method = "vst", nfeatures = 2000,verbose = FALSE)
+    alldata.list[[i]] <- FindVariableFeatures(alldata.list[[i]], selection.method = "vst", 
+        nfeatures = 2000, verbose = FALSE)
 }
 
-hvgs_per_dataset <- lapply(alldata.list, function(x) { x@assays$RNA@var.features })
-venn::venn(hvgs_per_dataset,opacity = .4,zcolor = scales::hue_pal()(3),cexsn = 1,cexil = 1,lwd=1,col="white",frame=F,borders = NA)
+hvgs_per_dataset <- lapply(alldata.list, function(x) {
+    x@assays$RNA@var.features
+})
+venn::venn(hvgs_per_dataset, opacity = 0.4, zcolor = (scales::hue_pal())(3), cexsn = 1, 
+    cexil = 1, lwd = 1, col = "white", frame = F, borders = NA)
 ```
 
 ![](seurat_03_integration_files/figure-html/unnamed-chunk-2-1.png)<!-- -->
@@ -159,7 +208,7 @@ alldata.anchors <- FindIntegrationAnchors(object.list = alldata.list, dims = 1:3
 ```
 
 ```
-## 	Found 2185 anchors
+## 	Found 2005 anchors
 ```
 
 ```
@@ -167,11 +216,7 @@ alldata.anchors <- FindIntegrationAnchors(object.list = alldata.list, dims = 1:3
 ```
 
 ```
-## 	Retained 1906 anchors
-```
-
-```
-## Extracting within-dataset neighbors
+## 	Retained 1718 anchors
 ```
 
 ```
@@ -191,7 +236,7 @@ alldata.anchors <- FindIntegrationAnchors(object.list = alldata.list, dims = 1:3
 ```
 
 ```
-## 	Found 2279 anchors
+## 	Found 2139 anchors
 ```
 
 ```
@@ -199,11 +244,7 @@ alldata.anchors <- FindIntegrationAnchors(object.list = alldata.list, dims = 1:3
 ```
 
 ```
-## 	Retained 1979 anchors
-```
-
-```
-## Extracting within-dataset neighbors
+## 	Retained 1711 anchors
 ```
 
 ```
@@ -223,7 +264,7 @@ alldata.anchors <- FindIntegrationAnchors(object.list = alldata.list, dims = 1:3
 ```
 
 ```
-## 	Found 3062 anchors
+## 	Found 2679 anchors
 ```
 
 ```
@@ -231,11 +272,343 @@ alldata.anchors <- FindIntegrationAnchors(object.list = alldata.list, dims = 1:3
 ```
 
 ```
-## 	Retained 2681 anchors
+## 	Retained 2227 anchors
 ```
 
 ```
-## Extracting within-dataset neighbors
+## Running CCA
+```
+
+```
+## Merging objects
+```
+
+```
+## Finding neighborhoods
+```
+
+```
+## Finding anchors
+```
+
+```
+## 	Found 1823 anchors
+```
+
+```
+## Filtering anchors
+```
+
+```
+## 	Retained 1463 anchors
+```
+
+```
+## Running CCA
+```
+
+```
+## Merging objects
+```
+
+```
+## Finding neighborhoods
+```
+
+```
+## Finding anchors
+```
+
+```
+## 	Found 2286 anchors
+```
+
+```
+## Filtering anchors
+```
+
+```
+## 	Retained 1894 anchors
+```
+
+```
+## Running CCA
+```
+
+```
+## Merging objects
+```
+
+```
+## Finding neighborhoods
+```
+
+```
+## Finding anchors
+```
+
+```
+## 	Found 2527 anchors
+```
+
+```
+## Filtering anchors
+```
+
+```
+## 	Retained 1972 anchors
+```
+
+```
+## Running CCA
+```
+
+```
+## Merging objects
+```
+
+```
+## Finding neighborhoods
+```
+
+```
+## Finding anchors
+```
+
+```
+## 	Found 2104 anchors
+```
+
+```
+## Filtering anchors
+```
+
+```
+## 	Retained 1622 anchors
+```
+
+```
+## Running CCA
+```
+
+```
+## Merging objects
+```
+
+```
+## Finding neighborhoods
+```
+
+```
+## Finding anchors
+```
+
+```
+## 	Found 2630 anchors
+```
+
+```
+## Filtering anchors
+```
+
+```
+## 	Retained 2226 anchors
+```
+
+```
+## Running CCA
+```
+
+```
+## Merging objects
+```
+
+```
+## Finding neighborhoods
+```
+
+```
+## Finding anchors
+```
+
+```
+## 	Found 2899 anchors
+```
+
+```
+## Filtering anchors
+```
+
+```
+## 	Retained 2171 anchors
+```
+
+```
+## Running CCA
+```
+
+```
+## Merging objects
+```
+
+```
+## Finding neighborhoods
+```
+
+```
+## Finding anchors
+```
+
+```
+## 	Found 2920 anchors
+```
+
+```
+## Filtering anchors
+```
+
+```
+## 	Retained 2513 anchors
+```
+
+```
+## Running CCA
+```
+
+```
+## Merging objects
+```
+
+```
+## Finding neighborhoods
+```
+
+```
+## Finding anchors
+```
+
+```
+## 	Found 2081 anchors
+```
+
+```
+## Filtering anchors
+```
+
+```
+## 	Retained 1647 anchors
+```
+
+```
+## Running CCA
+```
+
+```
+## Merging objects
+```
+
+```
+## Finding neighborhoods
+```
+
+```
+## Finding anchors
+```
+
+```
+## 	Found 2523 anchors
+```
+
+```
+## Filtering anchors
+```
+
+```
+## 	Retained 2166 anchors
+```
+
+```
+## Running CCA
+```
+
+```
+## Merging objects
+```
+
+```
+## Finding neighborhoods
+```
+
+```
+## Finding anchors
+```
+
+```
+## 	Found 2821 anchors
+```
+
+```
+## Filtering anchors
+```
+
+```
+## 	Retained 2174 anchors
+```
+
+```
+## Running CCA
+```
+
+```
+## Merging objects
+```
+
+```
+## Finding neighborhoods
+```
+
+```
+## Finding anchors
+```
+
+```
+## 	Found 2734 anchors
+```
+
+```
+## Filtering anchors
+```
+
+```
+## 	Retained 2283 anchors
+```
+
+```
+## Running CCA
+```
+
+```
+## Merging objects
+```
+
+```
+## Finding neighborhoods
+```
+
+```
+## Finding anchors
+```
+
+```
+## 	Found 3066 anchors
+```
+
+```
+## Filtering anchors
+```
+
+```
+## 	Retained 2773 anchors
 ```
 
 We then pass these anchors to the IntegrateData function, which returns a Seurat object.
@@ -246,7 +619,7 @@ alldata.int <- IntegrateData(anchorset = alldata.anchors, dims = 1:30, new.assay
 ```
 
 ```
-## Merging dataset 1 into 3
+## Merging dataset 1 into 2
 ```
 
 ```
@@ -266,7 +639,7 @@ alldata.int <- IntegrateData(anchorset = alldata.anchors, dims = 1:30, new.assay
 ```
 
 ```
-## Merging dataset 2 into 3 1
+## Merging dataset 6 into 5
 ```
 
 ```
@@ -283,6 +656,70 @@ alldata.int <- IntegrateData(anchorset = alldata.anchors, dims = 1:30, new.assay
 
 ```
 ## Integrating data
+```
+
+```
+## Merging dataset 3 into 2 1
+```
+
+```
+## Extracting anchors for merged samples
+```
+
+```
+## Finding integration vectors
+```
+
+```
+## Finding integration vector weights
+```
+
+```
+## Integrating data
+```
+
+```
+## Merging dataset 4 into 5 6
+```
+
+```
+## Extracting anchors for merged samples
+```
+
+```
+## Finding integration vectors
+```
+
+```
+## Finding integration vector weights
+```
+
+```
+## Integrating data
+```
+
+```
+## Merging dataset 2 1 3 into 5 6 4
+```
+
+```
+## Extracting anchors for merged samples
+```
+
+```
+## Finding integration vectors
+```
+
+```
+## Finding integration vector weights
+```
+
+```
+## Integrating data
+```
+
+```
+## Warning: Adding a command log without an assay associated with it
 ```
 
 We can observe that a new assay slot is now created under the name `CCA`.
@@ -290,21 +727,71 @@ We can observe that a new assay slot is now created under the name `CCA`.
 
 ```r
 names(alldata.int@assays)
+
+# by default, Seurat now sets the integrated assay as the default assay, so any
+# operation you now perform will be on the ingegrated data.
+
+alldata.int@active.assay
 ```
 
 ```
 ## [1] "RNA" "CCA"
+## [1] "CCA"
 ```
 
 After running IntegrateData, the Seurat object will contain a new Assay with the integrated (or ‘batch-corrected’) expression matrix. Note that the original (uncorrected values) are still stored in the object in the “RNA” assay, so you can switch back and forth. We can then use this new integrated matrix for downstream analysis and visualization. Here we scale the integrated data, run PCA, and visualize the results with UMAP and TSNE. The integrated datasets cluster by cell type, instead of by technology.
 
 
 ```r
-#Run Dimensionality reduction on integrated space
-alldata.int <- ScaleData(alldata.int, verbose = FALSE,assay = "CCA")
-alldata.int <- RunPCA(alldata.int, npcs = 30, verbose = FALSE, assay = "CCA",reduction.name = "PCA_on_CCA")
-alldata.int <- RunUMAP(alldata.int, reduction = "PCA_on_CCA", dims = 1:30,reduction.name = "UMAP_on_CCA")
-alldata.int <- RunTSNE(alldata.int, reduction = "PCA_on_CCA", dims = 1:30,reduction.name = "TSNE_on_CCA")
+# Run Dimensionality reduction on integrated space
+alldata.int <- ScaleData(alldata.int, verbose = FALSE)
+alldata.int <- RunPCA(alldata.int, npcs = 30, verbose = FALSE)
+alldata.int <- RunUMAP(alldata.int, dims = 1:30)
+```
+
+```
+## Warning: The default method for RunUMAP has changed from calling Python UMAP via reticulate to the R-native UWOT using the cosine metric
+## To use Python UMAP via reticulate, set umap.method to 'umap-learn' and metric to 'correlation'
+## This message will be shown once per session
+```
+
+```
+## 16:59:13 UMAP embedding parameters a = 0.9922 b = 1.112
+```
+
+```
+## 16:59:13 Read 5532 rows and found 30 numeric columns
+```
+
+```
+## 16:59:13 Using Annoy for neighbor search, n_neighbors = 30
+```
+
+```
+## 16:59:13 Building Annoy index with metric = cosine, n_trees = 50
+```
+
+```
+## 0%   10   20   30   40   50   60   70   80   90   100%
+```
+
+```
+## [----|----|----|----|----|----|----|----|----|----|
+```
+
+```
+## **************************************************|
+## 16:59:14 Writing NN index file to temp file /var/folders/1s/j9ck5c_162s487xcprlxtmdh0000gp/T//RtmpJo37qJ/file89311ad8ed9d
+## 16:59:14 Searching Annoy index using 1 thread, search_k = 3000
+## 16:59:15 Annoy recall = 100%
+## 16:59:15 Commencing smooth kNN distance calibration using 1 thread
+## 16:59:16 Initializing from normalized Laplacian + noise
+## 16:59:16 Commencing optimization for 500 epochs, with 254078 positive edges
+## 16:59:22 Optimization finished
+```
+
+```r
+alldata.int <- RunTSNE(alldata.int, dims = 1:30)
 ```
 
 We can now plot the un-integrated and the integrated space reduced dimensions.
@@ -312,13 +799,13 @@ We can now plot the un-integrated and the integrated space reduced dimensions.
 
 ```r
 plot_grid(ncol = 3,
-  DimPlot(alldata, reduction = "PCA_on_RNA", group.by = "orig.ident"),
-  DimPlot(alldata, reduction = "TSNE_on_RNA", group.by = "orig.ident"),
-  DimPlot(alldata, reduction = "UMAP_on_RNA", group.by = "orig.ident"),
+  DimPlot(alldata, reduction = "pca", group.by = "orig.ident"),
+  DimPlot(alldata, reduction = "tsne", group.by = "orig.ident"),
+  DimPlot(alldata, reduction = "umap", group.by = "orig.ident"),
   
-  DimPlot(alldata.int, reduction = "PCA_on_CCA", group.by = "orig.ident"),
-  DimPlot(alldata.int, reduction = "TSNE_on_CCA", group.by = "orig.ident"),
-  DimPlot(alldata.int, reduction = "UMAP_on_CCA", group.by = "orig.ident")
+  DimPlot(alldata.int, reduction = "pca", group.by = "orig.ident"),
+  DimPlot(alldata.int, reduction = "tsne", group.by = "orig.ident"),
+  DimPlot(alldata.int, reduction = "umap", group.by = "orig.ident")
 )
 ```
 
@@ -339,7 +826,9 @@ FCER1A, CST3 | DCs
 
 
 ```r
-FeaturePlot(alldata.int, reduction = "UMAP_on_CCA",dims = 1:2,features = c("CD3E","CD4","CD8A","NKG7","GNLY","MS4A1","CD14","LYZ","MS4A7","FCGR3A","CST3","FCER1A"),ncol = 4,order = T)
+FeaturePlot(alldata.int, reduction = "umap", features = c("CD3E", "CD4", "CD8A", 
+    "NKG7", "GNLY", "MS4A1", "CD14", "LYZ", "MS4A7", "FCGR3A", "CST3", "FCER1A"), 
+    ncol = 4, order = T)
 ```
 
 ![](seurat_03_integration_files/figure-html/unnamed-chunk-8-1.png)<!-- -->
@@ -348,7 +837,7 @@ Finally, lets save the integrated data for further analysis.
 
 
 ```r
-saveRDS(alldata.int,"data/3pbmc_qc_dr_int.rds")
+saveRDS(alldata.int, "data/results/covid_qc_dr_int.rds")
 ```
 
 
@@ -361,71 +850,60 @@ sessionInfo()
 ```
 
 ```
-## R version 3.5.1 (2018-07-02)
+## R version 4.0.3 (2020-10-10)
 ## Platform: x86_64-apple-darwin13.4.0 (64-bit)
-## Running under: macOS  10.15
+## Running under: macOS Catalina 10.15.7
 ## 
 ## Matrix products: default
-## BLAS/LAPACK: /Users/asbj/miniconda3/envs/sc_course/lib/R/lib/libRblas.dylib
+## BLAS/LAPACK: /Users/asbj/miniconda3/envs/scRNAseq2021/lib/libopenblasp-r0.3.12.dylib
 ## 
 ## locale:
 ## [1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
 ## 
 ## attached base packages:
-## [1] parallel  stats4    stats     graphics  grDevices utils     datasets 
-## [8] methods   base     
+## [1] stats     graphics  grDevices utils     datasets  methods   base     
 ## 
 ## other attached packages:
-##  [1] scran_1.10.1                SingleCellExperiment_1.4.0 
-##  [3] SummarizedExperiment_1.12.0 DelayedArray_0.8.0         
-##  [5] matrixStats_0.55.0          Biobase_2.42.0             
-##  [7] GenomicRanges_1.34.0        GenomeInfoDb_1.18.1        
-##  [9] IRanges_2.16.0              S4Vectors_0.20.1           
-## [11] BiocGenerics_0.28.0         BiocParallel_1.16.6        
-## [13] ggplot2_3.2.1               cowplot_1.0.0              
-## [15] Matrix_1.2-17               Seurat_3.0.1               
-## [17] RJSONIO_1.3-1.2             optparse_1.6.4             
+## [1] ggplot2_3.3.2   cowplot_1.1.0   Seurat_3.2.2    RJSONIO_1.3-1.4
+## [5] optparse_1.6.6 
 ## 
 ## loaded via a namespace (and not attached):
-##   [1] ggbeeswarm_0.6.0         Rtsne_0.15               colorspace_1.4-1        
-##   [4] ggridges_0.5.1           dynamicTreeCut_1.63-1    XVector_0.22.0          
-##   [7] BiocNeighbors_1.0.0      listenv_0.7.0            npsurv_0.4-0            
-##  [10] getopt_1.20.3            ggrepel_0.8.1            bit64_0.9-7             
-##  [13] codetools_0.2-16         splines_3.5.1            R.methodsS3_1.7.1       
-##  [16] lsei_1.2-0               scater_1.10.1            knitr_1.26              
-##  [19] zeallot_0.1.0            jsonlite_1.6             ica_1.0-2               
-##  [22] cluster_2.1.0            png_0.1-7                R.oo_1.23.0             
-##  [25] HDF5Array_1.10.1         sctransform_0.2.0        compiler_3.5.1          
-##  [28] httr_1.4.1               backports_1.1.5          assertthat_0.2.1        
-##  [31] lazyeval_0.2.2           limma_3.38.3             htmltools_0.4.0         
-##  [34] tools_3.5.1              rsvd_1.0.2               igraph_1.2.4.1          
-##  [37] gtable_0.3.0             glue_1.3.1               GenomeInfoDbData_1.2.0  
-##  [40] RANN_2.6.1               reshape2_1.4.3           dplyr_0.8.3             
-##  [43] Rcpp_1.0.3               vctrs_0.2.0              gdata_2.18.0            
-##  [46] ape_5.3                  nlme_3.1-141             DelayedMatrixStats_1.4.0
-##  [49] gbRd_0.4-11              lmtest_0.9-37            xfun_0.11               
-##  [52] stringr_1.4.0            globals_0.12.4           lifecycle_0.1.0         
-##  [55] irlba_2.3.3              gtools_3.8.1             statmod_1.4.32          
-##  [58] future_1.15.1            edgeR_3.24.3             MASS_7.3-51.4           
-##  [61] zlibbioc_1.28.0          zoo_1.8-6                scales_1.0.0            
-##  [64] rhdf5_2.26.2             RColorBrewer_1.1-2       yaml_2.2.0              
-##  [67] reticulate_1.13          pbapply_1.4-2            gridExtra_2.3           
-##  [70] stringi_1.4.3            venn_1.7                 caTools_1.17.1.2        
-##  [73] bibtex_0.4.2             Rdpack_0.11-0            SDMTools_1.1-221.1      
-##  [76] rlang_0.4.2              pkgconfig_2.0.3          bitops_1.0-6            
-##  [79] evaluate_0.14            lattice_0.20-38          Rhdf5lib_1.4.3          
-##  [82] ROCR_1.0-7               purrr_0.3.3              htmlwidgets_1.5.1       
-##  [85] labeling_0.3             bit_1.1-14               tidyselect_0.2.5        
-##  [88] plyr_1.8.4               magrittr_1.5             R6_2.4.1                
-##  [91] gplots_3.0.1.1           pillar_1.4.2             withr_2.1.2             
-##  [94] fitdistrplus_1.0-14      survival_2.44-1.1        RCurl_1.95-4.12         
-##  [97] tibble_2.1.3             future.apply_1.3.0       tsne_0.1-3              
-## [100] crayon_1.3.4             hdf5r_1.2.0              KernSmooth_2.23-15      
-## [103] plotly_4.9.1             rmarkdown_1.17           viridis_0.5.1           
-## [106] locfit_1.5-9.1           grid_3.5.1               data.table_1.11.6       
-## [109] metap_1.1                digest_0.6.23            tidyr_1.0.0             
-## [112] R.utils_2.9.0            munsell_0.5.0            beeswarm_0.2.3          
-## [115] viridisLite_0.3.0        vipor_0.4.5
+##   [1] nlme_3.1-150          matrixStats_0.57.0    RcppAnnoy_0.0.17     
+##   [4] RColorBrewer_1.1-2    httr_1.4.2            sctransform_0.3.1    
+##   [7] tools_4.0.3           R6_2.5.0              irlba_2.3.3          
+##  [10] rpart_4.1-15          KernSmooth_2.23-18    uwot_0.1.9           
+##  [13] mgcv_1.8-33           lazyeval_0.2.2        colorspace_2.0-0     
+##  [16] withr_2.3.0           tidyselect_1.1.0      gridExtra_2.3        
+##  [19] compiler_4.0.3        formatR_1.7           plotly_4.9.2.1       
+##  [22] labeling_0.4.2        scales_1.1.1          spatstat.data_1.5-2  
+##  [25] lmtest_0.9-38         ggridges_0.5.2        pbapply_1.4-3        
+##  [28] goftest_1.2-2         spatstat_1.64-1       stringr_1.4.0        
+##  [31] digest_0.6.27         spatstat.utils_1.17-0 rmarkdown_2.5        
+##  [34] pkgconfig_2.0.3       htmltools_0.5.0       parallelly_1.21.0    
+##  [37] fastmap_1.0.1         htmlwidgets_1.5.2     rlang_0.4.8          
+##  [40] shiny_1.5.0           farver_2.0.3          generics_0.1.0       
+##  [43] zoo_1.8-8             jsonlite_1.7.1        ica_1.0-2            
+##  [46] dplyr_1.0.2           magrittr_2.0.1        patchwork_1.1.0      
+##  [49] Matrix_1.2-18         Rcpp_1.0.5            munsell_0.5.0        
+##  [52] abind_1.4-5           reticulate_1.18       lifecycle_0.2.0      
+##  [55] stringi_1.5.3         yaml_2.2.1            MASS_7.3-53          
+##  [58] Rtsne_0.15            plyr_1.8.6            grid_4.0.3           
+##  [61] parallel_4.0.3        listenv_0.8.0         promises_1.1.1       
+##  [64] ggrepel_0.8.2         venn_1.9              crayon_1.3.4         
+##  [67] deldir_0.2-3          miniUI_0.1.1.1        lattice_0.20-41      
+##  [70] splines_4.0.3         tensor_1.5            knitr_1.30           
+##  [73] pillar_1.4.7          igraph_1.2.6          admisc_0.11          
+##  [76] future.apply_1.6.0    reshape2_1.4.4        codetools_0.2-18     
+##  [79] leiden_0.3.5          glue_1.4.2            evaluate_0.14        
+##  [82] data.table_1.13.2     vctrs_0.3.5           png_0.1-7            
+##  [85] httpuv_1.5.4          polyclip_1.10-0       gtable_0.3.0         
+##  [88] getopt_1.20.3         RANN_2.6.1            purrr_0.3.4          
+##  [91] tidyr_1.1.2           future_1.20.1         xfun_0.19            
+##  [94] rsvd_1.0.3            mime_0.9              xtable_1.8-4         
+##  [97] RSpectra_0.16-0       later_1.1.0.1         survival_3.2-7       
+## [100] viridisLite_0.3.0     tibble_3.0.4          cluster_2.1.0        
+## [103] globals_0.14.0        fitdistrplus_1.1-1    ellipsis_0.3.1       
+## [106] ROCR_1.0-11
 ```
 
 

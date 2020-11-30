@@ -1,7 +1,7 @@
 ---
 title: #INTEG_TITLE:
 author: "Åsa Björklund  &  Paulo Czarnewski"
-date: "Sept 13, 2019"
+date: '`r format(Sys.Date(), "%B %d, %Y")`'
 output:
   html_document:
     self_contained: true
@@ -26,11 +26,7 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-<<<<<<< HEAD:labs/compiled/seurat/seurat_03_integration_compiled.Rmd
 knitr::opts_chunk$set(message=FALSE, warning=FALSE, result='hold',fig.width=12,tidy=TRUE)
-=======
-knitr::opts_chunk$set(message='hide', warning='hide', result='hold',fig.width=12)
->>>>>>> 171c4c465a29f687c5e10ab8b830cae3e4beb2dd:labs/compiled/seurat/seurat_03_integration.Rmd
 ```
 <style>
 h1, .h1, h2, .h2, h3, .h3, h4, .h4 { margin-top: 50px }
@@ -55,7 +51,7 @@ suppressPackageStartupMessages({
   library(ggplot2)
 })
 
-alldata <- readRDS("data/3pbmc_qc_dr.rds")
+alldata <- readRDS("data/results/covid_qc_dr.rds")
 print(names(alldata@reductions))
 ```
 
@@ -89,29 +85,33 @@ We can observe that a new assay slot is now created under the name `CCA`.
 
 ```{r, message='hide',warning='hide',results='hold'}
 names(alldata.int@assays)
+
+# by default, Seurat now sets the integrated assay as the default assay, so any operation you now perform will be on the ingegrated data.
+
+alldata.int@active.assay
 ```
 
 After running IntegrateData, the Seurat object will contain a new Assay with the integrated (or ‘batch-corrected’) expression matrix. Note that the original (uncorrected values) are still stored in the object in the “RNA” assay, so you can switch back and forth. We can then use this new integrated matrix for downstream analysis and visualization. Here we scale the integrated data, run PCA, and visualize the results with UMAP and TSNE. The integrated datasets cluster by cell type, instead of by technology.
 
 ```{r, message='hide',warning='hide',results='hold'}
 #Run Dimensionality reduction on integrated space
-alldata.int <- ScaleData(alldata.int, verbose = FALSE,assay = "CCA")
-alldata.int <- RunPCA(alldata.int, npcs = 30, verbose = FALSE, assay = "CCA",reduction.name = "PCA_on_CCA")
-alldata.int <- RunUMAP(alldata.int, reduction = "PCA_on_CCA", dims = 1:30,reduction.name = "UMAP_on_CCA")
-alldata.int <- RunTSNE(alldata.int, reduction = "PCA_on_CCA", dims = 1:30,reduction.name = "TSNE_on_CCA")
+alldata.int <- ScaleData(alldata.int, verbose = FALSE)
+alldata.int <- RunPCA(alldata.int, npcs = 30, verbose = FALSE)
+alldata.int <- RunUMAP(alldata.int, dims = 1:30)
+alldata.int <- RunTSNE(alldata.int, dims = 1:30)
 ```
 
 We can now plot the un-integrated and the integrated space reduced dimensions.
 
 ```{r, message='hide',warning='hide',results='hold',fig.asp=.55,fig.width=16}
 plot_grid(ncol = 3,
-  DimPlot(alldata, reduction = "PCA_on_RNA", group.by = "orig.ident"),
-  DimPlot(alldata, reduction = "TSNE_on_PCA", group.by = "orig.ident"),
-  DimPlot(alldata, reduction = "UMAP_on_PCA", group.by = "orig.ident"),
+  DimPlot(alldata, reduction = "pca", group.by = "orig.ident"),
+  DimPlot(alldata, reduction = "tsne", group.by = "orig.ident"),
+  DimPlot(alldata, reduction = "umap", group.by = "orig.ident"),
   
-  DimPlot(alldata.int, reduction = "PCA_on_CCA", group.by = "orig.ident"),
-  DimPlot(alldata.int, reduction = "TSNE_on_CCA", group.by = "orig.ident"),
-  DimPlot(alldata.int, reduction = "UMAP_on_CCA", group.by = "orig.ident")
+  DimPlot(alldata.int, reduction = "pca", group.by = "orig.ident"),
+  DimPlot(alldata.int, reduction = "tsne", group.by = "orig.ident"),
+  DimPlot(alldata.int, reduction = "umap", group.by = "orig.ident")
 )
 ```
 
@@ -129,13 +129,13 @@ FCGR3A, LYZ, CST3, MS4A7	| FCGR3A+  Monocytes
 FCER1A, CST3 | DCs
 
 ```{r,message='hide',warning='hide', results='hold',results='hold',fig.asp=.65,fig.width=16}
-FeaturePlot(alldata.int, reduction = "UMAP_on_CCA",dims = 1:2,features = c("CD3E","CD4","CD8A","NKG7","GNLY","MS4A1","CD14","LYZ","MS4A7","FCGR3A","CST3","FCER1A"),ncol = 4,order = T)
+FeaturePlot(alldata.int, reduction = "umap", features = c("CD3E","CD4","CD8A","NKG7","GNLY","MS4A1","CD14","LYZ","MS4A7","FCGR3A","CST3","FCER1A"),ncol = 4,order = T)
 ```
 
 Finally, lets save the integrated data for further analysis.
 
 ```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=16}
-saveRDS(alldata.int,"data/3pbmc_qc_dr_int.rds")
+saveRDS(alldata.int,"data/results/covid_qc_dr_int.rds")
 ```
 
 

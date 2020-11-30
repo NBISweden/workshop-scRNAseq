@@ -19,7 +19,7 @@ suppressPackageStartupMessages({
   library(rafalib)
 })
 
-alldata <- readRDS("data/3pbmc_qc_dr_int.rds")
+alldata <- readRDS("data/results/covid_qc_dr_int.rds")
 ```
 
 #CLUST_TITLE2:
@@ -33,12 +33,16 @@ alldata <- readRDS("data/3pbmc_qc_dr_int.rds")
 #CLUST_SEURAT:
 
 ```{r, message='hide',warning='hide',results='hold'}
+# check that CCA is still the active assay
+alldata@active.assay
+
+
 alldata <- FindNeighbors(alldata,
-                         reduction = "PCA_on_CCA",
                          dims = 1:30,
                          k.param = 60,
                          prune.SNN = 1/15)
 
+# check the names for graphs in the object.
 names(alldata@graphs)
 ```
 
@@ -58,16 +62,32 @@ pheatmap(alldata@graphs$CCA_nn[1:200,1:200],
 #CLUST_SEURAT2:
 
 ```{r,results='hide',block.title=TRUE,fig.height=2.9,fig.width=10}
-alldata <- FindClusters(alldata, graph.name = "CCA_snn", resolution = .5 , algorithm = 1)
-alldata <- FindClusters(alldata, graph.name = "CCA_snn", resolution = 1  , algorithm = 1)
-alldata <- FindClusters(alldata, graph.name = "CCA_snn", resolution = 2  , algorithm = 1)
+# Clustering with louvain (algorithm 1)
+for (res in c(0.3,0.5,1,1.5,2)){
+  alldata <- FindClusters(alldata, graph.name = "CCA_snn", resolution = res , algorithm = 1)
+}
+
+# each time you run clustering, the data is stored in meta data columns:
+# seurat_clusters - lastest results only
+# CCA_snn_res.XX - for each different resolution you test.
 
 plot_grid(ncol = 3,
-  DimPlot(alldata, reduction = "UMAP_on_CCA", group.by = "CCA_snn_res.0.5")+ggtitle("louvain_0.5"),
-  DimPlot(alldata, reduction = "UMAP_on_CCA", group.by = "CCA_snn_res.1")+ggtitle("louvain_1"),
-  DimPlot(alldata, reduction = "UMAP_on_CCA", group.by = "CCA_snn_res.2")+ggtitle("louvain_2")
+  DimPlot(alldata, reduction = "umap", group.by = "CCA_snn_res.0.5")+ggtitle("louvain_0.5"),
+  DimPlot(alldata, reduction = "umap", group.by = "CCA_snn_res.1")+ggtitle("louvain_1"),
+  DimPlot(alldata, reduction = "umap", group.by = "CCA_snn_res.2")+ggtitle("louvain_2")
 )
 ```
+
+#CLUST_ALL4.3:
+
+
+```{r}
+suppressPackageStartupMessages(library(clustree))
+
+clustree(alldata@meta.data, prefix = "CCA_snn_res.")
+
+```
+
 
 
 #CLUST_TITLE3:
@@ -75,17 +95,23 @@ plot_grid(ncol = 3,
 #CLUST_ALL7:
 
 ```{r,results='hide',block.title=TRUE,fig.height=2.9}
-alldata$kmeans_5 <- kmeans(x = alldata@reductions[["PCA_on_CCA"]]@cell.embeddings,centers = 5)$cluster
-alldata$kmeans_10 <- kmeans(x = alldata@reductions[["PCA_on_CCA"]]@cell.embeddings,centers = 10)$cluster
-alldata$kmeans_15 <- kmeans(x = alldata@reductions[["PCA_on_CCA"]]@cell.embeddings,centers = 15)$cluster
+alldata$kmeans_5 <- kmeans(x = alldata@reductions[["pca"]]@cell.embeddings,centers = 5)$cluster
+alldata$kmeans_10 <- kmeans(x = alldata@reductions[["pca"]]@cell.embeddings,centers = 10)$cluster
+alldata$kmeans_15 <- kmeans(x = alldata@reductions[["pca"]]@cell.embeddings,centers = 15)$cluster
 
 plot_grid(ncol = 3,
-  DimPlot(alldata, reduction = "UMAP_on_CCA", group.by = "kmeans_5")+ggtitle("kmeans_5"),
-  DimPlot(alldata, reduction = "UMAP_on_CCA", group.by = "kmeans_10")+ggtitle("kmeans_10"),
-  DimPlot(alldata, reduction = "UMAP_on_CCA", group.by = "kmeans_15")+ggtitle("kmeans_15")
+  DimPlot(alldata, reduction = "umap", group.by = "kmeans_5")+ggtitle("kmeans_5"),
+  DimPlot(alldata, reduction = "umap", group.by = "kmeans_10")+ggtitle("kmeans_10"),
+  DimPlot(alldata, reduction = "umap", group.by = "kmeans_15")+ggtitle("kmeans_15")
 )
 ```
 
+
+```{r}
+
+clustree(alldata@meta.data, prefix = "kmeans_")
+
+```
 
 #CLUST_TITLE4:
 
@@ -94,7 +120,7 @@ plot_grid(ncol = 3,
 #CLUST_ALL8.1:
 
 ```{r,results='hide',block.title=TRUE,fig.height=5}
-d <- dist( alldata@reductions[["PCA_on_CCA"]]@cell.embeddings,
+d <- dist( alldata@reductions[["pca"]]@cell.embeddings,
            method="euclidean")
 ```
 
@@ -102,7 +128,7 @@ d <- dist( alldata@reductions[["PCA_on_CCA"]]@cell.embeddings,
 
 ```{r,results='hide',block.title=TRUE,fig.height=5,fig.width=5}
 #Compute sample correlations
-sample_cor <- cor( Matrix::t(alldata@reductions[["PCA_on_CCA"]]@cell.embeddings) )
+sample_cor <- cor( Matrix::t(alldata@reductions[["pca"]]@cell.embeddings) )
 
 #Transform the scale from correlations
 sample_cor <- (1 - sample_cor) / 2
@@ -138,13 +164,13 @@ alldata$hc_corelation_15 <- cutree(h_correlation,k = 15)
 
 
 plot_grid(ncol = 3,
-  DimPlot(alldata, reduction = "UMAP_on_CCA", group.by = "hc_euclidean_5")+ggtitle("hc_euc_5"),
-  DimPlot(alldata, reduction = "UMAP_on_CCA", group.by = "hc_euclidean_10")+ggtitle("hc_euc_10"),
-  DimPlot(alldata, reduction = "UMAP_on_CCA", group.by = "hc_euclidean_15")+ggtitle("hc_euc_15"),
+  DimPlot(alldata, reduction = "umap", group.by = "hc_euclidean_5")+ggtitle("hc_euc_5"),
+  DimPlot(alldata, reduction = "umap", group.by = "hc_euclidean_10")+ggtitle("hc_euc_10"),
+  DimPlot(alldata, reduction = "umap", group.by = "hc_euclidean_15")+ggtitle("hc_euc_15"),
   
-  DimPlot(alldata, reduction = "UMAP_on_CCA", group.by = "hc_corelation_5")+ggtitle("hc_cor_5"),
-  DimPlot(alldata, reduction = "UMAP_on_CCA", group.by = "hc_corelation_10")+ggtitle("hc_cor_10"),
-  DimPlot(alldata, reduction = "UMAP_on_CCA", group.by = "hc_corelation_15")+ggtitle("hc_cor_15")
+  DimPlot(alldata, reduction = "umap", group.by = "hc_corelation_5")+ggtitle("hc_cor_5"),
+  DimPlot(alldata, reduction = "umap", group.by = "hc_corelation_10")+ggtitle("hc_cor_10"),
+  DimPlot(alldata, reduction = "umap", group.by = "hc_corelation_15")+ggtitle("hc_cor_15")
 )
 ```
 
@@ -152,7 +178,7 @@ plot_grid(ncol = 3,
 #CLUST_ALL9:
 
 ```{r}
-saveRDS(alldata,"data/3pbmc_qc_dr_int_cl.rds")
+saveRDS(alldata,"data/results/covid_qc_dr_int_cl.rds")
 ```
 
 
