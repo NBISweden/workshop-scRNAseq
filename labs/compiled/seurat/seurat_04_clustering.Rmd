@@ -1,6 +1,6 @@
 ---
 author: "Åsa Björklund  &  Paulo Czarnewski"
-date: "Sept 13, 2019"
+date: '`r format(Sys.Date(), "%B %d, %Y")`'
 output:
   html_document:
     self_contained: true
@@ -25,7 +25,8 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(message='hide', warning='hide', result='hold',fig.width=12)
+knitr::opts_chunk$set(message=FALSE, warning=FALSE, result='hold',fig.width=12,tidy=TRUE)
+knitr::opts_knit$set(progress=TRUE,verbose=TRUE)
 ```
 <style>
 h1, .h1, h2, .h2, h3, .h3, h4, .h4 { margin-top: 50px }
@@ -48,7 +49,7 @@ suppressPackageStartupMessages({
   library(rafalib)
 })
 
-alldata <- readRDS("data/3pbmc_qc_dr_int.rds")
+alldata <- readRDS("data/results/covid_qc_dr_int.rds")
 ```
 
 ## Graph clustering
@@ -70,12 +71,16 @@ The first step into graph clustering is to construct a k-nn graph, in case you d
 As we can see above, the **Seurat** function `FindNeighbors` already computes both the KNN and SNN graphs, in which we can control the minimal percentage of shared neighbours to be kept. See `?FindNeighbors` for additional options.
 
 ```{r, message='hide',warning='hide',results='hold'}
+# check that CCA is still the active assay
+alldata@active.assay
+
+
 alldata <- FindNeighbors(alldata,
-                         reduction = "PCA_on_CCA",
                          dims = 1:30,
                          k.param = 60,
                          prune.SNN = 1/15)
 
+# check the names for graphs in the object.
 names(alldata@graphs)
 ```
 
@@ -96,16 +101,32 @@ Once the graph is built, we can now perform graph clustering. The clustering is 
 In **Seurat**, the function `FindClusters` will do a graph-based clustering using "Louvain" algorithim by default (`algorithm = 1`). TO use the leiden algorithm, you need to set it to `algorithm = 4`. See `?FindClusters` for additional options.
 
 ```{r,results='hide',block.title=TRUE,fig.height=2.9,fig.width=10}
-alldata <- FindClusters(alldata, graph.name = "CCA_snn", resolution = .5 , algorithm = 1)
-alldata <- FindClusters(alldata, graph.name = "CCA_snn", resolution = 1  , algorithm = 1)
-alldata <- FindClusters(alldata, graph.name = "CCA_snn", resolution = 2  , algorithm = 1)
+# Clustering with louvain (algorithm 1)
+for (res in c(0.3,0.5,1,1.5,2)){
+  alldata <- FindClusters(alldata, graph.name = "CCA_snn", resolution = res , algorithm = 1)
+}
+
+# each time you run clustering, the data is stored in meta data columns:
+# seurat_clusters - lastest results only
+# CCA_snn_res.XX - for each different resolution you test.
 
 plot_grid(ncol = 3,
-  DimPlot(alldata, reduction = "UMAP_on_CCA", group.by = "CCA_snn_res.0.5")+ggtitle("louvain_0.5"),
-  DimPlot(alldata, reduction = "UMAP_on_CCA", group.by = "CCA_snn_res.1")+ggtitle("louvain_1"),
-  DimPlot(alldata, reduction = "UMAP_on_CCA", group.by = "CCA_snn_res.2")+ggtitle("louvain_2")
+  DimPlot(alldata, reduction = "umap", group.by = "CCA_snn_res.0.5")+ggtitle("louvain_0.5"),
+  DimPlot(alldata, reduction = "umap", group.by = "CCA_snn_res.1")+ggtitle("louvain_1"),
+  DimPlot(alldata, reduction = "umap", group.by = "CCA_snn_res.2")+ggtitle("louvain_2")
 )
 ```
+
+We can now use the `clustree` package to visualize how cells are distributed between clusters depending on resolution.
+
+
+```{r}
+suppressPackageStartupMessages(library(clustree))
+
+clustree(alldata@meta.data, prefix = "CCA_snn_res.")
+
+```
+
 
 
 ## K-means clustering
@@ -114,17 +135,23 @@ plot_grid(ncol = 3,
 K-means is a generic clustering algorithm that has been used in many application areas. In R, it can be applied via the kmeans function. Typically, it is applied to a reduced dimension representation of the expression data (most often PCA, because of the interpretability of the low-dimensional distances). We need to define the number of clusters in advance. Since the results depend on the initialization of the cluster centers, it is typically recommended to run K-means with multiple starting configurations (via the nstart argument).
 
 ```{r,results='hide',block.title=TRUE,fig.height=2.9}
-alldata$kmeans_5 <- kmeans(x = alldata@reductions[["PCA_on_CCA"]]@cell.embeddings,centers = 5)$cluster
-alldata$kmeans_10 <- kmeans(x = alldata@reductions[["PCA_on_CCA"]]@cell.embeddings,centers = 10)$cluster
-alldata$kmeans_15 <- kmeans(x = alldata@reductions[["PCA_on_CCA"]]@cell.embeddings,centers = 15)$cluster
+alldata$kmeans_5 <- kmeans(x = alldata@reductions[["pca"]]@cell.embeddings,centers = 5)$cluster
+alldata$kmeans_10 <- kmeans(x = alldata@reductions[["pca"]]@cell.embeddings,centers = 10)$cluster
+alldata$kmeans_15 <- kmeans(x = alldata@reductions[["pca"]]@cell.embeddings,centers = 15)$cluster
 
 plot_grid(ncol = 3,
-  DimPlot(alldata, reduction = "UMAP_on_CCA", group.by = "kmeans_5")+ggtitle("kmeans_5"),
-  DimPlot(alldata, reduction = "UMAP_on_CCA", group.by = "kmeans_10")+ggtitle("kmeans_10"),
-  DimPlot(alldata, reduction = "UMAP_on_CCA", group.by = "kmeans_15")+ggtitle("kmeans_15")
+  DimPlot(alldata, reduction = "umap", group.by = "kmeans_5")+ggtitle("kmeans_5"),
+  DimPlot(alldata, reduction = "umap", group.by = "kmeans_10")+ggtitle("kmeans_10"),
+  DimPlot(alldata, reduction = "umap", group.by = "kmeans_15")+ggtitle("kmeans_15")
 )
 ```
 
+
+```{r}
+
+clustree(alldata@meta.data, prefix = "kmeans_")
+
+```
 
 ## Hierarchical clustering
 ***
@@ -134,7 +161,7 @@ plot_grid(ncol = 3,
 The base R `stats` package already contains a function `dist` that calculates distances between all pairs of samples. Since we want to compute distances between samples, rather than among genes, we need to transpose the data before applying it to the `dist` function. This can be done by simply adding the transpose function `t()` to the data. The distance methods available  in `dist` are: "euclidean", "maximum", "manhattan", "canberra", "binary" or "minkowski".
 
 ```{r,results='hide',block.title=TRUE,fig.height=5}
-d <- dist( alldata@reductions[["PCA_on_CCA"]]@cell.embeddings,
+d <- dist( alldata@reductions[["pca"]]@cell.embeddings,
            method="euclidean")
 ```
 
@@ -147,7 +174,7 @@ Once we transformed the correlations to a 0-1 scale, we can simply convert it to
 
 ```{r,results='hide',block.title=TRUE,fig.height=5,fig.width=5}
 #Compute sample correlations
-sample_cor <- cor( Matrix::t(alldata@reductions[["PCA_on_CCA"]]@cell.embeddings) )
+sample_cor <- cor( Matrix::t(alldata@reductions[["pca"]]@cell.embeddings) )
 
 #Transform the scale from correlations
 sample_cor <- (1 - sample_cor) / 2
@@ -183,13 +210,13 @@ alldata$hc_corelation_15 <- cutree(h_correlation,k = 15)
 
 
 plot_grid(ncol = 3,
-  DimPlot(alldata, reduction = "UMAP_on_CCA", group.by = "hc_euclidean_5")+ggtitle("hc_euc_5"),
-  DimPlot(alldata, reduction = "UMAP_on_CCA", group.by = "hc_euclidean_10")+ggtitle("hc_euc_10"),
-  DimPlot(alldata, reduction = "UMAP_on_CCA", group.by = "hc_euclidean_15")+ggtitle("hc_euc_15"),
+  DimPlot(alldata, reduction = "umap", group.by = "hc_euclidean_5")+ggtitle("hc_euc_5"),
+  DimPlot(alldata, reduction = "umap", group.by = "hc_euclidean_10")+ggtitle("hc_euc_10"),
+  DimPlot(alldata, reduction = "umap", group.by = "hc_euclidean_15")+ggtitle("hc_euc_15"),
   
-  DimPlot(alldata, reduction = "UMAP_on_CCA", group.by = "hc_corelation_5")+ggtitle("hc_cor_5"),
-  DimPlot(alldata, reduction = "UMAP_on_CCA", group.by = "hc_corelation_10")+ggtitle("hc_cor_10"),
-  DimPlot(alldata, reduction = "UMAP_on_CCA", group.by = "hc_corelation_15")+ggtitle("hc_cor_15")
+  DimPlot(alldata, reduction = "umap", group.by = "hc_corelation_5")+ggtitle("hc_cor_5"),
+  DimPlot(alldata, reduction = "umap", group.by = "hc_corelation_10")+ggtitle("hc_cor_10"),
+  DimPlot(alldata, reduction = "umap", group.by = "hc_corelation_15")+ggtitle("hc_cor_15")
 )
 ```
 
@@ -197,12 +224,12 @@ plot_grid(ncol = 3,
 Finally, lets save the integrated data for further analysis.
 
 ```{r}
-saveRDS(alldata,"data/3pbmc_qc_dr_int_cl.rds")
+saveRDS(alldata,"data/results/covid_qc_dr_int_cl.rds")
 ```
 
 
-## Check QC-stats
-By now you should know how to plot different features onto your data. Take the QC metrics that were calculated in the first exercise, that should be stored in your data object, and plot it onto your UMAP and as violin plots per cluster using the clustering method of your choice. For example, plot number of UMIS, detected genes, percent mitochondrial reads. 
+###TASK: Check QC-stats
+By now you should know how to plot different features onto your data. Take the QC metrics that were calculated in the first exercise, that should be stored in your data object, and plot it as violin plots per cluster using the clustering method of your choice. For example, plot number of UMIS, detected genes, percent mitochondrial reads. 
 Then, check carefully if there is any bias in how your data is separated due to quality metrics. Could it be explained biologically, or could you have technical bias there?
 
 

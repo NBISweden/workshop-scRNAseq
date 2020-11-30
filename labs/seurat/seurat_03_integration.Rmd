@@ -18,7 +18,7 @@ suppressPackageStartupMessages({
   library(ggplot2)
 })
 
-alldata <- readRDS("data/3pbmc_qc_dr.rds")
+alldata <- readRDS("data/results/covid_qc_dr.rds")
 print(names(alldata@reductions))
 ```
 
@@ -52,29 +52,33 @@ alldata.int <- IntegrateData(anchorset = alldata.anchors, dims = 1:30, new.assay
 
 ```{r, message='hide',warning='hide',results='hold'}
 names(alldata.int@assays)
+
+# by default, Seurat now sets the integrated assay as the default assay, so any operation you now perform will be on the ingegrated data.
+
+alldata.int@active.assay
 ```
 
 #INTEG_SEURAT4:
 
 ```{r, message='hide',warning='hide',results='hold'}
 #Run Dimensionality reduction on integrated space
-alldata.int <- ScaleData(alldata.int, verbose = FALSE,assay = "CCA")
-alldata.int <- RunPCA(alldata.int, npcs = 30, verbose = FALSE, assay = "CCA",reduction.name = "PCA_on_CCA")
-alldata.int <- RunUMAP(alldata.int, reduction = "PCA_on_CCA", dims = 1:30,reduction.name = "UMAP_on_CCA")
-alldata.int <- RunTSNE(alldata.int, reduction = "PCA_on_CCA", dims = 1:30,reduction.name = "TSNE_on_CCA")
+alldata.int <- ScaleData(alldata.int, verbose = FALSE)
+alldata.int <- RunPCA(alldata.int, npcs = 30, verbose = FALSE)
+alldata.int <- RunUMAP(alldata.int, dims = 1:30)
+alldata.int <- RunTSNE(alldata.int, dims = 1:30)
 ```
 
 #INTEG_ALL4:
 
 ```{r, message='hide',warning='hide',results='hold',fig.asp=.55,fig.width=16}
 plot_grid(ncol = 3,
-  DimPlot(alldata, reduction = "PCA_on_RNA", group.by = "orig.ident"),
-  DimPlot(alldata, reduction = "TSNE_on_PCA", group.by = "orig.ident"),
-  DimPlot(alldata, reduction = "UMAP_on_PCA", group.by = "orig.ident"),
+  DimPlot(alldata, reduction = "pca", group.by = "orig.ident"),
+  DimPlot(alldata, reduction = "tsne", group.by = "orig.ident"),
+  DimPlot(alldata, reduction = "umap", group.by = "orig.ident"),
   
-  DimPlot(alldata.int, reduction = "PCA_on_CCA", group.by = "orig.ident"),
-  DimPlot(alldata.int, reduction = "TSNE_on_CCA", group.by = "orig.ident"),
-  DimPlot(alldata.int, reduction = "UMAP_on_CCA", group.by = "orig.ident")
+  DimPlot(alldata.int, reduction = "pca", group.by = "orig.ident"),
+  DimPlot(alldata.int, reduction = "tsne", group.by = "orig.ident"),
+  DimPlot(alldata.int, reduction = "umap", group.by = "orig.ident")
 )
 ```
 
@@ -83,13 +87,13 @@ plot_grid(ncol = 3,
 #MARKER_TABLE:
 
 ```{r,message='hide',warning='hide', results='hold',results='hold',fig.asp=.65,fig.width=16}
-FeaturePlot(alldata.int, reduction = "UMAP_on_CCA",dims = 1:2,features = c("CD3E","CD4","CD8A","NKG7","GNLY","MS4A1","CD14","LYZ","MS4A7","FCGR3A","CST3","FCER1A"),ncol = 4,order = T)
+FeaturePlot(alldata.int, reduction = "umap", features = c("CD3E","CD4","CD8A","NKG7","GNLY","MS4A1","CD14","LYZ","MS4A7","FCGR3A","CST3","FCER1A"),ncol = 4,order = T)
 ```
 
 #INTEG_ALL5:
 
 ```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=16}
-saveRDS(alldata.int,"data/3pbmc_qc_dr_int.rds")
+saveRDS(alldata.int,"data/results/covid_qc_dr_int.rds")
 ```
 
 
