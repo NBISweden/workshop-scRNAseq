@@ -1,0 +1,214 @@
+---
+author: "Åsa Björklund  &  Paulo Czarnewski"
+date: '`r format(Sys.Date(), "%B %d, %Y")`'
+output:
+  html_document:
+    self_contained: true
+    highlight: tango
+    df_print: paged
+    toc: yes
+    toc_float:
+      collapsed: false
+      smooth_scroll: true
+    toc_depth: 3
+    keep_md: yes
+    fig_caption: true
+  html_notebook:
+    self_contained: true
+    highlight: tango
+    df_print: paged
+    toc: yes
+    toc_float:
+      collapsed: false
+      smooth_scroll: true
+    toc_depth: 3
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(message=FALSE, warning=FALSE, result='hold',fig.width=12,tidy=TRUE)
+knitr::opts_knit$set(progress=TRUE,verbose=TRUE)
+```
+<style>
+h1, .h1, h2, .h2, h3, .h3, h4, .h4 { margin-top: 50px }
+p.caption {font-size: 0.9em;font-style: italic;color: grey;margin-right: 10%;margin-left: 10%;text-align: justify}
+</style>
+
+## Celltype prediction
+***
+
+ Celltype prediction can either be performed on indiviudal cells where each cell gets a predicted celltype label, or on the level of clusters. All methods are based on similarity to other datasets, single cell or sorted bulk RNAseq, or uses know marker genes for each celltype. 
+ 
+We will select one sample from the Covid data, `ctrl_13` and predict celltype by cell on that sample.
+
+Some methods will predict a celltype to each cell based on what it is most similar to even if the celltype of that cell is not included in the reference. Other methods include an uncertainty so that cells with low similarity scores will be unclassified. 
+
+Here we will use a reference PBMC dataset from the `scPred` package which is already a Seurat object with counts. And test classification based on label transfer using the function `TransferData` in the Seurat package, the `scPred` method and `singleR` method.
+
+```{r}
+suppressPackageStartupMessages({
+  library(Seurat)
+  library(venn)
+  library(dplyr)
+  library(cowplot)
+  library(ggplot2)
+  library(pheatmap)
+  library(rafalib)
+  library(scPred)
+})
+```
+
+```{r}
+#load the data and select 'ctrl_13` sample
+alldata <- readRDS("data/results/covid_qc_dr_int_cl.rds")
+ctrl = alldata[, alldata$orig.ident == 'ctrl_13']
+
+# set active assay to RNA and remove the CCA assay
+ctrl@active.assay = 'RNA' 
+ctrl[['CCA']] = NULL
+ctrl
+```
+
+
+
+```{r}
+reference <- scPred::pbmc_1
+
+reference
+```
+
+Here, we will run all the steps that we did in previous labs in one go using the `magittr` package with the pipe-operator `%>%`.
+
+```{r}
+reference <- reference %>%
+  NormalizeData() %>%
+  FindVariableFeatures() %>%
+  ScaleData() %>%
+  RunPCA(verbose = F) %>%
+  RunUMAP(dims = 1:30)
+```
+
+```{r, fig.width=5}
+DimPlot(reference, group.by = "cell_type", label = TRUE, repel = TRUE) + NoAxes()
+```
+
+
+Run all steps of the analysis for the ctrl sample as well. Use the clustering from the integration lab with resolution 0.3.
+
+```{r}
+#Set the identity as louvain with resolution 0.3
+ctrl <- SetIdent(ctrl, value = "CCA_snn_res.0.3")
+  
+ctrl <- ctrl %>%
+  NormalizeData() %>%
+  FindVariableFeatures() %>%
+  ScaleData() %>%
+  RunPCA(verbose = F) %>%
+  RunUMAP(dims = 1:30)
+
+```
+
+```{r, fig.width=5}
+DimPlot(ctrl,  label = TRUE, repel = TRUE) + NoAxes()
+```
+
+
+## Seurat label transfer
+First we will run label transfer using a similar method as in the integration exercise. But, instad of CCA the default for the 'FindTransferAnchors` function is to use "pcaproject", e.g. the query datset is projected onto the PCA of the reference dataset. Then, the labels of the reference data are predicted.
+
+```{r}
+transfer.anchors <- FindTransferAnchors(reference = reference, query = ctrl, 
+    dims = 1:30)
+predictions <- TransferData(anchorset = transfer.anchors, refdata = reference$cell_type, 
+    dims = 1:30)
+ctrl <- AddMetaData(object = ctrl, metadata = predictions)
+```
+
+```{r}
+
+DimPlot(ctrl, group.by = "predicted.id", label = T, repel = T) + NoAxes()
+```
+
+Now plot how many cells of each celltypes can be found in each cluster.
+
+```{r}
+ggplot(ctrl@meta.data, aes(x=CCA_snn_res.0.3, fill = predicted.id)) + geom_bar() + theme_classic()
+```
+
+## scPred
+scPred will train a classifier based on all principal components. First, `getFeatureSpace` will create a scPred object stored in the `@misc` slot where it extracts the PCs that best separates the different celltypes. Then `trainModel` will do the actual training for each celltype.
+
+```{r}
+reference <- getFeatureSpace(reference, "cell_type")
+
+reference <- trainModel(reference)
+```
+
+We can then print how well the training worked for the different celltypes by printing the number of PCs used for each, the ROC value and Sensitivity/Specificity. Which celltypes do you think are harder to classify based on this dataset?
+
+```{r}
+get_scpred(reference)
+```
+
+You can optimize parameters for each dataset by chaning parameters and testing different types of models, see more at: https://powellgenomicslab.github.io/scPred/articles/introduction.html. But for now, we will continue with this model.
+
+ Now, lets predict celltypes on our data, where scPred will align the two datasets with Harmony and then perform classification.
+
+```{r}
+ctrl <- scPredict(ctrl, reference)
+```
+
+```{r}
+DimPlot(ctrl, group.by = "scpred_prediction", label = T, repel = T) + NoAxes()
+
+```
+
+Now plot how many	cells of each celltypes	can be found in	each cluster.
+
+```{r}
+ggplot(ctrl@meta.data, aes(x=CCA_snn_res.0.3, fill = scpred_prediction)) + geom_bar() + theme_classic()
+```
+
+## Compare results
+
+Now we will compare the output of the two methods using the convenient function in scPred `crossTab` that prints the overlap between two metadata slots.
+
+```{r}
+crossTab(ctrl, "predicted.id", "scpred_prediction")
+```
+
+Do you think that the methods overlap well? Where do you see the most inconsistencies? 
+
+In this case we do not have any ground truth, and we cannot say wich method performs best. You should keep in mind, that any celltype classification method is just a prediction, and you still need to use your common sense and knowledge of the biological system to judge if the results make sense.
+
+Finally, lets save the data with predictions.
+
+```{r}
+saveRDS(ctrl,"data/results/ctrl13_qc_dr_int_cl_celltype.rds")
+```
+
+
+### Session Info
+***
+
+```{r}
+sessionInfo()
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

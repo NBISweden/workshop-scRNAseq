@@ -1,0 +1,171 @@
+---
+#CSS_ALL:
+---
+
+#CHUNK_OPT:
+
+#CT_TITLE:
+
+#CT_ALL1:
+
+#CT_SEURAT1:
+
+```{r}
+suppressPackageStartupMessages({
+  library(Seurat)
+  library(venn)
+  library(dplyr)
+  library(cowplot)
+  library(ggplot2)
+  library(pheatmap)
+  library(rafalib)
+  library(scPred)
+})
+```
+
+```{r}
+#load the data and select 'ctrl_13` sample
+alldata <- readRDS("data/results/covid_qc_dr_int_cl.rds")
+ctrl = alldata[, alldata$orig.ident == 'ctrl_13']
+
+# set active assay to RNA and remove the CCA assay
+ctrl@active.assay = 'RNA' 
+ctrl[['CCA']] = NULL
+ctrl
+```
+
+
+
+```{r}
+reference <- scPred::pbmc_1
+
+reference
+```
+
+#CT_SEURAT3:
+
+```{r}
+reference <- reference %>%
+  NormalizeData() %>%
+  FindVariableFeatures() %>%
+  ScaleData() %>%
+  RunPCA(verbose = F) %>%
+  RunUMAP(dims = 1:30)
+```
+
+```{r, fig.width=5}
+DimPlot(reference, group.by = "cell_type", label = TRUE, repel = TRUE) + NoAxes()
+```
+
+
+#CT_ALL4:
+
+```{r}
+#Set the identity as louvain with resolution 0.3
+ctrl <- SetIdent(ctrl, value = "CCA_snn_res.0.3")
+  
+ctrl <- ctrl %>%
+  NormalizeData() %>%
+  FindVariableFeatures() %>%
+  ScaleData() %>%
+  RunPCA(verbose = F) %>%
+  RunUMAP(dims = 1:30)
+
+```
+
+```{r, fig.width=5}
+DimPlot(ctrl,  label = TRUE, repel = TRUE) + NoAxes()
+```
+
+
+#CT_SEURAT4:
+
+```{r}
+transfer.anchors <- FindTransferAnchors(reference = reference, query = ctrl, 
+    dims = 1:30)
+predictions <- TransferData(anchorset = transfer.anchors, refdata = reference$cell_type, 
+    dims = 1:30)
+ctrl <- AddMetaData(object = ctrl, metadata = predictions)
+```
+
+```{r}
+
+DimPlot(ctrl, group.by = "predicted.id", label = T, repel = T) + NoAxes()
+```
+
+#CT_SEURAT4.2:
+
+```{r}
+ggplot(ctrl@meta.data, aes(x=CCA_snn_res.0.3, fill = predicted.id)) + geom_bar() + theme_classic()
+```
+
+#CT_SEURAT5:
+
+```{r}
+reference <- getFeatureSpace(reference, "cell_type")
+
+reference <- trainModel(reference)
+```
+
+#CT_SEURAT5.2:
+
+```{r}
+get_scpred(reference)
+```
+
+#CT_SEURAT5.3:
+
+```{r}
+ctrl <- scPredict(ctrl, reference)
+```
+
+```{r}
+DimPlot(ctrl, group.by = "scpred_prediction", label = T, repel = T) + NoAxes()
+
+```
+
+#CT_SEURAT5.4:
+
+```{r}
+ggplot(ctrl@meta.data, aes(x=CCA_snn_res.0.3, fill = scpred_prediction)) + geom_bar() + theme_classic()
+```
+
+#CT_ALL6:
+
+#CT_SEURAT6:
+
+```{r}
+crossTab(ctrl, "predicted.id", "scpred_prediction")
+```
+
+#CT_ALL7:
+
+```{r}
+saveRDS(ctrl,"data/results/ctrl13_qc_dr_int_cl_celltype.rds")
+```
+
+
+#SESSION_INFO:
+
+```{r}
+sessionInfo()
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
