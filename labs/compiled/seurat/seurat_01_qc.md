@@ -1,7 +1,7 @@
 ---
 title: "Seurat: Quality control"
 author: "Åsa Björklund  &  Paulo Czarnewski"
-date: 'November 27, 2020'
+date: 'November 30, 2020'
 output:
   html_document:
     self_contained: true
@@ -120,8 +120,8 @@ gc()
 
 ```
 ##            used  (Mb) gc trigger  (Mb) max used  (Mb)
-## Ncells  2603656 139.1    5108165 272.9  4535480 242.3
-## Vcells 43391644 331.1  104630984 798.3 95393841 727.8
+## Ncells  2603859 139.1    5108754 272.9  4535703 242.3
+## Vcells 43392151 331.1  104631972 798.3 95394549 727.9
 ```
  Here it is how the count matrix and the metatada look like for every cell.
 
@@ -216,7 +216,8 @@ FeatureScatter(alldata, "nCount_RNA", "nFeature_RNA", group.by = "orig.ident", p
 
 ![](seurat_01_qc_files/figure-html/unnamed-chunk-11-1.png)<!-- -->
 
-###TASK: Plot additional QC stats that we have calculated as scatter plots. How are the different measures correlated? Can you explain why?
+### TASK: Plot scatterplots
+Plot additional QC stats that we have calculated as scatter plots. How are the different measures correlated? Can you explain why?
 
 ***
 # Filtering
