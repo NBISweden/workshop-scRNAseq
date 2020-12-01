@@ -21,12 +21,23 @@ suppressPackageStartupMessages({
   library(rafalib)
 })
 
-alldata <- readRDS("data/3pbmc_qc_dr_int_cl.rds")
+alldata <- readRDS("data/results/covid_qc_dr_int_cl.rds")
+```
 
-#Set the identity as louvain_2 clustering
-print(alldata@active.ident[1:10])
-alldata <- SetIdent(alldata, value = "kmeans_5")
-print(alldata@active.ident[1:10])
+```{r, fig.width=12, fig.height=6}
+#Set the identity as louvain with resolution 0.3
+sel.clust = "CCA_snn_res.0.3"
+
+alldata <- SetIdent(alldata, value = sel.clust)
+table(alldata@active.ident)
+
+# plot this clustering
+plot_grid(ncol = 3,
+  DimPlot(alldata, label = T) + NoAxes(),
+  DimPlot(alldata, group.by = "orig.ident") + NoAxes(),
+  DimPlot(alldata, group.by = "type") + NoAxes() )
+  
+  
 ```
 
 #DGE_TITLE1:
@@ -68,20 +79,26 @@ for(i in unique(top25$cluster)){
 ```{r}
 markers_genes %>% group_by(cluster)  %>% top_n(-5, p_val_adj) -> top5
 
+# create a scale.data slot for the selected genes
 alldata <- ScaleData(alldata, features = as.character(unique(top5$gene)), assay = "RNA")
-DoHeatmap(alldata, features = as.character(unique(top5$gene)),group.by = "kmeans_5", assay = "RNA")
+DoHeatmap(alldata, features = as.character(unique(top5$gene)),group.by = sel.clust, assay = "RNA")
 ```
 
 #DGE_ALL4.2:
 
-```{r}
-DotPlot(alldata, features = as.character(unique(top5$gene)),group.by = "kmeans_5",assay = "RNA")+coord_flip()
+```{r, fig.height=10}
+DotPlot(alldata, features = as.character(unique(top5$gene)),group.by = sel.clust,assay = "RNA")+coord_flip()
 ```
 
 #DGE_ALL4.3:
 
 ```{r,fig.height=10,fig.width=10}
-VlnPlot(alldata, features = as.character(unique(top5$gene)), ncol = 5, group.by = "kmeans_5",assay = "RNA")
+# take top 3 genes per cluster/
+top5 %>% group_by(cluster)  %>% top_n(-3, p_val_adj) -> top3
+
+
+# set pt.size to zero if you do not want all the points to hide the violin shapes, or to a small value like 0.1
+VlnPlot(alldata, features = as.character(unique(top3$gene)), ncol = 5, group.by = sel.clust, assay = "RNA", pt.size = 0)
 ```
 
 #DGE_ALL5:
@@ -91,8 +108,9 @@ VlnPlot(alldata, features = as.character(unique(top5$gene)), ncol = 5, group.by 
 #DGE_ALL6:
 
 ```{r,fig.height=10,fig.width=10}
-cell_selection <- subset(alldata, cells = colnames(alldata)[ alldata$kmeans_5 == 4 ])
-cell_selection <- SetIdent(cell_selection, value = "Chemistry")
+# select all cells in cluster 1
+cell_selection <- subset(alldata, cells = colnames(alldata)[ alldata@meta.data[,sel.clust] == 1])
+cell_selection <- SetIdent(cell_selection, value = "type")
 #Compute differentiall expression
 DGE_cell_selection <- FindAllMarkers(cell_selection,
                                logfc.threshold = 0.2,
@@ -110,15 +128,17 @@ DGE_cell_selection <- FindAllMarkers(cell_selection,
 DGE_cell_selection %>% group_by(cluster)  %>% top_n(-5, p_val_adj) -> top5_cell_selection
 
 VlnPlot(cell_selection, features = as.character(unique(top5_cell_selection$gene)),
-        ncol = 5,group.by = "Chemistry",assay = "RNA")
+        ncol = 5,group.by = "type",assay = "RNA", pt.size = .1)
 ```
 
-#DGE_ALL6.2:
+#DGE_ALL6.1b:
 
-```{r,fig.asp=.28}
-FeaturePlot(alldata, reduction = "UMAP_on_CCA",dims = 1:2,
-            features = c("JUND","RPS17","CD81"),order = T,ncol = 3)
+```{r}
+VlnPlot(alldata, features = as.character(unique(top5_cell_selection$gene)),
+        ncol = 5, split.by = "type",assay = "RNA", pt.size = 0)
 ```
+
+
 
 #DGE_ALL10:
 
