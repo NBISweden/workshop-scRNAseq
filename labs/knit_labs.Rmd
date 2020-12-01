@@ -693,6 +693,7 @@ for( pipeline in c("seurat","scater")){
 =======
 
 >>>>>>> e118a0cf4765a56b47fca2432b91c05790857257
+
 ```{r setup, include=FALSE}
 for( pipeline in c("seurat","scater")){
   lab <- readLines(paste0(script_path,"/",pipeline,"/",pipeline,"_05_dge.Rmd"))
@@ -718,6 +719,59 @@ for( pipeline in c("seurat","scater")){
 
 =======
 >>>>>>> e118a0cf4765a56b47fca2432b91c05790857257
+
+#-------------------------------------#
+#   Celltype			      #
+#-------------------------------------#
+#CT_TITLE:## Celltype prediction
+#CT_TITLE:***
+
+#CT_ALL1: Celltype prediction can either be performed on indiviudal cells where each cell gets a predicted celltype label, or on the level of clusters. All methods are based on similarity to other datasets, single cell or sorted bulk RNAseq, or uses know marker genes for each celltype. 
+#CT_ALL1: 
+#CT_ALL1:We will select one sample from the Covid data, `ctrl_13` and predict celltype by cell on that sample.
+#CT_ALL1:
+#CT_ALL1:Some methods will predict a celltype to each cell based on what it is most similar to even if the celltype of that cell is not included in the reference. Other methods include an uncertainty so that cells with low similarity scores will be unclassified. 
+
+#CT_SEURAT1:Here we will use a reference PBMC dataset from the `scPred` package which is already a Seurat object with counts. And test classification based on label transfer using the function `TransferData` in the Seurat package, the `scPred` method and `singleR` method.
+
+
+#CT_ALL2:## Load data
+#CT_ALL2:First, lets load required libraries and the saved object from the clustering step. Subset for one patient.
+
+#CT_ALL3:Then, load the reference dataset with annotated labels. Also, run all steps of the normal analysis pipeline with normalizaiton, variable gene selection, scaling and dimensionality reduction.
+
+#CT_SEURAT3:Here, we will run all the steps that we did in previous labs in one go using the `magittr` package with the pipe-operator `%>%`.
+
+#CT_ALL4:Run all steps of the analysis for the ctrl sample as well. Use the clustering from the integration lab with resolution 0.3.
+
+#CT_SEURAT4:## Seurat label transfer
+#CT_SEURAT4:First we will run label transfer using a similar method as in the integration exercise. But, instad of CCA the default for the 'FindTransferAnchors` function is to use "pcaproject", e.g. the query datset is projected onto the PCA of the reference dataset. Then, the labels of the reference data are predicted.
+
+#CT_SEURAT4.2:Now plot how many cells of each celltypes can be found in each cluster.
+
+#CT_SEURAT5:## scPred
+#CT_SEURAT5:scPred will train a classifier based on all principal components. First, `getFeatureSpace` will create a scPred object stored in the `@misc` slot where it extracts the PCs that best separates the different celltypes. Then `trainModel` will do the actual training for each celltype.
+
+#CT_SEURAT5.2:We can then print how well the training worked for the different celltypes by printing the number of PCs used for each, the ROC value and Sensitivity/Specificity. Which celltypes do you think are harder to classify based on this dataset?
+
+#CT_SEURAT5.3:You can optimize parameters for each dataset by chaning parameters and testing different types of models, see more at: https://powellgenomicslab.github.io/scPred/articles/introduction.html. But for now, we will continue with this model.
+#CT_SEURAT5.3:
+#CT_SEURAT5.3: Now, lets predict celltypes on our data, where scPred will align the two datasets with Harmony and then perform classification.
+
+#CT_SEURAT5.4:Now plot how many	cells of each celltypes	can be found in	each cluster.
+
+#CT_ALL6:## Compare results
+#CT_SEURAT6:Now we will compare the output of the two methods using the convenient function in scPred `crossTab` that prints the overlap between two metadata slots.
+
+#CT_ALL7:Do you think that the methods overlap well? Where do you see the most inconsistencies? 
+#CT_ALL7:
+#CT_ALL7:In this case we do not have any ground truth, and we cannot say wich method performs best. You should keep in mind, that any celltype classification method is just a prediction, and you still need to use your common sense and knowledge of the biological system to judge if the results make sense.
+#CT_ALL7:
+#CT_ALL7:Finally, lets save the data with predictions.
+
+
+#-----------
+
 
 #-------------------------------------#
 #   Trajectory inference: Slingshot   #
