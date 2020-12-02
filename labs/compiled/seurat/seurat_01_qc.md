@@ -1,7 +1,7 @@
 ---
 title: "Seurat: Quality control"
 author: "Åsa Björklund  &  Paulo Czarnewski"
-date: 'November 30, 2020'
+date: 'December 02, 2020'
 output:
   html_document:
     self_contained: true
@@ -120,8 +120,8 @@ gc()
 
 ```
 ##            used  (Mb) gc trigger  (Mb) max used  (Mb)
-## Ncells  2603859 139.1    5108754 272.9  4535703 242.3
-## Vcells 43392151 331.1  104631972 798.3 95394549 727.9
+## Ncells  2603888 139.1    5108734 272.9  4535732 242.3
+## Vcells 43392671 331.1  104633050 798.3 95395069 727.9
 ```
  Here it is how the count matrix and the metatada look like for every cell.
 

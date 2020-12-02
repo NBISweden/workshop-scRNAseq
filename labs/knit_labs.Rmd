@@ -269,7 +269,7 @@ for( pipeline in c("seurat","scater")){
 
 #DIMRED_ALL1.1:### Feature selection
 
-#DIMRED_1_SCANPY: Before variable gene selection we need to normalize and logaritmize the data. As in the QC-lab, first store the raw data in the `raw`  slot.
+#DIMRED_1_SCANPY: Before variable gene selection we need to normalize and logaritmize the data. Then  store the full matrix in the `raw`  slot before doing variable gene selection. 
 
 #DIMRED_ALL2:Next, we first need to define which features/genes are important in our dataset to distinguish cell types. For this purpose, we need to find genes that are highly variable across cells, which in turn will also provide a good separation of the cell clusters.
 
@@ -424,10 +424,12 @@ for( pipeline in c("seurat","scater")){
 #INTEG_SCRAN3:We can observe that a new assay slot is now created under the name `MNN`.
 #INTEG_SCRAN4:Thus, the result from `fastMNN()` should solely be treated as a reduced dimensionality representation, suitable for direct plotting, TSNE/UMAP, clustering, and trajectory analysis that relies on such results.
 
-#INTEG_1_SCANPY:As the stored AnnData object contains scaled data based on variable genes, we need to make a new object with the raw counts and normalized it again. Variable gene selection should not be performed on the scaled data object, only do normalization and log transformation before variable genes selection. 
+#INTEG_1_SCANPY:As the stored AnnData object contains scaled data based on variable genes, we need to make a new object with the logtransformed normalized counts. The new variable gene selection should not be performed on the scaled data matrix.
+
 #INTEG_2_SCANPY:### Detect variable genes
-#INTEG_3_SCANPY:Variable genes can be detected across the full dataset, but then we run the risk of getting many batch-specific genes that will drive a lot of the variation. Or we can select variable genes from each batch separately to get only celltype variation. Here, we will do both as an example of how it can be done. 
-#INTEG_4_SCANPY:First we will select genes based on the full dataset.
+
+#INTEG_3_SCANPY:Variable genes can be detected across the full dataset, but then we run the risk of getting many batch-specific genes that will drive a lot of the variation. Or we can select variable genes from each batch separately to get only celltype variation. In the dimensionality reduction exercise, we already selected variable genes, so they are already stored in `adata.var.highly_variable`
+
 #INTEG_5_SCANPY:Detect variable genes in each dataset separately using the `batch_key` parameter. 
 #INTEG_6_SCANPY: Compare overlap of variable genes with batches or with all data.
 #INTEG_7_SCANPY:### Data integration
@@ -490,11 +492,9 @@ for( pipeline in c("seurat","scater")){
 #CLUST_TITLE:
 #CLUST_ALL:In this tutorial we will continue the analysis of the integrated dataset. We will use the integrated PCA to perform the clustering. First we will construct a $k$-nearest neighbour graph in order to perform a clustering on the graph. We will also show how to perform hierarchical clustering and k-means clustering on PCA space.
 
-#CLUST_1_SCANPY:In this tutorial we will continue the analysis of the integrated dataset. We will use the integrated PCA to perform the clustering using graph community detection algorithms. 
-
+#CLUST_1_SCANPY:In this tutorial we will continue the analysis of the integrated dataset. We will use the scanpy enbedding to perform the clustering using graph community detection algorithms. 
 
 #CLUST_ALL2:Let's first load all necessary libraries and also the integrated dataset from the previous step.
-
 
 
 #----------------------#
@@ -517,7 +517,7 @@ for( pipeline in c("seurat","scater")){
 
 #CLUST_ALL4:The first step into graph clustering is to construct a k-nn graph, in case you don't have one. For this, we will use the PCA space. Thus, as done for dimensionality reduction, we will use ony the top *N* PCA dimensions for this purpose (the same used for computing UMAP / tSNE).
 #CLUST_SEURAT:As we can see above, the **Seurat** function `FindNeighbors` already computes both the KNN and SNN graphs, in which we can control the minimal percentage of shared neighbours to be kept. See `?FindNeighbors` for additional options.
-#CLUST_2.1_SCANPY:If you recall from the dimensionality reductionction tutorial, we already constructed a knn graph before running UMAP. Hence we do not need to do it again, and can run the community detection right away. 
+#CLUST_2.1_SCANPY:If you recall from the integration, we already constructed a knn graph before running UMAP. Hence we do not need to do it again, and can run the community detection right away. 
 
 #CLUST_ALL4.1:We can take a look at the kNN graph. It is a matrix where every connection between cells is represented as $1$s. This is called a **unweighted** graph (default in Seurat). Some cell connections can however have more importance than others, in that case the scale of the graph from $0$ to a maximum distance. Usually, the smaller the distance, the closer two points are, and stronger is their connection. This is called a **weighted** graph. Both weighted and unweighted graphs are suitable for clustering, but clustering on unweighted graphs is faster for large datasets (> 100k cells).
 
@@ -681,7 +681,7 @@ for( pipeline in c("seurat","scater")){
 #DGE_ALL6.3:<div class = "blue">
 #DGE_ALL6.3:**Your turn**
 #DGE_ALL6.3:
-#DGE_ALL6.3:1) Are the differentially expressed genes across `Chemistry` different for each cluster, or are they all the same genes? Change the cluster to use above and check.
+#DGE_ALL6.3:1) Are the differentially expressed genes across `type` different for each cluster, or are they all the same genes? Change the cluster to use above and check.
 #DGE_ALL6.3:2) How would you visualize the results from the previous question?
 #DGE_ALL6.3:</div>
 
