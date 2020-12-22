@@ -71,7 +71,7 @@ Lecture slides will be provided as links as they get completed.
 | ----- | ------------------- | --------- |
 | 9.00 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [Trajectory inference analysis](lectures/trajectory_inference_analysis_paulo_czarnewski.pdf) | Paulo Czarnewski |
 | 10.00 | **Break**     | |
-| 10.15 | <img border="0" src="https://www.svgrepo.com/show/6672/exercise.svg" width="20" height="20"> [Exercises: Trajectory inference](exercises.md) | Åsa, Paulo, Olga, Jonathan |
+| 10.15 | <img border="0" src="https://www.svgrepo.com/show/6672/exercise.svg" width="20" height="20"> [Exercises: Trajectory inference](exercises.md) | Åsa, Paulo, Jonathan, Lokesh |
 | 12.00 | **Lunch** | |
 | 13.00 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [Spatial Transcriptomics]() | Alma Andersson |
 | 14.00 | <img border="0" src="https://www.svgrepo.com/show/6672/exercise.svg" width="20" height="20"> [Exercises: Spatial Transcriptomics](exercises.md) | Åsa, Paulo, Alma, Anna |
