@@ -6,6 +6,8 @@ title:  'Schedule - scRNAseq course'
 #### <img border="0" src="https://www.svgrepo.com/show/158264/schedule.svg" width="50" height="50"> Schedule
 ***
 
+_OBS!_ Shedule is preliminary and may be subject to changes!
+
 All lectures and exercises will be given via zoom, zoom-link will be sent to all students.
 
 Lecture slides will be provided as links as they get completed.
