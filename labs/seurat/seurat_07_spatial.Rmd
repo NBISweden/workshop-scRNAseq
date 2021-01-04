@@ -1,0 +1,439 @@
+---
+title: "Spatial transcriptomics"
+output: 
+  html_document:
+    self_contained: true
+    highlight: tango
+    df_print: paged
+    code_folding: hide
+    toc: yes
+    toc_depth: 3
+    toc_float:
+      collapsed: false
+      smooth_scroll: true    
+---
+
+Spatial transcriptomic data with the Visium platform is in many ways similar to scRNAseq data. It contains UMI counts for 5-20 cells instead of single cells, but is still quite sparse in the same way as scRNAseq data is, but with the additional information about spatial location in the tissue. 
+
+This tutorial is adapted from the Seurat vignette: https://satijalab.org/seurat/v3.2/spatial_vignette.html
+
+
+```{r setup, include=FALSE}
+knitr::opts_knit$set(progress=TRUE,verbose=TRUE)
+knitr::opts_chunk$set(message=FALSE, warning=FALSE, result='hold',fig.width=10, fig.height = 8)
+```
+
+
+```{r packages}
+suppressPackageStartupMessages(require(Matrix))
+suppressPackageStartupMessages(require(dplyr))
+suppressPackageStartupMessages(require(SeuratData))
+suppressPackageStartupMessages(require(Seurat))
+suppressPackageStartupMessages(require(ggplot2))
+suppressPackageStartupMessages(require(patchwork))
+suppressPackageStartupMessages(require(dplyr))
+```
+
+
+## Load ST data.
+
+The package `SeuratData` has some seurat objects for different datasets. Among those are spatial transcriptomics data from mouse brain and kidney. Here we will download and process sections from the mouse brain. 
+
+```{r load}
+
+outdir = "data/spatial/"
+dir.create(outdir, showWarnings = F)
+
+# to list available datasets in SeuratData you can run AvailableData()
+
+# first we dowload the dataset
+InstallData("stxBrain")
+
+## Check again that it works, did not work at first...
+
+
+# now we can list what datasets we have downloaded
+InstalledData()
+
+# now we will load the seurat object for one section
+brain1 <- LoadData("stxBrain", type = "anterior1")
+brain2 <- LoadData("stxBrain", type = "posterior1")
+
+```
+
+
+Merge into one seurat object
+
+```{r}
+brain <- merge(brain1, brain2)
+
+brain
+```
+
+As you can see, now we do not have the assay "RNA", but instead an assay called "Spatial". 
+
+
+## Quality control
+
+Similar to scRNAseq we use statistics on number of counts, number of features and percent mitochondria for quality control. Now the counts and feature counts are calculated on the Spatial assay, so they are named  "nCount_Spatial" and "nFeature_Spatial".
+
+```{r}
+brain <- PercentageFeatureSet(brain, "^mt-", col.name = "percent_mito")
+brain <- PercentageFeatureSet(brain, "^Hb.*-", col.name = "percent_hb")
+
+
+VlnPlot(brain, features = c("nCount_Spatial", "nFeature_Spatial","percent_mito","percent_hb"), pt.size = 0.1) + NoLegend()
+```
+
+We can also plot the same data onto the tissue section
+
+```{r}
+
+SpatialFeaturePlot(brain, features = c("nCount_Spatial", "nFeature_Spatial","percent_mito","percent_hb")) 
+
+```
+
+
+As you can see, the spots with low number of counts/features and high mitochondrial content is mainly towards the edges of the tissue. It is quite likely that these regions are damaged tissue. You may also see regions within a tissue with low quality if you have tears or folds in your section. 
+
+But remember, for some tissue types, the amount of genes expressed and proportion mitochondria may also be a biological features, so bear in mind what tissue you are working on and what these features mean.
+
+
+
+
+## Filter 
+
+Select all spots with less than 25% mitocondrial reads, less than 20% hb-reads and 1000 detected genes. You must judge for yourself based on your knowledge of the tissue what are appropriate filtering criteria for your dataset.
+
+```{r}
+brain = brain[, brain$nFeature_Spatial>500 & brain$percent_mito < 25 & brain$percent_hb < 20]
+```
+
+And replot onto tissue section:
+
+```{r}
+SpatialFeaturePlot(brain, features = c("nCount_Spatial", "nFeature_Spatial","percent_mito"))
+
+```
+
+### Top expressed genes
+
+```{r, fig.height=10, fig.width=6}
+C = brain@assays$Spatial@counts
+C@x = C@x/rep.int(colSums(C), diff(C@p))
+most_expressed <- order(Matrix::rowSums(C), decreasing = T)[20:1]
+boxplot(as.matrix(t(C[most_expressed, ])), cex = 0.1, las = 1, xlab = "% total count per cell", 
+    col = (scales::hue_pal())(20)[20:1], horizontal = TRUE)
+```
+
+
+
+```{r}
+dim(brain)
+
+# Filter Bl1
+brain <- brain[!grepl("Bc1", rownames(brain)), ]
+
+# Filter Mitocondrial
+brain <- brain[!grepl("^mt-", rownames(brain)), ]
+
+# Filter Hemoglobin gene (optional if that is a problem on your data)
+brain <- brain[!grepl("^Hb.*-", rownames(brain)), ]
+
+dim(brain)
+```
+
+## Normalize 
+
+For ST data, the Seurat team recommends to use SCTranform for normalization.
+
+```{r}
+
+brain <- SCTransform(brain, assay = "Spatial", verbose = FALSE, method = 'glmGamPoi')
+
+```
+
+
+Now we can plot gene expression of individual genes, the gene Hpca is a strong hippocampal marker and Ttr is a marker of the choroid plexus.
+
+```{r}
+SpatialFeaturePlot(brain, features = c("Hpca", "Ttr"))
+
+```
+
+If we want to see the tissue better you can modify point size and transparancy of the points.
+
+```{r}
+SpatialFeaturePlot(brain, features = "Ttr", pt.size.factor = 1, alpha = c(0.1, 1))
+
+```
+
+
+
+## Dimensionality reduction and clustering
+
+We can then now run dimensionality reduction and clustering using the same workflow as we use for scRNA-seq analysis. But make sure you run it on the `SCT` assay.
+
+```{r}
+brain <- RunPCA(brain, assay = "SCT", verbose = FALSE)
+brain <- FindNeighbors(brain, reduction = "pca", dims = 1:30)
+brain <- FindClusters(brain, verbose = FALSE)
+brain <- RunUMAP(brain, reduction = "pca", dims = 1:30)
+```
+
+We can then plot clusters onto umap or onto the tissue section.
+
+```{r}
+
+DimPlot(brain, reduction = "umap", group.by = c("ident", "orig.ident"))
+
+SpatialDimPlot(brain)
+
+```
+
+We can also plot each cluster separately
+
+```{r, fig.height= 8}
+SpatialDimPlot(brain, cells.highlight = CellsByIdentities(brain), facet.highlight = TRUE, ncol = 5)
+
+```
+
+# Integration
+
+Quite often there are strong batch effects between different ST sections, so it may be a good idea to integrate the data. 
+
+We will do a similar integration as in the Data Integration lab, but this time we will use the SCT assay for integration. Therefore we need to run `PrepSCTIntegration` which will compute the sctransform residuals for all genes in both the datasets. 
+
+```{r}
+# create a list of the original data that we loaded to start with
+st.list = list(anterior1=brain1, posterior1=brain2)
+
+# run SCT on both datasets
+st.list = lapply(st.list, SCTransform, assay = "Spatial", method='glmGamPoi')
+
+# need to set maxSize for PrepSCTIntegration to work
+options(future.globals.maxSize = 2000 * 1024^2) # set allowed size to 2K MiB
+
+
+st.features = SelectIntegrationFeatures(st.list, nfeatures = 3000)
+st.list <- PrepSCTIntegration(object.list = st.list, anchor.features = st.features, 
+    verbose = FALSE)
+
+```
+
+```{r}
+int.anchors <- FindIntegrationAnchors(object.list = st.list, normalization.method = "SCT",   verbose = FALSE, anchor.features = st.features)
+brain.integrated <- IntegrateData(anchorset = int.anchors, normalization.method = "SCT", 
+    verbose = FALSE)
+
+rm(int.anchors, st.list)
+gc()
+```
+
+```{r}
+brain.integrated <- RunPCA(brain.integrated, verbose = FALSE)
+brain.integrated <- FindNeighbors(brain.integrated, dims = 1:30)
+brain.integrated <- FindClusters(brain.integrated, verbose = FALSE)
+brain.integrated <- RunUMAP(brain.integrated, dims = 1:30)
+```
+
+```{r}
+DimPlot(brain.integrated, reduction = "umap", group.by = c("ident", "orig.ident"))
+
+SpatialDimPlot(brain.integrated)
+
+
+```
+
+Judge for yourself, which of the clusterings do you think looks best?
+
+
+# Identification of Spatially Variable Features
+
+Seurat offers two workflows to identify molecular features that correlate with spatial location within a tissue. The first is to perform differential expression based on pre-annotated anatomical regions within the tissue, which may be determined either from unsupervised clustering or prior knowledge. This strategy works well in this case, as the clusters above exhibit clear spatial restriction.
+
+```{r}
+# differential expression between cluster 1 and cluster 6
+de_markers <- FindMarkers(brain.integrated, ident.1 = 5, ident.2 = 6)
+
+# plot top markers
+SpatialFeaturePlot(object = brain.integrated, features = rownames(de_markers)[1:3], alpha = c(0.1, 1), ncol = 3)
+
+```
+
+An alternative approach, implemented in FindSpatiallyVariables, is to search for features exhibiting spatial patterning in the absence of pre-annotation. The default method (method = 'markvariogram), is inspired by the Trendsceek, which models spatial transcriptomics data as a mark point process and computes a 'variogram', which identifies genes whose expression level is dependent on their spatial location. More specifically, this process calculates gamma(r) values measuring the dependence between two spots a certain "r" distance apart. By default, we use an r-value of '5' in these analyes, and only compute these values for variable genes (where variation is calculated independently of spatial location) to save time.
+
+We note that there are mulitple methods in the literature to accomplish this task, including SpatialDE, and Splotch.
+
+_OBS!_ Takes a long time to run, so skip this step for now!
+
+```{r}
+# brain <- FindSpatiallyVariableFeatures(brain, assay = "SCT", features = VariableFeatures(brain)[1:1000], 
+#     selection.method = "markvariogram")
+
+# We would get top features from SpatiallyVariableFeatures
+# top.features <- head(SpatiallyVariableFeatures(brain, selection.method = "markvariogram"), 6)
+
+```
+
+
+
+# Subset for frontal cortex
+
+```{r}
+# subset for the anterior dataset
+cortex <- subset(brain.integrated, orig.ident == "anterior1")
+
+# there seems to be an error in the subsetting, so the posterior1 image is not removed, do it manually
+cortex@images$posterior1 = NULL
+
+# subset for a specific region
+cortex <- subset(cortex, anterior1_imagerow > 400 | anterior1_imagecol < 150, invert = TRUE)
+cortex <- subset(cortex, anterior1_imagerow > 275 & anterior1_imagecol > 370, invert = TRUE)
+cortex <- subset(cortex, anterior1_imagerow > 250 & anterior1_imagecol > 440, invert = TRUE)
+
+# also subset for FC clusters
+cortex <- subset(cortex, idents = c(0,1,6,7,12,17))
+
+p1 <- SpatialDimPlot(cortex, crop = TRUE, label = TRUE)
+p2 <- SpatialDimPlot(cortex, crop = FALSE, label = TRUE, pt.size.factor = 1, label.size = 3)
+p1 + p2
+
+# After subsetting, we renormalize cortex
+cortex <- SCTransform(cortex, assay = "Spatial", verbose = FALSE, method = "glmGamPoi") %>% RunPCA(verbose = FALSE)
+
+```
+
+# Single cell data
+
+We will use a reference scRNA-seq dataset of ~14,000 adult mouse cortical cell taxonomy from the Allen Institute, generated with the SMART-Seq2 protocol.
+
+First dowload the data from: https://www.dropbox.com/s/cuowvm4vrf65pvq/allen_cortex.rds?dl=1 to folder `data/spatial/`.
+
+
+```{bash}
+wget  -O data/spatial/allen_cortex.rds https://www.dropbox.com/s/cuowvm4vrf65pvq/allen_cortex.rds?dl=1
+
+```
+
+Now, load the data and subsample for similar number of cells per group (`subclass`).
+
+```{r}
+allen_reference <- readRDS("data/spatial/allen_cortex.rds")
+
+
+
+# check number of cells per subclass
+table(allen_reference$subclass)
+
+# select 200 cells per subclass, fist set subclass ass active.ident
+Idents(allen_reference) <- allen_reference$subclass
+allen_reference <- subset(allen_reference, cells = WhichCells(allen_reference, downsample = 200))
+
+# check again number of cells per subclass
+table(allen_reference$subclass)
+```
+
+Then run normalization and dimensionality reduction.
+
+```{r}
+# First run SCTransform and PCA 
+allen_reference <- SCTransform(allen_reference, ncells = 3000, verbose = FALSE, method = 'glmGamPoi') %>% RunPCA(verbose = FALSE) %>%    RunUMAP(dims = 1:30)
+
+# the annotation is stored in the 'subclass' column of object metadata
+DimPlot(allen_reference, label = TRUE)
+```
+
+
+```{r}
+anchors <- FindTransferAnchors(reference = allen_reference, query = cortex, normalization.method = "SCT")
+predictions.assay <- TransferData(anchorset = anchors, refdata = allen_reference$subclass, prediction.assay = TRUE, 
+    weight.reduction = cortex[["pca"]])
+cortex[["predictions"]] <- predictions.assay
+```
+
+```{r}
+DefaultAssay(cortex) <- "predictions"
+SpatialFeaturePlot(cortex, features = c("L2/3 IT", "L4"), pt.size.factor = 1.6, ncol = 2, crop = TRUE)
+```
+
+Based on these prediction scores, we can also predict cell types whose location is spatially restricted. We use the same methods based on marked point processes to define spatially variable features, but use the cell type prediction scores as the "marks" rather than gene expression.
+
+```{r}
+cortex <- FindSpatiallyVariableFeatures(cortex, assay = "predictions", selection.method = "markvariogram", 
+    features = rownames(cortex), r.metric = 5, slot = "data")
+top.clusters <- head(SpatiallyVariableFeatures(cortex), 4)
+SpatialPlot(object = cortex, features = top.clusters, ncol = 2)
+
+```
+
+
+We can also visualize the scores per cluster in ST data
+
+```{r, fig.width=12}
+VlnPlot(cortex, group.by = "seurat_clusters", features = top.clusters, pt.size = 0, ncol=2)
+
+```
+
+Keep in mind, that the scores are "just" prediction scores, and do not correspond to proportion of cells that are of a certain celltype or similar. It mainly tells you that gene expression in a certain spot is hihgly similar/dissimilar to gene expression of a celltype.
+
+
+If we look at the scores, we see that some spots got really clear predictions by celltype, while others did not have high scores for any of the celltypes.
+
+
+
+TASK: Subset for another region that does not contain cortex cells and check what you get from the label transfer. Suggested region is the right end of the posterial section that you can select like this:
+
+```{r}
+# subset for the anterior dataset
+subregion <- subset(brain.integrated, orig.ident == "posterior1")
+
+# there seems to be an error in the subsetting, so the posterior1 image is not removed, do it manually
+subregion@images$anterior1 = NULL
+
+# subset for a specific region
+subregion <- subset(subregion,  posterior1_imagecol > 330, invert = FALSE)
+
+#SpatialDimPlot(subregion ,cells.highlight = WhichCells(subregion, expression = posterior1_imagecol > 50))
+  
+
+# also subset for FC clusters
+subregion <- subset(subregion, idents = c(0,2,3,5,14,18))
+
+p1 <- SpatialDimPlot(subregion, crop = TRUE, label = TRUE)
+p2 <- SpatialDimPlot(subregion, crop = FALSE, label = TRUE, pt.size.factor = 1, label.size = 3)
+p1 + p2
+
+# After subsetting, we renormalize cortex
+subregion <- SCTransform(subregion, assay = "Spatial", verbose = FALSE, method = "glmGamPoi") %>% RunPCA(verbose = FALSE)
+
+```
+
+REMOVE this part - just testing now...
+
+```{r}
+anchors <- FindTransferAnchors(reference = allen_reference, query = subregion, normalization.method = "SCT")
+predictions.assay <- TransferData(anchorset = anchors, refdata = allen_reference$subclass, prediction.assay = TRUE, 
+    weight.reduction = subregion[["pca"]])
+subregion[["predictions"]] <- predictions.assay
+
+DefaultAssay(subregion) <- "predictions"
+SpatialFeaturePlot(subregion, features = c("L2/3 IT", "L4"), pt.size.factor = 1.6, ncol = 2, crop = TRUE)
+```
+
+```{r}
+subregion <- FindSpatiallyVariableFeatures(subregion, assay = "predictions", selection.method = "markvariogram", 
+    features = rownames(cortex), r.metric = 5, slot = "data")
+top.clusters <- head(SpatiallyVariableFeatures(subregion), 4)
+SpatialPlot(object = subregion, features = top.clusters, ncol = 2)
+
+
+VlnPlot(subregion, group.by = "seurat_clusters", features = top.clusters, pt.size = 0, ncol=2)
+
+```
+
+### Session info
+
+```{r}
+sessionInfo()
+```
