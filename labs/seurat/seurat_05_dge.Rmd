@@ -66,7 +66,7 @@ top25
 #DGE_ALL4:
 
 ```{r}
-mypar(1,5,mar=c(4,6,3,1))
+mypar(2,5,mar=c(4,6,3,1))
 for(i in unique(top25$cluster)){
   barplot( sort( setNames(top25$avg_logFC, top25$gene) [top25$cluster == i], F),
            horiz = T,las=1 ,main=paste0(i," vs. rest"),border = "white", yaxs="i" )
@@ -87,14 +87,14 @@ DoHeatmap(alldata, features = as.character(unique(top5$gene)),group.by = sel.clu
 #DGE_ALL4.2:
 
 ```{r, fig.height=10}
-DotPlot(alldata, features = as.character(unique(top5$gene)),group.by = sel.clust,assay = "RNA")+coord_flip()
+DotPlot(alldata, features = rev(as.character(unique(top5$gene))),group.by = sel.clust,assay = "RNA")+coord_flip()
 ```
 
 #DGE_ALL4.3:
 
 ```{r,fig.height=10,fig.width=10}
 # take top 3 genes per cluster/
-top5 %>% group_by(cluster)  %>% top_n(-3, p_val_adj) -> top3
+top5 %>% group_by(cluster)  %>% top_n(-3, p_val) -> top3
 
 
 # set pt.size to zero if you do not want all the points to hide the violin shapes, or to a small value like 0.1
@@ -109,7 +109,7 @@ VlnPlot(alldata, features = as.character(unique(top3$gene)), ncol = 5, group.by 
 
 ```{r,fig.height=10,fig.width=10}
 # select all cells in cluster 1
-cell_selection <- subset(alldata, cells = colnames(alldata)[ alldata@meta.data[,sel.clust] == 1])
+cell_selection <- subset(alldata, cells = colnames(alldata)[ alldata@meta.data[,sel.clust] == 2])
 cell_selection <- SetIdent(cell_selection, value = "type")
 #Compute differentiall expression
 DGE_cell_selection <- FindAllMarkers(cell_selection,
@@ -125,7 +125,7 @@ DGE_cell_selection <- FindAllMarkers(cell_selection,
 #DGE_ALL6.1:
 
 ```{r, fig.height=10}
-DGE_cell_selection %>% group_by(cluster)  %>% top_n(-5, p_val_adj) -> top5_cell_selection
+DGE_cell_selection %>% group_by(cluster)  %>% top_n(-5, p_val) -> top5_cell_selection
 
 VlnPlot(cell_selection, features = as.character(unique(top5_cell_selection$gene)),
         ncol = 5,group.by = "type",assay = "RNA", pt.size = .1)
@@ -138,12 +138,115 @@ VlnPlot(alldata, features = as.character(unique(top5_cell_selection$gene)),
         ncol = 5, split.by = "type",assay = "RNA", pt.size = 0)
 ```
 
+#DGE_TITLE3:
 
+#DGE_ALL7:
+
+```{r}
+# Load additional packages
+library(enrichR)
+
+# Check available databases to perform enrichment (then choose one)
+enrichR::listEnrichrDbs()
+
+# Perform enrichment
+enrich_results <- enrichr(
+ genes     = DGE_cell_selection$gene[DGE_cell_selection$cluster == "Covid"],
+ databases = "GO_Biological_Process_2017b" )[[1]]
+
+```
+
+#DGE_ALL7.1:
+
+```{r}
+par(mar = c(3, 25, 2, 1))
+barplot( height    = -log10(enrich_results$P.value)[10:1],
+        names.arg = enrich_results$Term[10:1],
+        horiz     = TRUE,
+        las       = 1,
+        border    = FALSE,
+        cex.names = .6 )
+abline(v = c(-log10(0.05)), lty = 2)
+abline(v = 0, lty = 1)
+```
+
+#DGE_ALL7.2
+
+
+
+```{r,fig.height=10,fig.width=10}
+# select all cells in cluster 1
+cell_selection <- subset(alldata, cells = colnames(alldata)[ alldata@meta.data[,sel.clust] == 2])
+cell_selection <- SetIdent(cell_selection, value = "type")
+#Compute differentiall expression
+DGE_cell_selection <- FindMarkers(cell_selection,
+                                  ident.1 = "Covid",
+                               logfc.threshold = 0,
+                               test.use = "wilcox",
+                               min.pct = 0,
+                               min.diff.pct = 0,
+                               only.pos = TRUE,
+                               max.cells.per.ident = 50,
+                               return.thresh = 1, # <- IMPORTANT!!
+                               assay = "RNA")
+dim(DGE_cell_selection)
+```
+
+
+
+```{r,fig.height=10,fig.width=10}
+# if folder and files doesn't exist, download it
+if(!dir.exists("data/MSigDB_files/")) {
+  dir.create("data/MSigDB_files")
+  download.file(url="https://raw.github.com/NBISweden/workshop-RNAseq/master/data/MSigDB_files/c2.cp.kegg.v6.2.symbols.gmt.txt","./data/MSigDB_files/c2.cp.kegg.v6.2.symbols.gmt.txt")
+  download.file(url="https://raw.github.com/NBISweden/workshop-RNAseq/master/data/MSigDB_files/c3.tft.v6.2.symbols.gmt.txt","./data/MSigDB_files/c3.tft.v6.2.symbols.gmt.txt")
+  download.file(url="https://raw.github.com/NBISweden/workshop-RNAseq/master/data/MSigDB_files/h.all.v6.2.symbols.gmt.txt","./data/MSigDB_files/h.all.v6.2.symbols.gmt.txt")
+  download.file(url="https://raw.github.com/NBISweden/workshop-RNAseq/master/data/MSigDB_files/c2.cp.v6.2.symbols.gmt.txt","./data/MSigDB_files/c2.cp.v6.2.symbols.gmt.txt")
+  download.file(url="https://raw.github.com/NBISweden/workshop-RNAseq/master/data/MSigDB_files/c5.bp.v6.2.symbols.gmt.txt","./data/MSigDB_files/c5.bp.v6.2.symbols.gmt.txt")
+}
+```
+
+
+
+```{r,results='hide',block.title=TRUE,fig.height=5,fig.width=10}
+library(fgsea)
+
+# Create a gene rank based on the gene expression
+gene_rank <- setNames( DGE_cell_selection$avg_logFC, casefold(rownames(DGE_cell_selection),upper=T) )
+
+```
+
+Once our list of genes are sorted (from highest to lowest expression in day 7), we can proceed with the enrichment itself. Here, we will be using the `fgsea()` function. This will result in a table containing information for several pathways. We can then sort and filter those pathways to visualize only the top ones. You can select/filter them by either `p-value` or normalized enrichemnet score (`NES`).
+
+```{r,results='hide',block.title=TRUE,fig.height=5,fig.width=10}
+# Load hallmark pathways
+hallmark_pathways <- gmtPathways("data/MSigDB_files/c5.bp.v6.2.symbols.gmt.txt")
+
+# Perform enrichemnt analysis
+fgseaRes <- fgsea( pathways=hallmark_pathways, stats=gene_rank, minSize=15, maxSize=500, nperm=10000)
+
+# Filter the results table to show only the top 10 UP and DOWN regulated processes (optional)
+fgseaRes %>% top_n(20, NES) %>% top_n(-10, pval) -> top5_UP
+fgseaRes %>% top_n(-20, NES) %>% top_n(-10, pval) -> top5_DOWN
+
+topPathways <- c(top5_UP$pathway, rev(top5_DOWN$pathway))
+
+# Nice summary table (shown as a plot)
+dev.off()
+plotGseaTable(hallmark_pathways[topPathways], gene_rank, fgseaRes, gseaParam = 0.5)
+```
+
+
+Which KEGG pathways are upregulated in 
+Which HALLMARK pathways are upregulated in 
+Which KEGG, GO and HALLMAK to cluster #####?
+Which KEGG, GO and HALLMAK to cluster #####?
 
 #DGE_ALL10:
 
 ```{r}
 saveRDS(alldata,"data/3pbmc_qc_dr_int_cl_dge.rds")
+write.csv(markers_genes)
 ```
 
 
