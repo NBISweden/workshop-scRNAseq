@@ -1,6 +1,8 @@
 ---
 title: "Seurat: Quality control"
 #CSS_ALL:
+editor_options: 
+  chunk_output_type: console
 ---
 
 #CHUNK_OPT:
@@ -18,14 +20,18 @@ count=$(ls -l data/raw/*.h5 | grep -v ^d | wc -l )
 echo $count
 
 # if not 4 files, fetch the files from github.
-if (("$count" <  4)); then
+if (("$count" <  6)); then
   cd data/raw
-  curl  -O https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/raw/master/labs/data/covid_data_GSE149689/raw/Normal_PBMC_13.h5
-  curl  -O https://github.com/NBISweden/workshop-scRNAseq/raw/master/labs/data/covid_data_GSE149689/raw/Normal_PBMC_14.h5
-  curl  -O https://github.com/NBISweden/workshop-scRNAseq/raw/master/labs/data/covid_data_GSE149689/raw/nCoV_PBMC_16.h5
-  curl  -O https://github.com/NBISweden/workshop-scRNAseq/raw/master/labs/data/covid_data_GSE149689/raw/nCoV_PBMC_17.h5
+  curl -O https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/new_dataset/labs/data/covid_data_GSE149689/sub/Normal_PBMC_13.h5
+  curl -O https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/new_dataset/labs/data/covid_data_GSE149689/sub/Normal_PBMC_14.h5
+  curl -O https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/new_dataset/labs/data/covid_data_GSE149689/sub/Normal_PBMC_5.h5
+  curl -O https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/new_dataset/labs/data/covid_data_GSE149689/sub/nCoV_PBMC_15.h5
+  curl -O https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/new_dataset/labs/data/covid_data_GSE149689/sub/nCoV_PBMC_17.h5
+  curl -O https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/new_dataset/labs/data/covid_data_GSE149689/sub/nCoV_PBMC_1.h5
   cd ../..
-fi  
+fi
+
+ls -lGa data/raw
 ```
 
 #DATA_ALL2:
@@ -143,6 +149,8 @@ alldata$percent_ribo <- colSums(  alldata@assays$RNA@counts[ribo_genes,]  ) / to
 # Percentage hemoglobin genes - includes all genes starting with HB except HBP.
 alldata <- PercentageFeatureSet(alldata, "^HB[^(P)]", col.name = "percent_hb")
 
+alldata <- PercentageFeatureSet(alldata, "PECAM1|PF4", col.name = "percent_plat")
+
 ```
 
 ***
@@ -201,9 +209,10 @@ ncol(data.filt)
 ```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=8,fig.width=12}
 #Compute the relative expression of each gene per cell
 #Use sparse matrix operations, if your dataset is large, doing matrix devisions the regular way will take a very long time.
-C = data.filt@assays$RNA@counts
-C@x = C@x / rep.int(colSums(C), diff(C@p))
-most_expressed <- order(Matrix::rowSums( C ),decreasing = T)[20:1]
+par(mar=c(4,8,2,1))
+C <- data.filt@assays$RNA@counts
+C <-  Matrix::t( Matrix::t(C) / Matrix::colSums(C) ) * 100
+most_expressed <- order(apply(C,1,median),decreasing = T)[20:1]
 boxplot( as.matrix(t(C[most_expressed,])),cex=.1, las=1, xlab="% total count per cell",col=scales::hue_pal()(20)[20:1],horizontal=TRUE)
 
 ```
@@ -294,6 +303,7 @@ VlnPlot(data.filt, features = c("S.Score","G2M.Score"), group.by= "orig.ident",n
 #DOUBLET_SEURAT1.1:
 
 ```{r}
+# remotes::install_github('chris-mcginnis-ucsf/DoubletFinder')
 suppressMessages(require(DoubletFinder))
 
 data.filt = FindVariableFeatures(data.filt, verbose = F)

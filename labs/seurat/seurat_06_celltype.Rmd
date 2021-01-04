@@ -1,5 +1,7 @@
 ---
 #CSS_ALL:
+editor_options: 
+  chunk_output_type: console
 ---
 
 #CHUNK_OPT:
@@ -121,7 +123,6 @@ ctrl <- scPredict(ctrl, reference)
 
 ```{r}
 DimPlot(ctrl, group.by = "scpred_prediction", label = T, repel = T) + NoAxes()
-
 ```
 
 #CT_SEURAT5.4:
@@ -158,13 +159,111 @@ sessionInfo()
 
 
 
+```{r}
+# Download gene marker list
+if(!dir.exists("data/CellMarker_list/")) {
+  dir.create("data/CellMarker_list")
+  download.file(url="http://bio-bigdata.hrbmu.edu.cn/CellMarker/download/Human_cell_markers.txt",
+                destfile = "./data/CellMarker_list/Human_cell_markers.txt")
+  download.file(url="http://bio-bigdata.hrbmu.edu.cn/CellMarker/download/Mouse_cell_markers.txt",
+                destfile = "./data/CellMarker_list/Mouse_cell_markers.txt")
+  download.file(url="https://www.gsea-msigdb.org/gsea/msigdb/download_file.jsp?filePath=/msigdb/release/7.2/c8.all.v7.2.symbols.gmt","./data/MSigDB_files/c8.all.v7.2.symbols.gmt.txt")
+}
+```
 
 
 
+```{r}
+celltype_list <- gmtPathways("~/Downloads/c8.all.v7.2.symbols.gmt")
+length(celltype_list)
+
+# Load the table
+markers <- read.delim("data/CellMarker_list/Human_cell_markers.txt")
+colnames(markers)
+markers <- markers [ markers$speciesType == "Human", ]
+markers <- markers [ markers$cancerType == "Normal", ]
+
+#Filter by tissue (to reduce computational time and have tissue-specific classification)
+# sort(unique(markers$tissueType))
+# grep("blood",unique(markers$tissueType),value = T)
+# markers <- markers [ markers$tissueType %in% c("Blood","Venous blood",
+#                                                "Serum","Plasma",
+#                                                "Spleen","Bone marrow","Lymph node"), ]
+# markers <- markers [ markers$tissueType %in% c("Blood"), ]
+
+celltype_list <- lapply( unique(markers$cellName) , function(x){
+  x <- paste(markers$geneSymbol[markers$cellName == x],sep=",")
+  x <- gsub("[[]|[]]| |-",",",x)
+  x <- unlist(strsplit( x , split = ","))
+  x <- unique(x [ ! x %in% c("","NA","family") ])
+  x <- casefold(x,upper = T)
+})
+names(celltype_list) <- unique(markers$cellName)
+# celltype_list <- lapply(celltype_list , function(x) {x[1:min(length(x),50)]} )
+celltype_list <- celltype_list[ unlist(lapply(celltype_list,length)) < 100 ]
+celltype_list <- celltype_list[ unlist(lapply(celltype_list,length)) > 5 ]
 
 
 
+# Compute differential gene expression in reference dataset (that has cell annotation)
+reference <- SetIdent( reference, value = "cell_type")
+reference_markers <- FindAllMarkers( reference , min.pct = .1 , 
+                                     min.diff.pct = .2, only.pos = T, 
+                                     max.cells.per.ident = 20 ,
+                                     return.thresh = 1 )
 
+# Identify the top cell marker genes in reference dataset
+reference_markers <- reference_markers [ order(reference_markers$avg_logFC,decreasing = T), ]
+reference_markers %>% 
+  group_by(cluster) %>% 
+  top_n(-100, p_val) %>% 
+  top_n(50, avg_logFC) -> top10_cell_selection
+
+# Transform the markers into a list
+celltype_list <- lapply( unique(top10_cell_selection$cluster) , function(x){
+  x <- top10_cell_selection$gene [top10_cell_selection$cluster == x]
+} )
+names(celltype_list) <- unique(top10_cell_selection$cluster)
+celltype_list
+
+```
+
+
+```{r}
+alldata <- SetIdent(alldata,value = "CCA_snn_res.0.3")
+DGE_list <- FindAllMarkers(alldata,
+                               logfc.threshold = 0,
+                               test.use = "wilcox",
+                               min.pct = 0,
+                               min.diff.pct = 0,
+                               only.pos = TRUE,
+                               max.cells.per.ident = 20,
+                               return.thresh = 1,
+                               assay = "RNA")
+
+
+res <- lapply(as.character(unique(DGE_list$cluster)),function(x){
+  gene_rank <- setNames(DGE_list$avg_logFC [ DGE_list$cluster == x],
+                        DGE_list$gene [ DGE_list$cluster == x])
+  fgseaRes <- fgsea( pathways=celltype_list, stats=gene_rank)
+  return(fgseaRes)
+})
+names(res) <- as.character(unique(DGE_list$cluster))
+res
+
+# You can resort the table based on ES, NES or pvalue
+res <- lapply(res, function(x) {x[ x$pval < 0.1 , ]} )
+res <- lapply(res, function(x) {x[ x$size > 2 , ]} )
+res <- lapply(res, function(x) {x[order(x$NES,decreasing = T), ]} )
+res
+
+new.cluster.ids <- unlist(lapply(res,function(x){as.data.frame(x)[1,1]}))
+alldata <- RenameIdents(alldata, new.cluster.ids)
+alldata$predicted <- alldata@active.ident
+
+DimPlot(alldata,label = T,group.by = "CCA_snn_res.0.3")
+DimPlot(alldata,label = T)
+```
 
 
 
