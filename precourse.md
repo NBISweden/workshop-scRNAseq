@@ -3,13 +3,13 @@ layout: default
 title:  'Precourse Material - scRNAseq course'
 ---
 
-#### <img border="0" src="https://www.svgrepo.com/show/19652/maths-class-materials-cross-of-a-pencil-and-a-ruler.svg" width="50" height="50"> Precourse material
+# <img border="0" src="https://www.svgrepo.com/show/19652/maths-class-materials-cross-of-a-pencil-and-a-ruler.svg" width="50" height="50"> Precourse material
 ***
 
 <br/>
 
-=======
-This workshop is aimed towards biologists, researchers, computer scientists or data analysts planning to run, analyse and interpret single cells RNA-seq experiments. Basic knowledge of working on the Unix/Linux command line, R and RNA-seq **is expected**.
+
+This workshop is aimed towards biologists, researchers, computer scientists or data analysts planning to run, analyse and interpret single cells RNA-seq experiments independently. Basic knowledge of working on the Unix/Linux command line, R/Python and RNA-seq is therefore **expected**.
 
 Please follow the instructions below for installations prior to the workshop:
 
@@ -17,32 +17,39 @@ Please follow the instructions below for installations prior to the workshop:
 - Slack
 - Zoom
 - Conda
+- Dataset
+- Code
 
-## Requirements
+<br/>
 
-<img border="0" src="https://toppng.com/uploads/preview/knowledge-icon-icon-knowledge-icon-11553482729yd4gxvibcr.png" width="50" height="50">
+## Knowledge Requirements
 
-We strongly recommend for those not yet familiar with UNIX and/or R to take this opportunity and take these online tutorials, since **those are requirements for the workshop**. This will help you to develop your programming skills and we can always learn a few tricks here and there, even if you are already experienced.
+<img border="0" src="https://toppng.com/uploads/preview/knowledge-icon-icon-knowledge-icon-11553482729yd4gxvibcr.png" width="20" height="20">
+
+We strongly recommend for those not yet familiar with UNIX and/or R/Python to take this opportunity and take these online tutorials, since **those are requirements for the workshop**. This will help you to develop your programming skills and we can always learn a few tricks here and there, even if you are already experienced.
 
 - UNIX (part_1): [http://swcarpentry.github.io/shell-novice/](http://swcarpentry.github.io/shell-novice/)
 - UNIX (part_2): [https://carpentries-incubator.github.io/shell-extras/](https://carpentries-incubator.github.io/shell-extras/)
 - R (part_1): [https://swcarpentry.github.io/r-novice-inflammation/](https://swcarpentry.github.io/r-novice-inflammation/)
 - R (part_2): [http://swcarpentry.github.io/r-novice-gapminder/](http://swcarpentry.github.io/r-novice-gapminder/)
+- Python (part_1):[https://swcarpentry.github.io/python-novice-inflammation/](https://swcarpentry.github.io/python-novice-inflammation/)
+- Python (part_2): [http://swcarpentry.github.io/python-novice-gapminder/](http://swcarpentry.github.io/python-novice-gapminder/)
 
-After taking those courses (or any other equivalent course in programming in bash and R) will provide you with the basics in, for example:
+After taking those courses (or any other equivalent course in programming in bash and R or Python) will provide you with the basics in, for example:
 
-- file structure and manipulation in bash and R
-- loading, handling and manipulating vectors, matrices, factors and lists in R
-- creating for-loops in R and bash
-- using Rmarkdown for reports in R
-- editing and writing files in the command line and in R
+- file structure and manipulation in bash
+- loading, handling and manipulating vectors, matrices, factors and lists
+- creating for-loops
+- using Rmarkdown/Jupyter for reports
+- editing and writing files in the command line
 - and much more ...
 
 <br/>
 
 ## Slack
+***
 
-<img border="0" src="https://image.flaticon.com/icons/png/512/2111/2111615.png" width="50" height="50">
+<img border="0" src="https://image.flaticon.com/icons/png/512/2111/2111615.png" width="20" height="20">
 
 Make sure that you have [**Slack**](https://slack.com/intl/en-se/downloads) installed because we will use it a lot during the workshop. Communication, troubleshooting and group discussions will happen via **Slack workspace** `NBIS-workshop-RNAseq`. All accepted students will receive an invitation link via email. Please add this workspace to your Slack application on your desktop and do **NOT** use it in the web.
 
@@ -56,8 +63,9 @@ Note: Please post your question in the channel and **NOT** directly to the teach
 <br/>
 
 ## Zoom
+***
 
-<img border="0" src="https://simg.nicepng.com/png/small/1008-10087079_zoom-icon-zoom-video-conferencing-logo.png" width="50" height="50">
+<img border="0" src="https://simg.nicepng.com/png/small/1008-10087079_zoom-icon-zoom-video-conferencing-logo.png" width="20" height="20">
 
 Make sure that you have the latest [**Zoom (version 5.4.0 or above)**](https://zoom.us/download) installed because we will use it a lot during the workshop for the lecture and groups discussions.
 
@@ -66,8 +74,9 @@ Previous Zoom versions will not work. If you already have Zoom installed, you ca
 <br/>
 
 ## Conda
+***
 
-<img border="0" src="https://hackernoon.com/hn-images/1*rW03Wtue71AKfxnx6XN_iQ.png" width="50" height="50">
+<img border="0" src="https://hackernoon.com/hn-images/1*rW03Wtue71AKfxnx6XN_iQ.png" width="20" height="20">
 
 During this workshop, you will use conda environments to run the exercises. This is because conda environments allow all users to have the same computing environment, i.e. package versions. This enforces reproducibility for you to run this material without the need to re-install or change your local versions. See and graphical example below:
 
@@ -86,7 +95,7 @@ You can [read more](https://nbis-reproducible-research.readthedocs.io/en/latest/
 
 <br/>
 
-***
+
 
 ### <img border="0" src="https://www.svgrepo.com/show/4795/installation-symbol.svg" width="20" height="20"> Download and install Conda and Mamba
 
@@ -96,6 +105,9 @@ Start by installing Conda. We suggest installing Miniconda3 and NOT Anaconda. Af
 
 #### **On Mac OS X**
 
+<details>
+<summary><b>Click here to expand</b></summary>
+<p>
 
 <img border="0" src="https://logos-download.com/wp-content/uploads/2020/06/Apple_Mac_OS_Logo-700x670.png" width="50" height="50">
 
@@ -111,13 +123,20 @@ conda init
 conda install -n base -c conda-forge mamba
 ```
 
+</p>
+</details>
+
+
 
 <br/>
 
 #### **On Ubuntu**
 
+<details>
+<summary><b>Click here to expand</b></summary>
+<p>
 
-<img border="0" src="https://encrypted-tbn0.gstatic.com/images?q=tbn%3AANd9GcR2rSSpKVBohI4AXgBaUjFVYqO73ou2l9AOXw&usqp=CAU" width="50" height="50">
+<img border="0" src="https://encrypted-tbn0.gstatic.com/images?q=tbn%3AANd9GcR2rSSpKVBohI4AXgBaUjFVYqO73ou2l9AOXw&usqp=CAU" width="20" height="20">
 
 ```
 wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
@@ -131,13 +150,18 @@ conda init
 conda install -n base -c conda-forge mamba
 ```
 
+</p>
+</details>
 
 <br/>
 
 #### **On Windows 10**
 
+<details>
+<summary><b>Click here to expand</b></summary>
+<p>
 
-<img border="0" src="https://seeklogo.com/images/W/windows-10-icon-logo-5BC5C69712-seeklogo.com.png" width="50" height="50">
+<img border="0" src="https://seeklogo.com/images/W/windows-10-icon-logo-5BC5C69712-seeklogo.com.png" width="20" height="20">
 
 Unfortunately, not all packages available on conda are compatible with windows machines. The good news is that Windows 10 offers native linux support via the Windows Subsystem for Linux (WSL2). This allows you to run linux/bash commands from within windows without the need of a virtual machine nor a dual-boot setup (i.e. having 2 operating systems). However, WSL does not offer a complete support for graphical interfaces (such as RStudio in our case), so we need additional steps to make that happen.
 
@@ -180,13 +204,18 @@ sudo apt-get install libgl1-mesa-glx libegl1-mesa libxrandr2 libxrandr2 libxss1 
 
 8. Close and open all application and Inside MobaXterm, you will probably will see that your WSL is already listed on the left panel as an available connection. Just double-click it and you will be accessing it via MobaXterm.
 
+</p>
+</details>
 
 <br/>
 
 #### VirtualBox
 
+<details>
+<summary><b>Click here to expand</b></summary>
+<p>
 
-<img border="0" src="https://upload.wikimedia.org/wikipedia/commons/d/d5/Virtualbox_logo.png" width="50" height="50">
+<img border="0" src="https://upload.wikimedia.org/wikipedia/commons/d/d5/Virtualbox_logo.png" width="20" height="20">
 
 If by any means you see that the installations are not working as it should on your computer, you can try to create a virtual machine to run UBUNTU and install everything there. But please keep this alternative as the last temporary resourse, as we recommend troubleshooting the installation o the up-mentioned methods.
 
@@ -244,9 +273,12 @@ conda activate scRNAseq2021
 rstudio &
 ```
 
+</p>
+</details>
+
 <br/>
 
-***
+
 
 ### <img border="0" src="https://www.svgrepo.com/show/4795/installation-symbol.svg" width="20" height="20"> Create a conda environment from file
 
@@ -283,7 +315,7 @@ Several messages will show up on your screen and will tell you about the install
 
 <br/>
 
-***
+
 
 ### <img border="0" src="https://www.svgrepo.com/show/4795/installation-symbol.svg" width="20" height="20"> Activate the environment
 
@@ -301,7 +333,7 @@ rstudio PATH/my_script.Rmd &
 
 <br/>
 
-***
+
 
 ### <img border="0" src="https://www.svgrepo.com/show/4795/installation-symbol.svg" width="20" height="20"> Deactivate the environment
 
@@ -315,6 +347,7 @@ conda deactivate
 
 
 ## Dataset
+***
 
 <img border="0" src="https://www.svgrepo.com/show/20109/database.svg" width="50" height="50">
 
@@ -332,6 +365,7 @@ cd labs/data/covid_data_GSE149689/raw/
 <br/>
 
 ## Code
+***
 
 <img border="0" src="https://www.svgrepo.com/show/26279/code-file.svg" width="50" height="50">
 
@@ -344,86 +378,3 @@ git clone https://github.com/NBISweden/workshop-scRNAseq.git
 Or download manually from the github site https://github.com/NBISweden/workshop-scRNAseq.
 
 <br/>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
->>>>>>> Stashed changes
-##### <img border="0" src="https://www.svgrepo.com/show/4795/installation-symbol.svg" width="20" height="20"> Installations
-***
-
-We have conda recipies for all R and Python packages in one [file](labs/environment_r.yml). If you have never worked with conda before, please read the [conda instructions](conda_instructions.md).
-
-OBS! Need to fix some paths in instruction.
-Also info on Docker?
-
-<br/>
-
-##### <img border="0" src="https://www.svgrepo.com/show/20109/database.svg" width="20" height="20"> Dataset
-***
-
-We will run all tutorials with a set of 4 PBMC 10x datasets from 2 covid-19 patients and 2 healthy controls. If you have cloned the github repo (see below), you should have already downloaded the datasets.
-
-If you prefer not to clone the repo, these can be fetched using commands:
-
-```
-mkdir -p labs/data/covid_data_GSE149689
-cd labs/data/covid_data_GSE149689
-
-curl  -O https://github.com/NBISweden/workshop-scRNAseq/raw/master/labs/data/covid_data_GSE149689/raw/Normal_PBMC_13.h5
-curl  -O https://github.com/NBISweden/workshop-scRNAseq/raw/master/labs/data/covid_data_GSE149689/raw/Normal_PBMC_14.h5
-curl  -O https://github.com/NBISweden/workshop-scRNAseq/raw/master/labs/data/covid_data_GSE149689/raw/nCoV_PBMC_15.h5
-curl  -O https://github.com/NBISweden/workshop-scRNAseq/raw/master/labs/data/covid_data_GSE149689/raw/nCoV_PBMC_17.h5
-
-```
-
-<br/>
-
-##### <img border="0" src="https://www.svgrepo.com/show/26279/code-file.svg" width="20" height="20"> Code
-***
-
-All code is also available as R-markdown scripts at the course Github space. If you want a local copy of all course material you can simply clone it with git using:
-
-
-    git clone https://github.com/NBISweden/workshop-scRNAseq.git
-
-
-Or download manually from the github site https://github.com/NBISweden/workshop-scRNAseq.
-
-<br/>
-
-
-##### <img border="0" src="https://www.svgrepo.com/show/17086/server-client-exchange.svg" width="20" height="20"> Uppmax
-***
-
-**Attention**: This step is no longer required for the course. It is only used for the optional pipeline exercise.
-
-
-1.   If you do not already have an Uppmax account, create and Uppmax account following these [instructions](files/Apply_for_Uppmax_account.pdf). OBS! It may take a few days to recieve the account, so proceed with this point as soon as possible.
-
-2.   Log in to SUPR and request membership in the project g2019002. Account approval requires manual confirmation from the course organizers, so it may not happen immediately.
-
-3.   Make sure you can connect to Rackham at Uppmax using a terminal. If you use a pc we recommend MobaXterm (http://mobaxterm.mobatek.net) or Windows 10 Bash for Linux.
-
-4.   If you still feel uncertain how to work in a terminal please take time to do the first three parts in the “Unix tutorial for beginners” that can be found here http://www.ee.surrey.ac.uk/Teaching/Unix/ before the course starts. Otherwise you will not be able to take in the practical parts.  
-
-5.   Make sure that you can read and write in the course folder by creating a file with your uppmax user name in the `/proj/g2019002/completed` folder. If you cannot write to the folder, the most likely reason is that you have not requested access to the course project via [SUPR](https://supr.snic.se/), see point 2. OBS! It may take an hour or so from the time your access is approved before you can actually write to the folder. We will check before the course that all students have logged in and done this, so do not forget!
-
-<br/>
-
-<div style="text-align: right; font-size: 5px"> Icons are provided from [www.svgrepo.com](www.svgrepo.com) </div>
