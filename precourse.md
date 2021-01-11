@@ -333,15 +333,21 @@ conda deactivate
 ***
 
 
-We will run all tutorials with a set of 4 PBMC 10x datasets, two from Covid-19 patients and two healthy controls. The data is part of the github repo, so if you have cloned the repo, you can find all data in folder `labs/data/covid_data_GSE149689/raw/`
+We will run all tutorials with a set of 6 PBMC 10x datasets, 3 from Covid-19 patients and 3 healthy controls. The data is part of the github repo, so if you have cloned the repo, you can find all data in folder `labs/data/covid_data_GSE149689/raw/`
 
 These can be fetched using commands (which are also included in the initial labs):
 If you prefer not to clone the repo, you can download the data with the following commands:
 
 ```
-mkdir -p labs/data/covid_data_GSE149689/raw/
-cd labs/data/covid_data_GSE149689/raw/
+mkdir -p ~/scRNAseq2021/data/raw
+cd ~/scRNAseq2021/data/raw
 
+for i in Normal_PBMC_13.h5 Normal_PBMC_14.h5 Normal_PBMC_19.h5 Normal_PBMC_5.h5 nCoV_PBMC_1.h5 nCoV_PBMC_15.h5 nCoV_PBMC_16.h5 nCoV_PBMC_17.h5:
+do
+curl -o $i 'https://github.com/NBISweden/workshop-scRNAseq/blob/master/labs/data/covid_data_GSE149689/sub'$i'?raw=true'
+done
+
+cd ~/scRNAseq2021
 ```
 
 <br/>
