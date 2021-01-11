@@ -14,6 +14,12 @@ p.caption {font-size: 0.9em;font-style: italic;color: grey;margin-right: 10%;mar
 
 
 
+
+#### command line developer tools not found (OSX)
+
+
+
+
 #### command line developer tools not found (OSX)
 ***
 
@@ -33,17 +39,17 @@ If your R does not find the correct python version, it will complain that `umap-
 
 ##### Try selecting the correct conda env in R
 
-In this example the conda environment is named `scRNAseq2020`.
+In this example the conda environment is named `scRNAseq2021`.
 ```
 library(reticulate)
-reticulate::use_conda("scRNAseq2020")
+reticulate::use_conda("scRNAseq2021")
 ```
 
 Then check what python you have in R:
 ```
 reticulate::py_config()
 # should read at top:
-python:         /Users/asbj/miniconda3/envs/scRNAseq2020/bin/python
+python:         /Users/asbj/miniconda3/envs/scRNAseq2021/bin/python
 ```
 
 If that still is not right, you may have an `r-reticulate` python installation as well and need to perform the steps below.
@@ -57,12 +63,12 @@ OBS! Before doing anything else you need to select python version.
 First, find out what path you have to your conda python (in TERMINAL):
 ```
 which python
-/Users/asbj/miniconda3/envs/scRNAseq2020/bin/python
+/Users/asbj/miniconda3/envs/scRNAseq2021/bin/python
 ```
 
 Then in R (after restarting):
 ```
-reticulate::use_python("/Users/asbj/miniconda3/envs/scRNAseq2020/bin/python", required=T)
+reticulate::use_python("/Users/asbj/miniconda3/envs/scRNAseq2021/bin/python", required=T)
 ```
 
 Then check again with `py_config` if correct version of python is used:
