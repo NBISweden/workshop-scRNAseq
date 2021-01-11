@@ -16,9 +16,31 @@ Here we provide short tutorials on the different steps of scRNAseq analysis usin
 
 All scripts (Rmarkdown or ipython notebooks) can be found at our github repo in folder [labs/compiled](https://github.com/NBISweden/workshop-scRNAseq/tree/master/labs/compiled)
 
-Please me sure you have completed the [<img border="0" src="https://www.svgrepo.com/show/19652/maths-class-materials-cross-of-a-pencil-and-a-ruler.svg" width="20" height="20">**Precourse material**](precourse.md) as well as the [<img border="0" src="https://hackernoon.com/hn-images/1*rW03Wtue71AKfxnx6XN_iQ.png" width="20" height="20">**Conda instructions**](conda_instructions.md)
+During this workshop, you will use conda environments to run the exercises. This is because conda environments allow all users to have the same computing environment, i.e. package versions. This enforces reproducibility for you to run this material without the need to re-install or change your local versions. Please me sure you have completed the [<img border="0" src="https://www.svgrepo.com/show/19652/maths-class-materials-cross-of-a-pencil-and-a-ruler.svg" width="20" height="20">**Precourse material**](precourse.md). The environment for this course (2021) is this:
 
-Below you will find the link to the `.Rmd` that you should use as well as the rendered exercise report ("answers").
+* [environment_scRNAseq2021.yml](https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/master/labs/environment_scRNAseq2021.yml)
+
+<br/>
+
+Below you will find the link to the `.Rmd`/`.ipynb` that you should use as well as the rendered exercise report ("answers"). The easiest way of getting started with the exercises is to download the `.Rmd`/`.ipynb` file and then open it with Rstudio / Jypyter Notebooks. First activate your conda environment, then copy the link of a `.Rmd`/`.ipynb` file and then type:
+
+```
+wget <LINK_TO_Exercise1.Rmd_FILE>
+rstudio Exercise1.Rmd &
+```
+
+Or in python for `.ipynb`:
+
+```
+wget <LINK_TO_Exercise1.ipynb_FILE>
+jupyter notebook Exercise1.ipynb &
+```
+
+We highly recommend you to use the files provided instead of copying and pasting from the rendered report. Keep in mind that the results may vary slightly depending on the parameters used.
+
+Many additional information and explanations can be found in the [Single Cell Glossary](https://nbisweden.github.io/single-cell-pbl/glossary_of_terms_single_cell.html)
+
+<br/>
 
 | Tutorial | <img border="0" src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/R_logo.svg/1448px-R_logo.svg.png" width="20" height="20"> Seurat | <img border="0" src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/R_logo.svg/1448px-R_logo.svg.png" width="20" height="20"> Scater/Scran | <img border="0" src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Python-logo-notext.svg/1024px-Python-logo-notext.svg.png" width="20" height="20"> Scanpy |
 | -------- | ---------- | ---------------- | --------------- |
@@ -31,24 +53,6 @@ Below you will find the link to the `.Rmd` that you should use as well as the re
 
 <br/>
 
-Environments being used in the course (see [<img border="0" src="https://hackernoon.com/hn-images/1*rW03Wtue71AKfxnx6XN_iQ.png" width="20" height="20">**Conda instructions**](conda_instructions.md) ):
-
-* [seurat_scran_scanpy_paga](https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/master/labs/environment_r.yml)
-* [slingshot](https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/master/labs/trajectory/environment_slingshot.yml)
-
-The easiest way of getting started with the exercises is to download the `.Rmd`/`.ipynb` file and then open it with Rstudio / Jypyter Notebooks. First activate your conda environment, then copy the link of a `.Rmd`/`.ipynb` file and then type:
-```
-wget <LINK_TO_Exercise1.Rmd_FILE>
-rstudio Exercise1.Rmd &
-```
-
-Or in python for `.ipynb`:
-```
-wget <LINK_TO_Exercise1.ipynb_FILE>
-jupyter notebook Exercise1.ipynb &
-```
-
-We highly recommend you to use the files provided instead of copying and pasting from the rendered report. Keep in mind that the results may vary slightly depending on the parameters used.
 
 <br/>
 

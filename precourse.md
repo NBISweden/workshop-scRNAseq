@@ -8,7 +8,6 @@ title:  'Precourse Material - scRNAseq course'
 
 <br/>
 
-<<<<<<< Updated upstream
 =======
 This workshop is aimed towards biologists, researchers, computer scientists or data analysts planning to run, analyse and interpret single cells RNA-seq experiments. Basic knowledge of working on the Unix/Linux command line, R and RNA-seq **is expected**.
 

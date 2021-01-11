@@ -1,5 +1,7 @@
 ---
 #CSS_ALL:
+editor_options: 
+  chunk_output_type: console
 ---
 
 #CHUNK_OPT:
@@ -17,7 +19,7 @@ suppressPackageStartupMessages({
   #library(venn)
   library(cowplot)
   library(ggplot2)
-  library(rafalib)
+  # library(rafalib)
   library(pheatmap)
   library(igraph)
   library(dplyr)
@@ -32,8 +34,8 @@ sce <- readRDS("data/3pbmc_qc_dr_int_cl.rds")
 
 ```{r}
 #Compute differentiall expression
-markers_genes <- findMarkers( x = sce,
-                              clusters = sce$kmeans_5,
+markers_genes <- scran::findMarkers( x = sce,
+                              groups = as.character(sce$kmeans_5),
                               lfc=.5,
                               pval.type = "all",
                               direction = "up")
@@ -97,7 +99,7 @@ cell_selection$Chemistry <- ifelse(cell_selection$sample_id == "v2.1k","v2","v3"
 
 #Compute differentiall expression
 DGE_cell_selection <- findMarkers( x = cell_selection,
-                              clusters = cell_selection$Chemistry,
+                              groups = cell_selection$Chemistry,
                               lfc=.5,
                               pval.type = "all",
                               direction = "down")
@@ -117,12 +119,47 @@ scater::plotExpression(cell_selection, features = unique(top5_cell_selection$gen
 ```{r,fig.asp=.28}
 plotlist <- list()
 for(i in c("JUND","RPS17","GNAS")){
-  plotlist[[i]] <- plotReducedDim(sce,use_dimred = "UMAP_on_PCA",colour_by = i,by_exprs_values = "logcounts",add_ticks = F) +
+  plotlist[[i]] <- plotReducedDim(sce,dimred = "UMAP_on_PCA",colour_by = i,by_exprs_values = "logcounts") +
   scale_fill_gradientn(colours = colorRampPalette(c("grey90","orange3","firebrick","firebrick","red","red" ))(10)) +
   ggtitle(label = i)+ theme(plot.title = element_text(size=20)) }
 plot_grid(ncol=3, plotlist = plotlist)
 ```
 
+
+#DGE_TITLE3:## Differential expression across conditions
+#DGE_TITLE3:***
+
+#DGE_ALL7:
+
+```{r}
+# Load additional packages
+library(enrichR)
+
+# Check available databases to perform enrichment (then choose one)
+enrichR::listEnrichrDbs()
+
+# Perform enrichment
+enrich_results <- enrichr(
+  genes     = top25$gene[top25$cluster == "3"],
+  databases = "GO_Biological_Process_2017b" )[[1]]
+
+```
+
+#DGE_ALL7.1:
+
+```{r}
+par(mar = c(3, 20, 2, 1))
+barplot( height    = -log10(enrich_results$P.value)[20:1],
+         names.arg = enrich_results$Term[20:1],
+         horiz     = TRUE,
+         las       = 1,
+         border    = FALSE,
+         cex.names = .6 )
+abline(v = c(-log10(0.05)), lty = 2)
+abline(v = 0, lty = 1)
+```
+
+#DGE_ALL7.2
 
 #DGE_ALL10:
 
