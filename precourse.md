@@ -3,7 +3,7 @@ layout: default
 title:  'Precourse Material - scRNAseq course'
 ---
 
-# <img border="0" src="https://www.svgrepo.com/show/19652/maths-class-materials-cross-of-a-pencil-and-a-ruler.svg" width="50" height="50"> Precourse material
+#### <img border="0" src="https://www.svgrepo.com/show/19652/maths-class-materials-cross-of-a-pencil-and-a-ruler.svg" width="50" height="50"> Precourse material
 ***
 
 <br/>
@@ -22,9 +22,8 @@ Please follow the instructions below for installations prior to the workshop:
 
 <br/>
 
-## Knowledge Requirements
-
-<img border="0" src="https://toppng.com/uploads/preview/knowledge-icon-icon-knowledge-icon-11553482729yd4gxvibcr.png" width="20" height="20">
+##### <img border="0" src="https://toppng.com/uploads/preview/knowledge-icon-icon-knowledge-icon-11553482729yd4gxvibcr.png" width="20" height="20"> Knowledge Requirements
+***
 
 We strongly recommend for those not yet familiar with UNIX and/or R/Python to take this opportunity and take these online tutorials, since **those are requirements for the workshop**. This will help you to develop your programming skills and we can always learn a few tricks here and there, even if you are already experienced.
 
@@ -46,10 +45,9 @@ After taking those courses (or any other equivalent course in programming in bas
 
 <br/>
 
-## Slack
+##### <img border="0" src="https://image.flaticon.com/icons/png/512/2111/2111615.png" width="20" height="20"> Slack
 ***
 
-<img border="0" src="https://image.flaticon.com/icons/png/512/2111/2111615.png" width="20" height="20">
 
 Make sure that you have [**Slack**](https://slack.com/intl/en-se/downloads) installed because we will use it a lot during the workshop. Communication, troubleshooting and group discussions will happen via **Slack workspace** `NBIS-workshop-RNAseq`. All accepted students will receive an invitation link via email. Please add this workspace to your Slack application on your desktop and do **NOT** use it in the web.
 
@@ -62,10 +60,8 @@ Note: Please post your question in the channel and **NOT** directly to the teach
 
 <br/>
 
-## Zoom
+##### <img border="0" src="https://simg.nicepng.com/png/small/1008-10087079_zoom-icon-zoom-video-conferencing-logo.png" width="20" height="20"> Zoom
 ***
-
-<img border="0" src="https://simg.nicepng.com/png/small/1008-10087079_zoom-icon-zoom-video-conferencing-logo.png" width="20" height="20">
 
 Make sure that you have the latest [**Zoom (version 5.4.0 or above)**](https://zoom.us/download) installed because we will use it a lot during the workshop for the lecture and groups discussions.
 
@@ -73,10 +69,8 @@ Previous Zoom versions will not work. If you already have Zoom installed, you ca
 
 <br/>
 
-## Conda
+##### <img border="0" src="https://hackernoon.com/hn-images/1*rW03Wtue71AKfxnx6XN_iQ.png" width="20" height="20"> Conda
 ***
-
-<img border="0" src="https://hackernoon.com/hn-images/1*rW03Wtue71AKfxnx6XN_iQ.png" width="20" height="20">
 
 During this workshop, you will use conda environments to run the exercises. This is because conda environments allow all users to have the same computing environment, i.e. package versions. This enforces reproducibility for you to run this material without the need to re-install or change your local versions. See and graphical example below:
 
@@ -97,16 +91,13 @@ You can [read more](https://nbis-reproducible-research.readthedocs.io/en/latest/
 
 
 
-### <img border="0" src="https://www.svgrepo.com/show/4795/installation-symbol.svg" width="20" height="20"> Download and install Conda and Mamba
+###### Download and install Conda and Mamba
 
 Start by installing Conda. We suggest installing Miniconda3 and NOT Anaconda. After [installing Conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html).
 
-<br/>
-
-#### **On Mac OS X**
 
 <details>
-<summary><b>Click here to expand</b></summary>
+<summary><b>On Mac OS X</b></summary>
 <p>
 
 <img border="0" src="https://logos-download.com/wp-content/uploads/2020/06/Apple_Mac_OS_Logo-700x670.png" width="50" height="50">
@@ -128,12 +119,8 @@ conda install -n base -c conda-forge mamba
 
 
 
-<br/>
-
-#### **On Ubuntu**
-
 <details>
-<summary><b>Click here to expand</b></summary>
+<summary><b>On Ubuntu</b></summary>
 <p>
 
 <img border="0" src="https://encrypted-tbn0.gstatic.com/images?q=tbn%3AANd9GcR2rSSpKVBohI4AXgBaUjFVYqO73ou2l9AOXw&usqp=CAU" width="20" height="20">
@@ -153,12 +140,11 @@ conda install -n base -c conda-forge mamba
 </p>
 </details>
 
-<br/>
 
-#### **On Windows 10**
+
 
 <details>
-<summary><b>Click here to expand</b></summary>
+<summary><b>On Windows 10</b></summary>
 <p>
 
 <img border="0" src="https://seeklogo.com/images/W/windows-10-icon-logo-5BC5C69712-seeklogo.com.png" width="20" height="20">
@@ -207,12 +193,9 @@ sudo apt-get install libgl1-mesa-glx libegl1-mesa libxrandr2 libxrandr2 libxss1 
 </p>
 </details>
 
-<br/>
-
-#### VirtualBox
 
 <details>
-<summary><b>Click here to expand</b></summary>
+<summary><b>On VirtualBox</b></summary>
 <p>
 
 <img border="0" src="https://upload.wikimedia.org/wikipedia/commons/d/d5/Virtualbox_logo.png" width="20" height="20">
@@ -280,7 +263,7 @@ rstudio &
 
 
 
-### <img border="0" src="https://www.svgrepo.com/show/4795/installation-symbol.svg" width="20" height="20"> Create a conda environment from file
+###### Create a conda environment from file
 
 To download the `environment_scRNAseq2021.yml` file using the command on Terminal:
 
@@ -317,7 +300,7 @@ Several messages will show up on your screen and will tell you about the install
 
 
 
-### <img border="0" src="https://www.svgrepo.com/show/4795/installation-symbol.svg" width="20" height="20"> Activate the environment
+###### Activate the environment
 
 Once the environment is created, we need to activate it in order to use the softwares and packages inside it. To activate an environment type:
 
@@ -335,7 +318,7 @@ rstudio PATH/my_script.Rmd &
 
 
 
-### <img border="0" src="https://www.svgrepo.com/show/4795/installation-symbol.svg" width="20" height="20"> Deactivate the environment
+###### Deactivate the environment
 
 After you've ran all your analyses, you can deactivate the environment by typing:
 
@@ -346,10 +329,9 @@ conda deactivate
 <br/>
 
 
-## Dataset
+##### <img border="0" src="https://www.svgrepo.com/show/20109/database.svg" width="20" height="20"> Dataset
 ***
 
-<img border="0" src="https://www.svgrepo.com/show/20109/database.svg" width="50" height="50">
 
 We will run all tutorials with a set of 4 PBMC 10x datasets, two from Covid-19 patients and two healthy controls. The data is part of the github repo, so if you have cloned the repo, you can find all data in folder `labs/data/covid_data_GSE149689/raw/`
 
@@ -364,10 +346,8 @@ cd labs/data/covid_data_GSE149689/raw/
 
 <br/>
 
-## Code
+##### <img border="0" src="https://www.svgrepo.com/show/26279/code-file.svg" width="20" height="20"> Code
 ***
-
-<img border="0" src="https://www.svgrepo.com/show/26279/code-file.svg" width="50" height="50">
 
 All code is also available as R-markdown scripts at the course Github space. If you want a local copy of all course material you can simply clone it with git using:
 
