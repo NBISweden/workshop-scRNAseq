@@ -1,3 +1,4 @@
+{::options parse_block_html="true" /}
 ---
 layout: default
 title:  'Precourse Material - scRNAseq course'
@@ -91,7 +92,7 @@ You can [read more](https://nbis-reproducible-research.readthedocs.io/en/latest/
 
 
 
-###### Download and install Conda and Mamba
+**Download and install Conda and Mamba**
 
 Start by installing Conda. We suggest installing Miniconda3 and NOT Anaconda. After [installing Conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html).
 
