@@ -6,14 +6,16 @@ title: 'Precourse Material - scRNAseq course'
 {::options parse_block_html="true" /}
 
 #### <img border="0" src="https://www.svgrepo.com/show/19652/maths-class-materials-cross-of-a-pencil-and-a-ruler.svg" width="50" height="50"> Precourse material
+{:.no_toc}
 ***
 
 <br/>
 
-
 This workshop is aimed towards biologists, researchers, computer scientists or data analysts planning to run, analyse and interpret single cells RNA-seq experiments independently. Basic knowledge of working on the Unix/Linux command line, R/Python and RNA-seq is therefore **expected**.
 
 Please follow the instructions below for installations prior to the workshop:
+
+{:toc}
 
 - Knowledge Requirements
 - Slack
