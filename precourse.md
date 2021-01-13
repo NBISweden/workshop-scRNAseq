@@ -256,22 +256,18 @@ It is recommended that you INSTALL the program and not use the portable version.
 
 
 
-**Create a conda environment from file**
+**2. Create a conda environment from file**
 
 To download the `environment_scRNAseq2021.yml` file using the command on Terminal:
 
 ```
-#Ubuntu
-wget https://raw.githubusercontent.com/NBISweden/workshop-RNAseq/master/environment_scRNAseq2021.yml
-
-#MacOSX
 curl -o environment_scRNAseq2021.yml https://raw.githubusercontent.com/NBISweden/workshop-RNAseq/master/environment_scRNAseq2021.yml
 ```
 
 After this, you should have a file named `environment_scRNAseq2021.yml` in your directory (it does not matter where). Next, type:
 
 ```
-mamba env create -f environment_scRNAseq2021.yml
+mamba env create -n scRNAseq2021 -f environment_scRNAseq2021.yml
 ```
 
 Several messages will show up on your screen and will tell you about the installation process. This may take a few minutes depending on how many packages are to be installed.
@@ -293,7 +289,7 @@ Several messages will show up on your screen and will tell you about the install
 
 
 
-**2. Activate the environment**
+**3. Activate the environment**
 
 Once the environment is created, we need to activate it in order to use the softwares and packages inside it. To activate an environment type:
 
