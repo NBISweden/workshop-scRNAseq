@@ -5,21 +5,6 @@ title: 'Precourse Material - scRNAseq course'
 
 {::options parse_block_html="true" /}
 
-
-<details>
-  <summary markdown="span">This is the summary text, click me to expand</summary>
-
-  This is the detailed text.
-  
-  ```
-  This is code
-  ```
-
-  We can still use markdown, but we need to take the additional step of using the `parse_block_html` option as described in the [Mix HTML + Markdown Markup section](#mix-html--markdown-markup).
-
-  You can learn more about expected usage of this approach in the [GitLab UI docs](https://gitlab-org.gitlab.io/gitlab-ui/?path=/story/base-collapse--default) though the solution we use above is specific to usage in markdown.
-</details>
-
 #### <img border="0" src="https://www.svgrepo.com/show/19652/maths-class-materials-cross-of-a-pencil-and-a-ruler.svg" width="50" height="50"> Precourse material
 ***
 
@@ -110,170 +95,167 @@ You can [read more](https://nbis-reproducible-research.readthedocs.io/en/latest/
 
 **1. Download and install Conda and Mamba**
 
-Start by installing Conda. We suggest installing Miniconda3 and NOT Anaconda. After [installing Conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html).
+Start by installing Conda. We suggest installing **Miniconda3** and NOT Anaconda. After [installing Conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html).
 
 
 <details>
-<summary><b>On Mac OS X</b></summary>
-<p>
+  <summary markdown="span">This is the summary text, click me to expand</summary>
 
-<img border="0" src="https://logos-download.com/wp-content/uploads/2020/06/Apple_Mac_OS_Logo-700x670.png" width="20" height="20">
-
-```
-curl -o Miniconda3-latest-MacOSX-x86_64.sh https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh
-sh Miniconda3-latest-MacOSX-x86_64.sh
-```
-
-Follow the instructions on screen replying `yes` when necessary. Restart your terminal window to apply modifications. After restarting, you can type the command below to install Mamba:
-
-```
-conda init
-conda install -n base -c conda-forge mamba
-```
-
-</p>
+  This is the detailed text.
+  
+  ```
+  This is code
+  ```
 </details>
 
 
 
 <details>
-<summary><b>On Ubuntu</b></summary>
-<p>
-
-<img border="0" src="https://encrypted-tbn0.gstatic.com/images?q=tbn%3AANd9GcR2rSSpKVBohI4AXgBaUjFVYqO73ou2l9AOXw&usqp=CAU" width="20" height="20">
-
-```
-wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
-sh Miniconda3-latest-Linux-x86_64.sh
-```
-
-Follow the instructions on screen replying `yes` when necessary. Restart your terminal window to apply modifications. After restarting, you can type the command below to install Mamba:
-
-```
-conda init
-conda install -n base -c conda-forge mamba
-```
-
-</p>
+  <summary><img border="0" src="https://logos-download.com/wp-content/uploads/2020/06/Apple_Mac_OS_Logo-700x670.png" width="20" height="20">On Mac OS X</summary>
+  
+  First download the latest version of Miniconda3 and run it to install.
+  
+  ```
+  curl -o Miniconda3-latest-MacOSX-x86_64.sh https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh
+  sh Miniconda3-latest-MacOSX-x86_64.sh
+  ```
+  
+  Follow the instructions on screen, scrolling down, pressing ENTER and replying `yes` when necessary. Install it in the default directory. Restart your terminal window to apply modifications. After restarting, you can type the command below to install Mamba:
+  
+  ```
+  conda init
+  conda install -n base -c conda-forge mamba
+  ```
+  
 </details>
 
 
+<details>
+  <summary><img border="0" src="https://encrypted-tbn0.gstatic.com/images?q=tbn%3AANd9GcR2rSSpKVBohI4AXgBaUjFVYqO73ou2l9AOXw&usqp=CAU" width="20" height="20"> On Ubuntu </summary>
+  
+  First download the latest version of Miniconda3 and run it to install.
+  
+  ```
+  wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+  sh Miniconda3-latest-Linux-x86_64.sh
+  ```
+  
+  Follow the instructions on screen replying `yes` when necessary. Restart your terminal window to apply modifications. After restarting, you can type the command below to install Mamba:
+  
+  ```
+  conda init
+  conda install -n base -c conda-forge mamba
+  ```
+  
+</details>
 
 
 <details>
-<summary><b>On Windows 10</b></summary>
-<p>
+  <summary><img border="0" src="https://seeklogo.com/images/W/windows-10-icon-logo-5BC5C69712-seeklogo.com.png" width="20" height="20">>On Windows 10</summary>
 
-<img border="0" src="https://seeklogo.com/images/W/windows-10-icon-logo-5BC5C69712-seeklogo.com.png" width="20" height="20">
-
-Unfortunately, not all packages available on conda are compatible with windows machines. The good news is that Windows 10 offers native linux support via the Windows Subsystem for Linux (WSL2). This allows you to run linux/bash commands from within windows without the need of a virtual machine nor a dual-boot setup (i.e. having 2 operating systems). However, WSL does not offer a complete support for graphical interfaces (such as RStudio in our case), so we need additional steps to make that happen.
-
-1. On Windows 10, install the WSL if you don't have it. Follow the instructions here:
+  Unfortunately, not all packages available on conda are compatible with windows machines. The good news is that Windows 10 offers native linux support via the Windows Subsystem for Linux (WSL2). This allows you to run linux/bash commands from within windows without the need of a virtual machine nor a dual-boot setup (i.e. having 2 operating systems). However, WSL does not offer a complete support for graphical interfaces (such as RStudio in our case), so we need additional steps to make that happen.
+  
+  1. On Windows 10, install the WSL if you don't have it. Follow the instructions here:
 [https://docs.microsoft.com/en-us/windows/wsl/install-win10](https://docs.microsoft.com/en-us/windows/wsl/install-win10)
-
-2. Once you have that installed, you can download and install MobaXterm (which is the enhanced terminal with graphical capacity):
+  
+  2. Once you have that installed, you can download and install MobaXterm (which is the enhanced terminal with graphical capacity):
 [https://mobaxterm.mobatek.net](https://mobaxterm.mobatek.net)  
 It is recommended that you INSTALL the program and not use the portable version.
-
-3. Inside MobaXterm, you will probably will see that your WSL is already listed on the left panel as an available connection. Just double-click it and you will be accessing it via MobaXterm. If by any chance you don't see it there, close MobaXterm and go to the WSL terminal, because probably the WSL is not allowing SSH connections. You can follow this [link](https://www.illuminiastudios.com/dev-diaries/ssh-on-windows-subsystem-for-linux/) for the instructions on how to do it. You need to complete until the step `Start or restart the SSH service`, while the further steps are optional, but might be useful.
-
-4. Inside MobaXterm, download Conda with the command:
-
-```
-wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
-```
-
-5. Inside MobaXterm, type the commands below to install Conda. Follow the instructions for the installation there.
-
-```
-cd ~/Downloads
-sh Miniconda3-latest-Linux-x86_64.sh
-```
-
-6. Inside MobaXterm, Follow the instructions on screen replying `yes` when necessary. Restart your terminal window to apply modifications. After restarting, you can type the command below to install Mamba:
-
-```
-conda init
-conda install -n base -c conda-forge mamba
-```
-
-7. Inside MobaXterm, type the commands below to install the X-server graphical packages that will be used to launch RStudio.
+  
+  3. Inside MobaXterm, you will probably will see that your WSL is already listed on the left panel as an available connection. Just double-click it and you will be accessing it via MobaXterm. If by any chance you don't see it there, close MobaXterm and go to the WSL terminal, because probably the WSL is not allowing SSH connections. You can follow this [link](https://www.illuminiastudios.com/dev-diaries/ssh-on-windows-subsystem-for-linux/) for the instructions on how to do it. You need to complete until the step `Start or restart the SSH service`, while the further steps are optional, but might be useful.
+  
+  4. Inside MobaXterm, download Conda with the command:
+  
+  ```
+  wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+  ```
+  
+  5. Inside MobaXterm, type the commands below to install Conda. Follow the instructions for the installation there.
+  
+  ```
+  cd ~/Downloads
+  sh Miniconda3-latest-Linux-x86_64.sh
+  ```
+  
+  6. Inside MobaXterm, Follow the instructions on screen replying `yes` when necessary. Restart your terminal window to apply modifications. After restarting, you can type the command below to install Mamba:
+  
+  ```
+  conda init
+  conda install -n base -c conda-forge mamba
+  ```
+  
+  7. Inside MobaXterm, type the commands below to install the X-server graphical packages that will be used to launch RStudio.
 [https://docs.anaconda.com/anaconda/install/linux/](https://docs.anaconda.com/anaconda/install/linux/)
-
-```
-sudo apt-get update
-sudo apt-get install libgl1-mesa-glx libegl1-mesa libxrandr2 libxrandr2 libxss1 libxcursor1 libxcomposite1 libasound2 libxi6 libxtst6
-```
-
-8. Close and open all application and Inside MobaXterm, you will probably will see that your WSL is already listed on the left panel as an available connection. Just double-click it and you will be accessing it via MobaXterm.
-
-</p>
+  
+  ```
+  sudo apt-get update
+  sudo apt-get install libgl1-mesa-glx libegl1-mesa libxrandr2 libxrandr2 libxss1 libxcursor1 libxcomposite1 libasound2 libxi6 libxtst6
+  ```
+  
+  8. Close and open all application and Inside MobaXterm, you will probably will see that your WSL is already listed on the left panel as an available connection. Just double-click it and you will be accessing it via MobaXterm.
+  
 </details>
 
 
 <details>
-<summary><b>On VirtualBox</b></summary>
-<p>
-
-<img border="0" src="https://upload.wikimedia.org/wikipedia/commons/d/d5/Virtualbox_logo.png" width="20" height="20">
-
-If by any means you see that the installations are not working as it should on your computer, you can try to create a virtual machine to run UBUNTU and install everything there. But please keep this alternative as the last temporary resourse, as we recommend troubleshooting the installation o the up-mentioned methods.
-
-1. Download and install on your machine VIRTUALBOX
+  <summary><img border="0" src="https://upload.wikimedia.org/wikipedia/commons/d/d5/Virtualbox_logo.png" width="20" height="20">On VirtualBox</summary>
+  
+  If by any means you see that the installations are not working as it should on your computer, you can try to create a virtual machine to run UBUNTU and install everything there. But please keep this alternative as the last temporary resourse, as we recommend troubleshooting the installation o the up-mentioned methods.
+  
+  1. Download and install on your machine VIRTUALBOX
 [https://www.virtualbox.org](https://www.virtualbox.org)
-
-2. Download the ISO disk of UBUNTU
+  
+  2. Download the ISO disk of UBUNTU
 [https://ubuntu.com/download/desktop](https://ubuntu.com/download/desktop)
-
-3. On VIRTUALBOX, click on `Settings` (yellow engine) > `General` > `Advanced` and make sure that both settings **Shared Clipboard** and **Drag'n'Drop** are set to `Bidirectional`.
-
-4. Completely close VIRTUALBOX and start it again to apply changes.
-
-5. On VIRTUALBOX, create a machine called Ubuntu and add the image above
-- set the memory to the maximum allowed in the GREEN bar
-- set the hard disk to be dynamic allocated
-- all other things can be default
-
-6. Proceed with the Ubuntu installation as recommended. You can set to do "Minimal Installation" and deactivate to get updates during installation.
-
-7. Inside Ubuntu, open TERMINAL and type the commands below to install the X-server graphical packages that will be used to launch RStudio.
+  
+  3. On VIRTUALBOX, click on `Settings` (yellow engine) > `General` > `Advanced` and make sure that both settings **Shared Clipboard** and **Drag'n'Drop** are set to `Bidirectional`.
+  
+  4. Completely close VIRTUALBOX and start it again to apply changes.
+  
+  5. On VIRTUALBOX, create a machine called Ubuntu and add the image above
+  - set the memory to the maximum allowed in the GREEN bar
+  - set the hard disk to be dynamic allocated
+  - all other things can be default
+  
+  6. Proceed with the Ubuntu installation as recommended. You can set to do "Minimal Installation" and deactivate to get updates during installation.
+  
+  7. Inside Ubuntu, open TERMINAL and type the commands below to install the X-server graphical packages that will be used to launch RStudio.
 [https://docs.anaconda.com/anaconda/install/linux/](https://docs.anaconda.com/anaconda/install/linux/)
+  
+  ```
+  sudo apt-get update
+  sudo apt-get install libgl1-mesa-glx libegl1-mesa libxrandr2 libxrandr2 libxss1 libxcursor1 libxcomposite1 libasound2 libxi6 libxtst6
+  ```
+  
+  8. Inside UBUNTU, Download conda:
 
-```
-sudo apt-get update
-sudo apt-get install libgl1-mesa-glx libegl1-mesa libxrandr2 libxrandr2 libxss1 libxcursor1 libxcomposite1 libasound2 libxi6 libxtst6
-```
+  ```
+  wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+  ```
 
-8. Inside UBUNTU, Download conda:
+  9. Inside UBUNTU, open the TERMINAL and type the commands below. Follow the instructions for the installation there.
 
-```
-wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
-```
+  ```
+  cd ~/Downloads
+  sh Miniconda3-latest-Linux-x86_64.sh
+  ```
 
-9. Inside UBUNTU, open the TERMINAL and type the commands below. Follow the instructions for the installation there.
+  10. Close Terminal to apply the CONDA updates. Then you can create a course folder, download the environment file and create the environment:
 
-```
-cd ~/Downloads
-sh Miniconda3-latest-Linux-x86_64.sh
-```
+  ```
+  mkdir ~/Desktop/course
+  cd ~/Desktop/course
+  wget https://raw.githubusercontent.com/NBISweden/workshop-RNAseq/master/environment_scRNAseq2021.yml
+  conda env create -f environment_scRNAseq2021.yml
+  ```
 
-10. Close Terminal to apply the CONDA updates. Then you can create a course folder, download the environment file and create the environment:
+  11. You can then follow the instructions above to activate/deactivate the environment.
 
-```
-mkdir ~/Desktop/course
-cd ~/Desktop/course
-wget https://raw.githubusercontent.com/NBISweden/workshop-RNAseq/master/environment_scRNAseq2021.yml
-conda env create -f environment_scRNAseq2021.yml
-```
+  ```
+  conda activate scRNAseq2021
+  rstudio &
+  ```
 
-11. You can then follow the instructions above to activate/deactivate the environment.
-
-```
-conda activate scRNAseq2021
-rstudio &
-```
-
-</p>
 </details>
 
 <br/>
