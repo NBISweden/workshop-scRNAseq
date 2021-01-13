@@ -93,7 +93,7 @@ You can [read more](https://nbis-reproducible-research.readthedocs.io/en/latest/
 
 
 
-**Download and install Conda and Mamba**
+**1. Download and install Conda and Mamba**
 
 Start by installing Conda. We suggest installing Miniconda3 and NOT Anaconda. After [installing Conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html).
 
@@ -102,7 +102,7 @@ Start by installing Conda. We suggest installing Miniconda3 and NOT Anaconda. Af
 <summary><b>On Mac OS X</b></summary>
 <p>
 
-<img border="0" src="https://logos-download.com/wp-content/uploads/2020/06/Apple_Mac_OS_Logo-700x670.png" width="50" height="50">
+<img border="0" src="https://logos-download.com/wp-content/uploads/2020/06/Apple_Mac_OS_Logo-700x670.png" width="20" height="20">
 
 ```
 curl -o Miniconda3-latest-MacOSX-x86_64.sh https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh
@@ -302,7 +302,7 @@ Several messages will show up on your screen and will tell you about the install
 
 
 
-**Activate the environment**
+**2. Activate the environment**
 
 Once the environment is created, we need to activate it in order to use the softwares and packages inside it. To activate an environment type:
 
@@ -320,7 +320,7 @@ rstudio PATH/my_script.Rmd &
 
 
 
-###### Deactivate the environment
+**3. Deactivate the environment**
 
 After you've ran all your analyses, you can deactivate the environment by typing:
 
