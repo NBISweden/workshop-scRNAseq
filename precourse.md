@@ -307,7 +307,7 @@ rstudio PATH/my_script.Rmd &
 
 
 
-**3. Deactivate the environment**
+**4. Deactivate the environment**
 
 After you've ran all your analyses, you can deactivate the environment by typing:
 
