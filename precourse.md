@@ -265,7 +265,7 @@ rstudio &
 
 
 
-###### Create a conda environment from file
+**Create a conda environment from file**
 
 To download the `environment_scRNAseq2021.yml` file using the command on Terminal:
 
@@ -302,7 +302,7 @@ Several messages will show up on your screen and will tell you about the install
 
 
 
-###### Activate the environment
+**Activate the environment**
 
 Once the environment is created, we need to activate it in order to use the softwares and packages inside it. To activate an environment type:
 
