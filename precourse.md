@@ -1,8 +1,9 @@
-{::options parse_block_html="true" /}
 ---
 layout: default
-title:  'Precourse Material - scRNAseq course'
+title: 'Precourse Material - scRNAseq course'
 ---
+
+{::options parse_block_html="true" /}
 
 #### <img border="0" src="https://www.svgrepo.com/show/19652/maths-class-materials-cross-of-a-pencil-and-a-ruler.svg" width="50" height="50"> Precourse material
 ***
