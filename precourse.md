@@ -333,34 +333,12 @@ conda deactivate
 ***
 
 
-We will run all tutorials with a set of 6 PBMC 10x datasets, 3 from Covid-19 patients and 3 healthy controls. The data is part of the github repo, so if you have cloned the repo, you can find all data in folder `labs/data/covid_data_GSE149689/raw/`
-
-These can be fetched using commands (which are also included in the initial labs):
-If you prefer not to clone the repo, you can download the data with the following commands:
-
-```
-mkdir -p ~/scRNAseq2021/data/raw
-cd ~/scRNAseq2021/data/raw
-
-for i in Normal_PBMC_13.h5 Normal_PBMC_14.h5 Normal_PBMC_19.h5 Normal_PBMC_5.h5 nCoV_PBMC_1.h5 nCoV_PBMC_15.h5 nCoV_PBMC_16.h5 nCoV_PBMC_17.h5:
-do
-curl -o $i 'https://github.com/NBISweden/workshop-scRNAseq/blob/master/labs/data/covid_data_GSE149689/sub'$i'?raw=true'
-done
-
-cd ~/scRNAseq2021
-```
+TBA
 
 <br/>
 
 ##### <img border="0" src="https://www.svgrepo.com/show/26279/code-file.svg" width="20" height="20"> Code
 ***
 
-All code is also available as R-markdown scripts at the course Github space. If you want a local copy of all course material you can simply clone it with git using:
-
-```
-git clone https://github.com/NBISweden/workshop-scRNAseq.git
-```
-
-Or download manually from the github site https://github.com/NBISweden/workshop-scRNAseq.
-
+TBA
 <br/>
