@@ -239,7 +239,7 @@ It is recommended that you INSTALL the program and not use the portable version.
   ```
   mkdir ~/Desktop/course
   cd ~/Desktop/course
-  wget https://raw.githubusercontent.com/NBISweden/workshop-RNAseq/master/environment_scRNAseq2021.yml
+  wget https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/master/labs/environment_scRNAseq2021.yml
   conda env create -f environment_scRNAseq2021.yml
   ```
 
