@@ -104,6 +104,12 @@ Start by installing Conda. We suggest installing **Miniconda3** and NOT Anaconda
   <summary markdown="span">**On Mac OS X**</summary>
   <img border="0" src="https://logos-download.com/wp-content/uploads/2020/06/Apple_Mac_OS_Logo-700x670.png" width="30" height="30">
 
+  First, make sure you have Xcode and CommandLineTools installed and updated to latest version. If you have not already installed CommadLineTools, go to a terminal window and run:
+  
+  ```
+  xcode-select --install
+  ```
+
   First download the latest version of Miniconda3 and run it to install.
 
   ```
