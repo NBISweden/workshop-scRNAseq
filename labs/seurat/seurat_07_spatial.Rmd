@@ -11,6 +11,8 @@ output:
     toc_float:
       collapsed: false
       smooth_scroll: true    
+editor_options: 
+  chunk_output_type: console
 ---
 
 Spatial transcriptomic data with the Visium platform is in many ways similar to scRNAseq data. It contains UMI counts for 5-20 cells instead of single cells, but is still quite sparse in the same way as scRNAseq data is, but with the additional information about spatial location in the tissue. 
@@ -25,6 +27,8 @@ knitr::opts_chunk$set(message=FALSE, warning=FALSE, result='hold',fig.width=10, 
 
 
 ```{r packages}
+devtools::install_github('satijalab/seurat-data')
+
 suppressPackageStartupMessages(require(Matrix))
 suppressPackageStartupMessages(require(dplyr))
 suppressPackageStartupMessages(require(SeuratData))
@@ -149,7 +153,7 @@ For ST data, the Seurat team recommends to use SCTranform for normalization.
 
 ```{r}
 
-brain <- SCTransform(brain, assay = "Spatial", verbose = FALSE, method = 'glmGamPoi')
+brain <- SCTransform(brain, assay = "Spatial", verbose = TRUE, method = 'poisson')
 
 ```
 
@@ -209,7 +213,7 @@ We will do a similar integration as in the Data Integration lab, but this time w
 st.list = list(anterior1=brain1, posterior1=brain2)
 
 # run SCT on both datasets
-st.list = lapply(st.list, SCTransform, assay = "Spatial", method='glmGamPoi')
+st.list = lapply(st.list, SCTransform, assay = "Spatial", method='poisson')
 
 # need to set maxSize for PrepSCTIntegration to work
 options(future.globals.maxSize = 2000 * 1024^2) # set allowed size to 2K MiB
