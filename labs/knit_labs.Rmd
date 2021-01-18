@@ -772,6 +772,111 @@ for( pipeline in c("seurat","scater")){
 
 #-----------
 
+#-------------------------------------#
+#  Spatial transcriptomicst           #
+#-------------------------------------#
+
+#ST_TITLE:# Spatial transcriptomics
+#ST_TITLE:***
+
+#ST_ALL1:Spatial transcriptomic data with the Visium platform is in many ways similar to scRNAseq data. It contains UMI counts for 5-20 cells instead of single cells, but is still quite sparse in the same way as scRNAseq data is, but with the additional information about spatial location in the tissue. 
+#ST_ALL1:
+#ST_ALL1:Here we will first run quality control in a similar manner to scRNAseq data, then QC filtering, dimensionality reduction, integration and clustering. Then we will use scRNAseq data from mouse cortex to run LabelTransfer to predict celltypes in the Visium spots. 
+
+#ST_ALL1:
+#ST_ALL1:We will use two **Visium** spatial transcriptomics dataset of the mouse brain (Sagittal), which are publicly available from the [10x genomics website](https://support.10xgenomics.com/spatial-gene-expression/datasets/). Note, that these dataset have already been filtered for spots that does not overlap with the tissue.
+
+
+#ST_TITLE1:### Load packages
+
+#ST_TITLE2:### Load ST data
+
+#ST_TITLE3:##Quality control
+#ST_TITLE3:***
+
+#ST_ALL3:Similar to scRNAseq we use statistics on number of counts, number of features and percent mitochondria for quality control. 
+#ST_ALL3.1:We can also plot the same data onto the tissue section.
+
+#ST_ALL3.2:As you can see, the spots with low number of counts/features and high mitochondrial content is mainly towards the edges of the tissue. It is quite likely that these regions are damaged tissue. You may also see regions within a tissue with low quality if you have tears or folds in your section. 
+#ST_ALL3.2:
+#ST_ALL3.2:But remember, for some tissue types, the amount of genes expressed and proportion mitochondria may also be a biological features, so bear in mind what tissue you are working on and what these features mean.
+
+#ST_TITLE4:### Filter
+#ST_ALL4:Select all spots with less than 25% mitocondrial reads, less than 20% hb-reads and 1000 detected genes. You must judge for yourself based on your knowledge of the tissue what are appropriate filtering criteria for your dataset.
+
+#ST_TITLE5:### Top expressed genes
+#ST_TITLE5:As for scRNAseq data, we will look at what the top expressed genes are.
+
+#ST_ALL5:As you can see, the mitochondrial genes are among the top expressed. Also the lncRNA gene Bc1 (brain cytoplasmic RNA 1). Also one hemoglobin gene.
+
+#ST_TITLE6:### Filter genes
+#ST_TITLE6:We will remove the Bc1 gene, hemoglobin genes (blood contamination) and the mitochondrial genes.
+
+#ST_TITLE7:## Analysis
+#ST_TITLE7:***
+#ST_TITLE77:We will proceed with the data in a very similar manner to scRNAseq data.
+
+#ST_ALL7:Now we can plot gene expression of individual genes, the gene Hpca is a strong hippocampal marker and Ttr is a marker of the choroid plexus.
+
+#ST_ALL7.1:### Dimensionality reduction and clustering
+#ST_ALL7.1:We can then now run dimensionality reduction and clustering using the same workflow as we use for scRNA-seq analysis. 
+
+#ST_ALL7.2:We can then plot clusters onto umap or onto the tissue section.
+
+#ST_TITLE8:## Integration
+
+#ST_ALL8:Quite often there are strong batch effects between different ST sections, so it may be a good idea to integrate the data across sections.
+#ST_ALL8.1:Then we run dimensionality reduction and clustering as before.
+
+#ST_ALL8.2:Do you see any differences between the integrated and non-integrated clusering? Judge for yourself, which of the clusterings do you think looks best? 
+#ST_ALL8.2:As a reference, you can compare to brain regions in the [Allen brain atlas](https://mouse.brain-map.org/experiment/thumbnails/100042147?image_type=atlas). 
+
+
+#ST_TITLE9:## Identification of Spatially Variable Features
+#ST_ALL9: There are two main workflows to identify molecular features that correlate with spatial location within a tissue. The first is to perform differential expression based on spatially distinct clusters, the other is to find features that are have spatial patterning without taking clusters or spatial annotation into account. 
+#ST_ALL9:
+#ST_ALL9:First, we will do differential expression between clusters just as we did for the scRNAseq data before.
+
+
+#ST_ALL9.1:
+Spatial transcriptomics allows researchers to investigate how gene expression trends varies in space, thus identifying spatial patterns of gene expression. For this purpose there are multiple methods, such as SpatailDE, SPARK, Trendsceek, HMRF and Splotch.
+
+
+#ST_TITLE10:## Single cell data
+
+#ST_ALL10:We can also perform data integration between one scRNA-seq dataset and one spatial transcriptomics dataset. Such task is particularly useful because it allows us to transfer cell type labels to the Visium dataset, which were dentified from the scRNA-seq dataset. 
+#ST_ALL10:
+#ST_ALL10:We will use a reference scRNA-seq dataset of ~14,000 adult mouse cortical cell taxonomy from the Allen Institute, generated with the SMART-Seq2 protocol.
+
+#ST_ALL10.1:For speed, and for a more fair comparison of the celltypes, we will subsample all celltypes to a maximum of 200 cells per class (`subclass`).
+
+
+#ST_ALL10.1b:### Subset ST for cortex
+#ST_ALL10.1b:Since the scRNAseq dataset was generated from the mouse cortex, we will subset the visium dataset in order to select mainly the spots part of the cortex. Note that the integration can also be performed on the whole brain slice, but it would give rise to false positive cell type assignments and and therefore it should be interpreted with more care.
+
+
+
+#ST_ALL10.2:### Integrate with scRNAseq
+
+#ST_ALL10.3:We can also visualize the scores per cluster in ST data
+
+#ST_ALL10.4:Keep in mind, that the scores are "just" prediction scores, and do not correspond to proportion of cells that are of a certain celltype or similar. It mainly tells you that gene expression in a certain spot is hihgly similar/dissimilar to gene expression of a celltype.
+#ST_ALL10.4:
+#ST_ALL10.4:If we look at the scores, we see that some spots got really clear predictions by celltype, while others did not have high scores for any of the celltypes.
+
+#ST_ALL11:<style>
+#ST_ALL11:div.blue { background-color:#e6f0ff; border-radius: 5px; padding: 10px;}
+#ST_ALL11:</style>
+#ST_ALL11:<div class = "blue">
+#ST_ALL11:**Your turn:**
+#ST_ALL11:
+#ST_ALL11:Subset for another region that does not contain cortex cells and check what you get from the label transfer. 
+#ST_ALL11:
+#ST_ALL11:Suggested region is the right end of the posterial section that you can select like this:
+#ST_ALL11:
+#ST_ALL11:</div>
+
+
 
 #-------------------------------------#
 #   Trajectory inference: Slingshot   #
