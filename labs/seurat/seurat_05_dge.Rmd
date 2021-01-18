@@ -142,6 +142,8 @@ VlnPlot(alldata, features = as.character(unique(top5_cell_selection$gene)),
 
 #DGE_TITLE3:
 
+#DGE_TITLE3.1:
+
 #DGE_ALL7:
 
 ```{r}
@@ -172,77 +174,52 @@ abline(v = c(-log10(0.05)), lty = 2)
 abline(v = 0, lty = 1)
 ```
 
-#DGE_ALL7.2
+#DGE_TITLE3.2:
 
-
-
-```{r,fig.height=10,fig.width=10}
-# select all cells in cluster 1
-cell_selection <- subset(alldata, cells = colnames(alldata)[ alldata@meta.data[,sel.clust] == 2])
-cell_selection <- SetIdent(cell_selection, value = "type")
-#Compute differentiall expression
-DGE_cell_selection <- FindMarkers(cell_selection,
-                                  ident.1 = "Covid",
-                               logfc.threshold = 0,
-                               test.use = "wilcox",
-                               min.pct = 0,
-                               min.diff.pct = 0,
-                               only.pos = TRUE,
-                               max.cells.per.ident = 50,
-                               return.thresh = 1, # <- IMPORTANT!!
-                               assay = "RNA")
-dim(DGE_cell_selection)
-```
-
-
+#DGE_ALL7.2:
 
 ```{r,fig.height=10,fig.width=10}
-# if folder and files doesn't exist, download it
-if(!dir.exists("data/MSigDB_files/")) {
-  dir.create("data/MSigDB_files")
-  download.file(url="https://raw.github.com/NBISweden/workshop-RNAseq/master/data/MSigDB_files/c2.cp.kegg.v6.2.symbols.gmt.txt","./data/MSigDB_files/c2.cp.kegg.v6.2.symbols.gmt.txt")
-  download.file(url="https://raw.github.com/NBISweden/workshop-RNAseq/master/data/MSigDB_files/c3.tft.v6.2.symbols.gmt.txt","./data/MSigDB_files/c3.tft.v6.2.symbols.gmt.txt")
-  download.file(url="https://raw.github.com/NBISweden/workshop-RNAseq/master/data/MSigDB_files/h.all.v6.2.symbols.gmt.txt","./data/MSigDB_files/h.all.v6.2.symbols.gmt.txt")
-  download.file(url="https://raw.github.com/NBISweden/workshop-RNAseq/master/data/MSigDB_files/c2.cp.v6.2.symbols.gmt.txt","./data/MSigDB_files/c2.cp.v6.2.symbols.gmt.txt")
-  download.file(url="https://raw.github.com/NBISweden/workshop-RNAseq/master/data/MSigDB_files/c5.bp.v6.2.symbols.gmt.txt","./data/MSigDB_files/c5.bp.v6.2.symbols.gmt.txt")
-}
+# Create a gene rank based on the gene expression fold change
+gene_rank <- setNames( DGE_cell_selection$avg_logFC, casefold(rownames(DGE_cell_selection),upper=T) )
 ```
 
+#DGE_ALL7.3:
 
+```{r,fig.height=10,fig.width=10}
+# install.packages("msigdbr")
+library(msigdbr)
+
+#Download gene sets
+msigdbgmt <- msigdbr::msigdbr("Homo sapiens")
+msigdbgmt <- as.data.frame(msigdbgmt)
+
+#List available gene sets
+unique(msigdbgmt$gs_subcat)
+
+#Subset which gene set you want to use.
+msigdbgmt_subset <- msigdbgmt[msigdbgmt$gs_subcat == "CP:KEGG",]
+gmt <- lapply( unique(msigdbgmt_subset$gs_name),function(x){msigdbgmt_subset [msigdbgmt_subset$gs_name == x ,"gene_symbol"]} )
+names(gmt) <- unique(paste0(msigdbgmt_subset$gs_name,"_",msigdbgmt_subset$gs_exact_source))
+```
+
+#DGE_ALL7.4:
 
 ```{r,results='hide',block.title=TRUE,fig.height=5,fig.width=10}
 library(fgsea)
 
-# Create a gene rank based on the gene expression
-gene_rank <- setNames( DGE_cell_selection$avg_logFC, casefold(rownames(DGE_cell_selection),upper=T) )
-
-```
-
-Once our list of genes are sorted (from highest to lowest expression in day 7), we can proceed with the enrichment itself. Here, we will be using the `fgsea()` function. This will result in a table containing information for several pathways. We can then sort and filter those pathways to visualize only the top ones. You can select/filter them by either `p-value` or normalized enrichemnet score (`NES`).
-
-```{r,results='hide',block.title=TRUE,fig.height=5,fig.width=10}
-# Load hallmark pathways
-hallmark_pathways <- gmtPathways("data/MSigDB_files/c5.bp.v6.2.symbols.gmt.txt")
-
 # Perform enrichemnt analysis
-fgseaRes <- fgsea( pathways=hallmark_pathways, stats=gene_rank, minSize=15, maxSize=500, nperm=10000)
+fgseaRes <- fgsea( pathways=gmt, stats=gene_rank, minSize=15, maxSize=500)
+fgseaRes <- fgseaRes[ order(fgseaRes$pval) ,]
 
-# Filter the results table to show only the top 10 UP and DOWN regulated processes (optional)
-fgseaRes %>% top_n(20, NES) %>% top_n(-10, pval) -> top5_UP
-fgseaRes %>% top_n(-20, NES) %>% top_n(-10, pval) -> top5_DOWN
-
-topPathways <- c(top5_UP$pathway, rev(top5_DOWN$pathway))
+# Filter the results table to show only the top 10 UP or DOWN regulated processes (optional)
+top10_UP <- fgseaRes$pathway [1:10]
 
 # Nice summary table (shown as a plot)
 dev.off()
-plotGseaTable(hallmark_pathways[topPathways], gene_rank, fgseaRes, gseaParam = 0.5)
+plotGseaTable(gmt[top10_UP], gene_rank, fgseaRes, gseaParam = 0.5)
 ```
 
-
-Which KEGG pathways are upregulated in
-Which HALLMARK pathways are upregulated in
-Which KEGG, GO and HALLMAK to cluster #####?
-Which KEGG, GO and HALLMAK to cluster #####?
+#DGE_ALL8:
 
 #DGE_ALL10:
 
