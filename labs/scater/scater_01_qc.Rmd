@@ -89,7 +89,7 @@ sce@colData$type <- ifelse(grepl("cov",sce@colData$sample), "Covid","Control")
 
 ```{r}
 # remove all objects that will not be used.
-rm(cov.15, cov.1, cov.17, ctrl.5, ctrl.13, ctrl.14, sdata.cov15, sdata.cov1, sdata.cov17, sdata.ctrl5, sdata.ctrl13, sdata.ctrl14)
+rm(cov.15, cov.1, cov.17, ctrl.5, ctrl.13, ctrl.14)
 
 # run garbage collect to free up memory
 gc()
@@ -272,6 +272,60 @@ dim(sce.filt)
 ```
 
 
+#SEX_TITLE:
+
+#SEX_ALL1:
+
+#SEX_ALL2:
+
+```{r}
+
+genes.file = "data/results/genes.table.csv"
+
+if (!file.exists(genes.file)){
+  suppressMessages(require(biomaRt))
+
+  # initialize connection to mart, may take some time if the sites are unresponsive.
+  mart <- useMart(host="www.ensembl.org", "ENSEMBL_MART_ENSEMBL", dataset="hsapiens_gene_ensembl")
+
+  # fetch chromosome info plus some other annotations
+  genes.table <- getBM(filters= "external_gene_name", attributes= c("ensembl_gene_id",
+              "external_gene_name", "description","gene_biotype", "chromosome_name","start_position"),
+              values= rownames(sce.filt), mart= mart)
+  write.csv(genes.table, file = genes.file)
+}else{
+  genes.table = read.csv(genes.file)
+}
+```
+
+#SEX_ALL3:
+
+```{r}
+chrY.gene = genes.table$external_gene_name[genes.table$chromosome_name == "Y"]
+
+sce.filt@colData$pct_chrY  = colSums(counts(sce.filt)[chrY.gene,]) / colSums(counts(sce.filt))
+
+```
+
+#SEX_ALL4:
+
+```{r}
+# as plotColData cannot take an expression vs metadata, we need to add in XIST expression to colData
+sce.filt@colData$XIST = counts(sce.filt)["XIST",] /  colSums(counts(sce.filt)) * 10000
+
+plotColData(sce.filt,  "XIST",  "pct_chrY")
+```
+
+#SEX_ALL5:
+
+```{r}
+plot_grid(plotColData(sce.filt, y = "XIST", x = "sample", colour_by = "sample"), 
+          plotColData(sce.filt, y = "pct_chrY", x = "sample", colour_by = "sample"),  ncol = 2)
+
+```
+
+#SEX_ALL6:
+
 #CELLCYCLE_TITLE:
 
 #CELLCYCLE_ALL1:
@@ -314,6 +368,7 @@ plot_grid(plotColData(sce.filt,y = "G2M.score",x = "G1.score",colour_by = "sampl
 #DOUBLET_ALL1:
 
 #DOUBLET_SCATER1:
+#DOUBLET_SCATER1:
 
 ```{r}
 sce.filt <- logNormCounts(sce.filt)
@@ -350,10 +405,12 @@ plot_grid(plotUMAP(sce.filt, colour_by="DoubletScore"),
           plotUMAP(sce.filt, colour_by="sample"), ncol = 3)
 ```
 
-#DOUBLET_ALL2
+#DOUBLET_ALL2:
 
 ```{r}
 sce.filt = sce.filt[,sce.filt$DoubletScore < 2]
+
+dim(sce.filt)
 ```
 
 #DOUBLET_ALL3:

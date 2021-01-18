@@ -1,7 +1,7 @@
 ---
 title: "Seurat: Quality control"
 author: "Åsa Björklund  &  Paulo Czarnewski"
-date: 'December 02, 2020'
+date: 'January 18, 2021'
 output:
   html_document:
     self_contained: true
@@ -23,6 +23,8 @@ output:
       collapsed: false
       smooth_scroll: true
     toc_depth: 3
+editor_options: 
+  chunk_output_type: console
 ---
 
 
@@ -34,7 +36,7 @@ p.caption {font-size: 0.9em;font-style: italic;color: grey;margin-right: 10%;mar
 ***
 # Get data
 
-In this tutorial, we will run all tutorials with a set of 6 PBMC 10x datasets from 3 covid-19 patients and 3 healthy controls, the samples have been subsampled to 1500 cells per sample. They are part of the github repo and if you have cloned the repo they should be available in folder: `labs/data/covid_data_GSE149689`. Instructions on how to download them can also be found in the Precourse material. 
+In this tutorial, we will run all tutorials with a set of 6 PBMC 10x datasets from 3 covid-19 patients and 3 healthy controls, the samples have been subsampled to 1500 cells per sample. They are part of the github repo and if you have cloned the repo they should be available in folder: `labs/data/covid_data_GSE149689`. Instructions on how to download them can also be found in the Precourse material.
 
 
 ```bash
@@ -45,14 +47,18 @@ count=$(ls -l data/raw/*.h5 | grep -v ^d | wc -l )
 echo $count
 
 # if not 4 files, fetch the files from github.
-if (("$count" <  4)); then
+if (("$count" <  6)); then
   cd data/raw
-  curl  -O https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/raw/master/labs/data/covid_data_GSE149689/raw/Normal_PBMC_13.h5
-  curl  -O https://github.com/NBISweden/workshop-scRNAseq/raw/master/labs/data/covid_data_GSE149689/raw/Normal_PBMC_14.h5
-  curl  -O https://github.com/NBISweden/workshop-scRNAseq/raw/master/labs/data/covid_data_GSE149689/raw/nCoV_PBMC_16.h5
-  curl  -O https://github.com/NBISweden/workshop-scRNAseq/raw/master/labs/data/covid_data_GSE149689/raw/nCoV_PBMC_17.h5
+  curl -O https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/new_dataset/labs/data/covid_data_GSE149689/sub/Normal_PBMC_13.h5
+  curl -O https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/new_dataset/labs/data/covid_data_GSE149689/sub/Normal_PBMC_14.h5
+  curl -O https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/new_dataset/labs/data/covid_data_GSE149689/sub/Normal_PBMC_5.h5
+  curl -O https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/new_dataset/labs/data/covid_data_GSE149689/sub/nCoV_PBMC_15.h5
+  curl -O https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/new_dataset/labs/data/covid_data_GSE149689/sub/nCoV_PBMC_17.h5
+  curl -O https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/new_dataset/labs/data/covid_data_GSE149689/sub/nCoV_PBMC_1.h5
   cd ../..
-fi  
+fi
+
+ls -lGa data/raw
 ```
 
 With data in place, now we can start loading libraries we will use in this tutorial.
@@ -63,17 +69,61 @@ suppressMessages(require(Seurat))
 suppressMessages(require(Matrix))
 ```
 
-We can first load the data individually by reading directly from HDF5 file format (.h5). 
+We can first load the data individually by reading directly from HDF5 file format (.h5).
 
 
 ```r
 cov.15 <- Seurat::Read10X_h5(filename = "data/raw/nCoV_PBMC_15.h5", use.names = T)
-cov.1 <- Seurat::Read10X_h5(filename = "data/raw/nCoV_PBMC_1.h5", use.names = T)
-cov.17 <- Seurat::Read10X_h5(filename = "data/raw/nCoV_PBMC_17.h5", use.names = T)
+```
 
+```
+## Warning in sparseMatrix(i = indices[] + 1, p = indptr[], x = as.numeric(x =
+## counts[]), : 'giveCsparse' has been deprecated; setting 'repr = "T"' for you
+```
+
+```r
+cov.1 <- Seurat::Read10X_h5(filename = "data/raw/nCoV_PBMC_1.h5", use.names = T)
+```
+
+```
+## Warning in sparseMatrix(i = indices[] + 1, p = indptr[], x = as.numeric(x =
+## counts[]), : 'giveCsparse' has been deprecated; setting 'repr = "T"' for you
+```
+
+```r
+cov.17 <- Seurat::Read10X_h5(filename = "data/raw/nCoV_PBMC_17.h5", use.names = T)
+```
+
+```
+## Warning in sparseMatrix(i = indices[] + 1, p = indptr[], x = as.numeric(x =
+## counts[]), : 'giveCsparse' has been deprecated; setting 'repr = "T"' for you
+```
+
+```r
 ctrl.5 <- Seurat::Read10X_h5(filename = "data/raw/Normal_PBMC_5.h5", use.names = T)
+```
+
+```
+## Warning in sparseMatrix(i = indices[] + 1, p = indptr[], x = as.numeric(x =
+## counts[]), : 'giveCsparse' has been deprecated; setting 'repr = "T"' for you
+```
+
+```r
 ctrl.13 <- Seurat::Read10X_h5(filename = "data/raw/Normal_PBMC_13.h5", use.names = T)
+```
+
+```
+## Warning in sparseMatrix(i = indices[] + 1, p = indptr[], x = as.numeric(x =
+## counts[]), : 'giveCsparse' has been deprecated; setting 'repr = "T"' for you
+```
+
+```r
 ctrl.14 <- Seurat::Read10X_h5(filename = "data/raw/Normal_PBMC_14.h5", use.names = T)
+```
+
+```
+## Warning in sparseMatrix(i = indices[] + 1, p = indptr[], x = as.numeric(x =
+## counts[]), : 'giveCsparse' has been deprecated; setting 'repr = "T"' for you
 ```
 
 ***
@@ -120,8 +170,8 @@ gc()
 
 ```
 ##            used  (Mb) gc trigger  (Mb) max used  (Mb)
-## Ncells  2603888 139.1    5108734 272.9  4535732 242.3
-## Vcells 43392671 331.1  104633050 798.3 95395069 727.9
+## Ncells  2609434 139.4    5112281 273.1  4541343 242.6
+## Vcells 43400635 331.2  104649564 798.5 95403055 727.9
 ```
  Here it is how the count matrix and the metatada look like for every cell.
 
@@ -185,12 +235,14 @@ alldata$percent_ribo <- colSums(alldata@assays$RNA@counts[ribo_genes, ])/total_c
 ##  [8] "RPS7"    "RPS27A"  "RPL31"
 ```
 
-And finally, with the same method we will calculate proportion hemoglobin genes, which can give an indication of red blood cell contamination. 
+And finally, with the same method we will calculate proportion hemoglobin genes, which can give an indication of red blood cell contamination.
 
 
 ```r
 # Percentage hemoglobin genes - includes all genes starting with HB except HBP.
 alldata <- PercentageFeatureSet(alldata, "^HB[^(P)]", col.name = "percent_hb")
+
+alldata <- PercentageFeatureSet(alldata, "PECAM1|PF4", col.name = "percent_plat")
 ```
 
 ***
@@ -216,8 +268,14 @@ FeatureScatter(alldata, "nCount_RNA", "nFeature_RNA", group.by = "orig.ident", p
 
 ![](seurat_01_qc_files/figure-html/unnamed-chunk-11-1.png)<!-- -->
 
-### TASK: Plot scatterplots
+<style>
+div.blue { background-color:#e6f0ff; border-radius: 5px; padding: 10px;}
+</style>
+<div class = "blue">
+**Your turn**
+
 Plot additional QC stats that we have calculated as scatter plots. How are the different measures correlated? Can you explain why?
+</div>
 
 ***
 # Filtering
@@ -239,15 +297,15 @@ dim(data.filt)
 ## [1] 18147  7973
 ```
 
- Extremely high number of detected genes could indicate doublets. However, depending on the cell type composition in your sample, you may have cells with higher number of genes (and also higher counts) from one cell type. <br>In these datasets, there is also a clear difference between the v2 vs v3 10x chemistry with regards to gene detection, so it may not be fair to apply the same cutoffs to all of them. Also, in the protein assay data there is a lot of cells with few detected genes giving a bimodal distribution. This type of distribution is not seen in the other 2 datasets. Considering that they are all PBMC datasets it makes sense to regard this distribution as low quality libraries. Filter the cells with high gene detection (putative doublets) with cutoffs 4100 for v3 chemistry and 2000 for v2. <br>Here, we will filter the cells with low gene detection (low quality libraries) with less than 1000 genes for v2 and < 500 for v2.
+ Extremely high number of detected genes could indicate doublets. However, depending on the cell type composition in your sample, you may have cells with higher number of genes (and also higher counts) from one cell type. <br>In this case, we will run doublet prediction further down, so we will skip this step now, but the code below is an example of how it can be run:
 
 
 ```r
-# start with cells with many genes detected.
+# skip for now and run DoubletFinder first!
 
-# skip for now and run DoubletFinder first! high.det.v3 <- WhichCells(data.filt,
-# expression = nFeature_RNA > 4100) high.det.v2 <- WhichCells(data.filt,
-# expression = nFeature_RNA > 2000 & orig.ident == 'v2.1k')
+# high.det.v3 <- WhichCells(data.filt, expression = nFeature_RNA > 4100)
+# high.det.v2 <- WhichCells(data.filt, expression = nFeature_RNA > 2000 &
+# orig.ident == 'v2.1k')
 
 # remove these cells data.filt <- subset(data.filt,
 # cells=setdiff(WhichCells(data.filt),c(high.det.v2,high.det.v3)))
@@ -267,9 +325,10 @@ Additionally, we can also see which genes contribute the most to such reads. We 
 # Compute the relative expression of each gene per cell Use sparse matrix
 # operations, if your dataset is large, doing matrix devisions the regular way
 # will take a very long time.
-C = data.filt@assays$RNA@counts
-C@x = C@x/rep.int(colSums(C), diff(C@p))
-most_expressed <- order(Matrix::rowSums(C), decreasing = T)[20:1]
+par(mar = c(4, 8, 2, 1))
+C <- data.filt@assays$RNA@counts
+C <- Matrix::t(Matrix::t(C)/Matrix::colSums(C)) * 100
+most_expressed <- order(apply(C, 1, median), decreasing = T)[20:1]
 boxplot(as.matrix(t(C[most_expressed, ])), cex = 0.1, las = 1, xlab = "% total count per cell", 
     col = (scales::hue_pal())(20)[20:1], horizontal = TRUE)
 ```
@@ -280,7 +339,7 @@ As you can see, MALAT1 constitutes up to 30% of the UMIs from a single cell and 
 
 ## Mito/Ribo filtering
 
-We also have quite a lot of cells with high proportion of mitochondrial and low proportion ofribosomal reads. It could be wise to remove those cells, if we have enough cells left after filtering. <br>Another option would be to either remove all mitochondrial reads from the dataset and hope that the remaining genes still have enough biological signal. <br>A third option would be to just regress out the `percent_mito` variable during scaling. In this case we had as much as 99.7% mitochondrial reads in some of the cells, so it is quite unlikely that there is much cell type signature left in those. <br>Looking at the plots, make reasonable decisions on where to draw the cutoff. In this case, the bulk of the cells are below 20% mitochondrial reads and that will be used as a cutoff. We will also remove cells with less than 5% ribosomal reads. 
+We also have quite a lot of cells with high proportion of mitochondrial and low proportion ofribosomal reads. It could be wise to remove those cells, if we have enough cells left after filtering. <br>Another option would be to either remove all mitochondrial reads from the dataset and hope that the remaining genes still have enough biological signal. <br>A third option would be to just regress out the `percent_mito` variable during scaling. In this case we had as much as 99.7% mitochondrial reads in some of the cells, so it is quite unlikely that there is much cell type signature left in those. <br>Looking at the plots, make reasonable decisions on where to draw the cutoff. In this case, the bulk of the cells are below 20% mitochondrial reads and that will be used as a cutoff. We will also remove cells with less than 5% ribosomal reads.
 
 
 ```r
@@ -321,7 +380,7 @@ VlnPlot(data.filt, group.by = "orig.ident", features = feats, pt.size = 0.1, nco
 
 ## Filter genes
 
-As the level of expression of mitochondrial and MALAT1 genes are judged as mainly technical, and hemoglobin genes mainly from RBC contamination, it can be wise to remove them from the dataset bofore any further analysis. 
+As the level of expression of mitochondrial and MALAT1 genes are judged as mainly technical, it can be wise to remove them from the dataset bofore any further analysis.
 
 
 ```r
@@ -348,6 +407,64 @@ dim(data.filt)
 ```
 
 
+
+# Sample sex
+
+When working with human or animal samples, you should ideally constrain you experiments to a single sex to avoid including sex bias in the conclusions. However this may not always be possible. By looking at reads from chromosomeY (males) and XIST (X-inactive specific transcript) expression (mainly female) it is quite easy to determine per sample which sex it is. It can also bee a good way to detect if there has been any sample mixups, if the sample metadata sex does not agree with the computational predictions.
+
+To get choromosome information for all genes, you should ideally parse the information from the gtf file that you used in the mapping pipeline as it has the exact same annotation version/gene naming. However, it may not always be available, as in this case where we have downloaded public data. Hence, we will use biomart to fetch chromosome information. 
+As the biomart instances quite often are unresponsive, you can try the code below, but if it fails, we have the file with gene annotations on github [here](). Make sure you put it at the correct location for the path `genes.file` to work. 
+
+
+```r
+genes.file = "data/results/genes.table.csv"
+
+if (!file.exists(genes.file)) {
+    suppressMessages(require(biomaRt))
+    
+    # initialize connection to mart, may take some time if the sites are
+    # unresponsive.
+    mart <- useMart(host = "www.ensembl.org", "ENSEMBL_MART_ENSEMBL", dataset = "hsapiens_gene_ensembl")
+    
+    # fetch chromosome info plus some other annotations
+    genes.table <- getBM(filters = "external_gene_name", attributes = c("ensembl_gene_id", 
+        "external_gene_name", "description", "gene_biotype", "chromosome_name", "start_position"), 
+        values = rownames(data.filt), mart = mart)
+    write.csv(genes.table, file = genes.file)
+} else {
+    genes.table = read.csv(genes.file)
+}
+```
+
+Now that we have the chromosome information, we can calculate per cell the proportion of reads that comes from chromosome Y.
+
+
+```r
+chrY.gene = genes.table$external_gene_name[genes.table$chromosome_name == "Y"]
+
+data.filt$pct_chrY = colSums(data.filt@assays$RNA@counts[chrY.gene, ])/colSums(data.filt@assays$RNA@counts)
+```
+
+Then plot XIST expression vs chrY proportion. As you can see, the samples are clearly on either side, even if some cells do not have detection of either.
+
+
+```r
+FeatureScatter(data.filt, feature1 = "XIST", feature2 = "pct_chrY")
+```
+
+![](seurat_01_qc_files/figure-html/unnamed-chunk-20-1.png)<!-- -->
+
+Plot as violins.
+
+
+```r
+VlnPlot(data.filt, features = c("XIST", "pct_chrY"))
+```
+
+![](seurat_01_qc_files/figure-html/unnamed-chunk-21-1.png)<!-- -->
+
+Here, we can see clearly that we have two males and 4 females, can you see which samples they are? 
+Do you think this will cause any problems for downstream analysis? Discuss with your group: what would be the best way to deal with this type of sex bias?
 
 
 # Calculate cell-cycle scores
@@ -383,7 +500,7 @@ VlnPlot(data.filt, features = c("S.Score", "G2M.Score"), group.by = "orig.ident"
     ncol = 4, pt.size = 0.1)
 ```
 
-![](seurat_01_qc_files/figure-html/unnamed-chunk-19-1.png)<!-- -->
+![](seurat_01_qc_files/figure-html/unnamed-chunk-23-1.png)<!-- -->
 
 In this case it looks like we only have a few cycling cells in the datasets.
 
@@ -393,12 +510,13 @@ In this case it looks like we only have a few cycling cells in the datasets.
 Doublets/Mulitples of cells in the same well/droplet is a common issue in scRNAseq protocols. Especially in droplet-based methods whith overloading of cells. In a typical 10x experiment the proportion of doublets is linearly dependent on the amount of loaded cells. As  indicated from the Chromium user guide, doublet rates are about as follows:
 ![](../../figs/10x_doublet_rate.png)
 Most doublet detectors simulates doublets by merging cell counts and predicts doublets as cells that have similar embeddings as the simulated doublets. Most such packages need an assumption about the number/proportion of expected doublets in the dataset. The data you are using is subsampled, but the orignial datasets contained about 5 000 cells per sample, hence we can assume that they loaded about 9 000 cells and should have a doublet rate at about 4%.
-OBS! Ideally doublet prediction should be run on each sample separately, especially if your different samples have different proportions of celltypes. In this case, the data is subsampled so we have very few cells per sample and all samples are sorted PBMCs so it is okay to run them together. 
+OBS! Ideally doublet prediction should be run on each sample separately, especially if your different samples have different proportions of celltypes. In this case, the data is subsampled so we have very few cells per sample and all samples are sorted PBMCs so it is okay to run them together.
 
 Here, we will use `DoubletFinder` to predict doublet cells. But before doing doublet detection we need to run scaling, variable gene selection and pca, as well as UMAP for visualization. These steps will be explored in more detail in coming exercises.
 
 
 ```r
+# remotes::install_github('chris-mcginnis-ucsf/DoubletFinder')
 suppressMessages(require(DoubletFinder))
 
 data.filt = FindVariableFeatures(data.filt, verbose = F)
@@ -446,7 +564,7 @@ cowplot::plot_grid(ncol = 2, DimPlot(data.filt, group.by = "orig.ident") + NoAxe
     DimPlot(data.filt, group.by = DF.name) + NoAxes())
 ```
 
-![](seurat_01_qc_files/figure-html/unnamed-chunk-21-1.png)<!-- -->
+![](seurat_01_qc_files/figure-html/unnamed-chunk-25-1.png)<!-- -->
 
 
 We should expect that two cells have more detected genes than a single cell, lets check if our predicted doublets also have more detected genes in general.
@@ -456,7 +574,7 @@ We should expect that two cells have more detected genes than a single cell, let
 VlnPlot(data.filt, features = "nFeature_RNA", group.by = DF.name, pt.size = 0.1)
 ```
 
-![](seurat_01_qc_files/figure-html/unnamed-chunk-22-1.png)<!-- -->
+![](seurat_01_qc_files/figure-html/unnamed-chunk-26-1.png)<!-- -->
 
 Now, lets remove all predicted doublets from our data.
 
@@ -505,47 +623,47 @@ sessionInfo()
 ## [8] base     
 ## 
 ## other attached packages:
-## [1] KernSmooth_2.23-18  fields_11.6         spam_2.5-1         
-## [4] dotCall64_1.0-0     DoubletFinder_2.0.3 Matrix_1.2-18      
-## [7] Seurat_3.2.2        RJSONIO_1.3-1.4     optparse_1.6.6     
+## [1] KernSmooth_2.23-18  fields_11.6         spam_2.6-0         
+## [4] dotCall64_1.0-0     DoubletFinder_2.0.3 Matrix_1.3-0       
+## [7] Seurat_3.2.3        RJSONIO_1.3-1.4     optparse_1.6.6     
 ## 
 ## loaded via a namespace (and not attached):
 ##   [1] Rtsne_0.15            colorspace_2.0-0      deldir_0.2-3         
-##   [4] ellipsis_0.3.1        ggridges_0.5.2        spatstat.data_1.5-2  
-##   [7] leiden_0.3.5          listenv_0.8.0         farver_2.0.3         
-##  [10] getopt_1.20.3         ggrepel_0.8.2         bit64_4.0.5          
+##   [4] ellipsis_0.3.1        ggridges_0.5.2        spatstat.data_1.7-0  
+##   [7] leiden_0.3.6          listenv_0.8.0         farver_2.0.3         
+##  [10] getopt_1.20.3         ggrepel_0.9.0         bit64_4.0.5          
 ##  [13] RSpectra_0.16-0       codetools_0.2-18      splines_4.0.3        
-##  [16] knitr_1.30            polyclip_1.10-0       jsonlite_1.7.1       
+##  [16] knitr_1.30            polyclip_1.10-0       jsonlite_1.7.2       
 ##  [19] ica_1.0-2             cluster_2.1.0         png_0.1-7            
-##  [22] uwot_0.1.9            shiny_1.5.0           sctransform_0.3.1    
+##  [22] uwot_0.1.10           shiny_1.5.0           sctransform_0.3.2    
 ##  [25] compiler_4.0.3        httr_1.4.2            fastmap_1.0.1        
 ##  [28] lazyeval_0.2.2        later_1.1.0.1         formatR_1.7          
 ##  [31] htmltools_0.5.0       tools_4.0.3           rsvd_1.0.3           
 ##  [34] igraph_1.2.6          gtable_0.3.0          glue_1.4.2           
 ##  [37] RANN_2.6.1            reshape2_1.4.4        dplyr_1.0.2          
 ##  [40] maps_3.3.0            Rcpp_1.0.5            spatstat_1.64-1      
-##  [43] vctrs_0.3.5           nlme_3.1-150          lmtest_0.9-38        
-##  [46] xfun_0.19             stringr_1.4.0         globals_0.14.0       
-##  [49] mime_0.9              miniUI_0.1.1.1        lifecycle_0.2.0      
-##  [52] irlba_2.3.3           goftest_1.2-2         future_1.20.1        
-##  [55] MASS_7.3-53           zoo_1.8-8             scales_1.1.1         
-##  [58] promises_1.1.1        spatstat.utils_1.17-0 parallel_4.0.3       
-##  [61] RColorBrewer_1.1-2    yaml_2.2.1            reticulate_1.18      
-##  [64] pbapply_1.4-3         gridExtra_2.3         ggplot2_3.3.2        
-##  [67] rpart_4.1-15          stringi_1.5.3         rlang_0.4.8          
-##  [70] pkgconfig_2.0.3       matrixStats_0.57.0    evaluate_0.14        
-##  [73] lattice_0.20-41       ROCR_1.0-11           purrr_0.3.4          
-##  [76] tensor_1.5            patchwork_1.1.0       htmlwidgets_1.5.2    
-##  [79] labeling_0.4.2        cowplot_1.1.0         bit_4.0.4            
-##  [82] tidyselect_1.1.0      parallelly_1.21.0     RcppAnnoy_0.0.17     
-##  [85] plyr_1.8.6            magrittr_2.0.1        R6_2.5.0             
-##  [88] generics_0.1.0        pillar_1.4.7          withr_2.3.0          
-##  [91] mgcv_1.8-33           fitdistrplus_1.1-1    survival_3.2-7       
-##  [94] abind_1.4-5           tibble_3.0.4          future.apply_1.6.0   
-##  [97] crayon_1.3.4          hdf5r_1.3.3           plotly_4.9.2.1       
-## [100] rmarkdown_2.5         data.table_1.13.2     digest_0.6.27        
-## [103] xtable_1.8-4          tidyr_1.1.2           httpuv_1.5.4         
-## [106] munsell_0.5.0         viridisLite_0.3.0
+##  [43] scattermore_0.7       vctrs_0.3.6           nlme_3.1-151         
+##  [46] lmtest_0.9-38         xfun_0.19             stringr_1.4.0        
+##  [49] globals_0.14.0        mime_0.9              miniUI_0.1.1.1       
+##  [52] lifecycle_0.2.0       irlba_2.3.3           goftest_1.2-2        
+##  [55] future_1.21.0         MASS_7.3-53           zoo_1.8-8            
+##  [58] scales_1.1.1          promises_1.1.1        spatstat.utils_1.17-0
+##  [61] parallel_4.0.3        RColorBrewer_1.1-2    yaml_2.2.1           
+##  [64] reticulate_1.18       pbapply_1.4-3         gridExtra_2.3        
+##  [67] ggplot2_3.3.3         rpart_4.1-15          stringi_1.5.3        
+##  [70] rlang_0.4.10          pkgconfig_2.0.3       matrixStats_0.57.0   
+##  [73] evaluate_0.14         lattice_0.20-41       ROCR_1.0-11          
+##  [76] purrr_0.3.4           tensor_1.5            patchwork_1.1.1      
+##  [79] htmlwidgets_1.5.3     labeling_0.4.2        cowplot_1.1.1        
+##  [82] bit_4.0.4             tidyselect_1.1.0      parallelly_1.23.0    
+##  [85] RcppAnnoy_0.0.18      plyr_1.8.6            magrittr_2.0.1       
+##  [88] R6_2.5.0              generics_0.1.0        pillar_1.4.7         
+##  [91] withr_2.3.0           mgcv_1.8-33           fitdistrplus_1.1-3   
+##  [94] survival_3.2-7        abind_1.4-5           tibble_3.0.4         
+##  [97] future.apply_1.7.0    crayon_1.3.4          hdf5r_1.3.3          
+## [100] plotly_4.9.2.2        rmarkdown_2.6         data.table_1.13.6    
+## [103] digest_0.6.27         xtable_1.8-4          tidyr_1.1.2          
+## [106] httpuv_1.5.4          munsell_0.5.0         viridisLite_0.3.0
 ```
 
 

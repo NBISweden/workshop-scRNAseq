@@ -191,9 +191,8 @@ dim(data.filt)
 #FILTERING_ALL3:
 
 ```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=16}
-#start with cells with many genes detected.
-
 # skip for now and run DoubletFinder first!
+
 #high.det.v3 <- WhichCells(data.filt, expression = nFeature_RNA > 4100)
 #high.det.v2 <- WhichCells(data.filt, expression = nFeature_RNA > 2000 & orig.ident == "v2.1k")
 
@@ -271,6 +270,55 @@ dim(data.filt)
 ```
 
 
+
+#SEX_TITLE:
+
+#SEX_ALL1:
+
+#SEX_ALL2:
+
+```{r}
+genes.file = "data/results/genes.table.csv"
+
+if (!file.exists(genes.file)){
+  suppressMessages(require(biomaRt))
+
+  # initialize connection to mart, may take some time if the sites are unresponsive.
+  mart <- useMart(host="www.ensembl.org", "ENSEMBL_MART_ENSEMBL", dataset="hsapiens_gene_ensembl")
+
+  # fetch chromosome info plus some other annotations
+  genes.table <- getBM(filters= "external_gene_name", attributes= c("ensembl_gene_id",
+              "external_gene_name", "description","gene_biotype", "chromosome_name","start_position"),
+              values= rownames(data.filt), mart= mart)
+  write.csv(genes.table, file = genes.file)
+}else{
+  genes.table = read.csv(genes.file)
+}
+
+```
+
+#SEX_ALL3:
+
+```{r}
+chrY.gene = genes.table$external_gene_name[genes.table$chromosome_name == "Y"]
+
+data.filt$pct_chrY = colSums(data.filt@assays$RNA@counts[chrY.gene,]) / colSums(data.filt@assays$RNA@counts)
+
+```
+
+#SEX_ALL4:
+
+```{r}
+FeatureScatter(data.filt, feature1 = "XIST", feature2 = "pct_chrY")
+```
+
+#SEX_ALL5:
+
+```{r}
+VlnPlot(data.filt, features = c("XIST", "pct_chrY"))
+```
+
+#SEX_ALL6:
 
 
 #CELLCYCLE_TITLE:
