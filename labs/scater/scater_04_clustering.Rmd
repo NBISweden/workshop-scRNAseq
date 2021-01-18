@@ -1,5 +1,7 @@
 ---
 #CSS_ALL:
+editor_options: 
+  chunk_output_type: console
 ---
 
 #CHUNK_OPT:
@@ -21,7 +23,7 @@ suppressPackageStartupMessages({
   library(igraph)
 })
 
-sce <- readRDS("data/3pbmc_qc_dr_int.rds")
+sce <- readRDS("data/results/covid_qc_dr_int.rds")
 ```
 
 #CLUST_TITLE2:
@@ -34,24 +36,24 @@ sce <- readRDS("data/3pbmc_qc_dr_int.rds")
 
 ```{r, message='hide',warning='hide',results='hold'}
 #These 2 lines are for demonstration purposes only
-g <- buildKNNGraph(sce,k=30,use.dimred="MNN",assay.type="RNA")
-sce@reducedDims$KNN <- igraph::as_adjacency_matrix(g)
+g <- buildKNNGraph(sce,k=30,use.dimred="MNN")
+reducedDim(sce,"KNN") <- igraph::as_adjacency_matrix(g)
 
 #These 2 lines are the most recommended
-g <- buildSNNGraph(sce,k=30,use.dimred="MNN",assay.type="RNA")
-sce@reducedDims$SNN  <- as_adjacency_matrix(g, attr = "weight")
+g <- buildSNNGraph(sce,k=30,use.dimred="MNN")
+reducedDim(sce,"KNN")  <- as_adjacency_matrix(g, attr = "weight")
 ```
 
 #CLUST_ALL4.1:
 
 ```{r, message='hide',warning='hide',results='hold',fig.asp=1,fig.width=4}
 #plot the KNN graph
-pheatmap(sce@reducedDims$KNN[1:200,1:200],
+pheatmap(reducedDim(sce,"KNN")[1:200,1:200],
          col=c("white","black"),border_color = "grey90",
          legend = F,cluster_rows = F,cluster_cols = F,fontsize = 2)
 
 #or the SNN graph
-pheatmap(sce@reducedDims$SNN[1:200,1:200],
+pheatmap(reducedDim(sce,"KNN")[1:200,1:200],
         col = colorRampPalette(c("white","yellow","red","black"))(20), 
         border_color = "grey90",
          legend = T,cluster_rows = F,cluster_cols = F,fontsize = 2)
@@ -66,21 +68,21 @@ pheatmap(sce@reducedDims$SNN[1:200,1:200],
 
 
 ```{r,results='hide',block.title=TRUE,fig.height=2.8,fig.width=10}
-g <- buildSNNGraph(sce,k=5,use.dimred="MNN",assay.type="RNA")
+g <- buildSNNGraph(sce,k=5,use.dimred="MNN")
 sce$louvain_SNNk5 <- factor( cluster_louvain(g)$membership )
 
-g <- buildSNNGraph(sce,k=10,use.dimred="MNN",assay.type="RNA",)
+g <- buildSNNGraph(sce,k=10,use.dimred="MNN")
 sce$louvain_SNNk10 <- factor( cluster_louvain(g)$membership )
 
-g <- buildSNNGraph(sce,k=15,use.dimred="MNN",assay.type="RNA")
+g <- buildSNNGraph(sce,k=15,use.dimred="MNN")
 sce$louvain_SNNk15 <- factor( cluster_louvain(g)$membership )
 
 plot_grid(ncol = 3,
-  plotReducedDim(sce,use_dimred = "UMAP_on_MNN",colour_by = "louvain_SNNk5",add_ticks = F)+
+  plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = "louvain_SNNk5")+
     ggplot2::ggtitle(label ="louvain_SNNk5"),
-  plotReducedDim(sce,use_dimred = "UMAP_on_MNN",colour_by = "louvain_SNNk10",add_ticks = F)+
+  plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = "louvain_SNNk10")+
     ggplot2::ggtitle(label ="louvain_SNNk10"),
-  plotReducedDim(sce,use_dimred = "UMAP_on_MNN",colour_by = "louvain_SNNk15",add_ticks = F)+
+  plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = "louvain_SNNk15")+
     ggplot2::ggtitle(label ="louvain_SNNk15")
 )
 ```
@@ -91,16 +93,16 @@ plot_grid(ncol = 3,
 #CLUST_ALL7:
 
 ```{r,results='hide',block.title=TRUE,fig.height=2.9}
-sce$kmeans_5 <- factor( kmeans(x = sce@reducedDims$MNN,centers = 5)$cluster )
-sce$kmeans_10 <- factor(kmeans(x = sce@reducedDims$MNN,centers = 10)$cluster)
-sce$kmeans_15 <- factor(kmeans(x = sce@reducedDims$MNN,centers = 15)$cluster)
+sce$kmeans_5 <- factor( kmeans(x = reducedDim(sce,"MNN"),centers = 5)$cluster )
+sce$kmeans_10 <- factor(kmeans(x = reducedDim(sce,"MNN"),centers = 10)$cluster)
+sce$kmeans_15 <- factor(kmeans(x = reducedDim(sce,"MNN"),centers = 15)$cluster)
 
 plot_grid(ncol = 3,
-  plotReducedDim(sce,use_dimred = "UMAP_on_MNN",colour_by = "kmeans_5",add_ticks = F)+
+  plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = "kmeans_5")+
     ggplot2::ggtitle(label ="KMeans5"),
-  plotReducedDim(sce,use_dimred = "UMAP_on_MNN",colour_by = "kmeans_10",add_ticks = F)+
+  plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = "kmeans_10")+
     ggplot2::ggtitle(label ="KMeans10"),
-  plotReducedDim(sce,use_dimred = "UMAP_on_MNN",colour_by = "kmeans_15",add_ticks = F)+
+  plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = "kmeans_15")+
     ggplot2::ggtitle(label ="KMeans15")
 )
 ```
@@ -113,15 +115,14 @@ plot_grid(ncol = 3,
 #CLUST_ALL8.1:
 
 ```{r,results='hide',block.title=TRUE,fig.height=5}
-d <- dist( sce@reducedDims$MNN,
-           method="euclidean")
+d <- dist( reducedDim(sce,"MNN"),  method="euclidean")
 ```
 
 #CLUST_ALL8.2:
 
 ```{r,results='hide',block.title=TRUE,fig.height=5,fig.width=5}
 #Compute sample correlations
-sample_cor <- cor( Matrix::t(sce@reducedDims$MNN) )
+sample_cor <- cor( Matrix::t(reducedDim(sce,"MNN")) )
 
 #Transform the scale from correlations
 sample_cor <- (1 - sample_cor) / 2
@@ -157,18 +158,18 @@ sce$hc_corelation_15 <- factor( cutree(h_correlation,k = 15) )
 
 
 plot_grid(ncol = 3,
-  plotReducedDim(sce,use_dimred = "UMAP_on_MNN",colour_by = "hc_euclidean_5",add_ticks = F)+
+  plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = "hc_euclidean_5")+
     ggplot2::ggtitle(label ="HC_euclidean_5"),
-  plotReducedDim(sce,use_dimred = "UMAP_on_MNN",colour_by = "hc_euclidean_10",add_ticks = F)+
+  plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = "hc_euclidean_10")+
     ggplot2::ggtitle(label ="HC_euclidean_10"),
-  plotReducedDim(sce,use_dimred = "UMAP_on_MNN",colour_by = "hc_euclidean_15",add_ticks = F)+
+  plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = "hc_euclidean_15")+
     ggplot2::ggtitle(label ="HC_euclidean_15"),
   
-  plotReducedDim(sce,use_dimred = "UMAP_on_MNN",colour_by = "hc_corelation_5",add_ticks = F)+
+  plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = "hc_corelation_5")+
     ggplot2::ggtitle(label ="HC_correlation_5"),
-  plotReducedDim(sce,use_dimred = "UMAP_on_MNN",colour_by = "hc_corelation_10",add_ticks = F)+
+  plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = "hc_corelation_10")+
     ggplot2::ggtitle(label ="HC_correlation_10"),
-  plotReducedDim(sce,use_dimred = "UMAP_on_MNN",colour_by = "hc_corelation_15",add_ticks = F)+
+  plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = "hc_corelation_15")+
     ggplot2::ggtitle(label ="HC_correlation_15")
 )
 ```
@@ -177,7 +178,7 @@ plot_grid(ncol = 3,
 #CLUST_ALL9:
 
 ```{r}
-saveRDS(sce,"data/3pbmc_qc_dr_int_cl.rds")
+saveRDS(sce,"data/results/covid_qc_dr_int_cl.rds")
 ```
 
 #CLUST_ALL10:

@@ -1,6 +1,8 @@
 ---
 title: #INTEG_TITLE:
 #CSS_ALL:
+editor_options: 
+  chunk_output_type: console
 ---
 
 #CHUNK_OPT:
@@ -39,7 +41,7 @@ venn::venn(hvgs_per_dataset,opacity = .4,zcolor = scales::hue_pal()(3),cexsn = 1
 #INTEG_SEURAT1:
 
 ```{r, message='hide',warning='hide',results='hold'}
-alldata.anchors <- FindIntegrationAnchors(object.list = alldata.list, dims = 1:30)
+alldata.anchors <- FindIntegrationAnchors(object.list = alldata.list, dims = 1:30,reduction = "cca")
 ```
 
 #INTEG_SEURAT2:
@@ -72,13 +74,13 @@ alldata.int <- RunTSNE(alldata.int, dims = 1:30)
 
 ```{r, message='hide',warning='hide',results='hold',fig.asp=.55,fig.width=16}
 plot_grid(ncol = 3,
-  DimPlot(alldata, reduction = "pca", group.by = "orig.ident"),
-  DimPlot(alldata, reduction = "tsne", group.by = "orig.ident"),
-  DimPlot(alldata, reduction = "umap", group.by = "orig.ident"),
+  DimPlot(alldata, reduction = "pca", group.by = "orig.ident")+NoAxes()+ggtitle("PCA raw_data"),
+  DimPlot(alldata, reduction = "tsne", group.by = "orig.ident")+NoAxes()+ggtitle("tSNE raw_data"),
+  DimPlot(alldata, reduction = "umap", group.by = "orig.ident")+NoAxes()+ggtitle("UMAP raw_data"),
   
-  DimPlot(alldata.int, reduction = "pca", group.by = "orig.ident"),
-  DimPlot(alldata.int, reduction = "tsne", group.by = "orig.ident"),
-  DimPlot(alldata.int, reduction = "umap", group.by = "orig.ident")
+  DimPlot(alldata.int, reduction = "pca", group.by = "orig.ident")+NoAxes()+ggtitle("PCA integrated"),
+  DimPlot(alldata.int, reduction = "tsne", group.by = "orig.ident")+NoAxes()+ggtitle("tSNE integrated"),
+  DimPlot(alldata.int, reduction = "umap", group.by = "orig.ident")+NoAxes()+ggtitle("UMAP integrated")
 )
 ```
 
@@ -87,13 +89,98 @@ plot_grid(ncol = 3,
 #MARKER_TABLE:
 
 ```{r,message='hide',warning='hide', results='hold',results='hold',fig.asp=.65,fig.width=16}
-FeaturePlot(alldata.int, reduction = "umap", features = c("CD3E","CD4","CD8A","NKG7","GNLY","MS4A1","CD14","LYZ","MS4A7","FCGR3A","CST3","FCER1A"),ncol = 4,order = T)
+FeaturePlot(alldata.int, 
+            reduction = "umap", 
+            features = c("CD3E","CD4","CD8A","NKG7",
+                         "GNLY","MS4A1","CD14","LYZ",
+                         "MS4A7","FCGR3A","CST3","FCER1A"),
+            order = T,slot = "data",combine = T)
 ```
+
+
+```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=16}
+library(harmony)
+
+alldata.harmony <- RunHarmony(
+  alldata,
+  group.by.vars = "orig.ident",
+  reduction = "pca",
+  dims.use = 1:50,
+  assay.use = "RNA")
+
+#Here we use all PCs computed from Harmony for UMAP calculation
+alldata.harmony[["pca"]] <- alldata.harmony[["harmony"]]
+alldata.harmony <- RunUMAP(alldata.harmony, dims = 1:50, reduction = "harmony", reduction.name = "umap")
+```
+
+
+```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=16}
+hvgs <- unique(unlist(hvgs_per_dataset))
+
+assaylist <- list()
+genelist <- list()
+for(i in 1:length(alldata.list)) {
+  assaylist[[i]] <- t(as.matrix(GetAssayData(alldata.list[[i]], "data")[hvgs,]))
+  genelist[[i]] <- hvgs
+}
+
+lapply(assaylist,dim)
+```
+
+
+
+```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=16}
+library(reticulate)
+scanorama <- import("scanorama")
+
+integrated.data <- scanorama$integrate(datasets_full = assaylist,
+                                       genes_list = genelist )
+
+intdimred <- do.call(rbind, integrated.data[[1]])
+colnames(intdimred) <- paste0("PC_", 1:100)
+rownames(intdimred) <- colnames(alldata)
+
+# Add standard deviations in order to draw Elbow Plots in Seurat
+stdevs <- apply(intdimred, MARGIN = 2, FUN = sd)
+
+alldata.scanorama <- alldata
+alldata.scanorama[["pca"]] <- CreateDimReducObject(
+  embeddings = intdimred,
+  stdev      = stdevs,
+  key        = "PC_",
+  assay      = "RNA")
+
+#Here we use all PCs computed from Scanorama for UMAP calculation
+alldata.scanorama <- RunUMAP(alldata.scanorama, dims = 1:100, reduction = "pca",reduction.name = "umap")
+```
+
+
+```{r, message='hide',warning='hide',results='hold',fig.asp=.55,fig.width=16}
+p1 <- DimPlot(alldata, reduction = "umap", group.by = "orig.ident")+ggtitle("UMAP raw_data")
+p2 <- DimPlot(alldata.int, reduction = "umap", group.by = "orig.ident")+ggtitle("UMAP CCA")
+p3 <- DimPlot(alldata.harmony, reduction = "umap", group.by = "orig.ident")+ggtitle("UMAP Harmony")
+p4 <- DimPlot(alldata.scanorama, reduction = "umap", group.by = "orig.ident")+ggtitle("UMAP Scanorama")
+leg <- get_legend(p1)
+
+gridExtra::grid.arrange(
+  gridExtra::arrangeGrob(
+    p1 + NoLegend() + NoAxes(),
+    p2 + NoLegend() + NoAxes(),
+    p3 + NoLegend() + NoAxes(),
+    p4 + NoLegend() + NoAxes(), nrow=2),
+  leg, ncol=2,widths=c(8,2)
+)
+```
+
+
+
 
 #INTEG_ALL5:
 
 ```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=16}
 saveRDS(alldata.int,"data/results/covid_qc_dr_int.rds")
+saveRDS(alldata.harmony,"data/results/covid_qc_dr_int.rds")
+saveRDS(alldata.scanorama,"data/results/covid_qc_dr_int.rds")
 ```
 
 

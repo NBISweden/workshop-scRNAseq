@@ -1,5 +1,7 @@
 ---
 #CSS_ALL:
+editor_options:
+  chunk_output_type: console
 ---
 
 #CHUNK_OPT:
@@ -18,7 +20,7 @@ suppressPackageStartupMessages({
   library(cowplot)
   library(ggplot2)
   library(pheatmap)
-  library(rafalib)
+  library(enrichR)
 })
 
 alldata <- readRDS("data/results/covid_qc_dr_int_cl.rds")
@@ -36,8 +38,8 @@ plot_grid(ncol = 3,
   DimPlot(alldata, label = T) + NoAxes(),
   DimPlot(alldata, group.by = "orig.ident") + NoAxes(),
   DimPlot(alldata, group.by = "type") + NoAxes() )
-  
-  
+
+
 ```
 
 #DGE_TITLE1:
@@ -66,7 +68,7 @@ top25
 #DGE_ALL4:
 
 ```{r}
-mypar(1,5,mar=c(4,6,3,1))
+mypar(2,5,mar=c(4,6,3,1))
 for(i in unique(top25$cluster)){
   barplot( sort( setNames(top25$avg_logFC, top25$gene) [top25$cluster == i], F),
            horiz = T,las=1 ,main=paste0(i," vs. rest"),border = "white", yaxs="i" )
@@ -87,14 +89,14 @@ DoHeatmap(alldata, features = as.character(unique(top5$gene)),group.by = sel.clu
 #DGE_ALL4.2:
 
 ```{r, fig.height=10}
-DotPlot(alldata, features = as.character(unique(top5$gene)),group.by = sel.clust,assay = "RNA")+coord_flip()
+DotPlot(alldata, features = rev(as.character(unique(top5$gene))),group.by = sel.clust,assay = "RNA")+coord_flip()
 ```
 
 #DGE_ALL4.3:
 
 ```{r,fig.height=10,fig.width=10}
 # take top 3 genes per cluster/
-top5 %>% group_by(cluster)  %>% top_n(-3, p_val_adj) -> top3
+top5 %>% group_by(cluster)  %>% top_n(-3, p_val) -> top3
 
 
 # set pt.size to zero if you do not want all the points to hide the violin shapes, or to a small value like 0.1
@@ -109,7 +111,7 @@ VlnPlot(alldata, features = as.character(unique(top3$gene)), ncol = 5, group.by 
 
 ```{r,fig.height=10,fig.width=10}
 # select all cells in cluster 1
-cell_selection <- subset(alldata, cells = colnames(alldata)[ alldata@meta.data[,sel.clust] == 1])
+cell_selection <- subset(alldata, cells = colnames(alldata)[ alldata@meta.data[,sel.clust] == 2])
 cell_selection <- SetIdent(cell_selection, value = "type")
 #Compute differentiall expression
 DGE_cell_selection <- FindAllMarkers(cell_selection,
@@ -125,7 +127,7 @@ DGE_cell_selection <- FindAllMarkers(cell_selection,
 #DGE_ALL6.1:
 
 ```{r, fig.height=10}
-DGE_cell_selection %>% group_by(cluster)  %>% top_n(-5, p_val_adj) -> top5_cell_selection
+DGE_cell_selection %>% group_by(cluster)  %>% top_n(-5, p_val) -> top5_cell_selection
 
 VlnPlot(cell_selection, features = as.character(unique(top5_cell_selection$gene)),
         ncol = 5,group.by = "type",assay = "RNA", pt.size = .1)
@@ -138,12 +140,92 @@ VlnPlot(alldata, features = as.character(unique(top5_cell_selection$gene)),
         ncol = 5, split.by = "type",assay = "RNA", pt.size = 0)
 ```
 
+#DGE_TITLE3:
 
+#DGE_TITLE3.1:
+
+#DGE_ALL7:
+
+```{r}
+# Load additional packages
+library(enrichR)
+
+# Check available databases to perform enrichment (then choose one)
+enrichR::listEnrichrDbs()
+
+# Perform enrichment
+enrich_results <- enrichr(
+ genes     = DGE_cell_selection$gene[DGE_cell_selection$cluster == "Covid"],
+ databases = "GO_Biological_Process_2017b" )[[1]]
+
+```
+
+#DGE_ALL7.1:
+
+```{r}
+par(mar = c(3, 25, 2, 1))
+barplot( height    = -log10(enrich_results$P.value)[10:1],
+        names.arg = enrich_results$Term[10:1],
+        horiz     = TRUE,
+        las       = 1,
+        border    = FALSE,
+        cex.names = .6 )
+abline(v = c(-log10(0.05)), lty = 2)
+abline(v = 0, lty = 1)
+```
+
+#DGE_TITLE3.2:
+
+#DGE_ALL7.2:
+
+```{r,fig.height=10,fig.width=10}
+# Create a gene rank based on the gene expression fold change
+gene_rank <- setNames( DGE_cell_selection$avg_logFC, casefold(rownames(DGE_cell_selection),upper=T) )
+```
+
+#DGE_ALL7.3:
+
+```{r,fig.height=10,fig.width=10}
+# install.packages("msigdbr")
+library(msigdbr)
+
+#Download gene sets
+msigdbgmt <- msigdbr::msigdbr("Homo sapiens")
+msigdbgmt <- as.data.frame(msigdbgmt)
+
+#List available gene sets
+unique(msigdbgmt$gs_subcat)
+
+#Subset which gene set you want to use.
+msigdbgmt_subset <- msigdbgmt[msigdbgmt$gs_subcat == "CP:KEGG",]
+gmt <- lapply( unique(msigdbgmt_subset$gs_name),function(x){msigdbgmt_subset [msigdbgmt_subset$gs_name == x ,"gene_symbol"]} )
+names(gmt) <- unique(paste0(msigdbgmt_subset$gs_name,"_",msigdbgmt_subset$gs_exact_source))
+```
+
+#DGE_ALL7.4:
+
+```{r,results='hide',block.title=TRUE,fig.height=5,fig.width=10}
+library(fgsea)
+
+# Perform enrichemnt analysis
+fgseaRes <- fgsea( pathways=gmt, stats=gene_rank, minSize=15, maxSize=500)
+fgseaRes <- fgseaRes[ order(fgseaRes$pval) ,]
+
+# Filter the results table to show only the top 10 UP or DOWN regulated processes (optional)
+top10_UP <- fgseaRes$pathway [1:10]
+
+# Nice summary table (shown as a plot)
+dev.off()
+plotGseaTable(gmt[top10_UP], gene_rank, fgseaRes, gseaParam = 0.5)
+```
+
+#DGE_ALL8:
 
 #DGE_ALL10:
 
 ```{r}
 saveRDS(alldata,"data/3pbmc_qc_dr_int_cl_dge.rds")
+write.csv(markers_genes)
 ```
 
 
@@ -152,22 +234,3 @@ saveRDS(alldata,"data/3pbmc_qc_dr_int_cl_dge.rds")
 ```{r}
 sessionInfo()
 ```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
