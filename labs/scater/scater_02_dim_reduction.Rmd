@@ -1,6 +1,8 @@
 ---
 title: "Scater/Scran: Dimensionality reduction"
 #CSS_ALL:
+editor_options: 
+  chunk_output_type: console
 ---
 
 #DIMRED_MAIN:
@@ -21,7 +23,7 @@ suppressPackageStartupMessages({
   library(umap)
 })
 
-sce <- readRDS("data/3pbmc_qc.rds")
+sce <- readRDS("data/results/covid_qc.rds")
 ```
 
 #DIMRED_ALL1.1:
@@ -30,9 +32,8 @@ sce <- readRDS("data/3pbmc_qc.rds")
 
 ```{r}
 sce <- computeSumFactors(sce, sizes=c(20, 40, 60, 80))
-sce <- normalize(sce)
-var.fit <- trendVar(sce, use.spikes=FALSE,method="loess",loess.args=list(span=0.02))
-var.out <- decomposeVar(sce, var.fit)
+sce <- logNormCounts(sce)
+var.out <- modelGeneVar(sce, method="loess")
 
 mypar(1,2)
 #plot mean over TOTAL variance
@@ -77,24 +78,20 @@ print(nrow(hvg.out))
 
 ```{r}
 #Default Scater way
-sce <- runPCA(sce, exprs_values = "logcounts",  scale_features = T,
-              ncomponents = 30, feature_set = rownames(hvg.out), method = "prcomp")
-
-#For some reason Scater removes the dimnames of "logcounts" after PCA, so we put it back
-dimnames(sce@assays$data@listData$logcounts) <- dimnames(sce@assays$data@listData$counts)
-
-#2nd way:
-#sce <- runPCA(sce, exprs_values = "scaled.data", scale_features = FALSE,
-#              ncomponents = 30, feature_set = rownames(hvg.out) )
+sce <- runPCA(sce, exprs_values = "logcounts",
+              ncomponents = 50,
+              ntop = 500,
+              subset_row = NULL,
+              scale = FALSE)
 ```
 
 #PCA_ALL2:
 
 ```{r, fig.asp=.28}
 plot_grid(ncol = 3,
-  plotReducedDim(sce,use_dimred = "PCA",colour_by = "sample_id",ncomponents = 1:2,add_ticks = F, point_size = 0.6),
-  plotReducedDim(sce,use_dimred = "PCA",colour_by = "sample_id",ncomponents = 3:4,add_ticks = F, point_size = 0.6),
-  plotReducedDim(sce,use_dimred = "PCA",colour_by = "sample_id",ncomponents = 5:6,add_ticks = F, point_size = 0.6) )
+  plotReducedDim(sce,dimred = "PCA",colour_by = "sample",ncomponents = 1:2,point_size = 0.6),
+  plotReducedDim(sce,dimred = "PCA",colour_by = "sample",ncomponents = 3:4,point_size = 0.6),
+  plotReducedDim(sce,dimred = "PCA",colour_by = "sample",ncomponents = 5:6,point_size = 0.6) )
 
 ```
 
@@ -108,8 +105,8 @@ plot_grid(ncol = 2, plotExplanatoryPCs(sce))
 
 ```{r,fig.width=5,fig.height=5}
 mypar()
-plot(attr(sce@reducedDims$PCA,"percentVar")[1:50]*100,type="l",ylab="% variance",xlab="Principal component #")
-points(attr(sce@reducedDims$PCA,"percentVar")[1:50]*100,pch=21,bg="grey",cex=.5)
+plot(attr(reducedDim(sce,"PCA"),"percentVar")[1:50]*100,type="l",ylab="% variance",xlab="Principal component #")
+points(attr(reducedDim(sce,"PCA"),"percentVar")[1:50]*100,pch=21,bg="grey",cex=.5)
 ```
 
 #PCA_ALL6:
@@ -120,16 +117,14 @@ points(attr(sce@reducedDims$PCA,"percentVar")[1:50]*100,pch=21,bg="grey",cex=.5)
 
 ```{r, fig.asp=1}
 set.seed(42)
-sce <- runTSNE(sce, use_dimred = "PCA", n_dimred = 30, 
-               perplexity = 30)
-#see ?Rtsne and ?runTSNE for more info
-reducedDimNames(sce)[reducedDimNames(sce)=="TSNE"] <- "tSNE_on_PCA"
+sce <- runTSNE(sce, dimred = "PCA", n_dimred = 30, 
+               perplexity = 30,name = "tSNE_on_PCA")
 ```
 
 #tSNE_ALL2:
 
 ```{r,fig.asp=.28}
-plot_grid(ncol = 3,plotReducedDim(sce,use_dimred = "tSNE_on_PCA",colour_by = "sample_id",add_ticks = F))
+plot_grid(ncol = 3,plotReducedDim(sce,dimred = "tSNE_on_PCA",colour_by = "sample"))
 ```
 
 
@@ -138,34 +133,26 @@ plot_grid(ncol = 3,plotReducedDim(sce,use_dimred = "tSNE_on_PCA",colour_by = "sa
 #UMAP_ALL1:
 
 ```{r}
-sce <- runUMAP(sce,use_dimred = "PCA", n_dimred = 30,   ncomponents = 2)
-
-#We need to rename it to not overide with other UMAP computations
-try(sce@reducedDims$UMAP_on_RNA <- NULL)
-reducedDimNames(sce)[reducedDimNames(sce)=="UMAP"] <- "UMAP_on_PCA"
+sce <- runUMAP(sce,dimred = "PCA", n_dimred = 30,   ncomponents = 2,name = "UMAP_on_PCA")
 #see ?umap and ?runUMAP for more info
 ```
 
 #UMAP_ALL2:
 
 ```{r}
-sce <- runUMAP(sce,use_dimred = "PCA", n_dimred = 30,   ncomponents = 10)
+sce <- runUMAP(sce,dimred = "PCA", n_dimred = 30,   ncomponents = 10, name = "UMAP10_on_PCA")
 #see ?umap and ?runUMAP for more info
-
-#We need to rename it to not overide with other UMAP computations
-try(sce@reducedDims$UMAP10_on_RNA <- NULL)
-reducedDimNames(sce)[reducedDimNames(sce)=="UMAP"] <- "UMAP10_on_PCA"
 ```
 
 #UMAP_ALL2.1:
 
 ```{r,fig.asp=.28}
 plot_grid(ncol = 3,
-          plotReducedDim(sce,use_dimred = "UMAP_on_PCA",colour_by = "sample_id",add_ticks = F)+
+          plotReducedDim(sce,dimred = "UMAP_on_PCA",colour_by = "sample")+
             ggplot2::ggtitle(label ="UMAP_on_PCA"),
-          plotReducedDim(sce,use_dimred = "UMAP10_on_PCA",colour_by = "sample_id",ncomponents = 1:2,add_ticks = F)+
+          plotReducedDim(sce,dimred = "UMAP10_on_PCA",colour_by = "sample",ncomponents = 1:2)+
             ggplot2::ggtitle(label ="UMAP10_on_PCA"),
-          plotReducedDim(sce,use_dimred = "UMAP10_on_PCA",colour_by = "sample_id",ncomponents = 3:4,add_ticks = F)+
+          plotReducedDim(sce,dimred = "UMAP10_on_PCA",colour_by = "sample",ncomponents = 3:4)+
             ggplot2::ggtitle(label ="UMAP10_on_PCA")
 )
 ```
@@ -180,11 +167,7 @@ plot_grid(ncol = 3,
 #DIMRED_ALL5.1:
 
 ```{r,fig.asp=.28}
-sce <- runUMAP(sce, exprs_values='logcounts', feature_set = rownames(hvg.out))
-
-#We need to rename it to not overide with other UMAP computations
-try(sce@reducedDims$UMAP_on_ScaleData <- NULL)
-reducedDimNames(sce)[reducedDimNames(sce)=="UMAP"] <- "UMAP_on_ScaleData"
+sce <- runUMAP(sce, exprs_values='logcounts',name = "UMAP_on_ScaleData")
 ```
 
 #DIMRED_ALL5.2:
@@ -193,16 +176,16 @@ reducedDimNames(sce)[reducedDimNames(sce)=="UMAP"] <- "UMAP_on_ScaleData"
 
 ```{r,fig.asp=.28}
 #Build Graph
-g <- buildKNNGraph(sce,k=30,use.dimred="PCA",assay.type="RNA")
-sce@reducedDims$KNN <- igraph::as_adjacency_matrix(g)
+nn <- RANN::nn2(reducedDim(sce,"PCA"),k = 30)
+names(nn) <- c("idx","dist")
+g <- buildKNNGraph(sce, k=30, use.dimred="PCA")
+reducedDim(sce,"KNN") <- igraph::as_adjacency_matrix(g)
 
 
 #Run UMAP and rename it for comparisson
-# temp <- umap::umap.defaults
-# temp$input <- "dist"
-sce <- runUMAP(sce,use_dimred = "KNN", ncomponents = 2, input="dist")
-try(sce@reducedDims$UMAP_on_Graph <- NULL)
-reducedDimNames(sce)[reducedDimNames(sce)=="UMAP"] <- "UMAP_on_Graph"
+# temp <- umap::umap.defaults 
+try(reducedDim(sce,"UMAP_on_Graph") <- NULL)
+reducedDim(sce,"UMAP_on_Graph") <- uwot::umap(X=NULL, n_components = 2, nn_method=nn)
 ```
 
 
@@ -210,11 +193,11 @@ reducedDimNames(sce)[reducedDimNames(sce)=="UMAP"] <- "UMAP_on_Graph"
 
 ```{r,fig.asp=.28}
 plot_grid(ncol = 3,
-  plotReducedDim(sce, use_dimred = "UMAP_on_PCA", colour_by = "sample_id",add_ticks = F)+ 
+  plotReducedDim(sce, dimred = "UMAP_on_PCA", colour_by = "sample")+ 
     ggplot2::ggtitle(label ="UMAP_on_PCA"),
-  plotReducedDim(sce, use_dimred = "UMAP_on_ScaleData", colour_by = "sample_id",add_ticks = F)+
+  plotReducedDim(sce, dimred = "UMAP_on_ScaleData", colour_by = "sample")+
     ggplot2::ggtitle(label ="UMAP_on_ScaleData"),
-  plotReducedDim(sce, use_dimred = "UMAP_on_Graph", colour_by = "sample_id",add_ticks = F)+
+  plotReducedDim(sce, dimred = "UMAP_on_Graph", colour_by = "sample")+
     ggplot2::ggtitle(label ="UMAP_on_Graph")
 )
 ```
@@ -229,7 +212,7 @@ plot_grid(ncol = 3,
 ```{r,fig.asp=.9}
 plotlist <- list()
 for(i in c("CD3E","CD4","CD8A","NKG7","GNLY","MS4A1","CD14","LYZ","MS4A7","FCGR3A","CST3","FCER1A")){
-  plotlist[[i]] <- plotReducedDim(sce,use_dimred = "UMAP_on_PCA",colour_by = i,by_exprs_values = "logcounts",add_ticks = F) +
+  plotlist[[i]] <- plotReducedDim(sce,dimred = "UMAP_on_PCA",colour_by = i,by_exprs_values = "logcounts") +
   scale_fill_gradientn(colours = colorRampPalette(c("grey90","orange3","firebrick","firebrick","red","red" ))(10)) +
   ggtitle(label = i)+ theme(plot.title = element_text(size=20)) }
 plot_grid(ncol=3, plotlist = plotlist)
@@ -239,7 +222,7 @@ plot_grid(ncol=3, plotlist = plotlist)
 #DIMRED_ALL7:
 
 ```{r}
-saveRDS(sce,"data/3pbmc_qc_dm.rds")
+saveRDS(sce,"data/results/covid_qc_dm.rds")
 ```
 
 #SESSION_INFO:
@@ -247,19 +230,5 @@ saveRDS(sce,"data/3pbmc_qc_dm.rds")
 ```{r}
 sessionInfo()
 ```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 

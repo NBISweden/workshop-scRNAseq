@@ -1,5 +1,7 @@
 ---
 #CSS_ALL:
+editor_options: 
+  chunk_output_type: console
 ---
 
 #CHUNK_OPT:
@@ -63,7 +65,7 @@ pheatmap(alldata@graphs$CCA_nn[1:200,1:200],
 
 ```{r,results='hide',block.title=TRUE,fig.height=2.9,fig.width=10}
 # Clustering with louvain (algorithm 1)
-for (res in c(0.3,0.5,1,1.5,2)){
+for (res in c( 0.1 , 0.25 , .5 , 1 , 1.5 , 2 )){
   alldata <- FindClusters(alldata, graph.name = "CCA_snn", resolution = res , algorithm = 1)
 }
 
@@ -82,10 +84,10 @@ plot_grid(ncol = 3,
 
 
 ```{r}
+# install.packages("clustree")
 suppressPackageStartupMessages(library(clustree))
 
 clustree(alldata@meta.data, prefix = "CCA_snn_res.")
-
 ```
 
 
@@ -95,9 +97,10 @@ clustree(alldata@meta.data, prefix = "CCA_snn_res.")
 #CLUST_ALL7:
 
 ```{r,results='hide',block.title=TRUE,fig.height=2.9}
-alldata$kmeans_5 <- kmeans(x = alldata@reductions[["pca"]]@cell.embeddings,centers = 5)$cluster
-alldata$kmeans_10 <- kmeans(x = alldata@reductions[["pca"]]@cell.embeddings,centers = 10)$cluster
-alldata$kmeans_15 <- kmeans(x = alldata@reductions[["pca"]]@cell.embeddings,centers = 15)$cluster
+for (k in c( 5 , 7 , 10 , 12 , 15 , 17 , 20)){
+  alldata@meta.data[,paste0("kmeans_",k)] <- kmeans(x = alldata@reductions[["pca"]]@cell.embeddings,
+                                          centers = k,nstart = 100)$cluster
+}
 
 plot_grid(ncol = 3,
   DimPlot(alldata, reduction = "umap", group.by = "kmeans_5")+ggtitle("kmeans_5"),

@@ -1,6 +1,8 @@
 ---
 title: #INTEG_TITLE:
 #CSS_ALL:
+editor_options: 
+  chunk_output_type: console
 ---
 
 #CHUNK_OPT:
@@ -21,28 +23,27 @@ suppressPackageStartupMessages({
   library(venn)
 })
 
-sce <- readRDS("data/3pbmc_qc_dm.rds")
-print(names(sce@reducedDims))
+sce <- readRDS("data/results/covid_qc_dm.rds")
+print(reducedDims(sce))
 ```
 
 #INTEG_ALL3:
 
 ```{r, message='hide',warning='hide',results='hold',fig.height=2.9}
-sce.list <- lapply( unique(sce$sample_id), function(x){
-  x <- sce[ , sce$sample_id == x ] })
+sce.list <- lapply( unique(sce$sample), function(x){
+  x <- sce[ , sce$sample == x ] })
 
 
 mypar(1,3)
 hvgs_per_dataset <- lapply( sce.list, function(x){
   x <- computeSumFactors(x, sizes=c(20, 40, 60, 80))
-  x <- normalize(x)
-  var.fit <- trendVar(x, use.spikes=FALSE,method="loess",loess.args=list(span=0.05))
-  var.out <- decomposeVar(x, var.fit)
+  x <- logNormCounts(x)
+  var.out <- modelGeneVar(x, method="loess")
   hvg.out <- var.out[which(var.out$FDR <= 0.05 & var.out$bio >= 0.2),]
   hvg.out <- hvg.out[order(hvg.out$bio, decreasing=TRUE),]
   return(rownames(hvg.out))
 })
-names(hvgs_per_dataset) <- unique(sce$sample_id)
+names(hvgs_per_dataset) <- unique(sce$sample)
 
 venn::venn(hvgs_per_dataset,opacity = .4,zcolor = scales::hue_pal()(3),cexsn = 1,cexil = 1,lwd=1,col="white",borders = NA)
 ```
@@ -50,17 +51,15 @@ venn::venn(hvgs_per_dataset,opacity = .4,zcolor = scales::hue_pal()(3),cexsn = 1
 #INTEG_SCRAN1:
 
 ```{r, message='hide',warning='hide',results='hold'}
-mnn_out <- fastMNN(sce.list[[1]], sce.list[[2]], sce.list[[3]],
-                   subset.row = unique(unlist(hvgs_per_dataset)),
-                   k = 20, d = 50, approximate = TRUE,
-                   # BPPARAM = BiocParallel::MulticoreParam(4),
-                   BNPARAM = BiocNeighbors::AnnoyParam())
+mnn_out <- batchelor::fastMNN(sce,
+                              batch = factor(sce$sample),
+                              k = 20, d = 50)
 ```
 
 #INTEG_SCRAN2:
 
 ```{r, message='hide',warning='hide',results='hold'}
-mnn_out <- t(mnn_out$corrected)
+mnn_out <- t(reducedDim(mnn_out,"corrected"))
 colnames(mnn_out) <- unlist(lapply(sce.list,function(x){colnames(x)}))
 mnn_out <- mnn_out[,colnames(sce)]
 rownames(mnn_out) <- paste0("dim",1:50)
@@ -70,32 +69,28 @@ reducedDim(sce, "MNN") <- t(mnn_out)
 #INTEG_SCRAN3:
 
 ```{r, message='hide',warning='hide',results='hold'}
-names(sce@reducedDims)
+reducedDims(sce)
 ```
 
 #INTEG_SCRAN4:
 
 ```{r, message='hide',warning='hide',results='hold'}
 set.seed(42)
-sce <- runTSNE(sce, use_dimred = "MNN", n_dimred = 50, perplexity = 30)
-reducedDimNames(sce)[reducedDimNames(sce)=="TSNE"] <- "tSNE_on_MNN"
-
-
-sce <- runUMAP(sce,use_dimred = "MNN", n_dimred = 50, ncomponents = 2)
-reducedDimNames(sce)[reducedDimNames(sce)=="UMAP"] <- "UMAP_on_MNN"
+sce <- runTSNE(sce, dimred = "MNN", n_dimred = 50, perplexity = 30,name = "tSNE_on_MNN")
+sce <- runUMAP(sce,dimred = "MNN", n_dimred = 50, ncomponents = 2,name = "UMAP_on_MNN")
 ```
 
 #INTEG_ALL4:
 
 ```{r, message='hide',warning='hide',results='hold',fig.asp=.55}
 plot_grid(ncol = 3,
-  plotReducedDim(sce,use_dimred = "PCA",colour_by = "sample_id",add_ticks = F, point_size = 0.6)+ ggplot2::ggtitle(label ="PCA"),
-  plotReducedDim(sce,use_dimred = "tSNE_on_PCA",colour_by = "sample_id",add_ticks = F, point_size = 0.6)+ ggplot2::ggtitle(label ="tSNE_on_PCA"),
-  plotReducedDim(sce,use_dimred = "UMAP_on_PCA",colour_by = "sample_id",add_ticks = F, point_size = 0.6)+ ggplot2::ggtitle(label ="UMAP_on_PCA"),
+  plotReducedDim(sce,dimred = "PCA",colour_by = "sample", point_size = 0.6)+ ggplot2::ggtitle(label ="PCA"),
+  plotReducedDim(sce,dimred = "tSNE_on_PCA",colour_by = "sample", point_size = 0.6)+ ggplot2::ggtitle(label ="tSNE_on_PCA"),
+  plotReducedDim(sce,dimred = "UMAP_on_PCA",colour_by = "sample",point_size = 0.6)+ ggplot2::ggtitle(label ="UMAP_on_PCA"),
   
-  plotReducedDim(sce,use_dimred = "MNN",colour_by = "sample_id",add_ticks = F, point_size = 0.6)+ ggplot2::ggtitle(label ="MNN"),
-  plotReducedDim(sce,use_dimred = "tSNE_on_MNN",colour_by = "sample_id",add_ticks = F, point_size = 0.6)+ ggplot2::ggtitle(label ="tSNE_on_MNN"),
-  plotReducedDim(sce,use_dimred = "UMAP_on_MNN",colour_by = "sample_id",add_ticks = F, point_size = 0.6)+ ggplot2::ggtitle(label ="UMAP_on_MNN")
+  plotReducedDim(sce,dimred = "MNN",colour_by = "sample", point_size = 0.6)+ ggplot2::ggtitle(label ="MNN"),
+  plotReducedDim(sce,dimred = "tSNE_on_MNN",colour_by = "sample", point_size = 0.6)+ ggplot2::ggtitle(label ="tSNE_on_MNN"),
+  plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = "sample", point_size = 0.6)+ ggplot2::ggtitle(label ="UMAP_on_MNN")
 )
 ```
 
@@ -106,16 +101,99 @@ plot_grid(ncol = 3,
 ```{r,message='hide',warning='hide', results='hold',results='hold',fig.asp=1.1}
 plotlist <- list()
 for(i in c("CD3E","CD4","CD8A","NKG7","GNLY","MS4A1","CD14","LYZ","MS4A7","FCGR3A","CST3","FCER1A")){
-  plotlist[[i]] <- plotReducedDim(sce,use_dimred = "UMAP_on_MNN",colour_by = i,by_exprs_values = "logcounts",add_ticks = F, point_size = 0.6) +
+  plotlist[[i]] <- plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = i,by_exprs_values = "logcounts", point_size = 0.6) +
   scale_fill_gradientn(colours = colorRampPalette(c("grey90","orange3","firebrick","firebrick","red","red" ))(10)) +
   ggtitle(label = i)+ theme(plot.title = element_text(size=20)) }
 plot_grid(ncol=3, plotlist = plotlist)
 ```
 
+#INTEG_R1:
+
+#INTEG_R2:
+
+```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=16}
+library(harmony)
+
+reducedDimNames(sce)
+
+sce <- RunHarmony(
+  sce,
+  group.by.vars = "sample",
+  reduction.save = "harmony",
+  reduction = "PCA",
+  dims.use = 1:50)
+
+#Here we use all PCs computed from Harmony for UMAP calculation
+sce <- runUMAP(sce,dimred = "harmony", n_dimred = 50, ncomponents = 2,name = "UMAP_on_Harmony")
+```
+
+
+#INTEG_R3:
+
+#INTEG_R4:
+
+```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=16}
+hvgs <- unique(unlist(hvgs_per_dataset))
+
+scelist <- list()
+genelist <- list()
+for(i in 1:length(sce.list)) {
+  scelist[[i]] <- t(as.matrix(logcounts(sce.list[[i]])[hvgs,]))
+  genelist[[i]] <- hvgs
+}
+
+lapply(scelist,dim)
+```
+
+#INTEG_R5:
+
+```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=16}
+library(reticulate)
+scanorama <- import("scanorama")
+
+integrated.data <- scanorama$integrate(datasets_full = scelist,
+                                       genes_list = genelist )
+
+intdimred <- do.call(rbind, integrated.data[[1]])
+colnames(intdimred) <- paste0("PC_", 1:100)
+rownames(intdimred) <- colnames(logcounts(sce))
+
+# Add standard deviations in order to draw Elbow Plots in Seurat
+stdevs <- apply(intdimred, MARGIN = 2, FUN = sd)
+attr(intdimred,"varExplained") <- stdevs
+
+reducedDim(sce,"Scanorama_PCA") <- intdimred
+
+#Here we use all PCs computed from Scanorama for UMAP calculation
+sce <- runUMAP(sce, dimred = "Scanorama_PCA", n_dimred = 50, ncomponents = 2, name = "UMAP_on_Scanorama")
+```
+
+#INTEG_R6:
+
+```{r, message='hide',warning='hide',results='hold',fig.asp=.55,fig.width=16}
+p1 <- plotReducedDim(sce,dimred = "UMAP_on_PCA",colour_by = "sample", point_size = 0.6)+ ggplot2::ggtitle(label ="UMAP_on_PCA")
+p2 <- plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = "sample", point_size = 0.6)+ ggplot2::ggtitle(label ="UMAP_on_MNN")
+p3 <- plotReducedDim(sce,dimred = "UMAP_on_Harmony",colour_by = "sample", point_size = 0.6)+ ggplot2::ggtitle(label ="UMAP_on_Harmony")
+p4 <- plotReducedDim(sce,dimred = "UMAP_on_Scanorama",colour_by = "sample", point_size = 0.6)+ ggplot2::ggtitle(label ="UMAP_on_Scanorama")
+leg <- get_legend(p1)
+
+gridExtra::grid.arrange(
+  gridExtra::arrangeGrob(
+    p1 + Seurat::NoLegend() + Seurat::NoAxes(),
+    p2 + Seurat::NoLegend() + Seurat::NoAxes(),
+    p3 + Seurat::NoLegend() + Seurat::NoAxes(),
+    p4 + Seurat::NoLegend() + Seurat::NoAxes(), nrow=2),
+  leg, ncol=2,widths=c(8,2)
+)
+```
+
+#INTEG_R7:
+
+
 #INTEG_ALL5:
 
 ```{r}
-saveRDS(sce,"data/3pbmc_qc_dr_int.rds")
+saveRDS(sce,"data/results/covid_qc_dr_int.rds")
 ```
 
 #SESSION_INFO:
