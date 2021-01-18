@@ -1,30 +1,17 @@
 ---
-title: "Spatial transcriptomics"
-output: 
-  html_document:
-    self_contained: true
-    highlight: tango
-    df_print: paged
-    code_folding: hide
-    toc: yes
-    toc_depth: 3
-    toc_float:
-      collapsed: false
-      smooth_scroll: true    
-editor_options: 
-  chunk_output_type: console
+title: "Seurat: Spatial Transcriptomics"
+#CSS_ALL:
 ---
 
-Spatial transcriptomic data with the Visium platform is in many ways similar to scRNAseq data. It contains UMI counts for 5-20 cells instead of single cells, but is still quite sparse in the same way as scRNAseq data is, but with the additional information about spatial location in the tissue. 
+#CHUNK_OPT:
+
+#ST_TITLE:
 
 This tutorial is adapted from the Seurat vignette: https://satijalab.org/seurat/v3.2/spatial_vignette.html
 
+#ST_ALL1:
 
-```{r setup, include=FALSE}
-knitr::opts_knit$set(progress=TRUE,verbose=TRUE)
-knitr::opts_chunk$set(message=FALSE, warning=FALSE, result='hold',fig.width=10, fig.height = 8)
-```
-
+#ST_TITLE1:
 
 ```{r packages}
 devtools::install_github('satijalab/seurat-data')
@@ -39,7 +26,7 @@ suppressPackageStartupMessages(require(dplyr))
 ```
 
 
-## Load ST data.
+#ST_TITLE2:
 
 The package `SeuratData` has some seurat objects for different datasets. Among those are spatial transcriptomics data from mouse brain and kidney. Here we will download and process sections from the mouse brain. 
 
@@ -65,7 +52,6 @@ brain2 <- LoadData("stxBrain", type = "posterior1")
 
 ```
 
-
 Merge into one seurat object
 
 ```{r}
@@ -77,37 +63,35 @@ brain
 As you can see, now we do not have the assay "RNA", but instead an assay called "Spatial". 
 
 
-## Quality control
+#ST_TITLE3:
 
-Similar to scRNAseq we use statistics on number of counts, number of features and percent mitochondria for quality control. Now the counts and feature counts are calculated on the Spatial assay, so they are named  "nCount_Spatial" and "nFeature_Spatial".
+#ST_ALL3:
 
-```{r}
+Now the counts and feature counts are calculated on the Spatial assay, so they are named  "nCount_Spatial" and "nFeature_Spatial".
+
+```{r, fig.height=10}
 brain <- PercentageFeatureSet(brain, "^mt-", col.name = "percent_mito")
 brain <- PercentageFeatureSet(brain, "^Hb.*-", col.name = "percent_hb")
 
 
-VlnPlot(brain, features = c("nCount_Spatial", "nFeature_Spatial","percent_mito","percent_hb"), pt.size = 0.1) + NoLegend()
+VlnPlot(brain, features = c("nCount_Spatial", "nFeature_Spatial","percent_mito","percent_hb"), pt.size = 0.1, ncol = 2) + NoLegend()
 ```
 
-We can also plot the same data onto the tissue section
+#ST_ALL3.1:
 
-```{r}
+```{r, fig.height=12}
 
 SpatialFeaturePlot(brain, features = c("nCount_Spatial", "nFeature_Spatial","percent_mito","percent_hb")) 
 
 ```
 
 
-As you can see, the spots with low number of counts/features and high mitochondrial content is mainly towards the edges of the tissue. It is quite likely that these regions are damaged tissue. You may also see regions within a tissue with low quality if you have tears or folds in your section. 
+#ST_ALL3.2:
 
-But remember, for some tissue types, the amount of genes expressed and proportion mitochondria may also be a biological features, so bear in mind what tissue you are working on and what these features mean.
+#ST_TITLE4:
 
+#ST_ALL4:
 
-
-
-## Filter 
-
-Select all spots with less than 25% mitocondrial reads, less than 20% hb-reads and 1000 detected genes. You must judge for yourself based on your knowledge of the tissue what are appropriate filtering criteria for your dataset.
 
 ```{r}
 brain = brain[, brain$nFeature_Spatial>500 & brain$percent_mito < 25 & brain$percent_hb < 20]
@@ -115,14 +99,14 @@ brain = brain[, brain$nFeature_Spatial>500 & brain$percent_mito < 25 & brain$per
 
 And replot onto tissue section:
 
-```{r}
+```{r, fig.height=10}
 SpatialFeaturePlot(brain, features = c("nCount_Spatial", "nFeature_Spatial","percent_mito"))
 
 ```
 
-### Top expressed genes
+#ST_TITLE5:
 
-```{r, fig.height=10, fig.width=6}
+```{r, fig.height=8, fig.width=6}
 C = brain@assays$Spatial@counts
 C@x = C@x/rep.int(colSums(C), diff(C@p))
 most_expressed <- order(Matrix::rowSums(C), decreasing = T)[20:1]
@@ -130,7 +114,9 @@ boxplot(as.matrix(t(C[most_expressed, ])), cex = 0.1, las = 1, xlab = "% total c
     col = (scales::hue_pal())(20)[20:1], horizontal = TRUE)
 ```
 
+#ST_ALL5:
 
+#ST_TITLE6:
 
 ```{r}
 dim(brain)
@@ -147,9 +133,9 @@ brain <- brain[!grepl("^Hb.*-", rownames(brain)), ]
 dim(brain)
 ```
 
-## Normalize 
+#ST_TITLE7:
 
-For ST data, the Seurat team recommends to use SCTranform for normalization.
+For ST data, the Seurat team recommends to use SCTranform for normalization, so we will do that. `SCTransform` will select variable genes and normalize in one step.
 
 ```{r}
 
@@ -158,14 +144,14 @@ brain <- SCTransform(brain, assay = "Spatial", verbose = TRUE, method = 'poisson
 ```
 
 
-Now we can plot gene expression of individual genes, the gene Hpca is a strong hippocampal marker and Ttr is a marker of the choroid plexus.
+#ST_ALL7:
 
 ```{r}
 SpatialFeaturePlot(brain, features = c("Hpca", "Ttr"))
 
 ```
 
-If we want to see the tissue better you can modify point size and transparancy of the points.
+If you want to see the tissue better you can modify point size and transparancy of the points.
 
 ```{r}
 SpatialFeaturePlot(brain, features = "Ttr", pt.size.factor = 1, alpha = c(0.1, 1))
@@ -173,10 +159,9 @@ SpatialFeaturePlot(brain, features = "Ttr", pt.size.factor = 1, alpha = c(0.1, 1
 ```
 
 
+#ST_ALL7.1:
 
-## Dimensionality reduction and clustering
-
-We can then now run dimensionality reduction and clustering using the same workflow as we use for scRNA-seq analysis. But make sure you run it on the `SCT` assay.
+But make sure you run it on the `SCT` assay.
 
 ```{r}
 brain <- RunPCA(brain, assay = "SCT", verbose = FALSE)
@@ -185,7 +170,7 @@ brain <- FindClusters(brain, verbose = FALSE)
 brain <- RunUMAP(brain, reduction = "pca", dims = 1:30)
 ```
 
-We can then plot clusters onto umap or onto the tissue section.
+#ST_ALL7.2:
 
 ```{r}
 
@@ -202,9 +187,9 @@ SpatialDimPlot(brain, cells.highlight = CellsByIdentities(brain), facet.highligh
 
 ```
 
-# Integration
+#ST_TITLE8:
 
-Quite often there are strong batch effects between different ST sections, so it may be a good idea to integrate the data. 
+#ST_ALL8:
 
 We will do a similar integration as in the Data Integration lab, but this time we will use the SCT assay for integration. Therefore we need to run `PrepSCTIntegration` which will compute the sctransform residuals for all genes in both the datasets. 
 
@@ -219,11 +204,13 @@ st.list = lapply(st.list, SCTransform, assay = "Spatial", method='poisson')
 options(future.globals.maxSize = 2000 * 1024^2) # set allowed size to 2K MiB
 
 
-st.features = SelectIntegrationFeatures(st.list, nfeatures = 3000)
+st.features = SelectIntegrationFeatures(st.list, nfeatures = 3000, verbose = FALSE)
 st.list <- PrepSCTIntegration(object.list = st.list, anchor.features = st.features, 
     verbose = FALSE)
 
 ```
+
+Now we can perform the actual integraion.
 
 ```{r}
 int.anchors <- FindIntegrationAnchors(object.list = st.list, normalization.method = "SCT",   verbose = FALSE, anchor.features = st.features)
@@ -233,6 +220,8 @@ brain.integrated <- IntegrateData(anchorset = int.anchors, normalization.method 
 rm(int.anchors, st.list)
 gc()
 ```
+
+#ST_ALL8.1:
 
 ```{r}
 brain.integrated <- RunPCA(brain.integrated, verbose = FALSE)
@@ -249,14 +238,15 @@ SpatialDimPlot(brain.integrated)
 
 ```
 
-Judge for yourself, which of the clusterings do you think looks best?
+#ST_ALL8.2:
+
+#ST_TITLE9:
+
+#ST_ALL9:
 
 
-# Identification of Spatially Variable Features
 
-Seurat offers two workflows to identify molecular features that correlate with spatial location within a tissue. The first is to perform differential expression based on pre-annotated anatomical regions within the tissue, which may be determined either from unsupervised clustering or prior knowledge. This strategy works well in this case, as the clusters above exhibit clear spatial restriction.
-
-```{r}
+```{r, fig.height=12}
 # differential expression between cluster 1 and cluster 6
 de_markers <- FindMarkers(brain.integrated, ident.1 = 5, ident.2 = 6)
 
@@ -265,11 +255,12 @@ SpatialFeaturePlot(object = brain.integrated, features = rownames(de_markers)[1:
 
 ```
 
-An alternative approach, implemented in FindSpatiallyVariables, is to search for features exhibiting spatial patterning in the absence of pre-annotation. The default method (method = 'markvariogram), is inspired by the Trendsceek, which models spatial transcriptomics data as a mark point process and computes a 'variogram', which identifies genes whose expression level is dependent on their spatial location. More specifically, this process calculates gamma(r) values measuring the dependence between two spots a certain "r" distance apart. By default, we use an r-value of '5' in these analyes, and only compute these values for variable genes (where variation is calculated independently of spatial location) to save time.
+#ST_ALL9.1:
 
-We note that there are mulitple methods in the literature to accomplish this task, including SpatialDE, and Splotch.
+In `FindSpatiallyVariables` the default method in Seurat (method = 'markvariogram), is inspired by the Trendsceek, which models spatial transcriptomics data as a mark point process and computes a 'variogram', which identifies genes whose expression level is dependent on their spatial location. More specifically, this process calculates gamma(r) values measuring the dependence between two spots a certain "r" distance apart. By default, we use an r-value of '5' in these analyes, and only compute these values for variable genes (where variation is calculated independently of spatial location) to save time.
 
-_OBS!_ Takes a long time to run, so skip this step for now!
+
+**OBS!** Takes a long time to run, so skip this step for now!
 
 ```{r}
 # brain <- FindSpatiallyVariableFeatures(brain, assay = "SCT", features = VariableFeatures(brain)[1:1000], 
@@ -282,7 +273,57 @@ _OBS!_ Takes a long time to run, so skip this step for now!
 
 
 
-# Subset for frontal cortex
+
+#ST_TITLE10:
+
+#ST_ALL10:
+
+
+First dowload the seurat data from: https://www.dropbox.com/s/cuowvm4vrf65pvq/allen_cortex.rds?dl=1 to folder `data/spatial/` with command:
+
+
+```{bash}
+
+FILE="./data/spatial/allen_cortex.rds"
+
+if [ -e $FILE ]
+then
+   echo "File $FILE is downloaded."
+else
+   echo "Downloading $FILE"
+   mkdir -p data/spatial
+   wget  -O data/spatial/allen_cortex.rds https://www.dropbox.com/s/cuowvm4vrf65pvq/allen_cortex.rds?dl=1
+fi
+
+```
+
+#ST_ALL10.1:
+
+```{r subset_sc}
+allen_reference <- readRDS("data/spatial/allen_cortex.rds")
+
+# check number of cells per subclass
+table(allen_reference$subclass)
+
+# select 200 cells per subclass, fist set subclass ass active.ident
+Idents(allen_reference) <- allen_reference$subclass
+allen_reference <- subset(allen_reference, cells = WhichCells(allen_reference, downsample = 200))
+
+# check again number of cells per subclass
+table(allen_reference$subclass)
+```
+
+Then run normalization and dimensionality reduction.
+
+```{r}
+# First run SCTransform and PCA 
+allen_reference <- SCTransform(allen_reference, ncells = 3000, verbose = FALSE, method = 'glmGamPoi') %>% RunPCA(verbose = FALSE) %>%    RunUMAP(dims = 1:30)
+
+# the annotation is stored in the 'subclass' column of object metadata
+DimPlot(allen_reference, label = TRUE)
+```
+
+#ST_ALL10.1b:
 
 ```{r}
 # subset for the anterior dataset
@@ -308,46 +349,10 @@ cortex <- SCTransform(cortex, assay = "Spatial", verbose = FALSE, method = "glmG
 
 ```
 
-# Single cell data
 
-We will use a reference scRNA-seq dataset of ~14,000 adult mouse cortical cell taxonomy from the Allen Institute, generated with the SMART-Seq2 protocol.
+#ST_ALL10.2:
 
-First dowload the data from: https://www.dropbox.com/s/cuowvm4vrf65pvq/allen_cortex.rds?dl=1 to folder `data/spatial/`.
-
-
-```{bash}
-wget  -O data/spatial/allen_cortex.rds https://www.dropbox.com/s/cuowvm4vrf65pvq/allen_cortex.rds?dl=1
-
-```
-
-Now, load the data and subsample for similar number of cells per group (`subclass`).
-
-```{r}
-allen_reference <- readRDS("data/spatial/allen_cortex.rds")
-
-
-
-# check number of cells per subclass
-table(allen_reference$subclass)
-
-# select 200 cells per subclass, fist set subclass ass active.ident
-Idents(allen_reference) <- allen_reference$subclass
-allen_reference <- subset(allen_reference, cells = WhichCells(allen_reference, downsample = 200))
-
-# check again number of cells per subclass
-table(allen_reference$subclass)
-```
-
-Then run normalization and dimensionality reduction.
-
-```{r}
-# First run SCTransform and PCA 
-allen_reference <- SCTransform(allen_reference, ncells = 3000, verbose = FALSE, method = 'glmGamPoi') %>% RunPCA(verbose = FALSE) %>%    RunUMAP(dims = 1:30)
-
-# the annotation is stored in the 'subclass' column of object metadata
-DimPlot(allen_reference, label = TRUE)
-```
-
+Instead of the functions `FindIntegrationAnchors` and `IntegrateData` in Seurat, we will instead use `FindTransferAnchors` and `TransferData` which will create a new assay that contains the predictions scores (e.g. closeness of each spot to each celltype in the aligned spaces).
 
 ```{r}
 anchors <- FindTransferAnchors(reference = allen_reference, query = cortex, normalization.method = "SCT")
@@ -372,21 +377,18 @@ SpatialPlot(object = cortex, features = top.clusters, ncol = 2)
 ```
 
 
-We can also visualize the scores per cluster in ST data
+#ST_ALL10.3:
 
 ```{r, fig.width=12}
 VlnPlot(cortex, group.by = "seurat_clusters", features = top.clusters, pt.size = 0, ncol=2)
 
 ```
 
-Keep in mind, that the scores are "just" prediction scores, and do not correspond to proportion of cells that are of a certain celltype or similar. It mainly tells you that gene expression in a certain spot is hihgly similar/dissimilar to gene expression of a celltype.
 
+#ST_ALL10.4:
 
-If we look at the scores, we see that some spots got really clear predictions by celltype, while others did not have high scores for any of the celltypes.
+#ST_ALL11:
 
-
-
-TASK: Subset for another region that does not contain cortex cells and check what you get from the label transfer. Suggested region is the right end of the posterial section that you can select like this:
 
 ```{r}
 # subset for the anterior dataset
@@ -413,28 +415,6 @@ subregion <- SCTransform(subregion, assay = "Spatial", verbose = FALSE, method =
 
 ```
 
-REMOVE this part - just testing now...
-
-```{r}
-anchors <- FindTransferAnchors(reference = allen_reference, query = subregion, normalization.method = "SCT")
-predictions.assay <- TransferData(anchorset = anchors, refdata = allen_reference$subclass, prediction.assay = TRUE, 
-    weight.reduction = subregion[["pca"]])
-subregion[["predictions"]] <- predictions.assay
-
-DefaultAssay(subregion) <- "predictions"
-SpatialFeaturePlot(subregion, features = c("L2/3 IT", "L4"), pt.size.factor = 1.6, ncol = 2, crop = TRUE)
-```
-
-```{r}
-subregion <- FindSpatiallyVariableFeatures(subregion, assay = "predictions", selection.method = "markvariogram", 
-    features = rownames(cortex), r.metric = 5, slot = "data")
-top.clusters <- head(SpatiallyVariableFeatures(subregion), 4)
-SpatialPlot(object = subregion, features = top.clusters, ncol = 2)
-
-
-VlnPlot(subregion, group.by = "seurat_clusters", features = top.clusters, pt.size = 0, ncol=2)
-
-```
 
 ### Session info
 
