@@ -25,7 +25,7 @@ suppressPackageStartupMessages({
   library(dplyr)
 })
 
-sce <- readRDS("data/3pbmc_qc_dr_int_cl.rds")
+sce <- readRDS("data/results/covid_qc_dr_int_cl.rds")
 ```
 
 #DGE_TITLE1:
@@ -35,7 +35,7 @@ sce <- readRDS("data/3pbmc_qc_dr_int_cl.rds")
 ```{r}
 #Compute differentiall expression
 markers_genes <- scran::findMarkers( x = sce,
-                              groups = as.character(sce$kmeans_5),
+                              groups = as.character(sce$louvain_SNNk10),
                               lfc=.5,
                               pval.type = "all",
                               direction = "up")
@@ -53,6 +53,7 @@ markers_genes[["1"]]
 #Colect the top 25 genes for each cluster and put the into a single table
 top25 <- lapply( names(markers_genes), function(x) { temp <- markers_genes[[x]][1:25, 1:2] ; temp$gene <- rownames(markers_genes[[x]])[1:25] ; temp$cluster <- x ; return(temp) } )
 top25 <- as_tibble(do.call(rbind, top25))
+top25$p.value[top25$p.value==0] <- 1e-300
 top25
 ```
 
@@ -72,9 +73,9 @@ for(i in unique(top25$cluster)){
 ```{r}
 as_tibble(top25) %>% group_by(cluster)  %>% top_n(-5, p.value) -> top5
 
-scater::plotHeatmap(sce[,order(sce$kmeans_5)], features = unique(top5$gene) ,
+scater::plotHeatmap(sce[,order(sce$louvain_SNNk10)], features = unique(top5$gene) ,
                     center=T , zlim = c(-3,3) ,
-                    colour_columns_by= "kmeans_5",
+                    colour_columns_by= "louvain_SNNk10",
                     show_colnames=F , cluster_cols=F,
                     fontsize_row=6,
                     color=colorRampPalette(c("purple","black","yellow"))(90)
@@ -84,7 +85,7 @@ scater::plotHeatmap(sce[,order(sce$kmeans_5)], features = unique(top5$gene) ,
 #DGE_ALL4.3:
 
 ```{r,fig.height=10,fig.width=10}
-scater::plotExpression(sce, features = unique(top5$gene), x = "kmeans_5", ncol = 5, colour_by = "kmeans_5", scales="free")
+scater::plotExpression(sce, features = unique(top5$gene), x = "louvain_SNNk10", ncol = 5, colour_by = "louvain_SNNk10", scales="free")
 ```
 
 
@@ -94,15 +95,14 @@ scater::plotExpression(sce, features = unique(top5$gene), x = "kmeans_5", ncol =
 
 ```{r,fig.height=10,fig.width=10}
 #Filter cells from that cluster
-cell_selection <- sce[ , sce$kmeans_5 == 4 ]
-cell_selection$Chemistry <- ifelse(cell_selection$sample_id == "v2.1k","v2","v3")
+cell_selection <- sce[ , sce$louvain_SNNk10 == 10 ]
 
 #Compute differentiall expression
 DGE_cell_selection <- findMarkers( x = cell_selection,
-                              groups = cell_selection$Chemistry,
-                              lfc=.5,
+                              groups = cell_selection$type,
+                              lfc=.25,
                               pval.type = "all",
-                              direction = "down")
+                              direction = "any")
 top5_cell_selection <- lapply( names(DGE_cell_selection), function(x) { temp <- DGE_cell_selection[[x]][1:5, 1:2] ; temp$gene <- rownames(DGE_cell_selection[[x]])[1:5] ; temp$cluster <- x ; return(temp) } )
 top5_cell_selection <- as_tibble(do.call(rbind, top5_cell_selection))
 top5_cell_selection
@@ -111,16 +111,15 @@ top5_cell_selection
 #DGE_ALL6.1:
 
 ```{r,fig.height=4,fig.width=10}
-scater::plotExpression(cell_selection, features = unique(top5_cell_selection$gene), x = "Chemistry", ncol = 5, colour_by = "Chemistry")
+scater::plotExpression(cell_selection, features = unique(top5_cell_selection$gene), x = "type", ncol = 5, colour_by = "type")
 ```
 
 #DGE_ALL6.2:
 
 ```{r,fig.asp=.28}
 plotlist <- list()
-for(i in c("JUND","RPS17","GNAS")){
-  plotlist[[i]] <- plotReducedDim(sce,dimred = "UMAP_on_PCA",colour_by = i,by_exprs_values = "logcounts") +
-  scale_fill_gradientn(colours = colorRampPalette(c("grey90","orange3","firebrick","firebrick","red","red" ))(10)) +
+for(i in unique(top5_cell_selection$gene)){
+  plotlist[[i]] <- plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = i,by_exprs_values = "logcounts") +
   ggtitle(label = i)+ theme(plot.title = element_text(size=20)) }
 plot_grid(ncol=3, plotlist = plotlist)
 ```
