@@ -1,6 +1,6 @@
 ---
 author: "Åsa Björklund  &  Paulo Czarnewski"
-date: "Sept 13, 2019"
+date: '`r format(Sys.Date(), "%B %d, %Y")`'
 output:
   html_document:
     self_contained: true
@@ -22,10 +22,13 @@ output:
       collapsed: false
       smooth_scroll: true
     toc_depth: 3
+editor_options: 
+  chunk_output_type: console
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(message=FALSE, warning=FALSE, result='hold',fig.width=12,tidy=TRUE)
+knitr::opts_knit$set(progress=TRUE,verbose=TRUE)
 ```
 <style>
 h1, .h1, h2, .h2, h3, .h3, h4, .h4 { margin-top: 50px }
@@ -50,7 +53,7 @@ suppressPackageStartupMessages({
   library(igraph)
 })
 
-sce <- readRDS("data/3pbmc_qc_dr_int.rds")
+sce <- readRDS("data/results/covid_qc_dr_int.rds")
 ```
 
 ## Graph clustering
@@ -71,24 +74,24 @@ The first step into graph clustering is to construct a k-nn graph, in case you d
 
 ```{r, message='hide',warning='hide',results='hold'}
 #These 2 lines are for demonstration purposes only
-g <- buildKNNGraph(sce,k=30,use.dimred="MNN",assay.type="RNA")
-sce@reducedDims$KNN <- igraph::as_adjacency_matrix(g)
+g <- buildKNNGraph(sce,k=30,use.dimred="MNN")
+reducedDim(sce,"KNN") <- igraph::as_adjacency_matrix(g)
 
 #These 2 lines are the most recommended
-g <- buildSNNGraph(sce,k=30,use.dimred="MNN",assay.type="RNA")
-sce@reducedDims$SNN  <- as_adjacency_matrix(g, attr = "weight")
+g <- buildSNNGraph(sce,k=30,use.dimred="MNN")
+reducedDim(sce,"KNN")  <- as_adjacency_matrix(g, attr = "weight")
 ```
 
 We can take a look at the kNN graph. It is a matrix where every connection between cells is represented as $1$s. This is called a **unweighted** graph (default in Seurat). Some cell connections can however have more importance than others, in that case the scale of the graph from $0$ to a maximum distance. Usually, the smaller the distance, the closer two points are, and stronger is their connection. This is called a **weighted** graph. Both weighted and unweighted graphs are suitable for clustering, but clustering on unweighted graphs is faster for large datasets (> 100k cells).
 
 ```{r, message='hide',warning='hide',results='hold',fig.asp=1,fig.width=4}
 #plot the KNN graph
-pheatmap(sce@reducedDims$KNN[1:200,1:200],
+pheatmap(reducedDim(sce,"KNN")[1:200,1:200],
          col=c("white","black"),border_color = "grey90",
          legend = F,cluster_rows = F,cluster_cols = F,fontsize = 2)
 
 #or the SNN graph
-pheatmap(sce@reducedDims$SNN[1:200,1:200],
+pheatmap(reducedDim(sce,"KNN")[1:200,1:200],
         col = colorRampPalette(c("white","yellow","red","black"))(20), 
         border_color = "grey90",
          legend = T,cluster_rows = F,cluster_cols = F,fontsize = 2)
@@ -104,21 +107,21 @@ Once the graph is built, we can now perform graph clustering. The clustering is 
 
 
 ```{r,results='hide',block.title=TRUE,fig.height=2.8,fig.width=10}
-g <- buildSNNGraph(sce,k=5,use.dimred="MNN",assay.type="RNA")
+g <- buildSNNGraph(sce,k=5,use.dimred="MNN")
 sce$louvain_SNNk5 <- factor( cluster_louvain(g)$membership )
 
-g <- buildSNNGraph(sce,k=10,use.dimred="MNN",assay.type="RNA",)
+g <- buildSNNGraph(sce,k=10,use.dimred="MNN")
 sce$louvain_SNNk10 <- factor( cluster_louvain(g)$membership )
 
-g <- buildSNNGraph(sce,k=15,use.dimred="MNN",assay.type="RNA")
+g <- buildSNNGraph(sce,k=15,use.dimred="MNN")
 sce$louvain_SNNk15 <- factor( cluster_louvain(g)$membership )
 
 plot_grid(ncol = 3,
-  plotReducedDim(sce,use_dimred = "UMAP_on_MNN",colour_by = "louvain_SNNk5",add_ticks = F)+
+  plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = "louvain_SNNk5")+
     ggplot2::ggtitle(label ="louvain_SNNk5"),
-  plotReducedDim(sce,use_dimred = "UMAP_on_MNN",colour_by = "louvain_SNNk10",add_ticks = F)+
+  plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = "louvain_SNNk10")+
     ggplot2::ggtitle(label ="louvain_SNNk10"),
-  plotReducedDim(sce,use_dimred = "UMAP_on_MNN",colour_by = "louvain_SNNk15",add_ticks = F)+
+  plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = "louvain_SNNk15")+
     ggplot2::ggtitle(label ="louvain_SNNk15")
 )
 ```
@@ -130,16 +133,16 @@ plot_grid(ncol = 3,
 K-means is a generic clustering algorithm that has been used in many application areas. In R, it can be applied via the kmeans function. Typically, it is applied to a reduced dimension representation of the expression data (most often PCA, because of the interpretability of the low-dimensional distances). We need to define the number of clusters in advance. Since the results depend on the initialization of the cluster centers, it is typically recommended to run K-means with multiple starting configurations (via the nstart argument).
 
 ```{r,results='hide',block.title=TRUE,fig.height=2.9}
-sce$kmeans_5 <- factor( kmeans(x = sce@reducedDims$MNN,centers = 5)$cluster )
-sce$kmeans_10 <- factor(kmeans(x = sce@reducedDims$MNN,centers = 10)$cluster)
-sce$kmeans_15 <- factor(kmeans(x = sce@reducedDims$MNN,centers = 15)$cluster)
+sce$kmeans_5 <- factor( kmeans(x = reducedDim(sce,"MNN"),centers = 5)$cluster )
+sce$kmeans_10 <- factor(kmeans(x = reducedDim(sce,"MNN"),centers = 10)$cluster)
+sce$kmeans_15 <- factor(kmeans(x = reducedDim(sce,"MNN"),centers = 15)$cluster)
 
 plot_grid(ncol = 3,
-  plotReducedDim(sce,use_dimred = "UMAP_on_MNN",colour_by = "kmeans_5",add_ticks = F)+
+  plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = "kmeans_5")+
     ggplot2::ggtitle(label ="KMeans5"),
-  plotReducedDim(sce,use_dimred = "UMAP_on_MNN",colour_by = "kmeans_10",add_ticks = F)+
+  plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = "kmeans_10")+
     ggplot2::ggtitle(label ="KMeans10"),
-  plotReducedDim(sce,use_dimred = "UMAP_on_MNN",colour_by = "kmeans_15",add_ticks = F)+
+  plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = "kmeans_15")+
     ggplot2::ggtitle(label ="KMeans15")
 )
 ```
@@ -153,8 +156,7 @@ plot_grid(ncol = 3,
 The base R `stats` package already contains a function `dist` that calculates distances between all pairs of samples. Since we want to compute distances between samples, rather than among genes, we need to transpose the data before applying it to the `dist` function. This can be done by simply adding the transpose function `t()` to the data. The distance methods available  in `dist` are: "euclidean", "maximum", "manhattan", "canberra", "binary" or "minkowski".
 
 ```{r,results='hide',block.title=TRUE,fig.height=5}
-d <- dist( sce@reducedDims$MNN,
-           method="euclidean")
+d <- dist( reducedDim(sce,"MNN"),  method="euclidean")
 ```
 
 As you might have realized, correlation is not a method implemented in the `dist` function. However, we can create our own distances and transform them to a distance object. We can first compute sample correlations using the `cor` function.
@@ -166,7 +168,7 @@ Once we transformed the correlations to a 0-1 scale, we can simply convert it to
 
 ```{r,results='hide',block.title=TRUE,fig.height=5,fig.width=5}
 #Compute sample correlations
-sample_cor <- cor( Matrix::t(sce@reducedDims$MNN) )
+sample_cor <- cor( Matrix::t(reducedDim(sce,"MNN")) )
 
 #Transform the scale from correlations
 sample_cor <- (1 - sample_cor) / 2
@@ -202,18 +204,18 @@ sce$hc_corelation_15 <- factor( cutree(h_correlation,k = 15) )
 
 
 plot_grid(ncol = 3,
-  plotReducedDim(sce,use_dimred = "UMAP_on_MNN",colour_by = "hc_euclidean_5",add_ticks = F)+
+  plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = "hc_euclidean_5")+
     ggplot2::ggtitle(label ="HC_euclidean_5"),
-  plotReducedDim(sce,use_dimred = "UMAP_on_MNN",colour_by = "hc_euclidean_10",add_ticks = F)+
+  plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = "hc_euclidean_10")+
     ggplot2::ggtitle(label ="HC_euclidean_10"),
-  plotReducedDim(sce,use_dimred = "UMAP_on_MNN",colour_by = "hc_euclidean_15",add_ticks = F)+
+  plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = "hc_euclidean_15")+
     ggplot2::ggtitle(label ="HC_euclidean_15"),
   
-  plotReducedDim(sce,use_dimred = "UMAP_on_MNN",colour_by = "hc_corelation_5",add_ticks = F)+
+  plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = "hc_corelation_5")+
     ggplot2::ggtitle(label ="HC_correlation_5"),
-  plotReducedDim(sce,use_dimred = "UMAP_on_MNN",colour_by = "hc_corelation_10",add_ticks = F)+
+  plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = "hc_corelation_10")+
     ggplot2::ggtitle(label ="HC_correlation_10"),
-  plotReducedDim(sce,use_dimred = "UMAP_on_MNN",colour_by = "hc_corelation_15",add_ticks = F)+
+  plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = "hc_corelation_15")+
     ggplot2::ggtitle(label ="HC_correlation_15")
 )
 ```
@@ -222,12 +224,19 @@ plot_grid(ncol = 3,
 Finally, lets save the integrated data for further analysis.
 
 ```{r}
-saveRDS(sce,"data/3pbmc_qc_dr_int_cl.rds")
+saveRDS(sce,"data/results/covid_qc_dr_int_cl.rds")
 ```
 
-## Check QC-stats
-By now you should know how to plot different features onto your data. Take the QC metrics that were calculated in the first exercise, that should be stored in your data object, and plot it onto your UMAP and as violin plots per cluster using the clustering method of your choice. For example, plot number of UMIS, detected genes, percent mitochondrial reads. 
+<style>
+div.blue { background-color:#e6f0ff; border-radius: 5px; padding: 10px;}
+</style>
+<div class = "blue">
+**Your turn**
+
+By now you should know how to plot different features onto your data. Take the QC metrics that were calculated in the first exercise, that should be stored in your data object, and plot it as violin plots per cluster using the clustering method of your choice. For example, plot number of UMIS, detected genes, percent mitochondrial reads.
+
 Then, check carefully if there is any bias in how your data is separated due to quality metrics. Could it be explained biologically, or could you have technical bias there?
+</div>
 
 
 ### Session Info

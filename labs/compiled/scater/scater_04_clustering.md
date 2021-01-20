@@ -1,6 +1,6 @@
 ---
 author: "Åsa Björklund  &  Paulo Czarnewski"
-date: "Sept 13, 2019"
+date: 'January 20, 2021'
 output:
   html_document:
     self_contained: true
@@ -22,6 +22,8 @@ output:
       collapsed: false
       smooth_scroll: true
     toc_depth: 3
+editor_options: 
+  chunk_output_type: console
 ---
 
 
@@ -49,7 +51,7 @@ suppressPackageStartupMessages({
     library(igraph)
 })
 
-sce <- readRDS("data/3pbmc_qc_dr_int.rds")
+sce <- readRDS("data/results/covid_qc_dr_int.rds")
 ```
 
 ## Graph clustering
@@ -71,12 +73,12 @@ The first step into graph clustering is to construct a k-nn graph, in case you d
 
 ```r
 # These 2 lines are for demonstration purposes only
-g <- buildKNNGraph(sce, k = 30, use.dimred = "MNN", assay.type = "RNA")
-sce@reducedDims$KNN <- igraph::as_adjacency_matrix(g)
+g <- buildKNNGraph(sce, k = 30, use.dimred = "MNN")
+reducedDim(sce, "KNN") <- igraph::as_adjacency_matrix(g)
 
 # These 2 lines are the most recommended
-g <- buildSNNGraph(sce, k = 30, use.dimred = "MNN", assay.type = "RNA")
-sce@reducedDims$SNN <- as_adjacency_matrix(g, attr = "weight")
+g <- buildSNNGraph(sce, k = 30, use.dimred = "MNN")
+reducedDim(sce, "KNN") <- as_adjacency_matrix(g, attr = "weight")
 ```
 
 We can take a look at the kNN graph. It is a matrix where every connection between cells is represented as $1$s. This is called a **unweighted** graph (default in Seurat). Some cell connections can however have more importance than others, in that case the scale of the graph from $0$ to a maximum distance. Usually, the smaller the distance, the closer two points are, and stronger is their connection. This is called a **weighted** graph. Both weighted and unweighted graphs are suitable for clustering, but clustering on unweighted graphs is faster for large datasets (> 100k cells).
@@ -84,7 +86,7 @@ We can take a look at the kNN graph. It is a matrix where every connection betwe
 
 ```r
 # plot the KNN graph
-pheatmap(sce@reducedDims$KNN[1:200, 1:200], col = c("white", "black"), border_color = "grey90", 
+pheatmap(reducedDim(sce, "KNN")[1:200, 1:200], col = c("white", "black"), border_color = "grey90", 
     legend = F, cluster_rows = F, cluster_cols = F, fontsize = 2)
 ```
 
@@ -92,8 +94,8 @@ pheatmap(sce@reducedDims$KNN[1:200, 1:200], col = c("white", "black"), border_co
 
 ```r
 # or the SNN graph
-pheatmap(sce@reducedDims$SNN[1:200, 1:200], col = colorRampPalette(c("white", "yellow", 
-    "red", "black"))(20), border_color = "grey90", legend = T, cluster_rows = F, 
+pheatmap(reducedDim(sce, "KNN")[1:200, 1:200], col = colorRampPalette(c("white", 
+    "yellow", "red", "black"))(20), border_color = "grey90", legend = T, cluster_rows = F, 
     cluster_cols = F, fontsize = 2)
 ```
 
@@ -110,20 +112,19 @@ Once the graph is built, we can now perform graph clustering. The clustering is 
 
 
 ```r
-g <- buildSNNGraph(sce, k = 5, use.dimred = "MNN", assay.type = "RNA")
+g <- buildSNNGraph(sce, k = 5, use.dimred = "MNN")
 sce$louvain_SNNk5 <- factor(cluster_louvain(g)$membership)
 
-g <- buildSNNGraph(sce, k = 10, use.dimred = "MNN", assay.type = "RNA", )
+g <- buildSNNGraph(sce, k = 10, use.dimred = "MNN")
 sce$louvain_SNNk10 <- factor(cluster_louvain(g)$membership)
 
-g <- buildSNNGraph(sce, k = 15, use.dimred = "MNN", assay.type = "RNA")
+g <- buildSNNGraph(sce, k = 15, use.dimred = "MNN")
 sce$louvain_SNNk15 <- factor(cluster_louvain(g)$membership)
 
-plot_grid(ncol = 3, plotReducedDim(sce, use_dimred = "UMAP_on_MNN", colour_by = "louvain_SNNk5", 
-    add_ticks = F) + ggplot2::ggtitle(label = "louvain_SNNk5"), plotReducedDim(sce, 
-    use_dimred = "UMAP_on_MNN", colour_by = "louvain_SNNk10", add_ticks = F) + ggplot2::ggtitle(label = "louvain_SNNk10"), 
-    plotReducedDim(sce, use_dimred = "UMAP_on_MNN", colour_by = "louvain_SNNk15", 
-        add_ticks = F) + ggplot2::ggtitle(label = "louvain_SNNk15"))
+plot_grid(ncol = 3, plotReducedDim(sce, dimred = "UMAP_on_MNN", colour_by = "louvain_SNNk5") + 
+    ggplot2::ggtitle(label = "louvain_SNNk5"), plotReducedDim(sce, dimred = "UMAP_on_MNN", 
+    colour_by = "louvain_SNNk10") + ggplot2::ggtitle(label = "louvain_SNNk10"), plotReducedDim(sce, 
+    dimred = "UMAP_on_MNN", colour_by = "louvain_SNNk15") + ggplot2::ggtitle(label = "louvain_SNNk15"))
 ```
 
 ![](scater_04_clustering_files/figure-html/unnamed-chunk-4-1.png)<!-- -->
@@ -136,15 +137,14 @@ K-means is a generic clustering algorithm that has been used in many application
 
 
 ```r
-sce$kmeans_5 <- factor(kmeans(x = sce@reducedDims$MNN, centers = 5)$cluster)
-sce$kmeans_10 <- factor(kmeans(x = sce@reducedDims$MNN, centers = 10)$cluster)
-sce$kmeans_15 <- factor(kmeans(x = sce@reducedDims$MNN, centers = 15)$cluster)
+sce$kmeans_5 <- factor(kmeans(x = reducedDim(sce, "MNN"), centers = 5)$cluster)
+sce$kmeans_10 <- factor(kmeans(x = reducedDim(sce, "MNN"), centers = 10)$cluster)
+sce$kmeans_15 <- factor(kmeans(x = reducedDim(sce, "MNN"), centers = 15)$cluster)
 
-plot_grid(ncol = 3, plotReducedDim(sce, use_dimred = "UMAP_on_MNN", colour_by = "kmeans_5", 
-    add_ticks = F) + ggplot2::ggtitle(label = "KMeans5"), plotReducedDim(sce, use_dimred = "UMAP_on_MNN", 
-    colour_by = "kmeans_10", add_ticks = F) + ggplot2::ggtitle(label = "KMeans10"), 
-    plotReducedDim(sce, use_dimred = "UMAP_on_MNN", colour_by = "kmeans_15", add_ticks = F) + 
-        ggplot2::ggtitle(label = "KMeans15"))
+plot_grid(ncol = 3, plotReducedDim(sce, dimred = "UMAP_on_MNN", colour_by = "kmeans_5") + 
+    ggplot2::ggtitle(label = "KMeans5"), plotReducedDim(sce, dimred = "UMAP_on_MNN", 
+    colour_by = "kmeans_10") + ggplot2::ggtitle(label = "KMeans10"), plotReducedDim(sce, 
+    dimred = "UMAP_on_MNN", colour_by = "kmeans_15") + ggplot2::ggtitle(label = "KMeans15"))
 ```
 
 ![](scater_04_clustering_files/figure-html/unnamed-chunk-5-1.png)<!-- -->
@@ -159,7 +159,7 @@ The base R `stats` package already contains a function `dist` that calculates di
 
 
 ```r
-d <- dist(sce@reducedDims$MNN, method = "euclidean")
+d <- dist(reducedDim(sce, "MNN"), method = "euclidean")
 ```
 
 As you might have realized, correlation is not a method implemented in the `dist` function. However, we can create our own distances and transform them to a distance object. We can first compute sample correlations using the `cor` function.
@@ -172,7 +172,7 @@ Once we transformed the correlations to a 0-1 scale, we can simply convert it to
 
 ```r
 # Compute sample correlations
-sample_cor <- cor(Matrix::t(sce@reducedDims$MNN))
+sample_cor <- cor(Matrix::t(reducedDim(sce, "MNN")))
 
 # Transform the scale from correlations
 sample_cor <- (1 - sample_cor)/2
@@ -210,18 +210,18 @@ sce$hc_corelation_15 <- factor( cutree(h_correlation,k = 15) )
 
 
 plot_grid(ncol = 3,
-  plotReducedDim(sce,use_dimred = "UMAP_on_MNN",colour_by = "hc_euclidean_5",add_ticks = F)+
+  plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = "hc_euclidean_5")+
     ggplot2::ggtitle(label ="HC_euclidean_5"),
-  plotReducedDim(sce,use_dimred = "UMAP_on_MNN",colour_by = "hc_euclidean_10",add_ticks = F)+
+  plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = "hc_euclidean_10")+
     ggplot2::ggtitle(label ="HC_euclidean_10"),
-  plotReducedDim(sce,use_dimred = "UMAP_on_MNN",colour_by = "hc_euclidean_15",add_ticks = F)+
+  plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = "hc_euclidean_15")+
     ggplot2::ggtitle(label ="HC_euclidean_15"),
   
-  plotReducedDim(sce,use_dimred = "UMAP_on_MNN",colour_by = "hc_corelation_5",add_ticks = F)+
+  plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = "hc_corelation_5")+
     ggplot2::ggtitle(label ="HC_correlation_5"),
-  plotReducedDim(sce,use_dimred = "UMAP_on_MNN",colour_by = "hc_corelation_10",add_ticks = F)+
+  plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = "hc_corelation_10")+
     ggplot2::ggtitle(label ="HC_correlation_10"),
-  plotReducedDim(sce,use_dimred = "UMAP_on_MNN",colour_by = "hc_corelation_15",add_ticks = F)+
+  plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = "hc_corelation_15")+
     ggplot2::ggtitle(label ="HC_correlation_15")
 )
 ```
@@ -233,12 +233,19 @@ Finally, lets save the integrated data for further analysis.
 
 
 ```r
-saveRDS(sce, "data/3pbmc_qc_dr_int_cl.rds")
+saveRDS(sce, "data/results/covid_qc_dr_int_cl.rds")
 ```
 
-## Check QC-stats
-By now you should know how to plot different features onto your data. Take the QC metrics that were calculated in the first exercise, that should be stored in your data object, and plot it onto your UMAP and as violin plots per cluster using the clustering method of your choice. For example, plot number of UMIS, detected genes, percent mitochondrial reads. 
+<style>
+div.blue { background-color:#e6f0ff; border-radius: 5px; padding: 10px;}
+</style>
+<div class = "blue">
+**Your turn**
+
+By now you should know how to plot different features onto your data. Take the QC metrics that were calculated in the first exercise, that should be stored in your data object, and plot it as violin plots per cluster using the clustering method of your choice. For example, plot number of UMIS, detected genes, percent mitochondrial reads.
+
 Then, check carefully if there is any bias in how your data is separated due to quality metrics. Could it be explained biologically, or could you have technical bias there?
+</div>
 
 
 ### Session Info
@@ -250,12 +257,12 @@ sessionInfo()
 ```
 
 ```
-## R version 3.5.1 (2018-07-02)
+## R version 4.0.3 (2020-10-10)
 ## Platform: x86_64-apple-darwin13.4.0 (64-bit)
-## Running under: macOS  10.15.2
+## Running under: macOS Catalina 10.15.7
 ## 
 ## Matrix products: default
-## BLAS/LAPACK: /Users/asbj/miniconda3/envs/sc_course/lib/R/lib/libRblas.dylib
+## BLAS/LAPACK: /Users/asbj/miniconda3/envs/scRNAseq2021/lib/libopenblasp-r0.3.12.dylib
 ## 
 ## locale:
 ## [1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
@@ -265,36 +272,89 @@ sessionInfo()
 ## [8] methods   base     
 ## 
 ## other attached packages:
-##  [1] igraph_1.2.4.1              pheatmap_1.0.12            
-##  [3] rafalib_1.0.0               cowplot_1.0.0              
-##  [5] scran_1.10.1                scater_1.10.1              
-##  [7] ggplot2_3.2.1               SingleCellExperiment_1.4.0 
-##  [9] SummarizedExperiment_1.12.0 DelayedArray_0.8.0         
-## [11] BiocParallel_1.16.6         matrixStats_0.55.0         
-## [13] Biobase_2.42.0              GenomicRanges_1.34.0       
-## [15] GenomeInfoDb_1.18.1         IRanges_2.16.0             
-## [17] S4Vectors_0.20.1            BiocGenerics_0.28.0        
-## [19] RJSONIO_1.3-1.2             optparse_1.6.4             
+##  [1] igraph_1.2.6                pheatmap_1.0.12            
+##  [3] reticulate_1.18             harmony_1.0                
+##  [5] Rcpp_1.0.5                  venn_1.9                   
+##  [7] umap_0.2.7.0                rafalib_1.0.0              
+##  [9] scDblFinder_1.4.0           org.Hs.eg.db_3.12.0        
+## [11] AnnotationDbi_1.52.0        cowplot_1.1.1              
+## [13] scran_1.18.0                scater_1.18.0              
+## [15] ggplot2_3.3.3               SingleCellExperiment_1.12.0
+## [17] SummarizedExperiment_1.20.0 Biobase_2.50.0             
+## [19] GenomicRanges_1.42.0        GenomeInfoDb_1.26.0        
+## [21] IRanges_2.24.0              S4Vectors_0.28.0           
+## [23] BiocGenerics_0.36.0         MatrixGenerics_1.2.0       
+## [25] matrixStats_0.57.0          RJSONIO_1.3-1.4            
+## [27] optparse_1.6.6             
 ## 
 ## loaded via a namespace (and not attached):
-##  [1] viridis_0.5.1            dynamicTreeCut_1.63-1    edgeR_3.24.3            
-##  [4] viridisLite_0.3.0        DelayedMatrixStats_1.4.0 assertthat_0.2.1        
-##  [7] statmod_1.4.32           GenomeInfoDbData_1.2.0   vipor_0.4.5             
-## [10] yaml_2.2.0               pillar_1.4.2             lattice_0.20-38         
-## [13] glue_1.3.1               limma_3.38.3             digest_0.6.23           
-## [16] RColorBrewer_1.1-2       XVector_0.22.0           colorspace_1.4-1        
-## [19] htmltools_0.4.0          Matrix_1.2-17            plyr_1.8.4              
-## [22] pkgconfig_2.0.3          zlibbioc_1.28.0          purrr_0.3.3             
-## [25] scales_1.0.0             HDF5Array_1.10.1         getopt_1.20.3           
-## [28] tibble_2.1.3             withr_2.1.2              lazyeval_0.2.2          
-## [31] magrittr_1.5             crayon_1.3.4             evaluate_0.14           
-## [34] beeswarm_0.2.3           tools_3.5.1              formatR_1.7             
-## [37] stringr_1.4.0            Rhdf5lib_1.4.3           munsell_0.5.0           
-## [40] locfit_1.5-9.1           compiler_3.5.1           rlang_0.4.2             
-## [43] rhdf5_2.26.2             grid_3.5.1               RCurl_1.95-4.12         
-## [46] BiocNeighbors_1.0.0      labeling_0.3             bitops_1.0-6            
-## [49] rmarkdown_1.17           gtable_0.3.0             reshape2_1.4.3          
-## [52] R6_2.4.1                 gridExtra_2.3            knitr_1.26              
-## [55] dplyr_0.8.3              stringi_1.4.3            ggbeeswarm_0.6.0        
-## [58] Rcpp_1.0.3               tidyselect_0.2.5         xfun_0.11
+##   [1] plyr_1.8.6                lazyeval_0.2.2           
+##   [3] splines_4.0.3             BiocParallel_1.24.0      
+##   [5] listenv_0.8.0             scattermore_0.7          
+##   [7] digest_0.6.27             htmltools_0.5.0          
+##   [9] viridis_0.5.1             magrittr_2.0.1           
+##  [11] memoise_1.1.0             tensor_1.5               
+##  [13] cluster_2.1.0             ROCR_1.0-11              
+##  [15] limma_3.46.0              globals_0.14.0           
+##  [17] askpass_1.1               colorspace_2.0-0         
+##  [19] blob_1.2.1                ggrepel_0.9.0            
+##  [21] xfun_0.19                 dplyr_1.0.3              
+##  [23] crayon_1.3.4              RCurl_1.98-1.2           
+##  [25] jsonlite_1.7.2            spatstat.data_1.7-0      
+##  [27] spatstat_1.64-1           survival_3.2-7           
+##  [29] zoo_1.8-8                 glue_1.4.2               
+##  [31] polyclip_1.10-0           gtable_0.3.0             
+##  [33] zlibbioc_1.36.0           XVector_0.30.0           
+##  [35] leiden_0.3.6              DelayedArray_0.16.0      
+##  [37] BiocSingular_1.6.0        future.apply_1.7.0       
+##  [39] abind_1.4-5               scales_1.1.1             
+##  [41] DBI_1.1.0                 edgeR_3.32.0             
+##  [43] miniUI_0.1.1.1            viridisLite_0.3.0        
+##  [45] xtable_1.8-4              dqrng_0.2.1              
+##  [47] bit_4.0.4                 rsvd_1.0.3               
+##  [49] ResidualMatrix_1.0.0      htmlwidgets_1.5.3        
+##  [51] httr_1.4.2                getopt_1.20.3            
+##  [53] RColorBrewer_1.1-2        ellipsis_0.3.1           
+##  [55] Seurat_3.2.3              ica_1.0-2                
+##  [57] farver_2.0.3              pkgconfig_2.0.3          
+##  [59] scuttle_1.0.0             uwot_0.1.10              
+##  [61] deldir_0.2-3              locfit_1.5-9.4           
+##  [63] labeling_0.4.2            tidyselect_1.1.0         
+##  [65] rlang_0.4.10              reshape2_1.4.4           
+##  [67] later_1.1.0.1             munsell_0.5.0            
+##  [69] tools_4.0.3               xgboost_1.3.0.1          
+##  [71] generics_0.1.0            RSQLite_2.2.1            
+##  [73] ggridges_0.5.2            batchelor_1.6.0          
+##  [75] evaluate_0.14             stringr_1.4.0            
+##  [77] fastmap_1.0.1             goftest_1.2-2            
+##  [79] yaml_2.2.1                knitr_1.30               
+##  [81] bit64_4.0.5               fitdistrplus_1.1-3       
+##  [83] admisc_0.11               purrr_0.3.4              
+##  [85] RANN_2.6.1                nlme_3.1-151             
+##  [87] pbapply_1.4-3             future_1.21.0            
+##  [89] sparseMatrixStats_1.2.0   mime_0.9                 
+##  [91] formatR_1.7               hdf5r_1.3.3              
+##  [93] compiler_4.0.3            beeswarm_0.2.3           
+##  [95] plotly_4.9.2.2            png_0.1-7                
+##  [97] spatstat.utils_1.17-0     tibble_3.0.4             
+##  [99] statmod_1.4.35            stringi_1.5.3            
+## [101] RSpectra_0.16-0           lattice_0.20-41          
+## [103] bluster_1.0.0             Matrix_1.3-0             
+## [105] vctrs_0.3.6               pillar_1.4.7             
+## [107] lifecycle_0.2.0           lmtest_0.9-38            
+## [109] RcppAnnoy_0.0.18          BiocNeighbors_1.8.0      
+## [111] data.table_1.13.6         bitops_1.0-6             
+## [113] irlba_2.3.3               httpuv_1.5.4             
+## [115] patchwork_1.1.1           R6_2.5.0                 
+## [117] promises_1.1.1            KernSmooth_2.23-18       
+## [119] gridExtra_2.3             vipor_0.4.5              
+## [121] parallelly_1.23.0         codetools_0.2-18         
+## [123] MASS_7.3-53               assertthat_0.2.1         
+## [125] openssl_1.4.3             withr_2.3.0              
+## [127] sctransform_0.3.2         GenomeInfoDbData_1.2.4   
+## [129] mgcv_1.8-33               rpart_4.1-15             
+## [131] grid_4.0.3                beachmat_2.6.0           
+## [133] tidyr_1.1.2               rmarkdown_2.6            
+## [135] DelayedMatrixStats_1.12.0 Rtsne_0.15               
+## [137] shiny_1.5.0               ggbeeswarm_0.6.0
 ```

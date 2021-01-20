@@ -1,7 +1,7 @@
 ---
 title: "Scater/Scran: Quality control"
 author: "Åsa Björklund  &  Paulo Czarnewski"
-date: 'January 18, 2021'
+date: 'January 20, 2021'
 output:
   html_document:
     self_contained: true
@@ -164,8 +164,8 @@ gc()
 
 ```
 ##            used  (Mb) gc trigger  (Mb) max used  (Mb)
-## Ncells  7539159 402.7   11565925 617.7 11565925 617.7
-## Vcells 32519850 248.2   89896562 685.9 73655180 562.0
+## Ncells  7541778 402.8   11621170 620.7 11451228 611.6
+## Vcells 32525209 248.2   89906018 686.0 73660653 562.0
 ```
 
 
@@ -451,7 +451,7 @@ dim(sce.filt)
 When working with human or animal samples, you should ideally constrain you experiments to a single sex to avoid including sex bias in the conclusions. However this may not always be possible. By looking at reads from chromosomeY (males) and XIST (X-inactive specific transcript) expression (mainly female) it is quite easy to determine per sample which sex it is. It can also bee a good way to detect if there has been any sample mixups, if the sample metadata sex does not agree with the computational predictions.
 
 To get choromosome information for all genes, you should ideally parse the information from the gtf file that you used in the mapping pipeline as it has the exact same annotation version/gene naming. However, it may not always be available, as in this case where we have downloaded public data. Hence, we will use biomart to fetch chromosome information. 
-As the biomart instances quite often are unresponsive, you can try the code below, but if it fails, we have the file with gene annotations on github [here](). Make sure you put it at the correct location for the path `genes.file` to work. 
+As the biomart instances quite often are unresponsive, you can try the code below, but if it fails, we have the file with gene annotations on github [here](https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/labs/misc/genes.table.csv). Make sure you put it at the correct location for the path `genes.file` to work. 
 
 
 ```r
@@ -598,11 +598,11 @@ plot_grid(plotColData(sce.filt, y = "G2M.score", x = "G1.score", colour_by = "sa
 ```
 
 ```
-## Warning: Removed 403 rows containing non-finite values (stat_ydensity).
+## Warning: Removed 402 rows containing non-finite values (stat_ydensity).
 ```
 
 ```
-## Warning: Removed 403 rows containing missing values (position_quasirandom).
+## Warning: Removed 402 rows containing missing values (position_quasirandom).
 ```
 
 ![](scater_01_qc_files/figure-html/unnamed-chunk-22-1.png)<!-- -->
@@ -643,7 +643,7 @@ summary(dbl.dens)
 
 ```
 ##     Min.  1st Qu.   Median     Mean  3rd Qu.     Max. 
-##  0.00000  0.09434  0.22405  0.46928  0.44810 20.63600
+##  0.00000  0.09434  0.22405  0.46980  0.44810 20.67138
 ```
 
 ```r
@@ -662,7 +662,7 @@ table(sce.filt$doublet)
 ```
 ## 
 ## Doublet Singlet 
-##     172    5724
+##     166    5730
 ```
 
 ```r
@@ -687,7 +687,7 @@ dim(sce.filt)
 ```
 
 ```
-## [1] 18121  5724
+## [1] 18121  5730
 ```
 
 # Save data
@@ -748,10 +748,10 @@ sessionInfo()
 ##  [15] ROCR_1.0-11               limma_3.46.0             
 ##  [17] globals_0.14.0            colorspace_2.0-0         
 ##  [19] blob_1.2.1                ggrepel_0.9.0            
-##  [21] xfun_0.19                 dplyr_1.0.2              
+##  [21] xfun_0.19                 dplyr_1.0.3              
 ##  [23] crayon_1.3.4              RCurl_1.98-1.2           
-##  [25] jsonlite_1.7.2            spatstat_1.64-1          
-##  [27] spatstat.data_1.7-0       survival_3.2-7           
+##  [25] jsonlite_1.7.2            spatstat.data_1.7-0      
+##  [27] spatstat_1.64-1           survival_3.2-7           
 ##  [29] zoo_1.8-8                 glue_1.4.2               
 ##  [31] polyclip_1.10-0           gtable_0.3.0             
 ##  [33] zlibbioc_1.36.0           XVector_0.30.0           
@@ -799,13 +799,13 @@ sessionInfo()
 ## [117] KernSmooth_2.23-18        gridExtra_2.3            
 ## [119] vipor_0.4.5               parallelly_1.23.0        
 ## [121] codetools_0.2-18          MASS_7.3-53              
-## [123] withr_2.3.0               sctransform_0.3.2        
-## [125] GenomeInfoDbData_1.2.4    mgcv_1.8-33              
-## [127] rpart_4.1-15              grid_4.0.3               
-## [129] beachmat_2.6.0            tidyr_1.1.2              
-## [131] rmarkdown_2.6             DelayedMatrixStats_1.12.0
-## [133] Rtsne_0.15                shiny_1.5.0              
-## [135] ggbeeswarm_0.6.0
+## [123] assertthat_0.2.1          withr_2.3.0              
+## [125] sctransform_0.3.2         GenomeInfoDbData_1.2.4   
+## [127] mgcv_1.8-33               rpart_4.1-15             
+## [129] grid_4.0.3                beachmat_2.6.0           
+## [131] tidyr_1.1.2               rmarkdown_2.6            
+## [133] DelayedMatrixStats_1.12.0 Rtsne_0.15               
+## [135] shiny_1.5.0               ggbeeswarm_0.6.0
 ```
 
 
