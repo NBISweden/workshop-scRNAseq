@@ -1,6 +1,6 @@
 ---
 author: "Åsa Björklund  &  Paulo Czarnewski"
-date: 'January 19, 2021'
+date: 'January 20, 2021'
 output:
   html_document:
     self_contained: true
@@ -42,9 +42,10 @@ We will select one sample from the Covid data, `ctrl_13` and predict celltype by
 Some methods will predict a celltype to each cell based on what it is most similar to even if the celltype of that cell is not included in the reference. Other methods include an uncertainty so that cells with low similarity scores will be unclassified.
 There are multiple different methods to predict celltypes, here we will just cover a few of those. 
 
-Here we will use a reference PBMC dataset from the `scPred` package which is already a Seurat object with counts. And test classification based on label transfer using the function `TransferData` in the Seurat package and the `scPred` method. 
+Here we will use a reference PBMC dataset from the `scPred` package which is already a Seurat object with counts. And we will test classification based on label transfer using the function `TransferData` in the Seurat package and the `scPred` method. Finally we will use gene set enrichment predict celltype based on the DEGs of each cluster. 
 
-## Load data
+# Load and process data
+## Covid-19 data
 First, lets load required libraries and the saved object from the clustering step. Subset for one patient.
 
 
@@ -81,6 +82,7 @@ ctrl
 ```
 
 
+## Reference data
 Then, load the reference dataset with annotated labels. Also, run all steps of the normal analysis pipeline with normalizaiton, variable gene selection, scaling and dimensionality reduction.
 
 
@@ -97,6 +99,7 @@ reference
 ```
 
 
+## Rerun analysis pipeline
 Here, we will run all the steps that we did in previous labs in one go using the `magittr` package with the pipe-operator `%>%`.
 
 
@@ -132,7 +135,7 @@ DimPlot(ctrl, label = TRUE, repel = TRUE) + NoAxes()
 ![](seurat_06_celltype_files/figure-html/unnamed-chunk-7-1.png)<!-- -->
 
 
-## Seurat label transfer
+# Seurat label transfer
 First we will run label transfer using a similar method as in the integration exercise. But, instad of CCA the default for the 'FindTransferAnchors` function is to use "pcaproject", e.g. the query datset is projected onto the PCA of the reference dataset. Then, the labels of the reference data are predicted.
 
 
@@ -160,7 +163,7 @@ ggplot(ctrl@meta.data, aes(x = CCA_snn_res.0.3, fill = predicted.id)) + geom_bar
 
 ![](seurat_06_celltype_files/figure-html/unnamed-chunk-10-1.png)<!-- -->
 
-## scPred
+# scPred
 scPred will train a classifier based on all principal components. First, `getFeatureSpace` will create a scPred object stored in the `@misc` slot where it extracts the PCs that best separates the different celltypes. Then `trainModel` will do the actual training for each celltype.
 
 
@@ -245,7 +248,7 @@ ggplot(ctrl@meta.data, aes(x = CCA_snn_res.0.3, fill = scpred_prediction)) + geo
 
 ![](seurat_06_celltype_files/figure-html/unnamed-chunk-15-1.png)<!-- -->
 
-## Compare results
+# Compare results
 
 Now we will compare the output of the two methods using the convenient function in scPred `crossTab` that prints the overlap between two metadata slots.
 
@@ -305,19 +308,16 @@ top50_cell_selection <- reference_markers %>% group_by(cluster) %>% top_n(-100, 
     top_n(50, avg_logFC)
 
 # Transform the markers into a list
-ref_list <- lapply(unique(top50_cell_selection$cluster), function(x) {
-    x <- top50_cell_selection$gene[top50_cell_selection$cluster == x]
-})
-names(ref_list) <- unique(top50_cell_selection$cluster)
+ref_list = split(top50_cell_selection$gene, top50_cell_selection$cluster)
 
 unlist(lapply(ref_list, length))
 ```
 
 ```
-## Plasma cell       cMono      ncMono         cDC         pDC      B cell 
-##          50          50          50          50          50          50 
-##     NK cell  CD8 T cell  CD4 T cell 
-##          50          30          14
+##  CD8 T cell  CD4 T cell       cMono      B cell     NK cell         pDC 
+##          30          14          50          50          50          50 
+##      ncMono         cDC Plasma cell 
+##          50          50          50
 ```
 
 Now we can run GSEA for the DEGs from our dataset and check for enrichment of top DEGs in the reference dataset.
@@ -464,7 +464,7 @@ new.cluster.ids <- unlist(lapply(res, function(x) {
     as.data.frame(x)[1, 1]
 }))
 
-alldata$ref_gsea <- new.cluster.ids[alldata@active.ident]
+alldata$ref_gsea <- new.cluster.ids[as.character(alldata@active.ident)]
 
 cowplot::plot_grid(ncol = 2, DimPlot(alldata, label = T, group.by = "CCA_snn_res.0.3") + 
     NoAxes(), DimPlot(alldata, label = T, group.by = "ref_gsea") + NoAxes())
@@ -645,7 +645,7 @@ lapply(res, head, 3)
 new.cluster.ids <- unlist(lapply(res, function(x) {
     as.data.frame(x)[1, 1]
 }))
-alldata$cellmarker_gsea <- new.cluster.ids[alldata@active.ident]
+alldata$cellmarker_gsea <- new.cluster.ids[as.character(alldata@active.ident)]
 
 cowplot::plot_grid(ncol = 2, DimPlot(alldata, label = T, group.by = "ref_gsea") + 
     NoAxes(), DimPlot(alldata, label = T, group.by = "cellmarker_gsea") + NoAxes())
@@ -657,7 +657,7 @@ Do you think that the methods overlap well? Where do you see the most inconsiste
 
 In this case we do not have any ground truth, and we cannot say wich method performs best. You should keep in mind, that any celltype classification method is just a prediction, and you still need to use your common sense and knowledge of the biological system to judge if the results make sense.
 
-## Save data
+# Save data
 Finally, lets save the data with predictions.
 
 
