@@ -810,25 +810,61 @@ for( pipeline in c("seurat","scater")){
 #CT_ALL1:We will select one sample from the Covid data, `ctrl_13` and predict celltype by cell on that sample.
 #CT_ALL1:
 #CT_ALL1:Some methods will predict a celltype to each cell based on what it is most similar to even if the celltype of that cell is not included in the reference. Other methods include an uncertainty so that cells with low similarity scores will be unclassified.
+#CT_ALL1:There are multiple different methods to predict celltypes, here we will just cover a few of those. 
 
-#CT_SEURAT1:Here we will use a reference PBMC dataset from the `scPred` package which is already a Seurat object with counts. And test classification based on label transfer using the function `TransferData` in the Seurat package, the `scPred` method and `singleR` method.
+
+#CT_SEURAT1:Here we will use a reference PBMC dataset from the `scPred` package which is already a Seurat object with counts. And we will test classification based on label transfer using the function `TransferData` in the Seurat package and the `scPred` method. Finally we will use gene set enrichment predict celltype based on the DEGs of each cluster. 
+
+#CT_SCRAN1:Here we will use a reference PBMC dataset from the `scPred` package which is provided as a Seurat object with counts. And we will test classification based on the `scPred` and `scMap` methods. Finally we will use gene set enrichment predict celltype based on the DEGs of each cluster.
 
 
-#CT_ALL2:## Load data
+#CT_ALL2:# Load and process data
+
+#CT_ALL2:## Covid-19 data
 #CT_ALL2:First, lets load required libraries and the saved object from the clustering step. Subset for one patient.
 
+#CT_ALL3:## Reference data
 #CT_ALL3:Then, load the reference dataset with annotated labels. Also, run all steps of the normal analysis pipeline with normalizaiton, variable gene selection, scaling and dimensionality reduction.
 
+#CT_SCRAN3:## Rerun analysis pipeline
+#CT_SCRAN3:Run normalization, feature selection and dimensionality reduction
+
+
+#CT_SEURAT3:## Rerun analysis pipeline
 #CT_SEURAT3:Here, we will run all the steps that we did in previous labs in one go using the `magittr` package with the pipe-operator `%>%`.
 
 #CT_ALL4:Run all steps of the analysis for the ctrl sample as well. Use the clustering from the integration lab with resolution 0.3.
 
-#CT_SEURAT4:## Seurat label transfer
+#CT_SCRAN5:# scMap
+#CT_SCRAN5:The scMap package is one method for projecting cells from a scRNA-seq experiment on to the cell-types or individual cells identified in a different experiment. It can be run on different levels, either projecting by cluster or by single cell, here we will try out both.
+
+#CT_SCRAN5.1:## scMap cluster
+
+#CT_SCRAN5.1:For scmap cell type labels must be stored in the `cell_type1` column of the `colData` slots, and gene ids that are consistent across both datasets must be stored in the `feature_symbol` column of the `rowData` slots.
+#CT_SCRAN5.1:Then we can select variable features in both datasets.
+
+#CT_SCRAN5.2:Then we need to index the reference dataset by cluster, default is the clusters in `cell_type1`.
+#CT_SCRAN5.3:Now we project the Covid-19 dataset onto that index.
+#CT_SCRAN5.4:Then add the predictions to metadata and plot umap.
+
+#CT_SCRAN5.5:## scMap cell
+#CT_SCRAN5.5:We can instead index the refernce data based on each single cell and project our data onto the closest neighbor in that dataset.
+#CT_SCRAN5.6:
+#CT_SCRAN5.6:Again we need to index the reference dataset.
+
+#CT_SCRAN5.7:We now get a table with index for the 5 nearest neigbors in the reference dataset for each cell in our dataset.
+#CT_SCRAN5.7:We will select the celltype of the closest neighbor and assign it to the data.
+
+#CT_SCRAN5.8:Then add the predictions to metadata and plot umap.
+
+
+#CT_SEURAT4:# Seurat label transfer
 #CT_SEURAT4:First we will run label transfer using a similar method as in the integration exercise. But, instad of CCA the default for the 'FindTransferAnchors` function is to use "pcaproject", e.g. the query datset is projected onto the PCA of the reference dataset. Then, the labels of the reference data are predicted.
 
 #CT_SEURAT4.2:Now plot how many cells of each celltypes can be found in each cluster.
 
-#CT_SEURAT5:## scPred
+
+#CT_SEURAT5:# scPred
 #CT_SEURAT5:scPred will train a classifier based on all principal components. First, `getFeatureSpace` will create a scPred object stored in the `@misc` slot where it extracts the PCs that best separates the different celltypes. Then `trainModel` will do the actual training for each celltype.
 
 #CT_SEURAT5.2:We can then print how well the training worked for the different celltypes by printing the number of PCs used for each, the ROC value and Sensitivity/Specificity. Which celltypes do you think are harder to classify based on this dataset?
@@ -839,13 +875,40 @@ for( pipeline in c("seurat","scater")){
 
 #CT_SEURAT5.4:Now plot how many	cells of each celltypes	can be found in	each cluster.
 
-#CT_ALL6:## Compare results
+#CT_ALL6:# Compare results
 #CT_SEURAT6:Now we will compare the output of the two methods using the convenient function in scPred `crossTab` that prints the overlap between two metadata slots.
+
+#CT_GSEA_TITLE:# GSEA with celltype markers
+
+#CT_GSEA1:Another option, where celltype can be classified on cluster level is to use gene set enrichment among the DEGs with known markers for different celltypes. Similar to how we did functional enrichment for the DEGs in the Differential expression exercise. 
+#CT_GSEA1:There are some resources for celltype gene sets that can be used. Such as [CellMarker](http://bio-bigdata.hrbmu.edu.cn/CellMarker/), [PanglaoDB](https://panglaodb.se/) or celltype gene sets at [MSigDB](https://www.gsea-msigdb.org/gsea/msigdb/index.jsp).
+#CT_GSEA1:We can also look at overlap between DEGs in a reference dataset and the dataset you are analysing. 
+
+#CT_GSEA2:## DEG overlap
+#CT_GSEA2:First, lets extract top DEGs for our Covid-19 dataset and the reference dataset.
+#CT_GSEA2:When we run differential expression for our dataset, we want to report as many genes as possible, hence we set the cutoffs quite lenient.
+
+#CT_GSEA3:Now we can run GSEA for the DEGs from our dataset and check for enrichment of top DEGs in the reference dataset.
+
+#CT_GSEA4:Selecing top significant overlap per cluster, we can now rename the clusters according to the predicted labels. OBS! Be aware that if you have some clusters that have bad p-values for all the gene sets, the cluster label will not be very reliable. Also, the gene sets you are using may not cover all the celltypes you have in your dataset and hence predictions may just be the most similar celltype.
+
+#CT_GSEA4:Also, some of the clusters have very similar p-values to multiple celltypes, for instance the ncMono and cMono celltypes are equally good for some clusters.
+
+#CT_GSEA5:Compare to results with the other celltype prediction methods in the ctrl_13 sample.
+
+#CT_GSEA6:## With annotated gene sets
+#CT_GSEA6:First download celltype gene sets from CellMarker.
+
+#CT_GSEA7:Read in the gene lists and do some filering.
+
 
 #CT_ALL7:Do you think that the methods overlap well? Where do you see the most inconsistencies?
 #CT_ALL7:
 #CT_ALL7:In this case we do not have any ground truth, and we cannot say wich method performs best. You should keep in mind, that any celltype classification method is just a prediction, and you still need to use your common sense and knowledge of the biological system to judge if the results make sense.
+
+
 #CT_ALL7:
+#CT_ALL7:# Save data
 #CT_ALL7:Finally, lets save the data with predictions.
 
 
