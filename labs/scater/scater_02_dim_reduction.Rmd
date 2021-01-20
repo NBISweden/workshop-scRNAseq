@@ -37,14 +37,19 @@ var.out <- modelGeneVar(sce, method="loess")
 
 mypar(1,2)
 #plot mean over TOTAL variance
-plot(var.out$mean, var.out$total, pch=16, cex=0.4, xlab="Mean log-expression",
-     ylab="Variance of log-expression")
-o <- order(var.out$mean)
-lines(var.out$mean[o], var.out$tech[o], col="dodgerblue", lwd=2)
+# Visualizing the fit:
+fit.var <- metadata(var.out)
+plot(fit.var$mean, fit.var$var, xlab="Mean of log-expression",
+    ylab="Variance of log-expression")
+curve(fit.var$trend(x), col="dodgerblue", add=TRUE, lwd=2)
 
-cutoff_value <- 0.2
-cutoff <- var.out$bio > cutoff_value
-points(var.out$mean[cutoff], var.out$total[cutoff], col="red", pch=16,cex=.6)
+#Select 1000 top variable genes
+hvg.out <- getTopHVGs(var.out, n=1000)
+
+# highligt those cells in the plot
+cutoff <- rownames(var.out) %in% hvg.out
+points(fit.var$mean[cutoff], fit.var$var[cutoff], col="red", pch=16,cex=.6)
+
 
 #plot mean over BIOLOGICAL variance
 plot(var.out$mean, var.out$bio, pch=16, cex=0.4, xlab="Mean log-expression",
@@ -52,10 +57,6 @@ plot(var.out$mean, var.out$bio, pch=16, cex=0.4, xlab="Mean log-expression",
 lines(c(min(var.out$mean),max(var.out$mean)), c(0,0), col="dodgerblue", lwd=2)
 points(var.out$mean[cutoff], var.out$bio[cutoff], col="red", pch=16,cex=.6)
 
-hvg.out <- var.out[which(var.out$FDR <= 0.05 & var.out$bio >= cutoff_value),]
-hvg.out <- hvg.out[order(hvg.out$bio, decreasing=TRUE),]
-
-print(nrow(hvg.out))
 ```
 
 #DIMRED_ALL3:
@@ -77,12 +78,11 @@ print(nrow(hvg.out))
 #PCA_SCRAN:
 
 ```{r}
-#Default Scater way
+#runPCA and specify the variable genes to use for dim reduction with subset_row
 sce <- runPCA(sce, exprs_values = "logcounts",
               ncomponents = 50,
-              ntop = 500,
-              subset_row = NULL,
-              scale = FALSE)
+              subset_row = hvg.out,
+              scale = TRUE)
 ```
 
 #PCA_ALL2:

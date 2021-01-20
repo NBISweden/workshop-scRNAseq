@@ -35,7 +35,7 @@ sce <- readRDS("data/results/covid_qc_dr_int_cl.rds")
 ```{r}
 #Compute differentiall expression
 markers_genes <- scran::findMarkers( x = sce,
-                              groups = as.character(sce$louvain_SNNk10),
+                              groups = as.character(sce$louvain_SNNk15),
                               lfc=.5,
                               pval.type = "all",
                               direction = "up")
@@ -60,7 +60,7 @@ top25
 #DGE_ALL4:
 
 ```{r}
-mypar(1,5,mar=c(4,6,3,1))
+par(mfrow=c(1,5),mar=c(4,6,3,1))
 for(i in unique(top25$cluster)){
   barplot( sort( setNames(-log10(top25$p.value), top25$gene) [top25$cluster == i], F),
            horiz = T,las=1 ,main=paste0(i," vs. rest"),border = "white", yaxs="i",xlab="-log10FC" )
@@ -73,9 +73,9 @@ for(i in unique(top25$cluster)){
 ```{r}
 as_tibble(top25) %>% group_by(cluster)  %>% top_n(-5, p.value) -> top5
 
-scater::plotHeatmap(sce[,order(sce$louvain_SNNk10)], features = unique(top5$gene) ,
+scater::plotHeatmap(sce[,order(sce$louvain_SNNk15)], features = unique(top5$gene) ,
                     center=T , zlim = c(-3,3) ,
-                    colour_columns_by= "louvain_SNNk10",
+                    colour_columns_by= "louvain_SNNk15",
                     show_colnames=F , cluster_cols=F,
                     fontsize_row=6,
                     color=colorRampPalette(c("purple","black","yellow"))(90)
@@ -85,7 +85,7 @@ scater::plotHeatmap(sce[,order(sce$louvain_SNNk10)], features = unique(top5$gene
 #DGE_ALL4.3:
 
 ```{r,fig.height=10,fig.width=10}
-scater::plotExpression(sce, features = unique(top5$gene), x = "louvain_SNNk10", ncol = 5, colour_by = "louvain_SNNk10", scales="free")
+scater::plotExpression(sce, features = unique(top5$gene), x = "louvain_SNNk15", ncol = 5, colour_by = "louvain_SNNk15", scales="free")
 ```
 
 
@@ -95,11 +95,11 @@ scater::plotExpression(sce, features = unique(top5$gene), x = "louvain_SNNk10", 
 
 ```{r,fig.height=10,fig.width=10}
 #Filter cells from that cluster
-cell_selection <- sce[ , sce$louvain_SNNk10 == 1 ]
+cell_selection <- sce[ , sce$louvain_SNNk15 == 6 ]
 
 #Compute differentiall expression
 DGE_cell_selection <- findMarkers( x = cell_selection,
-                              groups = cell_selection$type,
+                              groups = cell_selection@colData$type,
                               lfc=.25,
                               pval.type = "all",
                               direction = "any")
@@ -202,7 +202,6 @@ fgseaRes <- fgseaRes[ order(fgseaRes$NES,decreasing = T) ,]
 top10_UP <- fgseaRes$pathway [1:10]
 
 # Nice summary table (shown as a plot)
-dev.off()
 plotGseaTable(gmt[top10_UP], gene_rank, fgseaRes, gseaParam = 0.5)
 ```
 
