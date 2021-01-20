@@ -12,6 +12,8 @@ editor_options:
 
 #CT_SEURAT1:
 
+#CT_ALL2:
+
 ```{r}
 suppressPackageStartupMessages({
   library(Seurat)
@@ -37,12 +39,14 @@ ctrl
 ```
 
 
+#CT_ALL3:
 
 ```{r}
 reference <- scPred::pbmc_1
 
 reference
 ```
+
 
 #CT_SEURAT3:
 
@@ -139,25 +143,100 @@ ggplot(ctrl@meta.data, aes(x=CCA_snn_res.0.3, fill = scpred_prediction)) + geom_
 crossTab(ctrl, "predicted.id", "scpred_prediction")
 ```
 
-#CT_ALL7:
+
+#CT_GSEA_TITLE:
+
+#CT_GSEA1:
+
+#CT_GSEA2:
 
 ```{r}
-saveRDS(ctrl,"data/results/ctrl13_qc_dr_int_cl_celltype.rds")
+# run differential expression in our dataset, using clustering at resolution 0.3
+alldata <- SetIdent(alldata,value = "CCA_snn_res.0.3")
+DGE_table <- FindAllMarkers(alldata,
+                               logfc.threshold = 0,
+                               test.use = "wilcox",
+                               min.pct = 0,
+                               min.diff.pct = 0,
+                               only.pos = TRUE,
+                               max.cells.per.ident = 20,
+                               return.thresh = 1,
+                               assay = "RNA")
+# split into a list
+DGE_list <- split(DGE_table, DGE_table$cluster)
+
+unlist(lapply(DGE_list, nrow))
 ```
-
-
-#SESSION_INFO:
 
 ```{r}
-sessionInfo()
+# Compute differential gene expression in reference dataset (that has cell annotation)
+reference <- SetIdent( reference, value = "cell_type")
+reference_markers <- FindAllMarkers( reference , min.pct = .1 , 
+                                     min.diff.pct = .2, only.pos = T, 
+                                     max.cells.per.ident = 20 ,
+                                     return.thresh = 1 )
+
+# Identify the top cell marker genes in reference dataset
+# select top 50 with hihgest foldchange among top 100 signifcant genes.
+reference_markers <- reference_markers [ order(reference_markers$avg_logFC,decreasing = T), ]
+reference_markers %>% 
+  group_by(cluster) %>% 
+  top_n(-100, p_val) %>% 
+  top_n(50, avg_logFC) -> top50_cell_selection
+
+# Transform the markers into a list
+ref_list = split(top50_cell_selection$gene, top50_cell_selection$cluster)
+
+unlist(lapply(ref_list, length))
 ```
 
+#CT_GSEA3:
 
+```{r}
+suppressPackageStartupMessages(library(fgsea))
 
+# run fgsea for each of the clusters in the list
+res <- lapply(DGE_list, function(x){
+  gene_rank <- setNames(x$avg_logFC, x$gene)
+  fgseaRes <- fgsea( pathways=ref_list, stats=gene_rank)
+  return(fgseaRes)
+})
+names(res) <- names(DGE_list)
 
+# You can filter and resort the table based on ES, NES or pvalue
+res <- lapply(res, function(x) {x[ x$pval < 0.1 , ]} )
+res <- lapply(res, function(x) {x[ x$size > 2 , ]} )
+res <- lapply(res, function(x) {x[order(x$NES,decreasing = T), ]} )
+res
+```
 
+#CT_GSEA4:
 
+```{r}
+new.cluster.ids <- unlist(lapply(res,function(x){as.data.frame(x)[1,1]}))
 
+alldata$ref_gsea <- new.cluster.ids[as.character(alldata@active.ident)]
+
+cowplot::plot_grid( ncol = 2,
+DimPlot(alldata,label = T,group.by = "CCA_snn_res.0.3") + NoAxes(),
+DimPlot(alldata,label = T, group.by = "ref_gsea") + NoAxes()
+)
+
+```
+
+#CT_GSEA5:
+
+```{r, fig.width=10}
+ctrl$ref_gsea = alldata$ref_gsea[alldata$orig.ident == "ctrl_13"]
+
+cowplot::plot_grid( ncol = 3,
+DimPlot(ctrl,label = T,group.by = "ref_gsea") + NoAxes() + ggtitle("GSEA"),
+DimPlot(ctrl,label = T, group.by = "predicted.id") + NoAxes() + ggtitle("LabelTransfer"),
+DimPlot(ctrl,label = T, group.by = "scpred_prediction") + NoAxes() + ggtitle("scPred")
+)
+```
+
+#CT_GSEA6:
 
 ```{r}
 # Download gene marker list
@@ -167,19 +246,16 @@ if(!dir.exists("data/CellMarker_list/")) {
                 destfile = "./data/CellMarker_list/Human_cell_markers.txt")
   download.file(url="http://bio-bigdata.hrbmu.edu.cn/CellMarker/download/Mouse_cell_markers.txt",
                 destfile = "./data/CellMarker_list/Mouse_cell_markers.txt")
-  download.file(url="https://www.gsea-msigdb.org/gsea/msigdb/download_file.jsp?filePath=/msigdb/release/7.2/c8.all.v7.2.symbols.gmt","./data/MSigDB_files/c8.all.v7.2.symbols.gmt.txt")
+
 }
 ```
 
-
+#CT_GSEA7:
 
 ```{r}
-celltype_list <- gmtPathways("~/Downloads/c8.all.v7.2.symbols.gmt")
-length(celltype_list)
 
-# Load the table
+# Load the human marker table
 markers <- read.delim("data/CellMarker_list/Human_cell_markers.txt")
-colnames(markers)
 markers <- markers [ markers$speciesType == "Human", ]
 markers <- markers [ markers$cancerType == "Normal", ]
 
@@ -189,8 +265,9 @@ markers <- markers [ markers$cancerType == "Normal", ]
 # markers <- markers [ markers$tissueType %in% c("Blood","Venous blood",
 #                                                "Serum","Plasma",
 #                                                "Spleen","Bone marrow","Lymph node"), ]
-# markers <- markers [ markers$tissueType %in% c("Blood"), ]
 
+
+# remove strange characters etc.
 celltype_list <- lapply( unique(markers$cellName) , function(x){
   x <- paste(markers$geneSymbol[markers$cellName == x],sep=",")
   x <- gsub("[[]|[]]| |-",",",x)
@@ -203,68 +280,50 @@ names(celltype_list) <- unique(markers$cellName)
 celltype_list <- celltype_list[ unlist(lapply(celltype_list,length)) < 100 ]
 celltype_list <- celltype_list[ unlist(lapply(celltype_list,length)) > 5 ]
 
-
-
-# Compute differential gene expression in reference dataset (that has cell annotation)
-reference <- SetIdent( reference, value = "cell_type")
-reference_markers <- FindAllMarkers( reference , min.pct = .1 , 
-                                     min.diff.pct = .2, only.pos = T, 
-                                     max.cells.per.ident = 20 ,
-                                     return.thresh = 1 )
-
-# Identify the top cell marker genes in reference dataset
-reference_markers <- reference_markers [ order(reference_markers$avg_logFC,decreasing = T), ]
-reference_markers %>% 
-  group_by(cluster) %>% 
-  top_n(-100, p_val) %>% 
-  top_n(50, avg_logFC) -> top10_cell_selection
-
-# Transform the markers into a list
-celltype_list <- lapply( unique(top10_cell_selection$cluster) , function(x){
-  x <- top10_cell_selection$gene [top10_cell_selection$cluster == x]
-} )
-names(celltype_list) <- unique(top10_cell_selection$cluster)
-celltype_list
-
 ```
 
-
 ```{r}
-alldata <- SetIdent(alldata,value = "CCA_snn_res.0.3")
-DGE_list <- FindAllMarkers(alldata,
-                               logfc.threshold = 0,
-                               test.use = "wilcox",
-                               min.pct = 0,
-                               min.diff.pct = 0,
-                               only.pos = TRUE,
-                               max.cells.per.ident = 20,
-                               return.thresh = 1,
-                               assay = "RNA")
-
-
-res <- lapply(as.character(unique(DGE_list$cluster)),function(x){
-  gene_rank <- setNames(DGE_list$avg_logFC [ DGE_list$cluster == x],
-                        DGE_list$gene [ DGE_list$cluster == x])
+# run fgsea for each of the clusters in the list
+res <- lapply(DGE_list, function(x){
+  gene_rank <- setNames(x$avg_logFC, x$gene)
   fgseaRes <- fgsea( pathways=celltype_list, stats=gene_rank)
   return(fgseaRes)
 })
-names(res) <- as.character(unique(DGE_list$cluster))
-res
+names(res) <- names(DGE_list)
 
-# You can resort the table based on ES, NES or pvalue
-res <- lapply(res, function(x) {x[ x$pval < 0.1 , ]} )
-res <- lapply(res, function(x) {x[ x$size > 2 , ]} )
+# You can filter and resort the table based on ES, NES or pvalue
+res <- lapply(res, function(x) {x[ x$pval < 0.01 , ]} )
+res <- lapply(res, function(x) {x[ x$size > 5 , ]} )
 res <- lapply(res, function(x) {x[order(x$NES,decreasing = T), ]} )
-res
 
-new.cluster.ids <- unlist(lapply(res,function(x){as.data.frame(x)[1,1]}))
-alldata <- RenameIdents(alldata, new.cluster.ids)
-alldata$predicted <- alldata@active.ident
-
-DimPlot(alldata,label = T,group.by = "CCA_snn_res.0.3")
-DimPlot(alldata,label = T)
+# show top 3 for each cluster.
+lapply(res,head,3)
 ```
 
 
+#CT_GSEA8:
 
+```{r}
+new.cluster.ids <- unlist(lapply(res,function(x){as.data.frame(x)[1,1]}))
+alldata$cellmarker_gsea <- new.cluster.ids[as.character(alldata@active.ident)]
+
+cowplot::plot_grid( ncol = 2,
+DimPlot(alldata,label = T,group.by = "ref_gsea") + NoAxes(),
+DimPlot(alldata,label = T, group.by = "cellmarker_gsea") + NoAxes()
+)
+
+```
+
+#CT_ALL7:
+
+```{r}
+saveRDS(ctrl,"data/results/ctrl13_qc_dr_int_cl_celltype.rds")
+```
+
+
+#SESSION_INFO:
+
+```{r}
+sessionInfo()
+```
 
