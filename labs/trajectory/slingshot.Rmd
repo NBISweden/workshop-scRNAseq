@@ -1,5 +1,7 @@
 ---
 #CSS_ALL:
+editor_options: 
+  chunk_output_type: console
 ---
 
 #CHUNK_OPT:
@@ -14,34 +16,42 @@
 mkdir data
 
 #Download file from NCBI server into data folder
-curl ftp://ftp.ncbi.nlm.nih.gov/geo/series/GSE72nnn/GSE72857/suppl/GSE72857%5Fumitab%2Etxt%2Egz -o data/GSE72857_umitab.txt.gz
+cd data
+#curl ftp://ftp.ncbi.nlm.nih.gov/geo/series/GSE72nnn/GSE72857/suppl/GSE72857%5Fumitab%2Etxt%2Egz -o GSE72857_umitab.txt.gz
 
-#Decompress it
-gunzip GSE72857_series_matrix.txt.gz
+curl -o barcodes.tsv.gz 'https://www.ncbi.nlm.nih.gov/geo/download/?acc=GSM3396161&format=file&file=GSM3396161%5Fbarcodes%5FA%2Etsv%2Egz'
+curl -o features.tsv.gz 'https://www.ncbi.nlm.nih.gov/geo/download/?acc=GSM3396161&format=file&file=GSM3396161%5Fgenes%5FA%2Etsv%2Egz'
+curl -o matrix.mtx.gz 'https://www.ncbi.nlm.nih.gov/geo/download/?acc=GSM3396161&format=file&file=GSM3396161%5Fmatrix%5FA%2Emtx%2Egz'
 ```
 
 
-### Loading matrix into R and converting it to compressed `.rds` format.
+### Loading matrix into R
 
 ```{r, eval=FALSE}
-data <- read.delim("data/GSE72857_umitab.txt", header = T, row.names = 1)
-comp_matrix <- Matrix::Matrix(as.matrix(data),sparse = T)
-saveRDS(comp_matrix,"data/GSE72857_umitab.rds")
+devtools::install_github('satijalab/seurat-data')
+library(SeuratData)
+
+SeuratData::InstallData("bmcite")
+library(bmcite.SeuratData)
 ```
 
- 
 
 ### Loading data
 
 In order to speed up the computations during the exercises, we will be selecting every fith cell of the dataset.
 
 ```{r}
-umi_counts <- readRDS("data/GSE72857_umitab.rds")
-umi_counts <- umi_counts[ , c(T,F,F,F,F)]
-dim(umi_counts)
+#Subset the data for faster computations
+bmcite <- bmcite.SeuratData::bmcite
+dim(bmcite)
+bmcite <- bmcite[, rep(c(T,F,F,F,F,F,F),20000)[1:ncol(bmcite)] ]
+dim(bmcite)
+umi_counts <- bmcite@assays$RNA@counts
 
 #Define a color pallete to use
-pal <- c( RColorBrewer::brewer.pal(9, "Set1"), RColorBrewer::brewer.pal(8, "Set2"))
+pal <- c( RColorBrewer::brewer.pal(9, "Set1"), RColorBrewer::brewer.pal(8, "Set2"),
+          RColorBrewer::brewer.pal(9, "Pastel1"),RColorBrewer::brewer.pal(8, "Pastel2"),
+          RColorBrewer::brewer.pal(8, "Set3"))
 ```
 
 
@@ -61,23 +71,29 @@ library(igraph)
 })
 
 #Data analysis with Scran pipeline
-data <- SingleCellExperiment( assays = list(counts = umi_counts) )
-data <- computeSumFactors(data, sizes=c(20, 40, 60, 80))
-data <- logNormCounts(data)
-var.fit <- modelGeneVar(data)
-top.hvgs <- getTopHVGs(var.fit, n=2000)
-data <- runPCA(data, subset_row=top.hvgs)
-g <- buildSNNGraph(data, k=5, use.dimred="PCA", assay.type="RNA")
-data$louvain_SNNk5 <- factor( igraph::cluster_louvain(g)$membership )
-data <- runUMAP(data, dimred = "PCA", n_dimred = 50,   ncomponents = 2, spread=2, min_dist = .1, n_neighbors=10, metric="cosine")
+sce <- SingleCellExperiment( assays = list(counts = umi_counts) )
+sce$celltype.l1 <- bmcite$celltype.l1
+sce <- computeSumFactors(sce, sizes=c(20, 40, 60, 80))
+sce <- logNormCounts(sce)
+var.fit <- modelGeneVar(sce)
+top.hvgs <- getTopHVGs(var.fit, n=5000)
+sce <- runPCA(sce, subset_row=top.hvgs, scale=F,ncomponents = 50)
+
+g <- buildSNNGraph(sce, k=3, use.dimred="PCA")
+sce$louvain_SNNk5 <- factor( igraph::cluster_louvain(g)$membership )
+
+sce <- runUMAP(sce, dimred = "PCA", n_dimred = 50,   ncomponents = 2, spread=1,
+               min_dist = .2,n_neighbors=5,repulsion_strength = .01,metric="euclidean",
+               n_epochs = 100,negative_sample_rate = 10)
+
 
 #Plot the clusters
-plotReducedDim(data, dimred = "UMAP",colour_by = "louvain_SNNk5")
+plotReducedDim(sce, dimred = "UMAP",colour_by = "louvain_SNNk5",text_by = "louvain_SNNk5")
 
 #Save the objects as separate matrices for input in slingshot
-dimred <- reducedDim(data, type = "UMAP")
-clustering <- data$louvain_SNNk5
-counts <- as.matrix( counts(data)[ top.hvgs , ] )
+dimred <- reducedDim(sce, type = "UMAP")
+clustering <- sce$louvain_SNNk5
+counts <- as.matrix( counts(sce)[ top.hvgs , ] )
 ```
 
  
@@ -98,20 +114,24 @@ library(cowplot)
 
 #Data analysis with Seurat pipeline
 data <- CreateSeuratObject(counts = umi_counts)
+data$celltype.l1 <- bmcite$celltype.l1
 data <- NormalizeData(data)
-data <- FindVariableFeatures(data, nfeatures = 2000)
+data <- FindVariableFeatures(data, nfeatures = 5000)
 data <- ScaleData(data)
-data <- RunPCA(data)
-data <- FindNeighbors(data)
-data <- FindClusters(data,resolution = 1)
-data <- RunUMAP(data, n.neighbors = 10, dims = 1:50,spread = 2,min.dist = 0.3 )
+data <- RunPCA(data,npcs = 50)
+
+data <- FindNeighbors(data,k.param = 20)
+data <- FindClusters(data,resolution = 0.8)
+
+data <- RunUMAP(data, n.neighbors = 15, dims = 1:50,spread = 1.5,min.dist = .5,
+                repulsion.strength = .001,metric="euclidean",n.epochs = 100,negative.sample.rate = 5 )
 
 #Plot the clusters
-DimPlot(data, group.by = "RNA_snn_res.1")
+DimPlot(data, group.by = "RNA_snn_res.0.8",label = T)
 
 #Save the objects as separate matrices for input in slingshot
 dimred <- data@reductions$umap@cell.embeddings
-clustering <- data$RNA_snn_res.1
+clustering <- data$RNA_snn_res.0.8
 counts <- as.matrix( data@assays$RNA@counts[ data@assays$RNA@var.features , ] )
 ```
 
@@ -149,13 +169,47 @@ lines(lineages, lwd = 3, col = 'black')
 
 Here we see one central issue with trajectory analysis: where does the trajectory begin? Without any extra information, this is nearly an impossible task for a TI method. We need prior biological information to be able to define where the trajectory starts and where it should end.
 
+First, we need to make sure to identify which cluster is the progenitor cell. In this case, they express the marker CD34.
+
+| Marker | Cell Type               |
+|--------|-------------------------|
+| CD34   | HSC progenitor          |
+| MS4A1  | B cell lineage          |
+| CD3E   | T cell lineage          |
+| NKG7   | Cytotoxic NK lineage    |
+| G0S2   | Granulocyte lineage     |
+| CST3   | Monocyte lineage        |
+
+
+```{r}
+#Seurat
+DimPlot(data, group.by = "RNA_snn_res.0.8",label = T)
+FeaturePlot(data,features = "CD34",order = T)
+FeaturePlot(data,features = "CD19",order = T)
+FeaturePlot(data,features = "G0S2",order = T)
+FeaturePlot(data,features = "CD3E",order = T)
+FeaturePlot(data,features = "CST3",order = T)
+FeaturePlot(data,features = "NKG7",order = T)
+
+
+#Scran/Scater
+plotReducedDim(sce, dimred = "UMAP",colour_by = "louvain_SNNk5",text_by = "louvain_SNNk5")
+plotReducedDim(sce, dimred = "UMAP",colour_by = "CD34",by_exprs_values = "logcounts")
+plotReducedDim(sce, dimred = "UMAP",colour_by = "NKG7",by_exprs_values = "logcounts")
+plotReducedDim(sce, dimred = "UMAP",colour_by = "CD3E",by_exprs_values = "logcounts")
+plotReducedDim(sce, dimred = "UMAP",colour_by = "MS4A1",by_exprs_values = "logcounts")
+plotReducedDim(sce, dimred = "UMAP",colour_by = "CST3",by_exprs_values = "logcounts")
+```
+
+Then, we can insert that information on where the trajectory starts on the `getLineages` function.
+
 ```{r}
 #Run default Slingshot
 set.seed(1)
 lineages <- getLineages(data = dimred,
                         clusterLabels = clustering,
-                        #end.clus = c("11","7","10","9","5"), #define how many branches/lineages to consider
-                        start.clus = "0") #define where to start the trajectories
+                        end.clus = c("8","12","9","11","1","12"), #define how many branches/lineages to consider
+                        start.clus = "7") #define where to start the trajectories
 
 lineages
 
@@ -250,9 +304,12 @@ pseudotime_association$feature_id <- rownames(pseudotime_association)
 ```{r}
 feature_id <- pseudotime_association %>%
   filter(pvalue < 0.05) %>%
-  top_n(1, -waldStat) %>%
+  top_n(10, -waldStat) %>%
   pull(feature_id)
-plot_differential_expression(feature_id)
+
+feature_id
+
+plot_differential_expression(feature_id[1])
 ```
 
  
@@ -287,11 +344,13 @@ More interesting are genes that are different between two branches. We may have 
 ```{r}
 different_end_association <- diffEndTest(sce)
 different_end_association$feature_id <- rownames(different_end_association)
+
 feature_id <- different_end_association %>% 
   filter(pvalue < 0.05) %>% 
   arrange(desc(waldStat)) %>% 
   dplyr::slice(1) %>% 
   pull(feature_id)
+
 plot_differential_expression(feature_id)
 ```
 
@@ -305,6 +364,7 @@ feature_id <- branch_point_association %>%
   arrange(desc(waldStat)) %>% 
   dplyr::slice(1) %>% 
   pull(feature_id)
+
 plot_differential_expression(feature_id)
 ```
 
