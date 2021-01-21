@@ -1,7 +1,7 @@
 ---
 title: "Scater/Scran: Quality control"
 #CSS_ALL:
-editor_options: 
+editor_options:
   chunk_output_type: console
 ---
 
@@ -41,6 +41,8 @@ suppressMessages(require(scater))
 suppressMessages(require(scran))
 suppressMessages(require(cowplot))
 suppressMessages(require(org.Hs.eg.db))
+remotes::install_github('chris-mcginnis-ucsf/DoubletFinder')
+suppressMessages(require(DoubletFinder))
 ```
 
 #DATA_ALL3:
@@ -216,7 +218,7 @@ boxplot( as.matrix(t(C[most_expressed,])),cex=.1, las=1, xlab="% total count per
 
 rm(C)
 
-# also, there is the option of running the function "plotHighestExprs" in the scater package, however, this function takes very long to execute. 
+# also, there is the option of running the function "plotHighestExprs" in the scater package, however, this function takes very long to execute.
 ```
 
 #FILTERING_ALL02:
@@ -279,7 +281,6 @@ dim(sce.filt)
 #SEX_ALL2:
 
 ```{r}
-
 genes.file = "data/results/genes.table.csv"
 
 if (!file.exists(genes.file)){
@@ -289,10 +290,10 @@ if (!file.exists(genes.file)){
   mart <- useMart(host="www.ensembl.org", "ENSEMBL_MART_ENSEMBL", dataset="hsapiens_gene_ensembl")
 
   # fetch chromosome info plus some other annotations
-  genes.table <- getBM(attributes= c("ensembl_gene_id",
+  genes.table <- getBM(filters= "external_gene_name", attributes= c("ensembl_gene_id",
               "external_gene_name", "description","gene_biotype", "chromosome_name","start_position"),
-               mart= mart)
-  if( !dir.exists("data/results") ){dir.create("data/results")}
+              values= rownames(sce.filt), mart= mart)
+  if(!dir.exists("data/results")){dir.create("data/results")}
   write.csv(genes.table, file = genes.file)
 }else{
   genes.table = read.csv(genes.file)
@@ -319,7 +320,7 @@ plotColData(sce.filt,  "XIST",  "pct_chrY")
 #SEX_ALL5:
 
 ```{r}
-plot_grid(plotColData(sce.filt, y = "XIST", x = "sample", colour_by = "sample"), 
+plot_grid(plotColData(sce.filt, y = "XIST", x = "sample", colour_by = "sample"),
           plotColData(sce.filt, y = "pct_chrY", x = "sample", colour_by = "sample"),  ncol = 2)
 
 ```
@@ -430,7 +431,3 @@ saveRDS(sce.filt,"data/results/covid_qc.rds")
 ```{r}
 sessionInfo()
 ```
-
-
-
-

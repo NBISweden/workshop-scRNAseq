@@ -22,6 +22,8 @@ output:
       collapsed: false
       smooth_scroll: true
     toc_depth: 3
+editor_options: 
+  chunk_output_type: console
 ---
 
 ```{r setup, include=FALSE}
@@ -41,12 +43,15 @@ In this tutorial we will continue the analysis of the integrated dataset. We wil
 Let's first load all necessary libraries and also the integrated dataset from the previous step.
 
 ```{r, message='hide',warning='hide',results='hold'}
+if(!require(clustree)){install.packages('clustree', dependencies=FALSE)}
+
 suppressPackageStartupMessages({
   library(Seurat)
   library(cowplot)
   library(ggplot2)
   library(pheatmap)
   library(rafalib)
+  library(clustree)
 })
 
 alldata <- readRDS("data/results/covid_qc_dr_int.rds")
@@ -102,7 +107,7 @@ In **Seurat**, the function `FindClusters` will do a graph-based clustering usin
 
 ```{r,results='hide',block.title=TRUE,fig.height=2.9,fig.width=10}
 # Clustering with louvain (algorithm 1)
-for (res in c(0.3,0.5,1,1.5,2)){
+for (res in c( 0.1 , 0.25 , .5 , 1 , 1.5 , 2 )){
   alldata <- FindClusters(alldata, graph.name = "CCA_snn", resolution = res , algorithm = 1)
 }
 
@@ -121,10 +126,10 @@ We can now use the `clustree` package to visualize how cells are distributed bet
 
 
 ```{r}
+# install.packages("clustree")
 suppressPackageStartupMessages(library(clustree))
 
 clustree(alldata@meta.data, prefix = "CCA_snn_res.")
-
 ```
 
 
@@ -135,9 +140,10 @@ clustree(alldata@meta.data, prefix = "CCA_snn_res.")
 K-means is a generic clustering algorithm that has been used in many application areas. In R, it can be applied via the kmeans function. Typically, it is applied to a reduced dimension representation of the expression data (most often PCA, because of the interpretability of the low-dimensional distances). We need to define the number of clusters in advance. Since the results depend on the initialization of the cluster centers, it is typically recommended to run K-means with multiple starting configurations (via the nstart argument).
 
 ```{r,results='hide',block.title=TRUE,fig.height=2.9}
-alldata$kmeans_5 <- kmeans(x = alldata@reductions[["pca"]]@cell.embeddings,centers = 5)$cluster
-alldata$kmeans_10 <- kmeans(x = alldata@reductions[["pca"]]@cell.embeddings,centers = 10)$cluster
-alldata$kmeans_15 <- kmeans(x = alldata@reductions[["pca"]]@cell.embeddings,centers = 15)$cluster
+for (k in c( 5 , 7 , 10 , 12 , 15 , 17 , 20)){
+  alldata@meta.data[,paste0("kmeans_",k)] <- kmeans(x = alldata@reductions[["pca"]]@cell.embeddings,
+                                          centers = k,nstart = 100)$cluster
+}
 
 plot_grid(ncol = 3,
   DimPlot(alldata, reduction = "umap", group.by = "kmeans_5")+ggtitle("kmeans_5"),
@@ -228,9 +234,16 @@ saveRDS(alldata,"data/results/covid_qc_dr_int_cl.rds")
 ```
 
 
-###TASK: Check QC-stats
-By now you should know how to plot different features onto your data. Take the QC metrics that were calculated in the first exercise, that should be stored in your data object, and plot it as violin plots per cluster using the clustering method of your choice. For example, plot number of UMIS, detected genes, percent mitochondrial reads. 
+<style>
+div.blue { background-color:#e6f0ff; border-radius: 5px; padding: 10px;}
+</style>
+<div class = "blue">
+**Your turn**
+
+By now you should know how to plot different features onto your data. Take the QC metrics that were calculated in the first exercise, that should be stored in your data object, and plot it as violin plots per cluster using the clustering method of your choice. For example, plot number of UMIS, detected genes, percent mitochondrial reads.
+
 Then, check carefully if there is any bias in how your data is separated due to quality metrics. Could it be explained biologically, or could you have technical bias there?
+</div>
 
 
 ### Session Info

@@ -1,6 +1,6 @@
 ---
 author: "Åsa Björklund  &  Paulo Czarnewski"
-date: 'January 20, 2021'
+date: 'January 21, 2021'
 output:
   html_document:
     self_contained: true
@@ -78,7 +78,7 @@ ctrl
 ## An object of class Seurat 
 ## 18121 features across 1129 samples within 1 assay 
 ## Active assay: RNA (18121 features, 0 variable features)
-##  2 dimensional reductions calculated: umap, tsne
+##  6 dimensional reductions calculated: umap, tsne, harmony, umap_harmony, scanorama, umap_scanorama
 ```
 
 
@@ -121,7 +121,7 @@ Run all steps of the analysis for the ctrl sample as well. Use the clustering fr
 
 ```r
 # Set the identity as louvain with resolution 0.3
-ctrl <- SetIdent(ctrl, value = "CCA_snn_res.0.3")
+ctrl <- SetIdent(ctrl, value = "CCA_snn_res.0.5")
 
 ctrl <- ctrl %>% NormalizeData() %>% FindVariableFeatures() %>% ScaleData() %>% RunPCA(verbose = F) %>% 
     RunUMAP(dims = 1:30)
@@ -157,7 +157,7 @@ Now plot how many cells of each celltypes can be found in each cluster.
 
 
 ```r
-ggplot(ctrl@meta.data, aes(x = CCA_snn_res.0.3, fill = predicted.id)) + geom_bar() + 
+ggplot(ctrl@meta.data, aes(x = CCA_snn_res.0.5, fill = predicted.id)) + geom_bar() + 
     theme_classic()
 ```
 
@@ -242,7 +242,7 @@ Now plot how many	cells of each celltypes	can be found in	each cluster.
 
 
 ```r
-ggplot(ctrl@meta.data, aes(x = CCA_snn_res.0.3, fill = scpred_prediction)) + geom_bar() + 
+ggplot(ctrl@meta.data, aes(x = CCA_snn_res.0.5, fill = scpred_prediction)) + geom_bar() + 
     theme_classic()
 ```
 
@@ -277,7 +277,7 @@ When we run differential expression for our dataset, we want to report as many g
 
 ```r
 # run differential expression in our dataset, using clustering at resolution 0.3
-alldata <- SetIdent(alldata, value = "CCA_snn_res.0.3")
+alldata <- SetIdent(alldata, value = "CCA_snn_res.0.5")
 DGE_table <- FindAllMarkers(alldata, logfc.threshold = 0, test.use = "wilcox", min.pct = 0, 
     min.diff.pct = 0, only.pos = TRUE, max.cells.per.ident = 20, return.thresh = 1, 
     assay = "RNA")
@@ -288,8 +288,8 @@ unlist(lapply(DGE_list, nrow))
 ```
 
 ```
-##    0    1    2    3    4    5    6    7 
-## 3673 5212 6350 3710 4338 4332 3945 4177
+##    0    1    2    3    4    5    6    7    8    9   10 
+## 3846 4338 5326 4564 4195 6209 3570 5852 3945 3842 4177
 ```
 
 
@@ -350,12 +350,12 @@ res
 ```
 ## $`0`
 ##    pathway         pval         padj   log2err        ES      NES size
-## 1:   cMono 1.000000e-10 4.500000e-10        NA 0.9626384 1.945885   48
-## 2:  ncMono 1.000000e-10 4.500000e-10        NA 0.8528708 1.721378   46
-## 3:     cDC 1.646665e-09 4.939994e-09 0.7881868 0.8364784 1.684587   43
-## 4:     pDC 5.185154e-04 1.166660e-03 0.4772708 0.7885987 1.522998   21
-## 5:  B cell 7.354005e-03 1.323721e-02 0.4070179 0.7732313 1.453187   15
-## 6: NK cell 2.026277e-02 3.039416e-02 0.3524879 0.7814043 1.422045   11
+## 1:   cMono 1.000000e-10 4.500000e-10        NA 0.9636931 1.929409   48
+## 2:  ncMono 1.000000e-10 4.500000e-10        NA 0.8554222 1.706870   46
+## 3:     cDC 4.709497e-10 1.412849e-09 0.8012156 0.8370169 1.665622   44
+## 4:     pDC 4.356212e-04 9.801478e-04 0.4984931 0.7923584 1.525090   22
+## 5:  B cell 4.591618e-03 8.264912e-03 0.4070179 0.7815194 1.453460   15
+## 6: NK cell 1.146738e-02 1.720107e-02 0.3807304 0.7876769 1.429233   11
 ##                                     leadingEdge
 ## 1:      S100A8,S100A9,LYZ,S100A12,VCAN,FCN1,...
 ## 2:     CTSS,TYMP,CST3,S100A11,AIF1,SERPINA1,...
@@ -366,45 +366,11 @@ res
 ## 
 ## $`1`
 ##        pathway         pval         padj   log2err        ES      NES size
-## 1:  CD8 T cell 1.000000e-10 7.000000e-10        NA 0.9512759 1.958564   29
-## 2:     NK cell 3.823688e-09 1.338291e-08 0.7614608 0.8680819 1.802598   32
-## 3:  CD4 T cell 1.200454e-02 2.801059e-02 0.3807304 0.8728284 1.536054    6
-## 4: Plasma cell 5.994006e-02 8.391608e-02 0.1813831 0.6226956 1.293046   32
-##                                   leadingEdge
-## 1:          CD8A,CD3D,GZMH,CCL5,CD3G,CD8B,...
-## 2:          CCL5,GZMM,NKG7,GZMA,CCL4,CST7,...
-## 3:                CD3G,CD3E,IL7R,PIK3IP1,TCF7
-## 4: FKBP11,PRDM1,PEBP1,SEC11C,PPIB,SELENOS,...
-## 
-## $`2`
-##        pathway         pval         padj   log2err        ES      NES size
-## 1:     NK cell 0.0000000001 0.0000000004        NA 0.9502916 2.169692   48
-## 2:  CD8 T cell 0.0000000001 0.0000000004        NA 0.9246532 2.027646   25
-## 3:         pDC 0.0017138796 0.0045703455 0.4550599 0.8396365 1.714656   11
-## 4:      ncMono 0.0065892889 0.0131785778 0.4070179 0.9241697 1.605313    4
-## 5: Plasma cell 0.0093411619 0.0149458590 0.3807304 0.6504100 1.445567   32
-##                                  leadingEdge
-## 1:      GNLY,GZMB,PRF1,FGFBP2,SPON2,NKG7,...
-## 2:       GNLY,GZMB,PRF1,FGFBP2,NKG7,CTSW,...
-## 3: GZMB,C12orf75,HSP90B1,ALOX5AP,RRBP1,PLAC8
-## 4:                 FCGR3A,IFITM2,RHOC,TYROBP
-## 5: CD38,FKBP11,PRDM1,HSP90B1,PPIB,SDF2L1,...
-## 
-## $`3`
-##       pathway         pval         padj   log2err        ES      NES size
-## 1: CD4 T cell 1.985583e-08 1.191350e-07 0.7337620 0.9574039 1.746816   13
-## 2: CD8 T cell 2.875535e-03 8.626604e-03 0.4317077 0.9207130 1.540903    6
-##                             leadingEdge
-## 1: IL7R,LTB,LDHB,TCF7,PIK3IP1,RCAN3,...
-## 2:         CD3E,CD3D,IL32,CD3G,CD2,CD8B
-## 
-## $`4`
-##        pathway         pval         padj   log2err        ES      NES size
-## 1:      B cell 0.0000000001 8.000000e-10        NA 0.9102004 1.789401   48
-## 2:         cDC 0.0000117541 4.701638e-05 0.5933255 0.9111434 1.698648   14
-## 3:         pDC 0.0002303574 6.142864e-04 0.5188481 0.8240613 1.566767   22
-## 4: Plasma cell 0.0320579111 5.129266e-02 0.2572065 0.7829680 1.425068   11
-## 5:      ncMono 0.0494791667 6.597222e-02 0.2311267 0.9100346 1.398148    3
+## 1:      B cell 1.000000e-10 8.000000e-10        NA 0.9102004 1.797025   48
+## 2:         cDC 1.376804e-05 5.507216e-05 0.5933255 0.9111434 1.660869   14
+## 3:         pDC 1.172339e-04 3.126238e-04 0.5384341 0.8240613 1.549381   22
+## 4: Plasma cell 3.597122e-02 5.076142e-02 0.2413400 0.7829680 1.394993   11
+## 5:      ncMono 3.807107e-02 5.076142e-02 0.2616635 0.9100346 1.386870    3
 ##                                             leadingEdge
 ## 1:      CD79A,TCL1A,LINC00926,MS4A1,CD79B,TNFRSF13C,...
 ## 2: CD74,HLA-DQB1,HLA-DRA,HLA-DPB1,HLA-DRB1,HLA-DQA1,...
@@ -412,40 +378,110 @@ res
 ## 4:             PLPP5,ISG20,HERPUD1,MZB1,ITM2C,IGLL5,...
 ## 5:                                  HLA-DPA1,POU2F2,LYN
 ## 
-## $`5`
-##    pathway         pval         padj   log2err        ES      NES size
-## 1:  ncMono 1.689478e-05 7.602653e-05 0.5756103 0.7996136 1.609111   38
-## 2:   cMono 4.389670e-06 3.950703e-05 0.6105269 0.7894851 1.604908   45
-## 3:  B cell 7.357047e-03 1.655336e-02 0.4070179 0.8683087 1.533063    8
-## 4:     cDC 7.464475e-04 2.239343e-03 0.4772708 0.7461714 1.491784   34
-## 5:     pDC 5.394605e-02 9.710290e-02 0.1918922 0.6490694 1.288450   29
+## $`2`
+##        pathway         pval         padj   log2err        ES      NES size
+## 1:  CD8 T cell 0.0000000001 3.500000e-10        NA 0.9570021 2.061123   29
+## 2:     NK cell 0.0000000001 3.500000e-10        NA 0.8805921 1.913106   32
+## 3:  CD4 T cell 0.0010133621 2.364511e-03 0.4550599 0.9341152 1.632062    5
+## 4:         pDC 0.0540254237 9.454449e-02 0.1978220 0.7536490 1.434682    8
+## 5: Plasma cell 0.0839160839 1.174825e-01 0.1511488 0.5753573 1.254476   33
+##                                   leadingEdge
+## 1:          GZMH,CD8A,CD3D,CD3G,CD8B,CCL5,...
+## 2:        CCL5,NKG7,GZMA,FGFBP2,CCL4,GZMM,...
+## 3:                             CD3G,CD3E,IL7R
+## 4:              C12orf75,GZMB,SELENOS,HSP90B1
+## 5: FKBP11,PRDM1,PPIB,SEC11C,SELENOS,PEBP1,...
+## 
+## $`3`
+##        pathway         pval         padj   log2err        ES      NES size
+## 1:  CD8 T cell 1.000000e-10 6.000000e-10        NA 0.9644968 1.949766   25
+## 2:     NK cell 8.975122e-08 2.692537e-07 0.7049757 0.8758142 1.777905   27
+## 3:  CD4 T cell 6.021170e-03 1.204234e-02 0.4070179 0.8849819 1.592248    7
+## 4: Plasma cell 7.792208e-02 9.350649e-02 0.1574029 0.6186609 1.261402   29
 ##                                 leadingEdge
-## 1: OAZ1,TIMP1,CST3,FKBP1A,IFITM3,FCER1G,...
-## 2:   CST3,FCER1G,COTL1,LYZ,STXBP2,AP1S2,...
-## 3:         PDLIM1,JCHAIN,HLA-DRB5,NCF1,STX7
+## 1:       DUSP2,CCL5,CD3D,LYAR,CD8A,CD3E,...
+## 2:       CCL5,KLRB1,GZMM,CMC1,CST7,GZMA,...
+## 3:         CD3E,CD3G,IL7R,PIK3IP1,TCF7,LDHB
+## 4: FKBP11,PEBP1,PRDM1,SEC11C,PPIB,LMAN1,...
+## 
+## $`4`
+##    pathway         pval         padj   log2err        ES      NES size
+## 1:   cMono 5.080943e-06 4.572849e-05 0.6105269 0.7757720 1.569012   45
+## 2:  B cell 3.411135e-03 7.675054e-03 0.4317077 0.9283909 1.550573    5
+## 3:  ncMono 1.281016e-04 5.764570e-04 0.5188481 0.7619578 1.532447   39
+## 4:     cDC 1.113701e-03 3.341103e-03 0.4550599 0.7414548 1.484590   35
+## 5:     pDC 2.270230e-02 4.086413e-02 0.3524879 0.6849178 1.362086   29
+##                                 leadingEdge
+## 1:   CST3,FCER1G,COTL1,LYZ,STXBP2,AP1S2,...
+## 2:              PDLIM1,JCHAIN,HLA-DRB5,NCF1
+## 3: OAZ1,TIMP1,CST3,FKBP1A,IFITM3,FCER1G,...
 ## 4: GAPDH,CST3,FCER1G,COTL1,LYZ,HLA-DRB5,...
-## 5:    JCHAIN,PTCRA,CST3,TXN,CTSB,MS4A6A,...
+## 5:      JCHAIN,PTCRA,CST3,TXN,MZB1,CTSB,...
+## 
+## $`5`
+##        pathway         pval         padj   log2err        ES      NES size
+## 1:     NK cell 0.0000000001 0.0000000004        NA 0.9474356 2.148061   50
+## 2:  CD8 T cell 0.0000000001 0.0000000004        NA 0.9370127 2.002828   23
+## 3:         pDC 0.0021256123 0.0042548172 0.4317077 0.8336225 1.634093   10
+## 4: Plasma cell 0.0021274086 0.0042548172 0.4317077 0.6796597 1.484603   29
+## 5:      ncMono 0.0198845883 0.0318153412 0.3524879 0.7984732 1.481087    7
+##                                  leadingEdge
+## 1:        SPON2,GNLY,PRF1,GZMB,CD7,CLIC3,...
+## 2:       GNLY,PRF1,GZMB,NKG7,FGFBP2,CTSW,...
+## 3: GZMB,C12orf75,RRBP1,PLAC8,ALOX5AP,HSP90B1
+## 4:  CD38,FKBP11,SLAMF7,SDF2L1,PRDM1,PPIB,...
+## 5:                   FCGR3A,IFITM2,RHOC,HES4
 ## 
 ## $`6`
+##       pathway         pval         padj   log2err        ES      NES size
+## 1: CD4 T cell 6.891751e-06 0.0000413505 0.6105269 0.9309759 1.673875   13
+## 2: CD8 T cell 3.046951e-03 0.0091408534 0.4317077 0.9122051 1.569613    7
+##                          leadingEdge
+## 1: IL7R,LTB,LDHB,RCAN3,MAL,NOSIP,...
+## 2:      IL32,CD3E,CD3D,CD2,CD3G,CD8B
+## 
+## $`7`
 ##        pathway         pval         padj   log2err        ES      NES size
-## 1:      B cell 1.000000e-10 0.0000000009        NA 0.9155446 1.757718   46
-## 2:         cDC 5.635195e-05 0.0002535838 0.5573322 0.9086034 1.661484   14
-## 3:         pDC 1.262126e-04 0.0003786378 0.5188481 0.8596737 1.593962   19
-## 4: Plasma cell 1.798120e-02 0.0231186844 0.3524879 0.7859744 1.441680   16
+## 1:     NK cell 0.0000000001 0.0000000004        NA 0.9376360 2.152328   46
+## 2:  CD8 T cell 0.0000000001 0.0000000004        NA 0.9521736 2.109402   26
+## 3:      ncMono 0.0056013963 0.0130494800 0.4070179 0.8767417 1.615374    6
+## 4:         pDC 0.0065247400 0.0130494800 0.4070179 0.7813233 1.581389   11
+## 5: Plasma cell 0.0121930024 0.0195088038 0.3807304 0.6362332 1.416387   29
+##                                   leadingEdge
+## 1:        FGFBP2,GNLY,NKG7,CST7,GZMB,CTSW,...
+## 2:        FGFBP2,GNLY,NKG7,CST7,GZMB,CTSW,...
+## 3:                         FCGR3A,IFITM2,RHOC
+## 4:  GZMB,C12orf75,HSP90B1,ALOX5AP,RRBP1,PLAC8
+## 5: PRDM1,FKBP11,HSP90B1,PPIB,SPCS2,SDF2L1,...
+## 
+## $`8`
+##        pathway         pval         padj   log2err        ES      NES size
+## 1:      B cell 1.000000e-10 0.0000000009        NA 0.9155446 1.749016   46
+## 2:         cDC 4.757819e-05 0.0002141018 0.5573322 0.9086034 1.635419   14
+## 3:         pDC 1.311549e-04 0.0003934648 0.5188481 0.8596737 1.571001   19
+## 4: Plasma cell 1.678928e-02 0.0215862198 0.3524879 0.7859744 1.428745   16
 ##                                             leadingEdge
 ## 1:        CD79A,MS4A1,BANK1,CD74,TNFRSF13C,HLA-DQA1,...
 ## 2: CD74,HLA-DQA1,HLA-DRA,HLA-DPB1,HLA-DQB1,HLA-DPA1,...
 ## 3:             CD74,JCHAIN,SPIB,HERPUD1,TCF4,CCDC50,...
 ## 4:            JCHAIN,HERPUD1,ISG20,ITM2C,PEBP1,MZB1,...
 ## 
-## $`7`
+## $`9`
+##       pathway         pval         padj   log2err        ES      NES size
+## 1: CD4 T cell 8.334409e-10 5.000645e-09 0.8012156 0.9582136 1.866999   13
+## 2: CD8 T cell 6.820950e-02 1.364190e-01 0.1882041 0.8347074 1.377604    4
+##                             leadingEdge
+## 1: IL7R,TCF7,PIK3IP1,TSHZ2,LTB,LEF1,...
+## 2:                   CD3E,CD3G,CD3D,CD2
+## 
+## $`10`
 ##    pathway         pval         padj   log2err        ES      NES size
-## 1:  ncMono 1.000000e-10 4.000000e-10        NA 0.9647690 1.883634   49
-## 2:   cMono 1.000000e-10 4.000000e-10        NA 0.9030410 1.734674   35
-## 3:     cDC 3.365367e-08 8.974312e-08 0.7195128 0.8487409 1.636918   38
-## 4: NK cell 1.438129e-03 2.876258e-03 0.4550599 0.8397246 1.547239   13
-## 5:     pDC 3.614458e-02 5.783133e-02 0.2377938 0.7217437 1.341433   16
-## 6:  B cell 8.333333e-02 1.023454e-01 0.1521449 0.6843492 1.271932   16
+## 1:  ncMono 1.000000e-10 4.000000e-10        NA 0.9647690 1.893443   49
+## 2:   cMono 1.000000e-10 4.000000e-10        NA 0.9030410 1.749942   35
+## 3:     cDC 2.557038e-08 6.818768e-08 0.7337620 0.8487409 1.651333   38
+## 4: NK cell 2.053339e-03 4.106679e-03 0.4317077 0.8397246 1.519935   13
+## 5:     pDC 4.116466e-02 6.586345e-02 0.2220560 0.7217437 1.329270   16
+## 6:  B cell 9.538153e-02 1.100529e-01 0.1412251 0.6843492 1.260398   16
 ##                                               leadingEdge
 ## 1:                CDKN1C,LST1,FCGR3A,AIF1,COTL1,MS4A7,...
 ## 2:               LST1,AIF1,COTL1,SERPINA1,FCER1G,PSAP,...
@@ -466,7 +502,7 @@ new.cluster.ids <- unlist(lapply(res, function(x) {
 
 alldata$ref_gsea <- new.cluster.ids[as.character(alldata@active.ident)]
 
-cowplot::plot_grid(ncol = 2, DimPlot(alldata, label = T, group.by = "CCA_snn_res.0.3") + 
+cowplot::plot_grid(ncol = 2, DimPlot(alldata, label = T, group.by = "CCA_snn_res.0.5") + 
     NoAxes(), DimPlot(alldata, label = T, group.by = "ref_gsea") + NoAxes())
 ```
 
@@ -560,81 +596,113 @@ lapply(res, head, 3)
 ```
 ## $`0`
 ##                   pathway         pval         padj   log2err        ES
-## 1:             Neutrophil 1.000000e-10 1.700000e-08        NA 0.8344521
-## 2:             Fibroblast 4.876723e-05 2.072607e-03 0.5573322 0.9084265
-## 3: CD1C+_B dendritic cell 7.814300e-09 6.642155e-07 0.7477397 0.8036599
+## 1:             Neutrophil 1.000000e-10 1.750000e-08        NA 0.8394617
+## 2:             Fibroblast 1.732754e-05 7.580799e-04 0.5756103 0.9063763
+## 3: CD1C+_B dendritic cell 7.943459e-09 6.950526e-07 0.7477397 0.8059971
 ##         NES size                              leadingEdge
-## 1: 1.701883   61 S100A8,S100A9,S100A12,CD14,MNDA,G0S2,...
-## 2: 1.666295   11        CD14,VIM,CD36,CKAP4,LRP1,CD44,...
-## 3: 1.624514   49  S100A8,S100A9,LYZ,S100A12,VCAN,FCN1,...
+## 1: 1.688406   60 S100A8,S100A9,S100A12,CD14,MNDA,G0S2,...
+## 2: 1.660297   12        CD14,VIM,CD36,CKAP4,LRP1,CD44,...
+## 3: 1.610161   50  S100A8,S100A9,LYZ,S100A12,VCAN,FCN1,...
 ## 
 ## $`1`
-##                  pathway         pval         padj   log2err        ES      NES
-## 1:           CD8+ T cell 2.523586e-07 1.066215e-05 0.6749629 0.9455361 1.848518
-## 2: CD4+ cytotoxic T cell 1.000000e-10 1.690000e-08        NA 0.8411733 1.817873
-## 3:          Naive T cell 2.955641e-06 7.135761e-05 0.6272567 0.9565583 1.790846
-##    size                        leadingEdge
-## 1:   13  CD8A,GZMK,CD3D,CD3G,CD8B,CD3E,...
-## 2:   61 GZMH,CCL5,LYAR,KLRG1,GZMM,NKG7,...
-## 3:    9  CD8A,CD3D,CD3G,CD8B,CD3E,IL7R,...
-## 
-## $`2`
-##                              pathway  pval         padj log2err        ES
-## 1:             CD4+ cytotoxic T cell 1e-10 5.566667e-09      NA 0.8945280
-## 2: Effector CD8+ memory T (Tem) cell 1e-10 5.566667e-09      NA 0.8762343
-## 3:               Natural killer cell 1e-10 5.566667e-09      NA 0.8483078
-##         NES size                            leadingEdge
-## 1: 2.056357   74   GNLY,GZMB,PRF1,FGFBP2,SPON2,NKG7,...
-## 2: 2.006901   66 GNLY,GZMB,FGFBP2,SPON2,KLRF1,KLRD1,...
-## 3: 1.927382   52   GNLY,GZMB,NKG7,KLRF1,CD247,KLRD1,...
-## 
-## $`3`
-##              pathway         pval         padj   log2err        ES      NES
-## 1:       CD8+ T cell 2.617912e-05 9.701773e-04 0.5756103 0.9231095 1.661565
-## 2:       CD4+ T cell 2.676351e-05 9.701773e-04 0.5756103 0.9032826 1.661128
-## 3: Naive CD4+ T cell 7.031312e-07 5.097701e-05 0.6594444 0.8659955 1.647634
-##    size                        leadingEdge
-## 1:   11  IL7R,CD3E,CD28,CD3D,CD3G,CD27,...
-## 2:   14   IL7R,LTB,CD3E,CD28,CD3D,CD3G,...
-## 3:   27 IL7R,TCF7,MAL,NOSIP,CCR7,TSHZ2,...
-## 
-## $`4`
 ##              pathway         pval        padj   log2err        ES      NES size
-## 1: Follicular B cell 5.777585e-05 0.009128585 0.5573322 0.9107084 1.660543   13
-## 2:            Neuron 2.246346e-03 0.045100994 0.4317077 0.9001931 1.567980    8
-## 3:      Myeloid cell 2.558874e-03 0.045100994 0.4317077 0.8975807 1.563430    8
+## 1: Follicular B cell 1.688543e-05 0.002667899 0.5756103 0.9107084 1.665647   13
+## 2:            Neuron 2.859483e-03 0.058778210 0.4317077 0.9001931 1.577511    8
+## 3:      Myeloid cell 3.096126e-03 0.058778210 0.4317077 0.8975807 1.572933    8
 ##                            leadingEdge
 ## 1: MS4A1,CD69,FCER2,CD22,CD40,PAX5,...
 ## 2:       PAX5,FOS,CD24,BCL2,PNOC,CD200
 ## 3:         CD69,FCER2,CD40,CD24,FCGR2B
 ## 
+## $`2`
+##                         pathway         pval         padj   log2err        ES
+## 1: Megakaryocyte erythroid cell 2.384940e-10 9.360891e-09 0.8140358 0.8835926
+## 2:        CD4+ cytotoxic T cell 1.000000e-10 6.306263e-09        NA 0.8381357
+## 3:                  CD8+ T cell 3.750808e-09 1.177754e-07 0.7614608 0.9750913
+##         NES size                          leadingEdge
+## 1: 1.924322   28    CD8A,CD3D,CD3G,CD2,CD3E,KLRG1,...
+## 2: 1.921561   70 GZMH,CCL5,NKG7,KLRG1,GZMA,FGFBP2,...
+## 3: 1.907747   10     CD8A,CD3D,CD3G,CD8B,CD2,CD3E,...
+## 
+## $`3`
+##                         pathway         pval         padj   log2err        ES
+## 1:                  CD8+ T cell 1.323184e-08 1.161774e-06 0.7477397 0.9655347
+## 2: Megakaryocyte erythroid cell 3.261017e-08 1.663119e-06 0.7195128 0.8618991
+## 3:                  CD4+ T cell 2.901051e-05 6.340868e-04 0.5756103 0.9124337
+##         NES size                         leadingEdge
+## 1: 1.845359   13   GZMK,CD3D,CD8A,CD3E,CD3G,CD8B,...
+## 2: 1.750688   32 CD3D,CD8A,KLRB1,CD3E,KLRG1,CD3G,...
+## 3: 1.740878   12     CD3D,CD3E,CD3G,IL7R,CD2,CD7,...
+## 
+## $`4`
+##                   pathway         pval       padj   log2err        ES      NES
+## 1:          Megakaryocyte 0.0001335701 0.02190549 0.5188481 0.8568478 1.655419
+## 2:               Platelet 0.0020575246 0.16871702 0.4317077 0.7814344 1.536939
+## 3: Circulating fetal cell 0.0068398620 0.30026142 0.4070179 0.8143232 1.536824
+##    size                         leadingEdge
+## 1:   18 PPBP,PF4,GP9,ITGA2B,CD9,RASGRP2,...
+## 2:   23 GP9,ITGA2B,CD9,CD151,CD63,ICAM2,...
+## 3:   12                   PF4,CD9,ACTB,CD68
+## 
 ## $`5`
-##          pathway         pval        padj   log2err        ES      NES size
-## 1: Megakaryocyte 5.279421e-05 0.008816634 0.5573322 0.8719641 1.679862   17
-## 2:      Platelet 1.944341e-04 0.016235247 0.5188481 0.8229869 1.607537   23
-##                            leadingEdge
-## 1: PPBP,PF4,GP9,ITGA2B,CD9,RASGRP2,...
-## 2: GP9,ITGA2B,CD9,CD151,GP1BA,CD63,...
+##                              pathway  pval    padj log2err        ES      NES
+## 1:             CD4+ cytotoxic T cell 1e-10 5.5e-09      NA 0.8883960 2.067957
+## 2: Effector CD8+ memory T (Tem) cell 1e-10 5.5e-09      NA 0.8569550 1.982192
+## 3:               Natural killer cell 1e-10 5.5e-09      NA 0.8443081 1.912697
+##    size                            leadingEdge
+## 1:   74    SPON2,GNLY,PRF1,PTGDS,GZMB,NKG7,...
+## 2:   63 SPON2,GNLY,GZMB,FGFBP2,KLRF1,KLRD1,...
+## 3:   46     GNLY,GZMB,CD7,CD247,NKG7,KLRF1,...
 ## 
 ## $`6`
-##              pathway        pval       padj   log2err        ES      NES size
-## 1: Follicular B cell 0.002179668 0.09847031 0.4317077 0.8693442 1.537949   11
-## 2:            Neuron 0.005939947 0.09847031 0.4070179 0.9118174 1.498583    6
-## 3:     Memory B cell 0.007710019 0.10163207 0.4070179 0.8909277 1.493152    7
+##             pathway         pval         padj   log2err        ES      NES size
+## 1:      CD4+ T cell 3.522691e-06 0.0002659632 0.6272567 0.9097284 1.669248   16
+## 2: Cytotoxic T cell 5.772752e-06 0.0002905619 0.6105269 0.9832666 1.656278    6
+## 3:      CD8+ T cell 7.120350e-04 0.0134396600 0.4772708 0.8712324 1.575798   13
+##                           leadingEdge
+## 1: IL7R,LTB,CD3E,CD3D,CD5,TNFRSF4,...
+## 2:            IL7R,CD3E,CD3D,CD5,CD3G
+## 3:    IL7R,CD3E,CD3D,CD5,CD2,CD3G,...
+## 
+## $`7`
+##                              pathway  pval         padj log2err        ES
+## 1:             CD4+ cytotoxic T cell 1e-10 5.433333e-09      NA 0.9067957
+## 2: Effector CD8+ memory T (Tem) cell 1e-10 5.433333e-09      NA 0.8711152
+## 3:               Natural killer cell 1e-10 5.433333e-09      NA 0.8808439
+##         NES size                           leadingEdge
+## 1: 2.152209   76   FGFBP2,GNLY,NKG7,CST7,GZMB,CTSW,...
+## 2: 2.057007   68 FGFBP2,GNLY,GZMB,GZMH,KLRF1,KLRD1,...
+## 3: 2.037627   43   GNLY,NKG7,GZMB,KLRF1,KLRD1,GZMA,...
+## 
+## $`8`
+##              pathway        pval      padj   log2err        ES      NES size
+## 1: Follicular B cell 0.002072313 0.1074369 0.4317077 0.8693442 1.539359   11
+## 2:            Neuron 0.004662605 0.1219958 0.4070179 0.9118174 1.514592    6
+## 3:     Memory B cell 0.009400735 0.1219958 0.3807304 0.8909277 1.506049    7
 ##                           leadingEdge
 ## 1: MS4A1,CD24,CD40,CD22,PAX5,EBF1,...
 ## 2:                CD24,PAX5,PNOC,BCL2
 ## 3:          SPIB,CD19,PAX5,CD27,TLR10
 ## 
-## $`7`
-##                            pathway         pval       padj   log2err        ES
-## 1:    Megakaryocyte erythroid cell 0.0003450828 0.02915949 0.4984931 0.8313014
-## 2:                   Lymphoid cell 0.0013951046 0.04715454 0.4550599 0.8343364
-## 3: Monocyte derived dendritic cell 0.0051569792 0.09683661 0.4070179 0.8815821
-##         NES size                           leadingEdge
-## 1: 1.540730   18 FCGR3A,PECAM1,CD68,ITGAX,SPN,CD86,...
-## 2: 1.503812   13       FCGR3A,CD68,ITGAX,SPN,CD4,ITGA4
-## 3: 1.499455    7               FCGR3A,CST3,ITGAX,IL3RA
+## $`9`
+##              pathway         pval         padj   log2err        ES      NES
+## 1: Naive CD8+ T cell 1.000000e-10 1.350000e-08        NA 0.8212612 1.830721
+## 2: Naive CD4+ T cell 2.669809e-09 1.802121e-07 0.7749390 0.8480762 1.795505
+## 3:      Naive T cell 4.985826e-04 1.682716e-02 0.4772708 0.8966874 1.658994
+##    size                             leadingEdge
+## 1:   80 CCR7,TCF7,PIK3IP1,LEF1,TRABD2A,LDHB,...
+## 2:   30    CCR7,IL7R,TCF7,TSHZ2,TRABD2A,MAL,...
+## 3:    8           CCR7,IL7R,CD27,CD3E,CD3G,CD3D
+## 
+## $`10`
+##                         pathway         pval       padj   log2err        ES
+## 1: Megakaryocyte erythroid cell 0.0004182119 0.03533891 0.4984931 0.8313014
+## 2:                Lymphoid cell 0.0027635424 0.07783978 0.4317077 0.8343364
+## 3:                 Myeloid cell 0.0002939231 0.03533891 0.4984931 0.7931802
+##         NES size                            leadingEdge
+## 1: 1.542582   18  FCGR3A,PECAM1,CD68,ITGAX,SPN,CD86,...
+## 2: 1.508032   13        FCGR3A,CD68,ITGAX,SPN,CD4,ITGA4
+## 3: 1.499494   25 FCGR3A,CSF1R,PECAM1,CD68,ITGAX,SPN,...
 ```
 
 
@@ -677,10 +745,10 @@ sessionInfo()
 ```
 ## R version 4.0.3 (2020-10-10)
 ## Platform: x86_64-apple-darwin13.4.0 (64-bit)
-## Running under: macOS Catalina 10.15.7
+## Running under: macOS Catalina 10.15.5
 ## 
 ## Matrix products: default
-## BLAS/LAPACK: /Users/asbj/miniconda3/envs/scRNAseq2021/lib/libopenblasp-r0.3.12.dylib
+## BLAS/LAPACK: /Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/libopenblasp-r0.3.12.dylib
 ## 
 ## locale:
 ## [1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
@@ -698,46 +766,46 @@ sessionInfo()
 ##   [1] fastmatch_1.1-0       plyr_1.8.6            igraph_1.2.6         
 ##   [4] lazyeval_0.2.2        splines_4.0.3         BiocParallel_1.24.0  
 ##   [7] listenv_0.8.0         scattermore_0.7       digest_0.6.27        
-##  [10] foreach_1.5.1         htmltools_0.5.0       fansi_0.4.1          
+##  [10] foreach_1.5.1         htmltools_0.5.1       fansi_0.4.2          
 ##  [13] magrittr_2.0.1        tensor_1.5            cluster_2.1.0        
 ##  [16] ROCR_1.0-11           limma_3.46.0          recipes_0.1.15       
 ##  [19] globals_0.14.0        gower_0.2.2           matrixStats_0.57.0   
-##  [22] colorspace_2.0-0      ggrepel_0.9.0         xfun_0.19            
+##  [22] colorspace_2.0-0      ggrepel_0.9.1         xfun_0.20            
 ##  [25] crayon_1.3.4          jsonlite_1.7.2        spatstat_1.64-1      
 ##  [28] spatstat.data_1.7-0   survival_3.2-7        zoo_1.8-8            
 ##  [31] iterators_1.0.13      glue_1.4.2            polyclip_1.10-0      
 ##  [34] gtable_0.3.0          ipred_0.9-9           leiden_0.3.6         
 ##  [37] kernlab_0.9-29        future.apply_1.7.0    abind_1.4-5          
-##  [40] scales_1.1.1          DBI_1.1.0             miniUI_0.1.1.1       
-##  [43] Rcpp_1.0.5            viridisLite_0.3.0     xtable_1.8-4         
+##  [40] scales_1.1.1          DBI_1.1.1             miniUI_0.1.1.1       
+##  [43] Rcpp_1.0.6            viridisLite_0.3.0     xtable_1.8-4         
 ##  [46] reticulate_1.18       rsvd_1.0.3            stats4_4.0.3         
 ##  [49] lava_1.6.8.1          prodlim_2019.11.13    htmlwidgets_1.5.3    
 ##  [52] httr_1.4.2            getopt_1.20.3         RColorBrewer_1.1-2   
 ##  [55] ellipsis_0.3.1        ica_1.0-2             pkgconfig_2.0.3      
 ##  [58] farver_2.0.3          nnet_7.3-14           uwot_0.1.10          
-##  [61] deldir_0.2-3          tidyselect_1.1.0      labeling_0.4.2       
+##  [61] deldir_0.2-9          tidyselect_1.1.0      labeling_0.4.2       
 ##  [64] rlang_0.4.10          reshape2_1.4.4        later_1.1.0.1        
 ##  [67] munsell_0.5.0         tools_4.0.3           cli_2.2.0            
-##  [70] generics_0.1.0        ggridges_0.5.2        evaluate_0.14        
+##  [70] generics_0.1.0        ggridges_0.5.3        evaluate_0.14        
 ##  [73] stringr_1.4.0         fastmap_1.0.1         yaml_2.2.1           
 ##  [76] goftest_1.2-2         ModelMetrics_1.2.2.2  knitr_1.30           
 ##  [79] fitdistrplus_1.1-3    admisc_0.11           purrr_0.3.4          
 ##  [82] RANN_2.6.1            pbapply_1.4-3         future_1.21.0        
 ##  [85] nlme_3.1-151          mime_0.9              formatR_1.7          
-##  [88] compiler_4.0.3        beeswarm_0.2.3        plotly_4.9.2.2       
-##  [91] png_0.1-7             spatstat.utils_1.17-0 tibble_3.0.4         
+##  [88] compiler_4.0.3        beeswarm_0.2.3        plotly_4.9.3         
+##  [91] png_0.1-7             spatstat.utils_1.20-2 tibble_3.0.5         
 ##  [94] stringi_1.5.3         highr_0.8             RSpectra_0.16-0      
-##  [97] Matrix_1.3-0          vctrs_0.3.6           pillar_1.4.7         
+##  [97] Matrix_1.3-2          vctrs_0.3.6           pillar_1.4.7         
 ## [100] lifecycle_0.2.0       lmtest_0.9-38         RcppAnnoy_0.0.18     
-## [103] data.table_1.13.6     irlba_2.3.3           httpuv_1.5.4         
+## [103] data.table_1.13.6     irlba_2.3.3           httpuv_1.5.5         
 ## [106] patchwork_1.1.1       R6_2.5.0              promises_1.1.1       
 ## [109] KernSmooth_2.23-18    gridExtra_2.3         vipor_0.4.5          
 ## [112] parallelly_1.23.0     codetools_0.2-18      MASS_7.3-53          
-## [115] assertthat_0.2.1      withr_2.3.0           sctransform_0.3.2    
+## [115] assertthat_0.2.1      withr_2.4.0           sctransform_0.3.2    
 ## [118] harmony_1.0           mgcv_1.8-33           parallel_4.0.3       
 ## [121] grid_4.0.3            rpart_4.1-15          timeDate_3043.102    
 ## [124] tidyr_1.1.2           class_7.3-17          rmarkdown_2.6        
-## [127] Rtsne_0.15            pROC_1.16.2           shiny_1.5.0          
+## [127] Rtsne_0.15            pROC_1.17.0.1         shiny_1.5.0          
 ## [130] lubridate_1.7.9.2     ggbeeswarm_0.6.0
 ```
 

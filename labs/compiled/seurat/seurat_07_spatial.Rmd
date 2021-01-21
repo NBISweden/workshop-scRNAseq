@@ -48,6 +48,8 @@ We will use two **Visium** spatial transcriptomics dataset of the mouse brain (S
 ### Load packages
 
 ```{r packages}
+devtools::install_github('satijalab/seurat-data')
+
 suppressPackageStartupMessages(require(Matrix))
 suppressPackageStartupMessages(require(dplyr))
 suppressPackageStartupMessages(require(SeuratData))
@@ -177,7 +179,7 @@ For ST data, the Seurat team recommends to use SCTranform for normalization, so 
 
 ```{r}
 
-brain <- SCTransform(brain, assay = "Spatial", verbose = FALSE, method = 'glmGamPoi')
+brain <- SCTransform(brain, assay = "Spatial", verbose = TRUE, method = 'poisson')
 
 ```
 
@@ -237,7 +239,7 @@ We will do a similar integration as in the Data Integration lab, but this time w
 st.list = list(anterior1=brain1, posterior1=brain2)
 
 # run SCT on both datasets
-st.list = lapply(st.list, SCTransform, assay = "Spatial", method='glmGamPoi', verbose=FALSE)
+st.list = lapply(st.list, SCTransform, assay = "Spatial", method='poisson')
 
 # need to set maxSize for PrepSCTIntegration to work
 options(future.globals.maxSize = 2000 * 1024^2) # set allowed size to 2K MiB
@@ -361,7 +363,7 @@ Then run normalization and dimensionality reduction.
 
 ```{r}
 # First run SCTransform and PCA 
-allen_reference <- SCTransform(allen_reference, ncells = 3000, verbose = FALSE, method = 'glmGamPoi') %>% RunPCA(verbose = FALSE) %>%    RunUMAP(dims = 1:30)
+allen_reference <- SCTransform(allen_reference, ncells = 3000, verbose = FALSE, method = 'poisson') %>% RunPCA(verbose = FALSE) %>%    RunUMAP(dims = 1:30)
 
 # the annotation is stored in the 'subclass' column of object metadata
 DimPlot(allen_reference, label = TRUE)
@@ -383,14 +385,14 @@ cortex <- subset(cortex, anterior1_imagerow > 275 & anterior1_imagecol > 370, in
 cortex <- subset(cortex, anterior1_imagerow > 250 & anterior1_imagecol > 440, invert = TRUE)
 
 # also subset for FC clusters
-cortex <- subset(cortex, idents = c(0,1,6,7,12,17))
+cortex <- subset(cortex, idents = c(0,1,6,7,12))
 
 p1 <- SpatialDimPlot(cortex, crop = TRUE, label = TRUE)
 p2 <- SpatialDimPlot(cortex, crop = FALSE, label = TRUE, pt.size.factor = 1, label.size = 3)
 p1 + p2
 
 # After subsetting, we renormalize cortex
-cortex <- SCTransform(cortex, assay = "Spatial", verbose = FALSE, method = "glmGamPoi") %>% RunPCA(verbose = FALSE)
+cortex <- SCTransform(cortex, assay = "Spatial", verbose = FALSE, method = "poisson") %>% RunPCA(verbose = FALSE)
 
 ```
 
@@ -461,14 +463,14 @@ subregion <- subset(subregion,  posterior1_imagecol > 330, invert = FALSE)
   
 
 # also subset for FC clusters
-subregion <- subset(subregion, idents = c(0,2,3,5,14,18))
+subregion <- subset(subregion, idents = c(0,2,3,5))
 
 p1 <- SpatialDimPlot(subregion, crop = TRUE, label = TRUE)
 p2 <- SpatialDimPlot(subregion, crop = FALSE, label = TRUE, pt.size.factor = 1, label.size = 3)
 p1 + p2
 
 # After subsetting, we renormalize cortex
-subregion <- SCTransform(subregion, assay = "Spatial", verbose = FALSE, method = "glmGamPoi") %>% RunPCA(verbose = FALSE)
+subregion <- SCTransform(subregion, assay = "Spatial", verbose = FALSE, method = "poisson") %>% RunPCA(verbose = FALSE)
 
 ```
 

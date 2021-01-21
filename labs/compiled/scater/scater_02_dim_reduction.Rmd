@@ -23,7 +23,7 @@ output:
       collapsed: false
       smooth_scroll: true
     toc_depth: 3
-editor_options: 
+editor_options:
   chunk_output_type: console
 ---
 
@@ -66,6 +66,7 @@ Next, we first need to define which features/genes are important in our dataset 
 sce <- computeSumFactors(sce, sizes=c(20, 40, 60, 80))
 sce <- logNormCounts(sce)
 var.out <- modelGeneVar(sce, method="loess")
+hvgs = getTopHVGs(dec, n=2000)
 
 mypar(1,2)
 #plot mean over TOTAL variance
@@ -151,7 +152,7 @@ We can now run [BH-tSNE](https://arxiv.org/abs/1301.3342).
 
 ```{r, fig.asp=1}
 set.seed(42)
-sce <- runTSNE(sce, dimred = "PCA", n_dimred = 30, 
+sce <- runTSNE(sce, dimred = "PCA", n_dimred = 30,
                perplexity = 30,name = "tSNE_on_PCA")
 ```
 
@@ -219,7 +220,7 @@ reducedDim(sce,"KNN") <- igraph::as_adjacency_matrix(g)
 
 
 #Run UMAP and rename it for comparisson
-# temp <- umap::umap.defaults 
+# temp <- umap::umap.defaults
 try(reducedDim(sce,"UMAP_on_Graph") <- NULL)
 reducedDim(sce,"UMAP_on_Graph") <- uwot::umap(X=NULL, n_components = 2, nn_method=nn)
 ```
@@ -229,7 +230,7 @@ We can now plot the UMAP comparing both on PCA vs ScaledSata vs Graph.
 
 ```{r,fig.asp=.28}
 plot_grid(ncol = 3,
-  plotReducedDim(sce, dimred = "UMAP_on_PCA", colour_by = "sample")+ 
+  plotReducedDim(sce, dimred = "UMAP_on_PCA", colour_by = "sample")+
     ggplot2::ggtitle(label ="UMAP_on_PCA"),
   plotReducedDim(sce, dimred = "UMAP_on_ScaleData", colour_by = "sample")+
     ggplot2::ggtitle(label ="UMAP_on_ScaleData"),
@@ -277,5 +278,3 @@ saveRDS(sce,"data/results/covid_qc_dm.rds")
 ```{r}
 sessionInfo()
 ```
-
-

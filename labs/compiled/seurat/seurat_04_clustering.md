@@ -1,6 +1,6 @@
 ---
 author: "Åsa Björklund  &  Paulo Czarnewski"
-date: 'November 27, 2020'
+date: 'January 21, 2021'
 output:
   html_document:
     self_contained: true
@@ -22,6 +22,8 @@ output:
       collapsed: false
       smooth_scroll: true
     toc_depth: 3
+editor_options: 
+  chunk_output_type: console
 ---
 
 
@@ -39,12 +41,31 @@ Let's first load all necessary libraries and also the integrated dataset from th
 
 
 ```r
+if (!require(clustree)) {
+    install.packages("clustree", dependencies = FALSE)
+}
+```
+
+```
+## Loading required package: clustree
+```
+
+```
+## Loading required package: ggraph
+```
+
+```
+## Loading required package: ggplot2
+```
+
+```r
 suppressPackageStartupMessages({
     library(Seurat)
     library(cowplot)
     library(ggplot2)
     library(pheatmap)
     library(rafalib)
+    library(clustree)
 })
 
 alldata <- readRDS("data/results/covid_qc_dr_int.rds")
@@ -115,7 +136,7 @@ In **Seurat**, the function `FindClusters` will do a graph-based clustering usin
 
 ```r
 # Clustering with louvain (algorithm 1)
-for (res in c(0.3, 0.5, 1, 1.5, 2)) {
+for (res in c(0.1, 0.25, 0.5, 1, 1.5, 2)) {
     alldata <- FindClusters(alldata, graph.name = "CCA_snn", resolution = res, algorithm = 1)
 }
 
@@ -136,6 +157,7 @@ We can now use the `clustree` package to visualize how cells are distributed bet
 
 
 ```r
+# install.packages('clustree')
 suppressPackageStartupMessages(library(clustree))
 
 clustree(alldata@meta.data, prefix = "CCA_snn_res.")
@@ -152,9 +174,10 @@ K-means is a generic clustering algorithm that has been used in many application
 
 
 ```r
-alldata$kmeans_5 <- kmeans(x = alldata@reductions[["pca"]]@cell.embeddings, centers = 5)$cluster
-alldata$kmeans_10 <- kmeans(x = alldata@reductions[["pca"]]@cell.embeddings, centers = 10)$cluster
-alldata$kmeans_15 <- kmeans(x = alldata@reductions[["pca"]]@cell.embeddings, centers = 15)$cluster
+for (k in c(5, 7, 10, 12, 15, 17, 20)) {
+    alldata@meta.data[, paste0("kmeans_", k)] <- kmeans(x = alldata@reductions[["pca"]]@cell.embeddings, 
+        centers = k, nstart = 100)$cluster
+}
 
 plot_grid(ncol = 3, DimPlot(alldata, reduction = "umap", group.by = "kmeans_5") + 
     ggtitle("kmeans_5"), DimPlot(alldata, reduction = "umap", group.by = "kmeans_10") + 
@@ -253,9 +276,16 @@ saveRDS(alldata, "data/results/covid_qc_dr_int_cl.rds")
 ```
 
 
-###TASK: Check QC-stats
-By now you should know how to plot different features onto your data. Take the QC metrics that were calculated in the first exercise, that should be stored in your data object, and plot it as violin plots per cluster using the clustering method of your choice. For example, plot number of UMIS, detected genes, percent mitochondrial reads. 
+<style>
+div.blue { background-color:#e6f0ff; border-radius: 5px; padding: 10px;}
+</style>
+<div class = "blue">
+**Your turn**
+
+By now you should know how to plot different features onto your data. Take the QC metrics that were calculated in the first exercise, that should be stored in your data object, and plot it as violin plots per cluster using the clustering method of your choice. For example, plot number of UMIS, detected genes, percent mitochondrial reads.
+
 Then, check carefully if there is any bias in how your data is separated due to quality metrics. Could it be explained biologically, or could you have technical bias there?
+</div>
 
 
 ### Session Info
@@ -269,10 +299,10 @@ sessionInfo()
 ```
 ## R version 4.0.3 (2020-10-10)
 ## Platform: x86_64-apple-darwin13.4.0 (64-bit)
-## Running under: macOS Catalina 10.15.7
+## Running under: macOS Catalina 10.15.5
 ## 
 ## Matrix products: default
-## BLAS/LAPACK: /Users/asbj/miniconda3/envs/scRNAseq2021/lib/libopenblasp-r0.3.12.dylib
+## BLAS/LAPACK: /Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/libopenblasp-r0.3.12.dylib
 ## 
 ## locale:
 ## [1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
@@ -281,47 +311,48 @@ sessionInfo()
 ## [1] stats     graphics  grDevices utils     datasets  methods   base     
 ## 
 ## other attached packages:
-## [1] clustree_0.4.3  ggraph_2.0.4    rafalib_1.0.0   pheatmap_1.0.12
-## [5] ggplot2_3.3.2   cowplot_1.1.0   Seurat_3.2.2    RJSONIO_1.3-1.4
+## [1] rafalib_1.0.0   pheatmap_1.0.12 cowplot_1.1.1   Seurat_3.2.3   
+## [5] clustree_0.4.3  ggraph_2.0.4    ggplot2_3.3.3   RJSONIO_1.3-1.4
 ## [9] optparse_1.6.6 
 ## 
 ## loaded via a namespace (and not attached):
-##   [1] Rtsne_0.15            colorspace_2.0-0      deldir_0.2-3         
-##   [4] ellipsis_0.3.1        ggridges_0.5.2        spatstat.data_1.5-2  
-##   [7] leiden_0.3.5          listenv_0.8.0         farver_2.0.3         
-##  [10] graphlayouts_0.7.1    getopt_1.20.3         ggrepel_0.8.2        
+##   [1] Rtsne_0.15            colorspace_2.0-0      deldir_0.2-9         
+##   [4] ellipsis_0.3.1        ggridges_0.5.3        spatstat.data_1.7-0  
+##   [7] leiden_0.3.6          listenv_0.8.0         farver_2.0.3         
+##  [10] graphlayouts_0.7.1    getopt_1.20.3         ggrepel_0.9.1        
 ##  [13] codetools_0.2-18      splines_4.0.3         knitr_1.30           
-##  [16] polyclip_1.10-0       jsonlite_1.7.1        ica_1.0-2            
-##  [19] cluster_2.1.0         png_0.1-7             uwot_0.1.9           
-##  [22] ggforce_0.3.2         shiny_1.5.0           sctransform_0.3.1    
-##  [25] compiler_4.0.3        httr_1.4.2            backports_1.2.0      
-##  [28] Matrix_1.2-18         fastmap_1.0.1         lazyeval_0.2.2       
-##  [31] tweenr_1.0.1          later_1.1.0.1         formatR_1.7          
-##  [34] htmltools_0.5.0       tools_4.0.3           rsvd_1.0.3           
-##  [37] igraph_1.2.6          gtable_0.3.0          glue_1.4.2           
-##  [40] RANN_2.6.1            reshape2_1.4.4        dplyr_1.0.2          
-##  [43] Rcpp_1.0.5            spatstat_1.64-1       vctrs_0.3.5          
-##  [46] nlme_3.1-150          lmtest_0.9-38         xfun_0.19            
-##  [49] stringr_1.4.0         globals_0.14.0        mime_0.9             
-##  [52] miniUI_0.1.1.1        lifecycle_0.2.0       irlba_2.3.3          
-##  [55] goftest_1.2-2         future_1.20.1         MASS_7.3-53          
-##  [58] zoo_1.8-8             scales_1.1.1          tidygraph_1.2.0      
-##  [61] promises_1.1.1        spatstat.utils_1.17-0 parallel_4.0.3       
-##  [64] RColorBrewer_1.1-2    yaml_2.2.1            reticulate_1.18      
-##  [67] pbapply_1.4-3         gridExtra_2.3         rpart_4.1-15         
-##  [70] stringi_1.5.3         checkmate_2.0.0       rlang_0.4.8          
-##  [73] pkgconfig_2.0.3       matrixStats_0.57.0    evaluate_0.14        
-##  [76] lattice_0.20-41       ROCR_1.0-11           purrr_0.3.4          
-##  [79] tensor_1.5            patchwork_1.1.0       htmlwidgets_1.5.2    
-##  [82] labeling_0.4.2        tidyselect_1.1.0      parallelly_1.21.0    
-##  [85] RcppAnnoy_0.0.17      plyr_1.8.6            magrittr_2.0.1       
-##  [88] R6_2.5.0              generics_0.1.0        pillar_1.4.7         
-##  [91] withr_2.3.0           mgcv_1.8-33           fitdistrplus_1.1-1   
-##  [94] survival_3.2-7        abind_1.4-5           tibble_3.0.4         
-##  [97] future.apply_1.6.0    crayon_1.3.4          KernSmooth_2.23-18   
-## [100] plotly_4.9.2.1        rmarkdown_2.5         viridis_0.5.1        
-## [103] grid_4.0.3            data.table_1.13.2     digest_0.6.27        
-## [106] xtable_1.8-4          tidyr_1.1.2           httpuv_1.5.4         
-## [109] munsell_0.5.0         viridisLite_0.3.0
+##  [16] polyclip_1.10-0       jsonlite_1.7.2        ica_1.0-2            
+##  [19] cluster_2.1.0         png_0.1-7             uwot_0.1.10          
+##  [22] ggforce_0.3.2         shiny_1.5.0           sctransform_0.3.2    
+##  [25] compiler_4.0.3        httr_1.4.2            backports_1.2.1      
+##  [28] assertthat_0.2.1      Matrix_1.3-2          fastmap_1.0.1        
+##  [31] lazyeval_0.2.2        later_1.1.0.1         tweenr_1.0.1         
+##  [34] formatR_1.7           htmltools_0.5.1       tools_4.0.3          
+##  [37] rsvd_1.0.3            igraph_1.2.6          gtable_0.3.0         
+##  [40] glue_1.4.2            RANN_2.6.1            reshape2_1.4.4       
+##  [43] dplyr_1.0.3           Rcpp_1.0.6            spatstat_1.64-1      
+##  [46] scattermore_0.7       vctrs_0.3.6           nlme_3.1-151         
+##  [49] lmtest_0.9-38         xfun_0.20             stringr_1.4.0        
+##  [52] globals_0.14.0        mime_0.9              miniUI_0.1.1.1       
+##  [55] lifecycle_0.2.0       irlba_2.3.3           goftest_1.2-2        
+##  [58] future_1.21.0         MASS_7.3-53           zoo_1.8-8            
+##  [61] scales_1.1.1          tidygraph_1.2.0       promises_1.1.1       
+##  [64] spatstat.utils_1.20-2 parallel_4.0.3        RColorBrewer_1.1-2   
+##  [67] yaml_2.2.1            reticulate_1.18       pbapply_1.4-3        
+##  [70] gridExtra_2.3         rpart_4.1-15          stringi_1.5.3        
+##  [73] checkmate_2.0.0       rlang_0.4.10          pkgconfig_2.0.3      
+##  [76] matrixStats_0.57.0    evaluate_0.14         lattice_0.20-41      
+##  [79] tensor_1.5            ROCR_1.0-11           purrr_0.3.4          
+##  [82] labeling_0.4.2        patchwork_1.1.1       htmlwidgets_1.5.3    
+##  [85] tidyselect_1.1.0      parallelly_1.23.0     RcppAnnoy_0.0.18     
+##  [88] plyr_1.8.6            magrittr_2.0.1        R6_2.5.0             
+##  [91] generics_0.1.0        DBI_1.1.1             mgcv_1.8-33          
+##  [94] pillar_1.4.7          withr_2.4.0           fitdistrplus_1.1-3   
+##  [97] abind_1.4-5           survival_3.2-7        tibble_3.0.5         
+## [100] future.apply_1.7.0    crayon_1.3.4          KernSmooth_2.23-18   
+## [103] plotly_4.9.3          rmarkdown_2.6         viridis_0.5.1        
+## [106] grid_4.0.3            data.table_1.13.6     digest_0.6.27        
+## [109] xtable_1.8-4          tidyr_1.1.2           httpuv_1.5.5         
+## [112] munsell_0.5.0         viridisLite_0.3.0
 ```
 

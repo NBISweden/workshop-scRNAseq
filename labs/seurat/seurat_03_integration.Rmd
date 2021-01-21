@@ -109,8 +109,8 @@ alldata.harmony <- RunHarmony(
   assay.use = "RNA")
 
 #Here we use all PCs computed from Harmony for UMAP calculation
-alldata.harmony[["pca"]] <- alldata.harmony[["harmony"]]
-alldata.harmony <- RunUMAP(alldata.harmony, dims = 1:50, reduction = "harmony", reduction.name = "umap")
+alldata.int[["harmony"]] <- alldata.harmony[["harmony"]]
+alldata.int <- RunUMAP(alldata.int, dims = 1:50, reduction = "harmony", reduction.name = "umap_harmony")
 ```
 
 
@@ -138,28 +138,27 @@ integrated.data <- scanorama$integrate(datasets_full = assaylist,
 
 intdimred <- do.call(rbind, integrated.data[[1]])
 colnames(intdimred) <- paste0("PC_", 1:100)
-rownames(intdimred) <- colnames(alldata)
+rownames(intdimred) <- colnames(alldata.int)
 
 # Add standard deviations in order to draw Elbow Plots in Seurat
 stdevs <- apply(intdimred, MARGIN = 2, FUN = sd)
 
-alldata.scanorama <- alldata
-alldata.scanorama[["pca"]] <- CreateDimReducObject(
+alldata.int[["scanorama"]] <- CreateDimReducObject(
   embeddings = intdimred,
   stdev      = stdevs,
   key        = "PC_",
   assay      = "RNA")
 
 #Here we use all PCs computed from Scanorama for UMAP calculation
-alldata.scanorama <- RunUMAP(alldata.scanorama, dims = 1:100, reduction = "pca",reduction.name = "umap")
+alldata.int <- RunUMAP(alldata.int, dims = 1:100, reduction = "scanorama",reduction.name = "umap_scanorama")
 ```
 
 
 ```{r, message='hide',warning='hide',results='hold',fig.asp=.55,fig.width=16}
 p1 <- DimPlot(alldata, reduction = "umap", group.by = "orig.ident")+ggtitle("UMAP raw_data")
 p2 <- DimPlot(alldata.int, reduction = "umap", group.by = "orig.ident")+ggtitle("UMAP CCA")
-p3 <- DimPlot(alldata.harmony, reduction = "umap", group.by = "orig.ident")+ggtitle("UMAP Harmony")
-p4 <- DimPlot(alldata.scanorama, reduction = "umap", group.by = "orig.ident")+ggtitle("UMAP Scanorama")
+p3 <- DimPlot(alldata.int, reduction = "umap_harmony", group.by = "orig.ident")+ggtitle("UMAP Harmony")
+p4 <- DimPlot(alldata.int, reduction = "umap_scanorama", group.by = "orig.ident")+ggtitle("UMAP Scanorama")
 leg <- get_legend(p1)
 
 gridExtra::grid.arrange(
@@ -179,8 +178,6 @@ gridExtra::grid.arrange(
 
 ```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=16}
 saveRDS(alldata.int,"data/results/covid_qc_dr_int.rds")
-saveRDS(alldata.harmony,"data/results/covid_qc_dr_int.rds")
-saveRDS(alldata.scanorama,"data/results/covid_qc_dr_int.rds")
 ```
 
 
