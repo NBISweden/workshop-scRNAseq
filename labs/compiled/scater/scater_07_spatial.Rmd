@@ -1,5 +1,5 @@
 ---
-title: "Seurat: Spatial Transcriptomics"
+title: "Scater/Scran:: Spatial Transcriptomics"
 author: "Åsa Björklund  &  Paulo Czarnewski"
 date: '`r format(Sys.Date(), "%B %d, %Y")`'
 output:
@@ -23,7 +23,7 @@ output:
       collapsed: false
       smooth_scroll: true
     toc_depth: 3
-editor_options: 
+editor_options:
   chunk_output_type: console
 ---
 
@@ -39,7 +39,6 @@ p.caption {font-size: 0.9em;font-style: italic;color: grey;margin-right: 10%;mar
 # Spatial transcriptomics
 ***
 
-This tutorial is adapted from the Seurat vignette: https://satijalab.org/seurat/v3.2/spatial_vignette.html
 
 Spatial transcriptomic data with the Visium platform is in many ways similar to scRNAseq data. It contains UMI counts for 5-20 cells instead of single cells, but is still quite sparse in the same way as scRNAseq data is, but with the additional information about spatial location in the tissue. 
 
@@ -97,9 +96,9 @@ suppressPackageStartupMessages(require(cowplot))
 We can first load and merge the objects into one SCE object.
 
 ```{r}
-sce.a <- Spaniel::createVisiumSCE(tenXDir="data/visium/Anterior", 
+sce.a <- Spaniel::createVisiumSCE(tenXDir="data/visium/Anterior",
                             resolution="Low")
-sce.p <- Spaniel::createVisiumSCE(tenXDir="data/visium/Posterior", 
+sce.p <- Spaniel::createVisiumSCE(tenXDir="data/visium/Posterior",
                             resolution="Low")
 
 sce <- cbind(sce.a , sce.p)
@@ -191,8 +190,8 @@ Select all spots with less than 25% mitocondrial reads, less than 20% hb-reads a
 
 
 ```{r}
-sce <- sce[ , sce$detected > 500 & 
-              sce$subsets_mt_percent < 25 & 
+sce <- sce[ , sce$detected > 500 &
+              sce$subsets_mt_percent < 25 &
               sce$subsets_hb_percent < 20]
 dim(sce)
 ```
@@ -339,7 +338,7 @@ plot_grid(ncol=2, plotlist = plist)
 
 Quite often there are strong batch effects between different ST sections, so it may be a good idea to integrate the data across sections.
 
-We will do a similar integration as in the Data Integration lab. 
+We will do a similar integration as in the Data Integration lab.
 
 ```{r}
 mnn_out <- batchelor::fastMNN(sce, subset.row = hvgs,
@@ -513,7 +512,7 @@ Next, we select the highly variable genes that are present in both datasets.
 #Find common highly variable genes
 common_hvgs <- allen.hvgs[allen.hvgs %in% hvgs]
 
-#Predict cell classes 
+#Predict cell classes
 pred.grun <- SingleR(test=sce.anterior[common_hvgs,],
                      de.n = 20,
                      ref=allen_reference_sce[common_hvgs,],
@@ -522,7 +521,7 @@ pred.grun <- SingleR(test=sce.anterior[common_hvgs,],
 
 #Transfer the classes to the SCE object
 sce.anterior$cell_prediction <- pred.grun$labels
-sce.anterior@colData <- cbind(sce.anterior@colData, 
+sce.anterior@colData <- cbind(sce.anterior@colData,
                               as.data.frame.matrix(table(list(1:ncol(sce.anterior),sce.anterior$cell_prediction))))
 ```
 

@@ -1,7 +1,7 @@
 ---
-title: "Seurat: Spatial Transcriptomics"
+title: "Scater/Scran:: Spatial Transcriptomics"
 #CSS_ALL:
-editor_options: 
+editor_options:
   chunk_output_type: console
 ---
 
@@ -9,7 +9,6 @@ editor_options:
 
 #ST_TITLE:
 
-This tutorial is adapted from the Seurat vignette: https://satijalab.org/seurat/v3.2/spatial_vignette.html
 
 #ST_ALL1:
 
@@ -63,9 +62,9 @@ suppressPackageStartupMessages(require(cowplot))
 We can first load and merge the objects into one SCE object.
 
 ```{r}
-sce.a <- Spaniel::createVisiumSCE(tenXDir="data/visium/Anterior", 
+sce.a <- Spaniel::createVisiumSCE(tenXDir="data/visium/Anterior",
                             resolution="Low")
-sce.p <- Spaniel::createVisiumSCE(tenXDir="data/visium/Posterior", 
+sce.p <- Spaniel::createVisiumSCE(tenXDir="data/visium/Posterior",
                             resolution="Low")
 
 sce <- cbind(sce.a , sce.p)
@@ -154,8 +153,8 @@ plot_grid(ncol=2, plotlist = plist)
 
 
 ```{r}
-sce <- sce[ , sce$detected > 500 & 
-              sce$subsets_mt_percent < 25 & 
+sce <- sce[ , sce$detected > 500 &
+              sce$subsets_mt_percent < 25 &
               sce$subsets_hb_percent < 20]
 dim(sce)
 ```
@@ -298,7 +297,7 @@ plot_grid(ncol=2, plotlist = plist)
 
 #ST_ALL8:
 
-We will do a similar integration as in the Data Integration lab. 
+We will do a similar integration as in the Data Integration lab.
 
 ```{r}
 mnn_out <- batchelor::fastMNN(sce, subset.row = hvgs,
@@ -466,7 +465,7 @@ Next, we select the highly variable genes that are present in both datasets.
 #Find common highly variable genes
 common_hvgs <- allen.hvgs[allen.hvgs %in% hvgs]
 
-#Predict cell classes 
+#Predict cell classes
 pred.grun <- SingleR(test=sce.anterior[common_hvgs,],
                      de.n = 20,
                      ref=allen_reference_sce[common_hvgs,],
@@ -475,7 +474,7 @@ pred.grun <- SingleR(test=sce.anterior[common_hvgs,],
 
 #Transfer the classes to the SCE object
 sce.anterior$cell_prediction <- pred.grun$labels
-sce.anterior@colData <- cbind(sce.anterior@colData, 
+sce.anterior@colData <- cbind(sce.anterior@colData,
                               as.data.frame.matrix(table(list(1:ncol(sce.anterior),sce.anterior$cell_prediction))))
 ```
 
