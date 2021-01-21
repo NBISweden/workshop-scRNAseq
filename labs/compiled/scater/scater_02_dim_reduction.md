@@ -1,7 +1,7 @@
 ---
 title: "Scater/Scran: Dimensionality reduction"
 author: "Åsa Björklund  &  Paulo Czarnewski"
-date: "Sept 13, 2019"
+date: 'January 20, 2021'
 output:
   html_document:
     self_contained: true
@@ -23,6 +23,8 @@ output:
       collapsed: false
       smooth_scroll: true
     toc_depth: 3
+editor_options: 
+  chunk_output_type: console
 ---
 
 # Dimensionality reduction
@@ -43,15 +45,15 @@ First, let's load all necessary libraries and the QC-filtered dataset from the p
 
 ```r
 suppressPackageStartupMessages({
-  library(scater)
-  library(scran)
-  library(cowplot)
-  library(ggplot2)
-  library(rafalib)
-  library(umap)
+    library(scater)
+    library(scran)
+    library(cowplot)
+    library(ggplot2)
+    library(rafalib)
+    library(umap)
 })
 
-sce <- readRDS("data/3pbmc_qc.rds")
+sce <- readRDS("data/results/covid_qc.rds")
 ```
 
 ### Feature selection
@@ -60,48 +62,32 @@ Next, we first need to define which features/genes are important in our dataset 
 
 
 ```r
-sce <- computeSumFactors(sce, sizes=c(20, 40, 60, 80))
-```
+sce <- computeSumFactors(sce, sizes = c(20, 40, 60, 80))
+sce <- logNormCounts(sce)
+var.out <- modelGeneVar(sce, method = "loess")
 
-```
-## Warning in FUN(...): encountered negative size factor estimates
-```
+mypar(1, 2)
+# plot mean over TOTAL variance Visualizing the fit:
+fit.var <- metadata(var.out)
+plot(fit.var$mean, fit.var$var, xlab = "Mean of log-expression", ylab = "Variance of log-expression")
+curve(fit.var$trend(x), col = "dodgerblue", add = TRUE, lwd = 2)
 
-```r
-sce <- normalize(sce)
-var.fit <- trendVar(sce, use.spikes=FALSE,method="loess",loess.args=list(span=0.02))
-var.out <- decomposeVar(sce, var.fit)
+# Select 1000 top variable genes
+hvg.out <- getTopHVGs(var.out, n = 1000)
 
-mypar(1,2)
-#plot mean over TOTAL variance
-plot(var.out$mean, var.out$total, pch=16, cex=0.4, xlab="Mean log-expression",
-     ylab="Variance of log-expression")
-o <- order(var.out$mean)
-lines(var.out$mean[o], var.out$tech[o], col="dodgerblue", lwd=2)
+# highligt those cells in the plot
+cutoff <- rownames(var.out) %in% hvg.out
+points(fit.var$mean[cutoff], fit.var$var[cutoff], col = "red", pch = 16, cex = 0.6)
 
-cutoff_value <- 0.2
-cutoff <- var.out$bio > cutoff_value
-points(var.out$mean[cutoff], var.out$total[cutoff], col="red", pch=16,cex=.6)
 
-#plot mean over BIOLOGICAL variance
-plot(var.out$mean, var.out$bio, pch=16, cex=0.4, xlab="Mean log-expression",
-     ylab="Variance of log-expression")
-lines(c(min(var.out$mean),max(var.out$mean)), c(0,0), col="dodgerblue", lwd=2)
-points(var.out$mean[cutoff], var.out$bio[cutoff], col="red", pch=16,cex=.6)
+# plot mean over BIOLOGICAL variance
+plot(var.out$mean, var.out$bio, pch = 16, cex = 0.4, xlab = "Mean log-expression", 
+    ylab = "Variance of log-expression")
+lines(c(min(var.out$mean), max(var.out$mean)), c(0, 0), col = "dodgerblue", lwd = 2)
+points(var.out$mean[cutoff], var.out$bio[cutoff], col = "red", pch = 16, cex = 0.6)
 ```
 
 ![](scater_02_dim_reduction_files/figure-html/unnamed-chunk-2-1.png)<!-- -->
-
-```r
-hvg.out <- var.out[which(var.out$FDR <= 0.05 & var.out$bio >= cutoff_value),]
-hvg.out <- hvg.out[order(hvg.out$bio, decreasing=TRUE),]
-
-print(nrow(hvg.out))
-```
-
-```
-## [1] 847
-```
 
 ### Z-score transformation
 
@@ -111,7 +97,8 @@ By default variables are scaled in the PCA step and is not done separately. But 
 
 
 ```r
-# sce@assays$data@listData$scaled.data <- apply(exprs(sce)[rownames(hvg.out),,drop=FALSE],2,function(x) scale(x,T,T))
+# sce@assays$data@listData$scaled.data <-
+# apply(exprs(sce)[rownames(hvg.out),,drop=FALSE],2,function(x) scale(x,T,T))
 # rownames(sce@assays$data@listData$scaled.data) <- rownames(hvg.out)
 ```
 
@@ -125,26 +112,19 @@ As said above, we use the `logcounts` and then set `scale_features` to TRUE in o
 
 
 ```r
-#Default Scater way
-sce <- runPCA(sce, exprs_values = "logcounts",  scale_features = T,
-              ncomponents = 30, feature_set = rownames(hvg.out),method = "prcomp")
-
-#For some reason Scater removes the dimnames of "logcounts" after PCA, so we put it back
-dimnames(sce@assays$data@listData$logcounts) <- dimnames(sce@assays$data@listData$counts)
-
-#2nd way:
-#sce <- runPCA(sce, exprs_values = "scaled.data", scale_features = FALSE,
-#              ncomponents = 30, feature_set = rownames(hvg.out) )
+# runPCA and specify the variable genes to use for dim reduction with subset_row
+sce <- runPCA(sce, exprs_values = "logcounts", ncomponents = 50, subset_row = hvg.out, 
+    scale = TRUE)
 ```
 
 We then plot the first principal components.
 
 
 ```r
-plot_grid(ncol = 3,
-  plotReducedDim(sce,use_dimred = "PCA",colour_by = "sample_id",ncomponents = 1:2,add_ticks = F, point_size = 0.6),
-  plotReducedDim(sce,use_dimred = "PCA",colour_by = "sample_id",ncomponents = 3:4,add_ticks = F, point_size = 0.6),
-  plotReducedDim(sce,use_dimred = "PCA",colour_by = "sample_id",ncomponents = 5:6,add_ticks = F, point_size = 0.6) )
+plot_grid(ncol = 3, plotReducedDim(sce, dimred = "PCA", colour_by = "sample", ncomponents = 1:2, 
+    point_size = 0.6), plotReducedDim(sce, dimred = "PCA", colour_by = "sample", 
+    ncomponents = 3:4, point_size = 0.6), plotReducedDim(sce, dimred = "PCA", colour_by = "sample", 
+    ncomponents = 5:6, point_size = 0.6))
 ```
 
 ![](scater_02_dim_reduction_files/figure-html/unnamed-chunk-5-1.png)<!-- -->
@@ -156,15 +136,6 @@ To identify which genes (Seurat) or metadata paramters (Scater/Scran) contribute
 plot_grid(ncol = 2, plotExplanatoryPCs(sce))
 ```
 
-```
-## Warning in getVarianceExplained(dummy, variables = variables, exprs_values =
-## "pc_space", : ignoring 'is_cell_control' with fewer than 2 unique levels
-```
-
-```
-## Warning in FUN(newX[, i], ...): no non-missing arguments to max; returning -Inf
-```
-
 ![](scater_02_dim_reduction_files/figure-html/unnamed-chunk-6-1.png)<!-- -->
 
 We can also plot the amount of variance explained by each PC.
@@ -172,8 +143,10 @@ We can also plot the amount of variance explained by each PC.
 
 ```r
 mypar()
-plot(attr(sce@reducedDims$PCA,"percentVar")[1:50]*100,type="l",ylab="% variance",xlab="Principal component #")
-points(attr(sce@reducedDims$PCA,"percentVar")[1:50]*100,pch=21,bg="grey",cex=.5)
+plot(attr(reducedDim(sce, "PCA"), "percentVar")[1:50] * 100, type = "l", ylab = "% variance", 
+    xlab = "Principal component #")
+points(attr(reducedDim(sce, "PCA"), "percentVar")[1:50] * 100, pch = 21, bg = "grey", 
+    cex = 0.5)
 ```
 
 ![](scater_02_dim_reduction_files/figure-html/unnamed-chunk-7-1.png)<!-- -->
@@ -188,17 +161,14 @@ We can now run [BH-tSNE](https://arxiv.org/abs/1301.3342).
 
 ```r
 set.seed(42)
-sce <- runTSNE(sce, use_dimred = "PCA", n_dimred = 30, 
-               perplexity = 30)
-#see ?Rtsne and ?runTSNE for more info
-reducedDimNames(sce)[reducedDimNames(sce)=="TSNE"] <- "tSNE_on_PCA"
+sce <- runTSNE(sce, dimred = "PCA", n_dimred = 30, perplexity = 30, name = "tSNE_on_PCA")
 ```
 
 We can now plot the tSNE colored per dataset. We can clearly see the effect of batches present in the dataset.
 
 
 ```r
-plot_grid(ncol = 3,plotReducedDim(sce,use_dimred = "tSNE_on_PCA",colour_by = "sample_id",add_ticks = F))
+plot_grid(ncol = 3, plotReducedDim(sce, dimred = "tSNE_on_PCA", colour_by = "sample"))
 ```
 
 ![](scater_02_dim_reduction_files/figure-html/unnamed-chunk-9-1.png)<!-- -->
@@ -211,38 +181,27 @@ We can now run [UMAP](https://arxiv.org/abs/1802.03426) for cell embeddings.
 
 
 ```r
-sce <- runUMAP(sce,use_dimred = "PCA", n_dimred = 30,   ncomponents = 2)
-
-#We need to rename it to not overide with other UMAP computations
-try(sce@reducedDims$UMAP_on_RNA <- NULL)
-reducedDimNames(sce)[reducedDimNames(sce)=="UMAP"] <- "UMAP_on_PCA"
-#see ?umap and ?runUMAP for more info
+sce <- runUMAP(sce, dimred = "PCA", n_dimred = 30, ncomponents = 2, name = "UMAP_on_PCA")
+# see ?umap and ?runUMAP for more info
 ```
 
 Another usefullness of UMAP is that it is not limitted by the number of dimensions the data cen be reduced into (unlike tSNE). We can simply reduce the dimentions altering the `n.components` parameter.
 
 
 ```r
-sce <- runUMAP(sce,use_dimred = "PCA", n_dimred = 30,   ncomponents = 10)
-#see ?umap and ?runUMAP for more info
-
-#We need to rename it to not overide with other UMAP computations
-try(sce@reducedDims$UMAP10_on_RNA <- NULL)
-reducedDimNames(sce)[reducedDimNames(sce)=="UMAP"] <- "UMAP10_on_PCA"
+sce <- runUMAP(sce, dimred = "PCA", n_dimred = 30, ncomponents = 10, name = "UMAP10_on_PCA")
+# see ?umap and ?runUMAP for more info
 ```
 
 We can now plot the UMAP colored per dataset. Although less distinct as in the tSNE, we still see quite an effect of the different batches in the data.
 
 
 ```r
-plot_grid(ncol = 3,
-          plotReducedDim(sce,use_dimred = "UMAP_on_PCA",colour_by = "sample_id",add_ticks = F)+
-            ggplot2::ggtitle(label ="UMAP_on_PCA"),
-          plotReducedDim(sce,use_dimred = "UMAP10_on_PCA",colour_by = "sample_id",ncomponents = 1:2,add_ticks = F)+
-            ggplot2::ggtitle(label ="UMAP10_on_PCA"),
-          plotReducedDim(sce,use_dimred = "UMAP10_on_PCA",colour_by = "sample_id",ncomponents = 3:4,add_ticks = F)+
-            ggplot2::ggtitle(label ="UMAP10_on_PCA")
-)
+plot_grid(ncol = 3, plotReducedDim(sce, dimred = "UMAP_on_PCA", colour_by = "sample") + 
+    ggplot2::ggtitle(label = "UMAP_on_PCA"), plotReducedDim(sce, dimred = "UMAP10_on_PCA", 
+    colour_by = "sample", ncomponents = 1:2) + ggplot2::ggtitle(label = "UMAP10_on_PCA"), 
+    plotReducedDim(sce, dimred = "UMAP10_on_PCA", colour_by = "sample", ncomponents = 3:4) + 
+        ggplot2::ggtitle(label = "UMAP10_on_PCA"))
 ```
 
 ![](scater_02_dim_reduction_files/figure-html/unnamed-chunk-12-1.png)<!-- -->
@@ -259,11 +218,7 @@ To run tSNE or UMAP on the scaled data, one firts needs to select the number of 
 
 
 ```r
-sce <- runUMAP(sce, exprs_values='logcounts', feature_set = rownames(hvg.out))
-
-#We need to rename it to not overide with other UMAP computations
-try(sce@reducedDims$UMAP_on_ScaleData <- NULL)
-reducedDimNames(sce)[reducedDimNames(sce)=="UMAP"] <- "UMAP_on_ScaleData"
+sce <- runUMAP(sce, exprs_values = "logcounts", name = "UMAP_on_ScaleData")
 ```
 
 To run tSNE or UMAP on the a graph, we first need to build a graph from the data. In fact, both tSNE and UMAP first build a graph from the data using a specified distance metrix and then optimize the embedding. Since a graph is just a matrix containing distances from cell to cell and as such, you can run either UMAP or tSNE using any other distance metric desired. Euclidean and Correlation are ususally the most commonly used.
@@ -272,17 +227,16 @@ To run tSNE or UMAP on the a graph, we first need to build a graph from the data
 
 
 ```r
-#Build Graph
-g <- buildKNNGraph(sce,k=30,use.dimred="PCA",assay.type="RNA")
-sce@reducedDims$KNN <- igraph::as_adjacency_matrix(g)
+# Build Graph
+nn <- RANN::nn2(reducedDim(sce, "PCA"), k = 30)
+names(nn) <- c("idx", "dist")
+g <- buildKNNGraph(sce, k = 30, use.dimred = "PCA")
+reducedDim(sce, "KNN") <- igraph::as_adjacency_matrix(g)
 
 
-#Run UMAP and rename it for comparisson
-# temp <- umap::umap.defaults
-# temp$input <- "dist"
-sce <- runUMAP(sce,use_dimred = "KNN", ncomponents = 2, input="data")
-try(sce@reducedDims$UMAP_on_Graph <- NULL)
-reducedDimNames(sce)[reducedDimNames(sce)=="UMAP"] <- "UMAP_on_Graph"
+# Run UMAP and rename it for comparisson temp <- umap::umap.defaults
+try(reducedDim(sce, "UMAP_on_Graph") <- NULL)
+reducedDim(sce, "UMAP_on_Graph") <- uwot::umap(X = NULL, n_components = 2, nn_method = nn)
 ```
 
 
@@ -290,14 +244,10 @@ We can now plot the UMAP comparing both on PCA vs ScaledSata vs Graph.
 
 
 ```r
-plot_grid(ncol = 3,
-  plotReducedDim(sce, use_dimred = "UMAP_on_PCA", colour_by = "sample_id",add_ticks = F)+ 
-    ggplot2::ggtitle(label ="UMAP_on_PCA"),
-  plotReducedDim(sce, use_dimred = "UMAP_on_ScaleData", colour_by = "sample_id",add_ticks = F)+
-    ggplot2::ggtitle(label ="UMAP_on_ScaleData"),
-  plotReducedDim(sce, use_dimred = "UMAP_on_Graph", colour_by = "sample_id",add_ticks = F)+
-    ggplot2::ggtitle(label ="UMAP_on_Graph")
-)
+plot_grid(ncol = 3, plotReducedDim(sce, dimred = "UMAP_on_PCA", colour_by = "sample") + 
+    ggplot2::ggtitle(label = "UMAP_on_PCA"), plotReducedDim(sce, dimred = "UMAP_on_ScaleData", 
+    colour_by = "sample") + ggplot2::ggtitle(label = "UMAP_on_ScaleData"), plotReducedDim(sce, 
+    dimred = "UMAP_on_Graph", colour_by = "sample") + ggplot2::ggtitle(label = "UMAP_on_Graph"))
 ```
 
 ![](scater_02_dim_reduction_files/figure-html/unnamed-chunk-15-1.png)<!-- -->
@@ -322,41 +272,13 @@ FCER1A, CST3 | DCs
 
 ```r
 plotlist <- list()
-for(i in c("CD3E","CD4","CD8A","NKG7","GNLY","MS4A1","CD14","LYZ","MS4A7","FCGR3A","CST3","FCER1A")){
-  plotlist[[i]] <- plotReducedDim(sce,use_dimred = "UMAP_on_PCA",colour_by = i,by_exprs_values = "logcounts",add_ticks = F) +
-  scale_fill_gradientn(colours = colorRampPalette(c("grey90","orange3","firebrick","firebrick","red","red" ))(10)) +
-  ggtitle(label = i)+ theme(plot.title = element_text(size=20)) }
-```
-
-```
-## Scale for 'fill' is already present. Adding another scale for 'fill', which
-## will replace the existing scale.
-## Scale for 'fill' is already present. Adding another scale for 'fill', which
-## will replace the existing scale.
-## Scale for 'fill' is already present. Adding another scale for 'fill', which
-## will replace the existing scale.
-## Scale for 'fill' is already present. Adding another scale for 'fill', which
-## will replace the existing scale.
-## Scale for 'fill' is already present. Adding another scale for 'fill', which
-## will replace the existing scale.
-## Scale for 'fill' is already present. Adding another scale for 'fill', which
-## will replace the existing scale.
-## Scale for 'fill' is already present. Adding another scale for 'fill', which
-## will replace the existing scale.
-## Scale for 'fill' is already present. Adding another scale for 'fill', which
-## will replace the existing scale.
-## Scale for 'fill' is already present. Adding another scale for 'fill', which
-## will replace the existing scale.
-## Scale for 'fill' is already present. Adding another scale for 'fill', which
-## will replace the existing scale.
-## Scale for 'fill' is already present. Adding another scale for 'fill', which
-## will replace the existing scale.
-## Scale for 'fill' is already present. Adding another scale for 'fill', which
-## will replace the existing scale.
-```
-
-```r
-plot_grid(ncol=3, plotlist = plotlist)
+for (i in c("CD3E", "CD4", "CD8A", "NKG7", "GNLY", "MS4A1", "CD14", "LYZ", "MS4A7", 
+    "FCGR3A", "CST3", "FCER1A")) {
+    plotlist[[i]] <- plotReducedDim(sce, dimred = "UMAP_on_PCA", colour_by = i, by_exprs_values = "logcounts") + 
+        scale_fill_gradientn(colours = colorRampPalette(c("grey90", "orange3", "firebrick", 
+            "firebrick", "red", "red"))(10)) + ggtitle(label = i) + theme(plot.title = element_text(size = 20))
+}
+plot_grid(ncol = 3, plotlist = plotlist)
 ```
 
 ![](scater_02_dim_reduction_files/figure-html/unnamed-chunk-16-1.png)<!-- -->
@@ -366,7 +288,7 @@ We can finally save the object for use in future steps.
 
 
 ```r
-saveRDS(sce,"data/3pbmc_qc_dm.rds")
+saveRDS(sce, "data/results/covid_qc_dm.rds")
 ```
 
 ### Session Info
@@ -378,12 +300,12 @@ sessionInfo()
 ```
 
 ```
-## R version 3.5.1 (2018-07-02)
+## R version 4.0.3 (2020-10-10)
 ## Platform: x86_64-apple-darwin13.4.0 (64-bit)
-## Running under: macOS  10.15
+## Running under: macOS Catalina 10.15.7
 ## 
 ## Matrix products: default
-## BLAS/LAPACK: /Users/asbj/miniconda3/envs/sc_course/lib/R/lib/libRblas.dylib
+## BLAS/LAPACK: /Users/asbj/miniconda3/envs/scRNAseq2021/lib/libopenblasp-r0.3.12.dylib
 ## 
 ## locale:
 ## [1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
@@ -393,54 +315,88 @@ sessionInfo()
 ## [8] methods   base     
 ## 
 ## other attached packages:
-##  [1] umap_0.2.3.1                rafalib_1.0.0              
-##  [3] cowplot_1.0.0               scran_1.10.1               
-##  [5] scater_1.10.1               ggplot2_3.2.1              
-##  [7] SingleCellExperiment_1.4.0  SummarizedExperiment_1.12.0
-##  [9] DelayedArray_0.8.0          BiocParallel_1.16.6        
-## [11] matrixStats_0.55.0          Biobase_2.42.0             
-## [13] GenomicRanges_1.34.0        GenomeInfoDb_1.18.1        
-## [15] IRanges_2.16.0              S4Vectors_0.20.1           
-## [17] BiocGenerics_0.28.0         RJSONIO_1.3-1.2            
-## [19] optparse_1.6.4             
+##  [1] umap_0.2.7.0                rafalib_1.0.0              
+##  [3] scDblFinder_1.4.0           org.Hs.eg.db_3.12.0        
+##  [5] AnnotationDbi_1.52.0        cowplot_1.1.1              
+##  [7] scran_1.18.0                scater_1.18.0              
+##  [9] ggplot2_3.3.3               SingleCellExperiment_1.12.0
+## [11] SummarizedExperiment_1.20.0 Biobase_2.50.0             
+## [13] GenomicRanges_1.42.0        GenomeInfoDb_1.26.0        
+## [15] IRanges_2.24.0              S4Vectors_0.28.0           
+## [17] BiocGenerics_0.36.0         MatrixGenerics_1.2.0       
+## [19] matrixStats_0.57.0          RJSONIO_1.3-1.4            
+## [21] optparse_1.6.6             
 ## 
 ## loaded via a namespace (and not attached):
-##  [1] viridis_0.5.1            dynamicTreeCut_1.63-1    edgeR_3.24.3            
-##  [4] jsonlite_1.6             viridisLite_0.3.0        DelayedMatrixStats_1.4.0
-##  [7] assertthat_0.2.1         statmod_1.4.32           GenomeInfoDbData_1.2.0  
-## [10] vipor_0.4.5              yaml_2.2.0               pillar_1.4.2            
-## [13] lattice_0.20-38          reticulate_1.13          glue_1.3.1              
-## [16] limma_3.38.3             digest_0.6.23            RColorBrewer_1.1-2      
-## [19] XVector_0.22.0           colorspace_1.4-1         htmltools_0.4.0         
-## [22] Matrix_1.2-17            plyr_1.8.4               pkgconfig_2.0.3         
-## [25] zlibbioc_1.28.0          purrr_0.3.3              scales_1.0.0            
-## [28] RSpectra_0.15-0          HDF5Array_1.10.1         Rtsne_0.15              
-## [31] getopt_1.20.3            openssl_1.1              tibble_2.1.3            
-## [34] withr_2.1.2              lazyeval_0.2.2           magrittr_1.5            
-## [37] crayon_1.3.4             evaluate_0.14            beeswarm_0.2.3          
-## [40] tools_3.5.1              stringr_1.4.0            Rhdf5lib_1.4.3          
-## [43] munsell_0.5.0            locfit_1.5-9.1           compiler_3.5.1          
-## [46] rlang_0.4.2              rhdf5_2.26.2             grid_3.5.1              
-## [49] RCurl_1.95-4.12          BiocNeighbors_1.0.0      igraph_1.2.4.1          
-## [52] labeling_0.3             bitops_1.0-6             rmarkdown_1.17          
-## [55] gtable_0.3.0             reshape2_1.4.3           R6_2.4.1                
-## [58] gridExtra_2.3            knitr_1.26               dplyr_0.8.3             
-## [61] stringi_1.4.3            ggbeeswarm_0.6.0         Rcpp_1.0.3              
-## [64] tidyselect_0.2.5         xfun_0.11
+##   [1] plyr_1.8.6                igraph_1.2.6             
+##   [3] lazyeval_0.2.2            splines_4.0.3            
+##   [5] BiocParallel_1.24.0       listenv_0.8.0            
+##   [7] scattermore_0.7           digest_0.6.27            
+##   [9] htmltools_0.5.0           viridis_0.5.1            
+##  [11] magrittr_2.0.1            memoise_1.1.0            
+##  [13] tensor_1.5                cluster_2.1.0            
+##  [15] ROCR_1.0-11               limma_3.46.0             
+##  [17] globals_0.14.0            askpass_1.1              
+##  [19] colorspace_2.0-0          blob_1.2.1               
+##  [21] ggrepel_0.9.0             xfun_0.19                
+##  [23] dplyr_1.0.3               crayon_1.3.4             
+##  [25] RCurl_1.98-1.2            jsonlite_1.7.2           
+##  [27] spatstat.data_1.7-0       spatstat_1.64-1          
+##  [29] survival_3.2-7            zoo_1.8-8                
+##  [31] glue_1.4.2                polyclip_1.10-0          
+##  [33] gtable_0.3.0              zlibbioc_1.36.0          
+##  [35] XVector_0.30.0            leiden_0.3.6             
+##  [37] DelayedArray_0.16.0       BiocSingular_1.6.0       
+##  [39] future.apply_1.7.0        abind_1.4-5              
+##  [41] scales_1.1.1              DBI_1.1.0                
+##  [43] edgeR_3.32.0              miniUI_0.1.1.1           
+##  [45] Rcpp_1.0.5                viridisLite_0.3.0        
+##  [47] xtable_1.8-4              reticulate_1.18          
+##  [49] dqrng_0.2.1               bit_4.0.4                
+##  [51] rsvd_1.0.3                htmlwidgets_1.5.3        
+##  [53] httr_1.4.2                getopt_1.20.3            
+##  [55] RColorBrewer_1.1-2        ellipsis_0.3.1           
+##  [57] Seurat_3.2.3              ica_1.0-2                
+##  [59] farver_2.0.3              pkgconfig_2.0.3          
+##  [61] scuttle_1.0.0             uwot_0.1.10              
+##  [63] deldir_0.2-3              locfit_1.5-9.4           
+##  [65] labeling_0.4.2            tidyselect_1.1.0         
+##  [67] rlang_0.4.10              reshape2_1.4.4           
+##  [69] later_1.1.0.1             munsell_0.5.0            
+##  [71] tools_4.0.3               xgboost_1.3.0.1          
+##  [73] generics_0.1.0            RSQLite_2.2.1            
+##  [75] ggridges_0.5.2            evaluate_0.14            
+##  [77] stringr_1.4.0             fastmap_1.0.1            
+##  [79] goftest_1.2-2             yaml_2.2.1               
+##  [81] knitr_1.30                bit64_4.0.5              
+##  [83] fitdistrplus_1.1-3        purrr_0.3.4              
+##  [85] RANN_2.6.1                nlme_3.1-151             
+##  [87] pbapply_1.4-3             future_1.21.0            
+##  [89] sparseMatrixStats_1.2.0   mime_0.9                 
+##  [91] formatR_1.7               hdf5r_1.3.3              
+##  [93] compiler_4.0.3            beeswarm_0.2.3           
+##  [95] plotly_4.9.2.2            png_0.1-7                
+##  [97] spatstat.utils_1.17-0     tibble_3.0.4             
+##  [99] statmod_1.4.35            stringi_1.5.3            
+## [101] RSpectra_0.16-0           lattice_0.20-41          
+## [103] bluster_1.0.0             Matrix_1.3-0             
+## [105] vctrs_0.3.6               pillar_1.4.7             
+## [107] lifecycle_0.2.0           lmtest_0.9-38            
+## [109] RcppAnnoy_0.0.18          BiocNeighbors_1.8.0      
+## [111] data.table_1.13.6         bitops_1.0-6             
+## [113] irlba_2.3.3               httpuv_1.5.4             
+## [115] patchwork_1.1.1           R6_2.5.0                 
+## [117] promises_1.1.1            KernSmooth_2.23-18       
+## [119] gridExtra_2.3             vipor_0.4.5              
+## [121] parallelly_1.23.0         codetools_0.2-18         
+## [123] MASS_7.3-53               assertthat_0.2.1         
+## [125] openssl_1.4.3             withr_2.3.0              
+## [127] sctransform_0.3.2         GenomeInfoDbData_1.2.4   
+## [129] mgcv_1.8-33               rpart_4.1-15             
+## [131] grid_4.0.3                beachmat_2.6.0           
+## [133] tidyr_1.1.2               rmarkdown_2.6            
+## [135] DelayedMatrixStats_1.12.0 Rtsne_0.15               
+## [137] shiny_1.5.0               ggbeeswarm_0.6.0
 ```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 

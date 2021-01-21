@@ -23,6 +23,8 @@ output:
       collapsed: false
       smooth_scroll: true
     toc_depth: 3
+editor_options: 
+  chunk_output_type: console
 ---
 
 ```{r setup, include=FALSE}
@@ -37,7 +39,7 @@ p.caption {font-size: 0.9em;font-style: italic;color: grey;margin-right: 10%;mar
 ***
 # Get data
 
-In this tutorial, we will run all tutorials with a set of 6 PBMC 10x datasets from 3 covid-19 patients and 3 healthy controls, the samples have been subsampled to 1500 cells per sample. They are part of the github repo and if you have cloned the repo they should be available in folder: `labs/data/covid_data_GSE149689`. Instructions on how to download them can also be found in the Precourse material. 
+In this tutorial, we will run all tutorials with a set of 6 PBMC 10x datasets from 3 covid-19 patients and 3 healthy controls, the samples have been subsampled to 1500 cells per sample. They are part of the github repo and if you have cloned the repo they should be available in folder: `labs/data/covid_data_GSE149689`. Instructions on how to download them can also be found in the Precourse material.
 
 ```{bash, results='hide'}
 mkdir -p data/raw
@@ -47,14 +49,18 @@ count=$(ls -l data/raw/*.h5 | grep -v ^d | wc -l )
 echo $count
 
 # if not 4 files, fetch the files from github.
-if (("$count" <  4)); then
+if (("$count" <  6)); then
   cd data/raw
-  curl  -O https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/raw/master/labs/data/covid_data_GSE149689/raw/Normal_PBMC_13.h5
-  curl  -O https://github.com/NBISweden/workshop-scRNAseq/raw/master/labs/data/covid_data_GSE149689/raw/Normal_PBMC_14.h5
-  curl  -O https://github.com/NBISweden/workshop-scRNAseq/raw/master/labs/data/covid_data_GSE149689/raw/nCoV_PBMC_16.h5
-  curl  -O https://github.com/NBISweden/workshop-scRNAseq/raw/master/labs/data/covid_data_GSE149689/raw/nCoV_PBMC_17.h5
+  curl -O https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/new_dataset/labs/data/covid_data_GSE149689/sub/Normal_PBMC_13.h5
+  curl -O https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/new_dataset/labs/data/covid_data_GSE149689/sub/Normal_PBMC_14.h5
+  curl -O https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/new_dataset/labs/data/covid_data_GSE149689/sub/Normal_PBMC_5.h5
+  curl -O https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/new_dataset/labs/data/covid_data_GSE149689/sub/nCoV_PBMC_15.h5
+  curl -O https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/new_dataset/labs/data/covid_data_GSE149689/sub/nCoV_PBMC_17.h5
+  curl -O https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/new_dataset/labs/data/covid_data_GSE149689/sub/nCoV_PBMC_1.h5
   cd ../..
-fi  
+fi
+
+ls -lGa data/raw
 ```
 
 With data in place, now we can start loading libraries we will use in this tutorial.
@@ -64,7 +70,7 @@ suppressMessages(require(Seurat))
 suppressMessages(require(Matrix))
 ```
 
-We can first load the data individually by reading directly from HDF5 file format (.h5). 
+We can first load the data individually by reading directly from HDF5 file format (.h5).
 
 ```{r,message='hide',warning='hide',results='hold'}
 cov.15 <- Seurat::Read10X_h5(
@@ -166,11 +172,13 @@ head(ribo_genes,10)
 alldata$percent_ribo <- colSums(  alldata@assays$RNA@counts[ribo_genes,]  ) / total_counts_per_cell
 ```
 
-And finally, with the same method we will calculate proportion hemoglobin genes, which can give an indication of red blood cell contamination. 
+And finally, with the same method we will calculate proportion hemoglobin genes, which can give an indication of red blood cell contamination.
 
 ```{r, results='hold'}
 # Percentage hemoglobin genes - includes all genes starting with HB except HBP.
 alldata <- PercentageFeatureSet(alldata, "^HB[^(P)]", col.name = "percent_hb")
+
+alldata <- PercentageFeatureSet(alldata, "PECAM1|PF4", col.name = "percent_plat")
 
 ```
 
@@ -192,8 +200,14 @@ FeatureScatter(alldata, "nCount_RNA"  , "nFeature_RNA", group.by = "orig.ident",
 
 ```
 
-### TASK: Plot scatterplots
+<style>
+div.blue { background-color:#e6f0ff; border-radius: 5px; padding: 10px;}
+</style>
+<div class = "blue">
+**Your turn**
+
 Plot additional QC stats that we have calculated as scatter plots. How are the different measures correlated? Can you explain why?
+</div>
 
 ***
 # Filtering
@@ -210,12 +224,11 @@ data.filt <- subset(alldata, features=selected_f, cells=selected_c)
 dim(data.filt)
 ```
 
- Extremely high number of detected genes could indicate doublets. However, depending on the cell type composition in your sample, you may have cells with higher number of genes (and also higher counts) from one cell type. <br>In these datasets, there is also a clear difference between the v2 vs v3 10x chemistry with regards to gene detection, so it may not be fair to apply the same cutoffs to all of them. Also, in the protein assay data there is a lot of cells with few detected genes giving a bimodal distribution. This type of distribution is not seen in the other 2 datasets. Considering that they are all PBMC datasets it makes sense to regard this distribution as low quality libraries. Filter the cells with high gene detection (putative doublets) with cutoffs 4100 for v3 chemistry and 2000 for v2. <br>Here, we will filter the cells with low gene detection (low quality libraries) with less than 1000 genes for v2 and < 500 for v2.
+ Extremely high number of detected genes could indicate doublets. However, depending on the cell type composition in your sample, you may have cells with higher number of genes (and also higher counts) from one cell type. <br>In this case, we will run doublet prediction further down, so we will skip this step now, but the code below is an example of how it can be run:
 
 ```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=16}
-#start with cells with many genes detected.
-
 # skip for now and run DoubletFinder first!
+
 #high.det.v3 <- WhichCells(data.filt, expression = nFeature_RNA > 4100)
 #high.det.v2 <- WhichCells(data.filt, expression = nFeature_RNA > 2000 & orig.ident == "v2.1k")
 
@@ -231,9 +244,10 @@ Additionally, we can also see which genes contribute the most to such reads. We 
 ```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=8,fig.width=12}
 #Compute the relative expression of each gene per cell
 #Use sparse matrix operations, if your dataset is large, doing matrix devisions the regular way will take a very long time.
-C = data.filt@assays$RNA@counts
-C@x = C@x / rep.int(colSums(C), diff(C@p))
-most_expressed <- order(Matrix::rowSums( C ),decreasing = T)[20:1]
+par(mar=c(4,8,2,1))
+C <- data.filt@assays$RNA@counts
+C <-  Matrix::t( Matrix::t(C) / Matrix::colSums(C) ) * 100
+most_expressed <- order(apply(C,1,median),decreasing = T)[20:1]
 boxplot( as.matrix(t(C[most_expressed,])),cex=.1, las=1, xlab="% total count per cell",col=scales::hue_pal()(20)[20:1],horizontal=TRUE)
 
 ```
@@ -242,7 +256,7 @@ As you can see, MALAT1 constitutes up to 30% of the UMIs from a single cell and 
 
 ## Mito/Ribo filtering
 
-We also have quite a lot of cells with high proportion of mitochondrial and low proportion ofribosomal reads. It could be wise to remove those cells, if we have enough cells left after filtering. <br>Another option would be to either remove all mitochondrial reads from the dataset and hope that the remaining genes still have enough biological signal. <br>A third option would be to just regress out the `percent_mito` variable during scaling. In this case we had as much as 99.7% mitochondrial reads in some of the cells, so it is quite unlikely that there is much cell type signature left in those. <br>Looking at the plots, make reasonable decisions on where to draw the cutoff. In this case, the bulk of the cells are below 20% mitochondrial reads and that will be used as a cutoff. We will also remove cells with less than 5% ribosomal reads. 
+We also have quite a lot of cells with high proportion of mitochondrial and low proportion ofribosomal reads. It could be wise to remove those cells, if we have enough cells left after filtering. <br>Another option would be to either remove all mitochondrial reads from the dataset and hope that the remaining genes still have enough biological signal. <br>A third option would be to just regress out the `percent_mito` variable during scaling. In this case we had as much as 99.7% mitochondrial reads in some of the cells, so it is quite unlikely that there is much cell type signature left in those. <br>Looking at the plots, make reasonable decisions on where to draw the cutoff. In this case, the bulk of the cells are below 20% mitochondrial reads and that will be used as a cutoff. We will also remove cells with less than 5% ribosomal reads.
 
 ```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=16}
 selected_mito <- WhichCells(data.filt, expression = percent_mito < 0.20)
@@ -271,7 +285,7 @@ VlnPlot(data.filt, group.by= "orig.ident", features = feats, pt.size = 0.1,ncol 
 
 ## Filter genes
 
-As the level of expression of mitochondrial and MALAT1 genes are judged as mainly technical, and hemoglobin genes mainly from RBC contamination, it can be wise to remove them from the dataset bofore any further analysis. 
+As the level of expression of mitochondrial and MALAT1 genes are judged as mainly technical, it can be wise to remove them from the dataset bofore any further analysis.
 
 ```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=4,fig.width=4}
 dim(data.filt)
@@ -292,6 +306,57 @@ dim(data.filt)
 ```
 
 
+
+# Sample sex
+
+When working with human or animal samples, you should ideally constrain you experiments to a single sex to avoid including sex bias in the conclusions. However this may not always be possible. By looking at reads from chromosomeY (males) and XIST (X-inactive specific transcript) expression (mainly female) it is quite easy to determine per sample which sex it is. It can also bee a good way to detect if there has been any sample mixups, if the sample metadata sex does not agree with the computational predictions.
+
+To get choromosome information for all genes, you should ideally parse the information from the gtf file that you used in the mapping pipeline as it has the exact same annotation version/gene naming. However, it may not always be available, as in this case where we have downloaded public data. Hence, we will use biomart to fetch chromosome information. 
+As the biomart instances quite often are unresponsive, you can try the code below, but if it fails, we have the file with gene annotations on github [here](). Make sure you put it at the correct location for the path `genes.file` to work. 
+
+```{r}
+genes.file = "data/results/genes.table.csv"
+
+if (!file.exists(genes.file)){
+  suppressMessages(require(biomaRt))
+
+  # initialize connection to mart, may take some time if the sites are unresponsive.
+  mart <- useMart(host="www.ensembl.org", "ENSEMBL_MART_ENSEMBL", dataset="hsapiens_gene_ensembl")
+
+  # fetch chromosome info plus some other annotations
+  genes.table <- getBM(filters= "external_gene_name", attributes= c("ensembl_gene_id",
+              "external_gene_name", "description","gene_biotype", "chromosome_name","start_position"),
+              values= rownames(data.filt), mart= mart)
+  write.csv(genes.table, file = genes.file)
+}else{
+  genes.table = read.csv(genes.file)
+}
+
+```
+
+Now that we have the chromosome information, we can calculate per cell the proportion of reads that comes from chromosome Y.
+
+```{r}
+chrY.gene = genes.table$external_gene_name[genes.table$chromosome_name == "Y"]
+
+data.filt$pct_chrY = colSums(data.filt@assays$RNA@counts[chrY.gene,]) / colSums(data.filt@assays$RNA@counts)
+
+```
+
+Then plot XIST expression vs chrY proportion. As you can see, the samples are clearly on either side, even if some cells do not have detection of either.
+
+```{r}
+FeatureScatter(data.filt, feature1 = "XIST", feature2 = "pct_chrY")
+```
+
+Plot as violins.
+
+```{r}
+VlnPlot(data.filt, features = c("XIST", "pct_chrY"))
+```
+
+Here, we can see clearly that we have two males and 4 females, can you see which samples they are? 
+Do you think this will cause any problems for downstream analysis? Discuss with your group: what would be the best way to deal with this type of sex bias?
 
 
 # Calculate cell-cycle scores
@@ -322,11 +387,12 @@ In this case it looks like we only have a few cycling cells in the datasets.
 Doublets/Mulitples of cells in the same well/droplet is a common issue in scRNAseq protocols. Especially in droplet-based methods whith overloading of cells. In a typical 10x experiment the proportion of doublets is linearly dependent on the amount of loaded cells. As  indicated from the Chromium user guide, doublet rates are about as follows:
 ![](../../figs/10x_doublet_rate.png)
 Most doublet detectors simulates doublets by merging cell counts and predicts doublets as cells that have similar embeddings as the simulated doublets. Most such packages need an assumption about the number/proportion of expected doublets in the dataset. The data you are using is subsampled, but the orignial datasets contained about 5 000 cells per sample, hence we can assume that they loaded about 9 000 cells and should have a doublet rate at about 4%.
-OBS! Ideally doublet prediction should be run on each sample separately, especially if your different samples have different proportions of celltypes. In this case, the data is subsampled so we have very few cells per sample and all samples are sorted PBMCs so it is okay to run them together. 
+OBS! Ideally doublet prediction should be run on each sample separately, especially if your different samples have different proportions of celltypes. In this case, the data is subsampled so we have very few cells per sample and all samples are sorted PBMCs so it is okay to run them together.
 
 Here, we will use `DoubletFinder` to predict doublet cells. But before doing doublet detection we need to run scaling, variable gene selection and pca, as well as UMAP for visualization. These steps will be explored in more detail in coming exercises.
 
 ```{r}
+# remotes::install_github('chris-mcginnis-ucsf/DoubletFinder')
 suppressMessages(require(DoubletFinder))
 
 data.filt = FindVariableFeatures(data.filt, verbose = F)
