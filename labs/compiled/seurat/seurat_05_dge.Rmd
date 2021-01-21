@@ -22,6 +22,8 @@ output:
       collapsed: false
       smooth_scroll: true
     toc_depth: 3
+editor_options:
+  chunk_output_type: console
 ---
 
 ```{r setup, include=FALSE}
@@ -47,6 +49,7 @@ suppressPackageStartupMessages({
   library(cowplot)
   library(ggplot2)
   library(pheatmap)
+  library(enrichR)
   library(rafalib)
 })
 
@@ -54,8 +57,8 @@ alldata <- readRDS("data/results/covid_qc_dr_int_cl.rds")
 ```
 
 ```{r, fig.width=12, fig.height=6}
-#Set the identity as louvain with resolution 0.3
-sel.clust = "CCA_snn_res.0.3"
+#Set the identity as louvain with resolution 0.5
+sel.clust = "CCA_snn_res.0.5"
 
 alldata <- SetIdent(alldata, value = sel.clust)
 table(alldata@active.ident)
@@ -65,8 +68,8 @@ plot_grid(ncol = 3,
   DimPlot(alldata, label = T) + NoAxes(),
   DimPlot(alldata, group.by = "orig.ident") + NoAxes(),
   DimPlot(alldata, group.by = "type") + NoAxes() )
-  
-  
+
+
 ```
 
 ## Cell marker genes
@@ -96,7 +99,7 @@ top25
 We can now select the top 25 up regulated genes for plotting.
 
 ```{r}
-mypar(1,5,mar=c(4,6,3,1))
+mypar(2,5,mar=c(4,6,3,1))
 for(i in unique(top25$cluster)){
   barplot( sort( setNames(top25$avg_logFC, top25$gene) [top25$cluster == i], F),
            horiz = T,las=1 ,main=paste0(i," vs. rest"),border = "white", yaxs="i" )
@@ -117,14 +120,14 @@ DoHeatmap(alldata, features = as.character(unique(top5$gene)),group.by = sel.clu
 Another way is by representing the overal group expression and detection rates in a dot-plot.
 
 ```{r, fig.height=10}
-DotPlot(alldata, features = as.character(unique(top5$gene)),group.by = sel.clust,assay = "RNA")+coord_flip()
+DotPlot(alldata, features = rev(as.character(unique(top5$gene))),group.by = sel.clust,assay = "RNA")+coord_flip()
 ```
 
 We can also plot a violin plot for each gene.
 
 ```{r,fig.height=10,fig.width=10}
 # take top 3 genes per cluster/
-top5 %>% group_by(cluster)  %>% top_n(-3, p_val_adj) -> top3
+top5 %>% group_by(cluster)  %>% top_n(-3, p_val) -> top3
 
 
 # set pt.size to zero if you do not want all the points to hide the violin shapes, or to a small value like 0.1
@@ -143,13 +146,13 @@ Take a screen shot of those results and re-run the same code above with another 
 ## Differential expression across conditions
 ***
 
-The second way of computing differential expression is to answer which genes are differentially expressed within a cluster. For example, in our case we have libraries comming from patients and controls and we would like to know which genes are influenced the most in a particular cell type. 
+The second way of computing differential expression is to answer which genes are differentially expressed within a cluster. For example, in our case we have libraries comming from patients and controls and we would like to know which genes are influenced the most in a particular cell type.
 
 For this end, we will first subset our data for the desired cell cluster, then change the cell identities to the variable of comparison (which now in our case is the "type", e.g. Covid/Ctrl).
 
 ```{r,fig.height=10,fig.width=10}
 # select all cells in cluster 1
-cell_selection <- subset(alldata, cells = colnames(alldata)[ alldata@meta.data[,sel.clust] == 1])
+cell_selection <- subset(alldata, cells = colnames(alldata)[ alldata@meta.data[,sel.clust] == 2])
 cell_selection <- SetIdent(cell_selection, value = "type")
 #Compute differentiall expression
 DGE_cell_selection <- FindAllMarkers(cell_selection,
@@ -165,7 +168,7 @@ DGE_cell_selection <- FindAllMarkers(cell_selection,
 We can now plot the expression across the "type".
 
 ```{r, fig.height=10}
-DGE_cell_selection %>% group_by(cluster)  %>% top_n(-5, p_val_adj) -> top5_cell_selection
+DGE_cell_selection %>% group_by(cluster)  %>% top_n(-5, p_val) -> top5_cell_selection
 
 VlnPlot(cell_selection, features = as.character(unique(top5_cell_selection$gene)),
         ncol = 5,group.by = "type",assay = "RNA", pt.size = .1)
@@ -178,12 +181,111 @@ VlnPlot(alldata, features = as.character(unique(top5_cell_selection$gene)),
         ncol = 5, split.by = "type",assay = "RNA", pt.size = 0)
 ```
 
+## Gene Set Analysis
+***
 
+Hypergeometric enrichment test
+
+Having a defined list of differentially expressed genes, you can now look for their combined function using hypergeometric test:
+
+```{r}
+# Load additional packages
+library(enrichR)
+
+# Check available databases to perform enrichment (then choose one)
+enrichR::listEnrichrDbs()
+
+# Perform enrichment
+enrich_results <- enrichr(
+ genes     = DGE_cell_selection$gene[DGE_cell_selection$cluster == "Covid"],
+ databases = "GO_Biological_Process_2017b" )[[1]]
+
+```
+
+
+Some databases of interest:
+
+* `GO_Biological_Process_2017b`
+* `KEGG_2019_Human`
+* `KEGG_2019_Mouse`
+* `WikiPathways_2019_Human`
+* `WikiPathways_2019_Mouse`
+
+You visualize your results using a simple barplot, for example:
+
+```{r}
+par(mar = c(3, 25, 2, 1))
+barplot( height    = -log10(enrich_results$P.value)[10:1],
+        names.arg = enrich_results$Term[10:1],
+        horiz     = TRUE,
+        las       = 1,
+        border    = FALSE,
+        cex.names = .6 )
+abline(v = c(-log10(0.05)), lty = 2)
+abline(v = 0, lty = 1)
+```
+
+Gene Set Enrichment Analysis (GSEA)
+
+Besides the enrichment using hypergeometric test, we can also perform gene set enrichment analysis (GSEA), which scores ranked genes list (usually based on fold changes) and computes permutation test to check if a particular gene set is more present in the Up-regulated genes, amongthe DOWN_regulated genes or not differentially regulated.
+
+```{r,fig.height=10,fig.width=10}
+# Create a gene rank based on the gene expression fold change
+gene_rank <- setNames( DGE_cell_selection$avg_logFC, casefold(rownames(DGE_cell_selection),upper=T) )
+```
+
+ Once our list of genes are sorted, we can proceed with the enrichment itself. We can use the package to get gene set from the Molecular Signature Database (MSigDB) and select KEGG pathways as an example.
+
+```{r,fig.height=10,fig.width=10}
+# install.packages("msigdbr")
+library(msigdbr)
+
+#Download gene sets
+msigdbgmt <- msigdbr::msigdbr("Homo sapiens")
+msigdbgmt <- as.data.frame(msigdbgmt)
+
+#List available gene sets
+unique(msigdbgmt$gs_subcat)
+
+#Subset which gene set you want to use.
+msigdbgmt_subset <- msigdbgmt[msigdbgmt$gs_subcat == "CP:KEGG",]
+gmt <- lapply( unique(msigdbgmt_subset$gs_name),function(x){msigdbgmt_subset [msigdbgmt_subset$gs_name == x ,"gene_symbol"]} )
+names(gmt) <- unique(paste0(msigdbgmt_subset$gs_name,"_",msigdbgmt_subset$gs_exact_source))
+```
+
+ Next, we will be using the GSEA. This will result in a table containing information for several pathways. We can then sort and filter those pathways to visualize only the top ones. You can select/filter them by either `p-value` or normalized enrichemnet score (`NES`).
+
+```{r,results='hide',block.title=TRUE,fig.height=5,fig.width=10}
+library(fgsea)
+
+# Perform enrichemnt analysis
+fgseaRes <- fgsea( pathways=gmt, stats=gene_rank, minSize=15, maxSize=500)
+fgseaRes <- fgseaRes[ order(fgseaRes$pval) ,]
+
+# Filter the results table to show only the top 10 UP or DOWN regulated processes (optional)
+top10_UP <- fgseaRes$pathway [1:10]
+
+# Nice summary table (shown as a plot)
+dev.off()
+plotGseaTable(gmt[top10_UP], gene_rank, fgseaRes, gseaParam = 0.5)
+```
+
+<style>
+div.blue { background-color:#e6f0ff; border-radius: 5px; padding: 10px;}
+</style>
+<div class = "blue">
+**Your turn**
+
+Which KEGG pathways are upregulated in this cluster?
+Which KEGG pathways are dowregulated in this cluster?
+Change the pathway source to another gene set (e.g. "CP:WIKIPATHWAYS" or "CP:REACTOME" or "CP:BIOCARTA" or "GO:BP") and check the if you get simmilar results?
+</div>
 
 Finally, lets save the integrated data for further analysis.
 
 ```{r}
 saveRDS(alldata,"data/3pbmc_qc_dr_int_cl_dge.rds")
+write.csv(markers_genes)
 ```
 
 
@@ -193,22 +295,3 @@ saveRDS(alldata,"data/3pbmc_qc_dr_int_cl_dge.rds")
 ```{r}
 sessionInfo()
 ```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

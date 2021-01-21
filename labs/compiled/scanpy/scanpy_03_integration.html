@@ -12947,8 +12947,13 @@ ul.typeahead-list  > li > a.pull-right {
 /*# sourceMappingURL=style.min.css.map */
     </style>
 <style type="text/css">
-    .highlight .hll { background-color: #ffffcc }
-.highlight  { background: #f8f8f8; }
+    pre { line-height: 125%; }
+td.linenos pre { color: #000000; background-color: #f0f0f0; padding-left: 5px; padding-right: 5px; }
+span.linenos { color: #000000; background-color: #f0f0f0; padding-left: 5px; padding-right: 5px; }
+td.linenos pre.special { color: #000000; background-color: #ffffc0; padding-left: 5px; padding-right: 5px; }
+span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 5px; padding-right: 5px; }
+.highlight .hll { background-color: #ffffcc }
+.highlight { background: #f8f8f8; }
 .highlight .c { color: #408080; font-style: italic } /* Comment */
 .highlight .err { border: 1px solid #FF0000 } /* Error */
 .highlight .k { color: #008000; font-weight: bold } /* Keyword */
@@ -13206,7 +13211,7 @@ $( document ).ready(function(){
 
 
 <div class="output_subarea output_stream output_stdout output_text">
-<pre>(5594, 3067)
+<pre>(5590, 3065)
 </pre>
 </div>
 </div>
@@ -13218,7 +13223,7 @@ $( document ).ready(function(){
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<p>As the stored AnnData object contains scaled data based on variable genes, we need to make a new object with the raw counts and normalized it again. Variable gene selection should not be performed on the scaled data object, only do normalization and log transformation before variable genes selection.</p>
+<p>As the stored AnnData object contains scaled data based on variable genes, we need to make a new object with the logtransformed normalized counts. The new variable gene selection should not be performed on the scaled data matrix.</p>
 
 </div>
 </div>
@@ -13228,10 +13233,10 @@ $( document ).ready(function(){
 <div class="prompt input_prompt">In&nbsp;[4]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">adata2</span> <span class="o">=</span> <span class="n">sc</span><span class="o">.</span><span class="n">AnnData</span><span class="p">(</span><span class="n">X</span><span class="o">=</span><span class="n">adata</span><span class="o">.</span><span class="n">raw</span><span class="o">.</span><span class="n">X</span><span class="p">,</span> <span class="n">var</span><span class="o">=</span><span class="n">adata</span><span class="o">.</span><span class="n">raw</span><span class="o">.</span><span class="n">var</span><span class="p">,</span> <span class="n">obs</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">)</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">adata2</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">raw</span><span class="o">.</span><span class="n">to_adata</span><span class="p">()</span> 
 
-<span class="n">sc</span><span class="o">.</span><span class="n">pp</span><span class="o">.</span><span class="n">normalize_per_cell</span><span class="p">(</span><span class="n">adata2</span><span class="p">,</span> <span class="n">counts_per_cell_after</span><span class="o">=</span><span class="mf">1e4</span><span class="p">)</span>
-<span class="n">sc</span><span class="o">.</span><span class="n">pp</span><span class="o">.</span><span class="n">log1p</span><span class="p">(</span><span class="n">adata2</span><span class="p">)</span>
+<span class="c1"># check that the matrix looks like noramlized counts</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">adata2</span><span class="o">.</span><span class="n">X</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="mi">10</span><span class="p">,</span><span class="mi">1</span><span class="p">:</span><span class="mi">10</span><span class="p">])</span>
 </pre></div>
 
     </div>
@@ -13248,8 +13253,8 @@ $( document ).ready(function(){
 
 
 <div class="output_subarea output_stream output_stdout output_text">
-<pre>normalizing by total count per cell
-    finished (0:00:00): normalized adata.X and added    &#39;n_counts&#39;, counts per cell before normalization (adata.obs)
+<pre>  (0, 5)	0.9678403
+  (1, 5)	0.5124039
 </pre>
 </div>
 </div>
@@ -13261,9 +13266,8 @@ $( document ).ready(function(){
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h3 id="Detect-variable-genes">Detect variable genes<a class="anchor-link" href="#Detect-variable-genes">&#182;</a></h3><p>Variable genes can be detected across the full dataset, but then we run the risk of getting many batch-specific genes that will drive a lot of the variation. Or we can select variable genes from each batch separately to get only celltype variation. Here, we will do both as an example of how it can be done.</p>
-<p>First we will select genes based on the full dataset.</p>
-
+<h3 id="Detect-variable-genes">Detect variable genes<a class="anchor-link" href="#Detect-variable-genes">&#182;</a></h3><p>Variable genes can be detected across the full dataset, but then we run the risk of getting many batch-specific genes that will drive a lot of the variation. Or we can select variable genes from each batch separately to get only celltype variation. In the dimensionality reduction exercise, we already selected variable genes, so they are already stored in <code>adata.var.highly_variable</code></p>
+<h1 id="INTEG_4_SCANPY:">INTEG_4_SCANPY:<a class="anchor-link" href="#INTEG_4_SCANPY:">&#182;</a></h1>
 </div>
 </div>
 </div>
@@ -13272,14 +13276,9 @@ $( document ).ready(function(){
 <div class="prompt input_prompt">In&nbsp;[5]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="c1">#variable genes for the full dataset</span>
-<span class="n">sc</span><span class="o">.</span><span class="n">pp</span><span class="o">.</span><span class="n">highly_variable_genes</span><span class="p">(</span><span class="n">adata2</span><span class="p">,</span> <span class="n">min_mean</span><span class="o">=</span><span class="mf">0.0125</span><span class="p">,</span> <span class="n">max_mean</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">min_disp</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">var_genes_all</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="o">.</span><span class="n">highly_variable</span>
 
-<span class="n">sc</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">highly_variable_genes</span><span class="p">(</span><span class="n">adata2</span><span class="p">)</span>
-
-<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Highly variable genes: </span><span class="si">%d</span><span class="s2">&quot;</span><span class="o">%</span><span class="k">sum</span>(adata2.var.highly_variable))
-
-<span class="n">var_genes_all</span> <span class="o">=</span> <span class="n">adata2</span><span class="o">.</span><span class="n">var</span><span class="o">.</span><span class="n">highly_variable</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Highly variable genes: </span><span class="si">%d</span><span class="s2">&quot;</span><span class="o">%</span><span class="k">sum</span>(var_genes_all))
 </pre></div>
 
     </div>
@@ -13296,40 +13295,7 @@ $( document ).ready(function(){
 
 
 <div class="output_subarea output_stream output_stdout output_text">
-<pre>extracting highly variable genes
-    finished (0:00:00)
---&gt; added
-    &#39;highly_variable&#39;, boolean vector (adata.var)
-    &#39;means&#39;, float vector (adata.var)
-    &#39;dispersions&#39;, float vector (adata.var)
-    &#39;dispersions_norm&#39;, float vector (adata.var)
-</pre>
-</div>
-</div>
-
-<div class="output_area">
-
-    <div class="prompt"></div>
-
-
-
-
-<div class="output_png output_subarea ">
-<img src="scanpy_03_integration_files/scanpy_03_integration_8_1.png"
-width=728
-height=281
->
-</div>
-
-</div>
-
-<div class="output_area">
-
-    <div class="prompt"></div>
-
-
-<div class="output_subarea output_stream output_stdout output_text">
-<pre>Highly variable genes: 3067
+<pre>Highly variable genes: 3065
 </pre>
 </div>
 </div>
@@ -13382,15 +13348,15 @@ height=281
     &#39;means&#39;, float vector (adata.var)
     &#39;dispersions&#39;, float vector (adata.var)
     &#39;dispersions_norm&#39;, float vector (adata.var)
-Highly variable genes intersection: 148
+Highly variable genes intersection: 149
 Number of batches where gene is variable:
-0    8153
-1    4763
-2    3116
-3    1633
-4     697
-5     242
-6     148
+0    8152
+1    4785
+2    3101
+3    1632
+4     690
+5     243
+6     149
 Name: highly_variable_nbatches, dtype: int64
 </pre>
 </div>
@@ -13434,11 +13400,11 @@ Name: highly_variable_nbatches, dtype: int64
 
 
 <div class="output_subarea output_stream output_stdout output_text">
-<pre>Any batch var genes: 10599
-All data var genes: 3067
-Overlap: 3062
-Variable genes in all batches: 148
-Overlap batch instersection and all: 146
+<pre>Any batch var genes: 10600
+All data var genes: 3065
+Overlap: 3060
+Variable genes in all batches: 149
+Overlap batch instersection and all: 148
 </pre>
 </div>
 </div>
@@ -13481,7 +13447,7 @@ Overlap batch instersection and all: 146
 
 
 <div class="output_text output_subarea output_execute_result">
-<pre>2720</pre>
+<pre>2714</pre>
 </div>
 
 </div>
@@ -13528,30 +13494,36 @@ Overlap batch instersection and all: 146
 
 
 <div class="output_text output_subarea output_execute_result">
-<pre>{&#39;covid_1&#39;: View of AnnData object with n_obs × n_vars = 855 × 18752
-     obs: &#39;type&#39;, &#39;sample&#39;, &#39;batch&#39;, &#39;n_genes_by_counts&#39;, &#39;total_counts&#39;, &#39;total_counts_mt&#39;, &#39;pct_counts_mt&#39;, &#39;total_counts_ribo&#39;, &#39;pct_counts_ribo&#39;, &#39;total_counts_hb&#39;, &#39;pct_counts_hb&#39;, &#39;percent_mt2&#39;, &#39;n_counts&#39;, &#39;n_genes&#39;, &#39;S_score&#39;, &#39;G2M_score&#39;, &#39;phase&#39;, &#39;doublet_scores&#39;, &#39;predicted_doublets&#39;, &#39;doublet_info&#39;
+<pre>{&#39;covid_1&#39;: View of AnnData object with n_obs × n_vars = 854 × 18752
+     obs: &#39;type&#39;, &#39;sample&#39;, &#39;batch&#39;, &#39;n_genes_by_counts&#39;, &#39;total_counts&#39;, &#39;total_counts_mt&#39;, &#39;pct_counts_mt&#39;, &#39;total_counts_ribo&#39;, &#39;pct_counts_ribo&#39;, &#39;total_counts_hb&#39;, &#39;pct_counts_hb&#39;, &#39;percent_mt2&#39;, &#39;n_counts&#39;, &#39;n_genes&#39;, &#39;percent_chrY&#39;, &#39;XIST-counts&#39;, &#39;S_score&#39;, &#39;G2M_score&#39;, &#39;phase&#39;, &#39;doublet_scores&#39;, &#39;predicted_doublets&#39;, &#39;doublet_info&#39;
      var: &#39;gene_ids&#39;, &#39;feature_types&#39;, &#39;genome&#39;, &#39;mt&#39;, &#39;ribo&#39;, &#39;hb&#39;, &#39;n_cells_by_counts&#39;, &#39;mean_counts&#39;, &#39;pct_dropout_by_counts&#39;, &#39;total_counts&#39;, &#39;n_cells&#39;, &#39;highly_variable&#39;, &#39;means&#39;, &#39;dispersions&#39;, &#39;dispersions_norm&#39;, &#39;highly_variable_nbatches&#39;, &#39;highly_variable_intersection&#39;
-     uns: &#39;log1p&#39;, &#39;hvg&#39;,
+     uns: &#39;doublet_info_colors&#39;, &#39;hvg&#39;, &#39;neighbors&#39;, &#39;pca&#39;, &#39;sample_colors&#39;, &#39;umap&#39;
+     obsm: &#39;X_pca&#39;, &#39;X_tsne&#39;, &#39;X_umap&#39;,
  &#39;covid_15&#39;: View of AnnData object with n_obs × n_vars = 582 × 18752
-     obs: &#39;type&#39;, &#39;sample&#39;, &#39;batch&#39;, &#39;n_genes_by_counts&#39;, &#39;total_counts&#39;, &#39;total_counts_mt&#39;, &#39;pct_counts_mt&#39;, &#39;total_counts_ribo&#39;, &#39;pct_counts_ribo&#39;, &#39;total_counts_hb&#39;, &#39;pct_counts_hb&#39;, &#39;percent_mt2&#39;, &#39;n_counts&#39;, &#39;n_genes&#39;, &#39;S_score&#39;, &#39;G2M_score&#39;, &#39;phase&#39;, &#39;doublet_scores&#39;, &#39;predicted_doublets&#39;, &#39;doublet_info&#39;
+     obs: &#39;type&#39;, &#39;sample&#39;, &#39;batch&#39;, &#39;n_genes_by_counts&#39;, &#39;total_counts&#39;, &#39;total_counts_mt&#39;, &#39;pct_counts_mt&#39;, &#39;total_counts_ribo&#39;, &#39;pct_counts_ribo&#39;, &#39;total_counts_hb&#39;, &#39;pct_counts_hb&#39;, &#39;percent_mt2&#39;, &#39;n_counts&#39;, &#39;n_genes&#39;, &#39;percent_chrY&#39;, &#39;XIST-counts&#39;, &#39;S_score&#39;, &#39;G2M_score&#39;, &#39;phase&#39;, &#39;doublet_scores&#39;, &#39;predicted_doublets&#39;, &#39;doublet_info&#39;
      var: &#39;gene_ids&#39;, &#39;feature_types&#39;, &#39;genome&#39;, &#39;mt&#39;, &#39;ribo&#39;, &#39;hb&#39;, &#39;n_cells_by_counts&#39;, &#39;mean_counts&#39;, &#39;pct_dropout_by_counts&#39;, &#39;total_counts&#39;, &#39;n_cells&#39;, &#39;highly_variable&#39;, &#39;means&#39;, &#39;dispersions&#39;, &#39;dispersions_norm&#39;, &#39;highly_variable_nbatches&#39;, &#39;highly_variable_intersection&#39;
-     uns: &#39;log1p&#39;, &#39;hvg&#39;,
+     uns: &#39;doublet_info_colors&#39;, &#39;hvg&#39;, &#39;neighbors&#39;, &#39;pca&#39;, &#39;sample_colors&#39;, &#39;umap&#39;
+     obsm: &#39;X_pca&#39;, &#39;X_tsne&#39;, &#39;X_umap&#39;,
  &#39;covid_17&#39;: View of AnnData object with n_obs × n_vars = 1028 × 18752
-     obs: &#39;type&#39;, &#39;sample&#39;, &#39;batch&#39;, &#39;n_genes_by_counts&#39;, &#39;total_counts&#39;, &#39;total_counts_mt&#39;, &#39;pct_counts_mt&#39;, &#39;total_counts_ribo&#39;, &#39;pct_counts_ribo&#39;, &#39;total_counts_hb&#39;, &#39;pct_counts_hb&#39;, &#39;percent_mt2&#39;, &#39;n_counts&#39;, &#39;n_genes&#39;, &#39;S_score&#39;, &#39;G2M_score&#39;, &#39;phase&#39;, &#39;doublet_scores&#39;, &#39;predicted_doublets&#39;, &#39;doublet_info&#39;
+     obs: &#39;type&#39;, &#39;sample&#39;, &#39;batch&#39;, &#39;n_genes_by_counts&#39;, &#39;total_counts&#39;, &#39;total_counts_mt&#39;, &#39;pct_counts_mt&#39;, &#39;total_counts_ribo&#39;, &#39;pct_counts_ribo&#39;, &#39;total_counts_hb&#39;, &#39;pct_counts_hb&#39;, &#39;percent_mt2&#39;, &#39;n_counts&#39;, &#39;n_genes&#39;, &#39;percent_chrY&#39;, &#39;XIST-counts&#39;, &#39;S_score&#39;, &#39;G2M_score&#39;, &#39;phase&#39;, &#39;doublet_scores&#39;, &#39;predicted_doublets&#39;, &#39;doublet_info&#39;
      var: &#39;gene_ids&#39;, &#39;feature_types&#39;, &#39;genome&#39;, &#39;mt&#39;, &#39;ribo&#39;, &#39;hb&#39;, &#39;n_cells_by_counts&#39;, &#39;mean_counts&#39;, &#39;pct_dropout_by_counts&#39;, &#39;total_counts&#39;, &#39;n_cells&#39;, &#39;highly_variable&#39;, &#39;means&#39;, &#39;dispersions&#39;, &#39;dispersions_norm&#39;, &#39;highly_variable_nbatches&#39;, &#39;highly_variable_intersection&#39;
-     uns: &#39;log1p&#39;, &#39;hvg&#39;,
- &#39;ctrl_5&#39;: View of AnnData object with n_obs × n_vars = 1017 × 18752
-     obs: &#39;type&#39;, &#39;sample&#39;, &#39;batch&#39;, &#39;n_genes_by_counts&#39;, &#39;total_counts&#39;, &#39;total_counts_mt&#39;, &#39;pct_counts_mt&#39;, &#39;total_counts_ribo&#39;, &#39;pct_counts_ribo&#39;, &#39;total_counts_hb&#39;, &#39;pct_counts_hb&#39;, &#39;percent_mt2&#39;, &#39;n_counts&#39;, &#39;n_genes&#39;, &#39;S_score&#39;, &#39;G2M_score&#39;, &#39;phase&#39;, &#39;doublet_scores&#39;, &#39;predicted_doublets&#39;, &#39;doublet_info&#39;
+     uns: &#39;doublet_info_colors&#39;, &#39;hvg&#39;, &#39;neighbors&#39;, &#39;pca&#39;, &#39;sample_colors&#39;, &#39;umap&#39;
+     obsm: &#39;X_pca&#39;, &#39;X_tsne&#39;, &#39;X_umap&#39;,
+ &#39;ctrl_5&#39;: View of AnnData object with n_obs × n_vars = 1018 × 18752
+     obs: &#39;type&#39;, &#39;sample&#39;, &#39;batch&#39;, &#39;n_genes_by_counts&#39;, &#39;total_counts&#39;, &#39;total_counts_mt&#39;, &#39;pct_counts_mt&#39;, &#39;total_counts_ribo&#39;, &#39;pct_counts_ribo&#39;, &#39;total_counts_hb&#39;, &#39;pct_counts_hb&#39;, &#39;percent_mt2&#39;, &#39;n_counts&#39;, &#39;n_genes&#39;, &#39;percent_chrY&#39;, &#39;XIST-counts&#39;, &#39;S_score&#39;, &#39;G2M_score&#39;, &#39;phase&#39;, &#39;doublet_scores&#39;, &#39;predicted_doublets&#39;, &#39;doublet_info&#39;
      var: &#39;gene_ids&#39;, &#39;feature_types&#39;, &#39;genome&#39;, &#39;mt&#39;, &#39;ribo&#39;, &#39;hb&#39;, &#39;n_cells_by_counts&#39;, &#39;mean_counts&#39;, &#39;pct_dropout_by_counts&#39;, &#39;total_counts&#39;, &#39;n_cells&#39;, &#39;highly_variable&#39;, &#39;means&#39;, &#39;dispersions&#39;, &#39;dispersions_norm&#39;, &#39;highly_variable_nbatches&#39;, &#39;highly_variable_intersection&#39;
-     uns: &#39;log1p&#39;, &#39;hvg&#39;,
+     uns: &#39;doublet_info_colors&#39;, &#39;hvg&#39;, &#39;neighbors&#39;, &#39;pca&#39;, &#39;sample_colors&#39;, &#39;umap&#39;
+     obsm: &#39;X_pca&#39;, &#39;X_tsne&#39;, &#39;X_umap&#39;,
  &#39;ctrl_13&#39;: View of AnnData object with n_obs × n_vars = 1124 × 18752
-     obs: &#39;type&#39;, &#39;sample&#39;, &#39;batch&#39;, &#39;n_genes_by_counts&#39;, &#39;total_counts&#39;, &#39;total_counts_mt&#39;, &#39;pct_counts_mt&#39;, &#39;total_counts_ribo&#39;, &#39;pct_counts_ribo&#39;, &#39;total_counts_hb&#39;, &#39;pct_counts_hb&#39;, &#39;percent_mt2&#39;, &#39;n_counts&#39;, &#39;n_genes&#39;, &#39;S_score&#39;, &#39;G2M_score&#39;, &#39;phase&#39;, &#39;doublet_scores&#39;, &#39;predicted_doublets&#39;, &#39;doublet_info&#39;
+     obs: &#39;type&#39;, &#39;sample&#39;, &#39;batch&#39;, &#39;n_genes_by_counts&#39;, &#39;total_counts&#39;, &#39;total_counts_mt&#39;, &#39;pct_counts_mt&#39;, &#39;total_counts_ribo&#39;, &#39;pct_counts_ribo&#39;, &#39;total_counts_hb&#39;, &#39;pct_counts_hb&#39;, &#39;percent_mt2&#39;, &#39;n_counts&#39;, &#39;n_genes&#39;, &#39;percent_chrY&#39;, &#39;XIST-counts&#39;, &#39;S_score&#39;, &#39;G2M_score&#39;, &#39;phase&#39;, &#39;doublet_scores&#39;, &#39;predicted_doublets&#39;, &#39;doublet_info&#39;
      var: &#39;gene_ids&#39;, &#39;feature_types&#39;, &#39;genome&#39;, &#39;mt&#39;, &#39;ribo&#39;, &#39;hb&#39;, &#39;n_cells_by_counts&#39;, &#39;mean_counts&#39;, &#39;pct_dropout_by_counts&#39;, &#39;total_counts&#39;, &#39;n_cells&#39;, &#39;highly_variable&#39;, &#39;means&#39;, &#39;dispersions&#39;, &#39;dispersions_norm&#39;, &#39;highly_variable_nbatches&#39;, &#39;highly_variable_intersection&#39;
-     uns: &#39;log1p&#39;, &#39;hvg&#39;,
- &#39;ctrl_14&#39;: View of AnnData object with n_obs × n_vars = 988 × 18752
-     obs: &#39;type&#39;, &#39;sample&#39;, &#39;batch&#39;, &#39;n_genes_by_counts&#39;, &#39;total_counts&#39;, &#39;total_counts_mt&#39;, &#39;pct_counts_mt&#39;, &#39;total_counts_ribo&#39;, &#39;pct_counts_ribo&#39;, &#39;total_counts_hb&#39;, &#39;pct_counts_hb&#39;, &#39;percent_mt2&#39;, &#39;n_counts&#39;, &#39;n_genes&#39;, &#39;S_score&#39;, &#39;G2M_score&#39;, &#39;phase&#39;, &#39;doublet_scores&#39;, &#39;predicted_doublets&#39;, &#39;doublet_info&#39;
+     uns: &#39;doublet_info_colors&#39;, &#39;hvg&#39;, &#39;neighbors&#39;, &#39;pca&#39;, &#39;sample_colors&#39;, &#39;umap&#39;
+     obsm: &#39;X_pca&#39;, &#39;X_tsne&#39;, &#39;X_umap&#39;,
+ &#39;ctrl_14&#39;: View of AnnData object with n_obs × n_vars = 984 × 18752
+     obs: &#39;type&#39;, &#39;sample&#39;, &#39;batch&#39;, &#39;n_genes_by_counts&#39;, &#39;total_counts&#39;, &#39;total_counts_mt&#39;, &#39;pct_counts_mt&#39;, &#39;total_counts_ribo&#39;, &#39;pct_counts_ribo&#39;, &#39;total_counts_hb&#39;, &#39;pct_counts_hb&#39;, &#39;percent_mt2&#39;, &#39;n_counts&#39;, &#39;n_genes&#39;, &#39;percent_chrY&#39;, &#39;XIST-counts&#39;, &#39;S_score&#39;, &#39;G2M_score&#39;, &#39;phase&#39;, &#39;doublet_scores&#39;, &#39;predicted_doublets&#39;, &#39;doublet_info&#39;
      var: &#39;gene_ids&#39;, &#39;feature_types&#39;, &#39;genome&#39;, &#39;mt&#39;, &#39;ribo&#39;, &#39;hb&#39;, &#39;n_cells_by_counts&#39;, &#39;mean_counts&#39;, &#39;pct_dropout_by_counts&#39;, &#39;total_counts&#39;, &#39;n_cells&#39;, &#39;highly_variable&#39;, &#39;means&#39;, &#39;dispersions&#39;, &#39;dispersions_norm&#39;, &#39;highly_variable_nbatches&#39;, &#39;highly_variable_intersection&#39;
-     uns: &#39;log1p&#39;, &#39;hvg&#39;}</pre>
+     uns: &#39;doublet_info_colors&#39;, &#39;hvg&#39;, &#39;neighbors&#39;, &#39;pca&#39;, &#39;sample_colors&#39;, &#39;umap&#39;
+     obsm: &#39;X_pca&#39;, &#39;X_tsne&#39;, &#39;X_umap&#39;}</pre>
 </div>
 
 </div>
@@ -13607,180 +13579,180 @@ Overlap batch instersection and all: 146
 
 
 <div class="output_subarea output_stream output_stderr output_text">
-<pre>/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py:14: NumbaWarning: 
-Compilation is falling back to object mode WITH looplifting enabled because Function &#34;l2_norm&#34; failed type inference due to: No implementation of function Function(&lt;function norm at 0x7fbf1d42e2f0&gt;) found for signature:
+<pre>/Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py:14: NumbaWarning: <span class="ansi-bold">
+Compilation is falling back to object mode WITH looplifting enabled because Function &#34;l2_norm&#34; failed type inference due to: </span><span class="ansi-bold">No implementation of function Function(&lt;function norm at 0x7ff0b5c42840&gt;) found for signature:
  
  &gt;&gt;&gt; norm(x=array(float32, 2d, A), axis=Literal[int](1))
  
 There are 2 candidate implementations:
-  - Of which 2 did not match due to:
+</span><span class="ansi-bold">  - Of which 2 did not match due to:
   Overload in function &#39;norm_impl&#39;: File: numba/np/linalg.py: Line 2352.
-    With argument(s): &#39;(x=array(float32, 2d, A), axis=int64)&#39;:
-   Rejected as the implementation raised a specific error:
-     TypeError: norm_impl() got an unexpected keyword argument &#39;x&#39;
-  raised from /Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/numba/core/typing/templates.py:710
+    With argument(s): &#39;(x=array(float32, 2d, A), axis=int64)&#39;:</span>
+<span class="ansi-bold">   Rejected as the implementation raised a specific error:
+     TypeError: norm_impl() got an unexpected keyword argument &#39;x&#39;</span>
+  raised from /Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/python3.6/site-packages/numba/core/typing/templates.py:710
 
-During: resolving callee type: Function(&lt;function norm at 0x7fbf1d42e2f0&gt;)
-During: typing of call at /Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py (16)
-
-
-File &#34;../../../../../../../miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 16:
-def l2_norm(in_matrix):
-    return np.linalg.norm(x=in_matrix, axis=1)
-    ^
+<span class="ansi-bold">During: resolving callee type: Function(&lt;function norm at 0x7ff0b5c42840&gt;)</span>
+<span class="ansi-bold">During: typing of call at /Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py (16)
+</span>
+<span class="ansi-bold">
+File &#34;../../../../../../.conda/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 16:</span>
+<span class="ansi-bold">def l2_norm(in_matrix):
+</span><span class="ansi-bold">    return np.linalg.norm(x=in_matrix, axis=1)
+</span>    <span class="ansi-bold">^</span>
 
   @jit(float32[:](float32[:, :]), nogil=True)
-/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/numba/core/object_mode_passes.py:178: NumbaWarning: Function &#34;l2_norm&#34; was compiled in object mode without forceobj=True.
-
-File &#34;../../../../../../../miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 15:
-@jit(float32[:](float32[:, :]), nogil=True)
-def l2_norm(in_matrix):
-^
+/Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/python3.6/site-packages/numba/core/object_mode_passes.py:152: NumbaWarning: <span class="ansi-bold">Function &#34;l2_norm&#34; was compiled in object mode without forceobj=True.
+</span><span class="ansi-bold">
+File &#34;../../../../../../.conda/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 15:</span>
+<span class="ansi-bold">@jit(float32[:](float32[:, :]), nogil=True)
+</span><span class="ansi-bold">def l2_norm(in_matrix):
+</span><span class="ansi-bold">^</span>
 
   state.func_ir.loc))
-/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/numba/core/object_mode_passes.py:188: NumbaDeprecationWarning: 
+/Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/python3.6/site-packages/numba/core/object_mode_passes.py:162: NumbaDeprecationWarning: <span class="ansi-bold">
 Fall-back from the nopython compilation path to the object mode compilation path has been detected, this is deprecated behaviour.
 
 For more information visit https://numba.pydata.org/numba-doc/latest/reference/deprecation.html#deprecation-of-object-mode-fall-back-behaviour-when-using-jit
-
-File &#34;../../../../../../../miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 15:
-@jit(float32[:](float32[:, :]), nogil=True)
-def l2_norm(in_matrix):
-^
+</span><span class="ansi-bold">
+File &#34;../../../../../../.conda/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 15:</span>
+<span class="ansi-bold">@jit(float32[:](float32[:, :]), nogil=True)
+</span><span class="ansi-bold">def l2_norm(in_matrix):
+</span><span class="ansi-bold">^</span>
 
   state.func_ir.loc))
-/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py:14: NumbaWarning: Code running in object mode won&#39;t allow parallel execution despite nogil=True.
+/Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py:14: NumbaWarning: <span class="ansi-bold">Code running in object mode won&#39;t allow parallel execution despite nogil=True.</span>
   @jit(float32[:](float32[:, :]), nogil=True)
-/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py:29: NumbaPerformanceWarning: np.dot() is faster on contiguous arrays, called on (array(float32, 1d, A), array(float32, 1d, A))
+/Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py:29: NumbaPerformanceWarning: <span class="ansi-bold">np.dot() is faster on contiguous arrays, called on (array(float32, 1d, A), array(float32, 1d, A))</span>
   dist[i, j] = np.dot(m[i], n[j])
-/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py:88: NumbaWarning: 
-Compilation is falling back to object mode WITH looplifting enabled because Function &#34;find_mutual_nn&#34; failed type inference due to: Untyped global name &#39;cKDTree&#39;: cannot determine Numba type of &lt;class &#39;type&#39;&gt;
-
-File &#34;../../../../../../../miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 90:
-def find_mutual_nn(data1, data2, k1, k2, n_jobs):
-    k_index_1 = cKDTree(data1).query(x=data2, k=k1, n_jobs=n_jobs)[1]
-    ^
-
-  @jit((float32[:, :], float32[:, :], int8, int8, int8))
-/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py:88: NumbaWarning: 
-Compilation is falling back to object mode WITHOUT looplifting enabled because Function &#34;find_mutual_nn&#34; failed type inference due to: Untyped global name &#39;cKDTree&#39;: cannot determine Numba type of &lt;class &#39;type&#39;&gt;
-
-File &#34;../../../../../../../miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 90:
-def find_mutual_nn(data1, data2, k1, k2, n_jobs):
-    k_index_1 = cKDTree(data1).query(x=data2, k=k1, n_jobs=n_jobs)[1]
-    ^
+/Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py:88: NumbaWarning: <span class="ansi-bold">
+Compilation is falling back to object mode WITH looplifting enabled because Function &#34;find_mutual_nn&#34; failed type inference due to: </span><span class="ansi-bold">Untyped global name &#39;cKDTree&#39;:</span> <span class="ansi-bold">Cannot determine Numba type of &lt;class &#39;type&#39;&gt;</span>
+<span class="ansi-bold">
+File &#34;../../../../../../.conda/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 90:</span>
+<span class="ansi-bold">def find_mutual_nn(data1, data2, k1, k2, n_jobs):
+</span><span class="ansi-bold">    k_index_1 = cKDTree(data1).query(x=data2, k=k1, n_jobs=n_jobs)[1]
+</span>    <span class="ansi-bold">^</span>
 
   @jit((float32[:, :], float32[:, :], int8, int8, int8))
-/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/numba/core/object_mode_passes.py:178: NumbaWarning: Function &#34;find_mutual_nn&#34; was compiled in object mode without forceobj=True, but has lifted loops.
+/Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py:88: NumbaWarning: <span class="ansi-bold">
+Compilation is falling back to object mode WITHOUT looplifting enabled because Function &#34;find_mutual_nn&#34; failed type inference due to: </span><span class="ansi-bold">Untyped global name &#39;cKDTree&#39;:</span> <span class="ansi-bold">Cannot determine Numba type of &lt;class &#39;type&#39;&gt;</span>
+<span class="ansi-bold">
+File &#34;../../../../../../.conda/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 90:</span>
+<span class="ansi-bold">def find_mutual_nn(data1, data2, k1, k2, n_jobs):
+</span><span class="ansi-bold">    k_index_1 = cKDTree(data1).query(x=data2, k=k1, n_jobs=n_jobs)[1]
+</span>    <span class="ansi-bold">^</span>
 
-File &#34;../../../../../../../miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 90:
-def find_mutual_nn(data1, data2, k1, k2, n_jobs):
-    k_index_1 = cKDTree(data1).query(x=data2, k=k1, n_jobs=n_jobs)[1]
-    ^
+  @jit((float32[:, :], float32[:, :], int8, int8, int8))
+/Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/python3.6/site-packages/numba/core/object_mode_passes.py:152: NumbaWarning: <span class="ansi-bold">Function &#34;find_mutual_nn&#34; was compiled in object mode without forceobj=True, but has lifted loops.
+</span><span class="ansi-bold">
+File &#34;../../../../../../.conda/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 90:</span>
+<span class="ansi-bold">def find_mutual_nn(data1, data2, k1, k2, n_jobs):
+</span><span class="ansi-bold">    k_index_1 = cKDTree(data1).query(x=data2, k=k1, n_jobs=n_jobs)[1]
+</span>    <span class="ansi-bold">^</span>
 
   state.func_ir.loc))
-/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/numba/core/object_mode_passes.py:188: NumbaDeprecationWarning: 
+/Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/python3.6/site-packages/numba/core/object_mode_passes.py:162: NumbaDeprecationWarning: <span class="ansi-bold">
 Fall-back from the nopython compilation path to the object mode compilation path has been detected, this is deprecated behaviour.
 
 For more information visit https://numba.pydata.org/numba-doc/latest/reference/deprecation.html#deprecation-of-object-mode-fall-back-behaviour-when-using-jit
-
-File &#34;../../../../../../../miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 90:
-def find_mutual_nn(data1, data2, k1, k2, n_jobs):
-    k_index_1 = cKDTree(data1).query(x=data2, k=k1, n_jobs=n_jobs)[1]
-    ^
+</span><span class="ansi-bold">
+File &#34;../../../../../../.conda/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 90:</span>
+<span class="ansi-bold">def find_mutual_nn(data1, data2, k1, k2, n_jobs):
+</span><span class="ansi-bold">    k_index_1 = cKDTree(data1).query(x=data2, k=k1, n_jobs=n_jobs)[1]
+</span>    <span class="ansi-bold">^</span>
 
   state.func_ir.loc))
-/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py:102: NumbaWarning: 
-Compilation is falling back to object mode WITH looplifting enabled because Function &#34;compute_correction&#34; failed type inference due to: No implementation of function Function(&lt;function unique at 0x7fbf1d49fbf8&gt;) found for signature:
+/Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py:102: NumbaWarning: <span class="ansi-bold">
+Compilation is falling back to object mode WITH looplifting enabled because Function &#34;compute_correction&#34; failed type inference due to: </span><span class="ansi-bold">No implementation of function Function(&lt;function unique at 0x7ff0b5cb6158&gt;) found for signature:
  
- &gt;&gt;&gt; unique(array(int32, 1d, A), return_counts=bool)
+ &gt;&gt;&gt; unique(array(int32, 1d, A), return_counts=Literal[bool](True))
  
 There are 2 candidate implementations:
-  - Of which 2 did not match due to:
+</span><span class="ansi-bold">  - Of which 2 did not match due to:
   Overload in function &#39;np_unique&#39;: File: numba/np/arrayobj.py: Line 1915.
-    With argument(s): &#39;(array(int32, 1d, A), return_counts=bool)&#39;:
-   Rejected as the implementation raised a specific error:
-     TypeError: np_unique() got an unexpected keyword argument &#39;return_counts&#39;
-  raised from /Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/numba/core/typing/templates.py:710
+    With argument(s): &#39;(array(int32, 1d, A), return_counts=bool)&#39;:</span>
+<span class="ansi-bold">   Rejected as the implementation raised a specific error:
+     TypeError: np_unique() got an unexpected keyword argument &#39;return_counts&#39;</span>
+  raised from /Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/python3.6/site-packages/numba/core/typing/templates.py:710
 
-During: resolving callee type: Function(&lt;function unique at 0x7fbf1d49fbf8&gt;)
-During: typing of call at /Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py (105)
-
-
-File &#34;../../../../../../../miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 105:
-def compute_correction(data1, data2, mnn1, mnn2, data2_or_raw2, sigma):
+<span class="ansi-bold">During: resolving callee type: Function(&lt;function unique at 0x7ff0b5cb6158&gt;)</span>
+<span class="ansi-bold">During: typing of call at /Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py (105)
+</span>
+<span class="ansi-bold">
+File &#34;../../../../../../.conda/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 105:</span>
+<span class="ansi-bold">def compute_correction(data1, data2, mnn1, mnn2, data2_or_raw2, sigma):
     &lt;source elided&gt;
     vect = data1[mnn1] - data2[mnn2]
-    mnn_index, mnn_count = np.unique(mnn2, return_counts=True)
-    ^
+</span><span class="ansi-bold">    mnn_index, mnn_count = np.unique(mnn2, return_counts=True)
+</span>    <span class="ansi-bold">^</span>
 
   @jit(float32[:, :](float32[:, :], float32[:, :], int32[:], int32[:], float32[:, :], float32))
-/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py:102: NumbaWarning: 
-Compilation is falling back to object mode WITHOUT looplifting enabled because Function &#34;compute_correction&#34; failed type inference due to: cannot determine Numba type of &lt;class &#39;numba.core.dispatcher.LiftedLoop&#39;&gt;
-
-File &#34;../../../../../../../miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 107:
-def compute_correction(data1, data2, mnn1, mnn2, data2_or_raw2, sigma):
+/Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py:102: NumbaWarning: <span class="ansi-bold">
+Compilation is falling back to object mode WITHOUT looplifting enabled because Function &#34;compute_correction&#34; failed type inference due to: </span><span class="ansi-bold">Cannot determine Numba type of &lt;class &#39;numba.core.dispatcher.LiftedLoop&#39;&gt;</span>
+<span class="ansi-bold">
+File &#34;../../../../../../.conda/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 107:</span>
+<span class="ansi-bold">def compute_correction(data1, data2, mnn1, mnn2, data2_or_raw2, sigma):
     &lt;source elided&gt;
     vect_reduced = np.zeros((data2.shape[0], vect.shape[1]), dtype=np.float32)
-    for index, ve in zip(mnn2, vect):
-    ^
+</span><span class="ansi-bold">    for index, ve in zip(mnn2, vect):
+</span>    <span class="ansi-bold">^</span>
 
   @jit(float32[:, :](float32[:, :], float32[:, :], int32[:], int32[:], float32[:, :], float32))
-/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/numba/core/object_mode_passes.py:178: NumbaWarning: Function &#34;compute_correction&#34; was compiled in object mode without forceobj=True, but has lifted loops.
-
-File &#34;../../../../../../../miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 104:
-def compute_correction(data1, data2, mnn1, mnn2, data2_or_raw2, sigma):
-    vect = data1[mnn1] - data2[mnn2]
-    ^
+/Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/python3.6/site-packages/numba/core/object_mode_passes.py:152: NumbaWarning: <span class="ansi-bold">Function &#34;compute_correction&#34; was compiled in object mode without forceobj=True, but has lifted loops.
+</span><span class="ansi-bold">
+File &#34;../../../../../../.conda/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 104:</span>
+<span class="ansi-bold">def compute_correction(data1, data2, mnn1, mnn2, data2_or_raw2, sigma):
+</span><span class="ansi-bold">    vect = data1[mnn1] - data2[mnn2]
+</span>    <span class="ansi-bold">^</span>
 
   state.func_ir.loc))
-/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/numba/core/object_mode_passes.py:188: NumbaDeprecationWarning: 
+/Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/python3.6/site-packages/numba/core/object_mode_passes.py:162: NumbaDeprecationWarning: <span class="ansi-bold">
 Fall-back from the nopython compilation path to the object mode compilation path has been detected, this is deprecated behaviour.
 
 For more information visit https://numba.pydata.org/numba-doc/latest/reference/deprecation.html#deprecation-of-object-mode-fall-back-behaviour-when-using-jit
-
-File &#34;../../../../../../../miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 104:
-def compute_correction(data1, data2, mnn1, mnn2, data2_or_raw2, sigma):
-    vect = data1[mnn1] - data2[mnn2]
-    ^
+</span><span class="ansi-bold">
+File &#34;../../../../../../.conda/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 104:</span>
+<span class="ansi-bold">def compute_correction(data1, data2, mnn1, mnn2, data2_or_raw2, sigma):
+</span><span class="ansi-bold">    vect = data1[mnn1] - data2[mnn2]
+</span>    <span class="ansi-bold">^</span>
 
   state.func_ir.loc))
-/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py:199: NumbaWarning: 
-Compilation is falling back to object mode WITH looplifting enabled because Function &#34;adjust_s_variance&#34; failed type inference due to: NameError: name &#39;sq_dist_to_line&#39; is not defined
+/Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py:199: NumbaWarning: <span class="ansi-bold">
+Compilation is falling back to object mode WITH looplifting enabled because Function &#34;adjust_s_variance&#34; failed type inference due to: </span><span class="ansi-bold">NameError: name &#39;sq_dist_to_line&#39; is not defined</span>
   @jit(float32(float32[:, :], float32[:, :], float32[:], float32[:], float32), nogil=True)
-/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py:199: NumbaWarning: 
-Compilation is falling back to object mode WITHOUT looplifting enabled because Function &#34;adjust_s_variance&#34; failed type inference due to: cannot determine Numba type of &lt;class &#39;numba.core.dispatcher.LiftedLoop&#39;&gt;
-
-File &#34;../../../../../../../miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 207:
-def adjust_s_variance(data1, data2, curcell, curvect, sigma):
+/Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py:199: NumbaWarning: <span class="ansi-bold">
+Compilation is falling back to object mode WITHOUT looplifting enabled because Function &#34;adjust_s_variance&#34; failed type inference due to: </span><span class="ansi-bold">Cannot determine Numba type of &lt;class &#39;numba.core.dispatcher.LiftedLoop&#39;&gt;</span>
+<span class="ansi-bold">
+File &#34;../../../../../../.conda/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 207:</span>
+<span class="ansi-bold">def adjust_s_variance(data1, data2, curcell, curvect, sigma):
     &lt;source elided&gt;
     totalprob2 = 0.
-    for samecell in data2:
-    ^
+</span><span class="ansi-bold">    for samecell in data2:
+</span>    <span class="ansi-bold">^</span>
 
   @jit(float32(float32[:, :], float32[:, :], float32[:], float32[:], float32), nogil=True)
-/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/numba/core/object_mode_passes.py:178: NumbaWarning: Function &#34;adjust_s_variance&#34; was compiled in object mode without forceobj=True, but has lifted loops.
-
-File &#34;../../../../../../../miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 201:
-def adjust_s_variance(data1, data2, curcell, curvect, sigma):
-    distance1 = np.zeros((data1.shape[0], 2), dtype=np.float32)
-    ^
+/Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/python3.6/site-packages/numba/core/object_mode_passes.py:152: NumbaWarning: <span class="ansi-bold">Function &#34;adjust_s_variance&#34; was compiled in object mode without forceobj=True, but has lifted loops.
+</span><span class="ansi-bold">
+File &#34;../../../../../../.conda/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 201:</span>
+<span class="ansi-bold">def adjust_s_variance(data1, data2, curcell, curvect, sigma):
+</span><span class="ansi-bold">    distance1 = np.zeros((data1.shape[0], 2), dtype=np.float32)
+</span>    <span class="ansi-bold">^</span>
 
   state.func_ir.loc))
-/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/numba/core/object_mode_passes.py:188: NumbaDeprecationWarning: 
+/Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/python3.6/site-packages/numba/core/object_mode_passes.py:162: NumbaDeprecationWarning: <span class="ansi-bold">
 Fall-back from the nopython compilation path to the object mode compilation path has been detected, this is deprecated behaviour.
 
 For more information visit https://numba.pydata.org/numba-doc/latest/reference/deprecation.html#deprecation-of-object-mode-fall-back-behaviour-when-using-jit
-
-File &#34;../../../../../../../miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 201:
-def adjust_s_variance(data1, data2, curcell, curvect, sigma):
-    distance1 = np.zeros((data1.shape[0], 2), dtype=np.float32)
-    ^
+</span><span class="ansi-bold">
+File &#34;../../../../../../.conda/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 201:</span>
+<span class="ansi-bold">def adjust_s_variance(data1, data2, curcell, curvect, sigma):
+</span><span class="ansi-bold">    distance1 = np.zeros((data1.shape[0], 2), dtype=np.float32)
+</span>    <span class="ansi-bold">^</span>
 
   state.func_ir.loc))
-/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py:199: NumbaWarning: Code running in object mode won&#39;t allow parallel execution despite nogil=True.
+/Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py:199: NumbaWarning: <span class="ansi-bold">Code running in object mode won&#39;t allow parallel execution despite nogil=True.</span>
   @jit(float32(float32[:, :], float32[:, :], float32[:], float32[:], float32), nogil=True)
-/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py:238: NumbaPerformanceWarning: np.dot() is faster on contiguous arrays, called on (array(float32, 1d, C), array(float32, 1d, A))
+/Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py:238: NumbaPerformanceWarning: <span class="ansi-bold">np.dot() is faster on contiguous arrays, called on (array(float32, 1d, C), array(float32, 1d, A))</span>
   scale = np.dot(working, grad)
 </pre>
 </div>
@@ -13803,269 +13775,269 @@ def adjust_s_variance(data1, data2, curcell, curvect, sigma):
 
 
 <div class="output_subarea output_stream output_stderr output_text">
-<pre>/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py:14: NumbaWarning: 
-Compilation is falling back to object mode WITH looplifting enabled because Function &#34;l2_norm&#34; failed type inference due to: No implementation of function Function(&lt;function norm at 0x7fbf1d42e2f0&gt;) found for signature:
+<pre>/Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py:14: NumbaWarning: <span class="ansi-bold">
+Compilation is falling back to object mode WITH looplifting enabled because Function &#34;l2_norm&#34; failed type inference due to: </span><span class="ansi-bold">No implementation of function Function(&lt;function norm at 0x7ff0b5c42840&gt;) found for signature:
  
  &gt;&gt;&gt; norm(x=array(float32, 2d, A), axis=Literal[int](1))
  
 There are 2 candidate implementations:
-    - Of which 2 did not match due to:
+</span><span class="ansi-bold">    - Of which 2 did not match due to:
     Overload in function &#39;norm_impl&#39;: File: numba/np/linalg.py: Line 2352.
-      With argument(s): &#39;(x=array(float32, 2d, A), axis=int64)&#39;:
-     Rejected as the implementation raised a specific error:
-       TypeError: norm_impl() got an unexpected keyword argument &#39;x&#39;
-  raised from /Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/numba/core/typing/templates.py:710
+      With argument(s): &#39;(x=array(float32, 2d, A), axis=int64)&#39;:</span>
+<span class="ansi-bold">     Rejected as the implementation raised a specific error:
+       TypeError: norm_impl() got an unexpected keyword argument &#39;x&#39;</span>
+  raised from /Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/python3.6/site-packages/numba/core/typing/templates.py:710
 
-During: resolving callee type: Function(&lt;function norm at 0x7fbf1d42e2f0&gt;)
-During: typing of call at /Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py (16)
-
-
-File &#34;../../../../../../../miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 16:
-def l2_norm(in_matrix):
-    return np.linalg.norm(x=in_matrix, axis=1)
-    ^
+<span class="ansi-bold">During: resolving callee type: Function(&lt;function norm at 0x7ff0b5c42840&gt;)</span>
+<span class="ansi-bold">During: typing of call at /Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py (16)
+</span>
+<span class="ansi-bold">
+File &#34;../../../../../../.conda/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 16:</span>
+<span class="ansi-bold">def l2_norm(in_matrix):
+</span><span class="ansi-bold">    return np.linalg.norm(x=in_matrix, axis=1)
+</span>    <span class="ansi-bold">^</span>
 
   @jit(float32[:](float32[:, :]), nogil=True)
-/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py:14: NumbaWarning: 
-Compilation is falling back to object mode WITH looplifting enabled because Function &#34;l2_norm&#34; failed type inference due to: No implementation of function Function(&lt;function norm at 0x7fbf1d42e2f0&gt;) found for signature:
+/Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py:14: NumbaWarning: <span class="ansi-bold">
+Compilation is falling back to object mode WITH looplifting enabled because Function &#34;l2_norm&#34; failed type inference due to: </span><span class="ansi-bold">No implementation of function Function(&lt;function norm at 0x7ff0b5c42840&gt;) found for signature:
  
  &gt;&gt;&gt; norm(x=array(float32, 2d, A), axis=Literal[int](1))
  
 There are 2 candidate implementations:
-    - Of which 2 did not match due to:
+</span><span class="ansi-bold">    - Of which 2 did not match due to:
     Overload in function &#39;norm_impl&#39;: File: numba/np/linalg.py: Line 2352.
-      With argument(s): &#39;(x=array(float32, 2d, A), axis=int64)&#39;:
-     Rejected as the implementation raised a specific error:
-       TypeError: norm_impl() got an unexpected keyword argument &#39;x&#39;
-  raised from /Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/numba/core/typing/templates.py:710
+      With argument(s): &#39;(x=array(float32, 2d, A), axis=int64)&#39;:</span>
+<span class="ansi-bold">     Rejected as the implementation raised a specific error:
+       TypeError: norm_impl() got an unexpected keyword argument &#39;x&#39;</span>
+  raised from /Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/python3.6/site-packages/numba/core/typing/templates.py:710
 
-During: resolving callee type: Function(&lt;function norm at 0x7fbf1d42e2f0&gt;)
-During: typing of call at /Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py (16)
-
-
-File &#34;../../../../../../../miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 16:
-def l2_norm(in_matrix):
-    return np.linalg.norm(x=in_matrix, axis=1)
-    ^
+<span class="ansi-bold">During: resolving callee type: Function(&lt;function norm at 0x7ff0b5c42840&gt;)</span>
+<span class="ansi-bold">During: typing of call at /Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py (16)
+</span>
+<span class="ansi-bold">
+File &#34;../../../../../../.conda/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 16:</span>
+<span class="ansi-bold">def l2_norm(in_matrix):
+</span><span class="ansi-bold">    return np.linalg.norm(x=in_matrix, axis=1)
+</span>    <span class="ansi-bold">^</span>
 
   @jit(float32[:](float32[:, :]), nogil=True)
-/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py:14: NumbaWarning: 
-Compilation is falling back to object mode WITH looplifting enabled because Function &#34;l2_norm&#34; failed type inference due to: No implementation of function Function(&lt;function norm at 0x7fbf1d42e2f0&gt;) found for signature:
+/Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py:14: NumbaWarning: <span class="ansi-bold">
+Compilation is falling back to object mode WITH looplifting enabled because Function &#34;l2_norm&#34; failed type inference due to: </span><span class="ansi-bold">No implementation of function Function(&lt;function norm at 0x7ff0b5c42840&gt;) found for signature:
  
  &gt;&gt;&gt; norm(x=array(float32, 2d, A), axis=Literal[int](1))
  
 There are 2 candidate implementations:
-    - Of which 2 did not match due to:
+</span><span class="ansi-bold">    - Of which 2 did not match due to:
     Overload in function &#39;norm_impl&#39;: File: numba/np/linalg.py: Line 2352.
-      With argument(s): &#39;(x=array(float32, 2d, A), axis=int64)&#39;:
-     Rejected as the implementation raised a specific error:
-       TypeError: norm_impl() got an unexpected keyword argument &#39;x&#39;
-  raised from /Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/numba/core/typing/templates.py:710
+      With argument(s): &#39;(x=array(float32, 2d, A), axis=int64)&#39;:</span>
+<span class="ansi-bold">     Rejected as the implementation raised a specific error:
+       TypeError: norm_impl() got an unexpected keyword argument &#39;x&#39;</span>
+  raised from /Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/python3.6/site-packages/numba/core/typing/templates.py:710
 
-During: resolving callee type: Function(&lt;function norm at 0x7fbf1d42e2f0&gt;)
-During: typing of call at /Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py (16)
-
-
-File &#34;../../../../../../../miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 16:
-def l2_norm(in_matrix):
-    return np.linalg.norm(x=in_matrix, axis=1)
-    ^
+<span class="ansi-bold">During: resolving callee type: Function(&lt;function norm at 0x7ff0b5c42840&gt;)</span>
+<span class="ansi-bold">During: typing of call at /Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py (16)
+</span>
+<span class="ansi-bold">
+File &#34;../../../../../../.conda/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 16:</span>
+<span class="ansi-bold">def l2_norm(in_matrix):
+</span><span class="ansi-bold">    return np.linalg.norm(x=in_matrix, axis=1)
+</span>    <span class="ansi-bold">^</span>
 
   @jit(float32[:](float32[:, :]), nogil=True)
-/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/numba/core/object_mode_passes.py:178: NumbaWarning: Function &#34;l2_norm&#34; was compiled in object mode without forceobj=True.
-
-File &#34;../../../../../../../miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 15:
-@jit(float32[:](float32[:, :]), nogil=True)
-def l2_norm(in_matrix):
-^
+/Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/python3.6/site-packages/numba/core/object_mode_passes.py:152: NumbaWarning: <span class="ansi-bold">Function &#34;l2_norm&#34; was compiled in object mode without forceobj=True.
+</span><span class="ansi-bold">
+File &#34;../../../../../../.conda/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 15:</span>
+<span class="ansi-bold">@jit(float32[:](float32[:, :]), nogil=True)
+</span><span class="ansi-bold">def l2_norm(in_matrix):
+</span><span class="ansi-bold">^</span>
 
   state.func_ir.loc))
-/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/numba/core/object_mode_passes.py:188: NumbaDeprecationWarning: 
+/Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/python3.6/site-packages/numba/core/object_mode_passes.py:162: NumbaDeprecationWarning: <span class="ansi-bold">
 Fall-back from the nopython compilation path to the object mode compilation path has been detected, this is deprecated behaviour.
 
 For more information visit https://numba.pydata.org/numba-doc/latest/reference/deprecation.html#deprecation-of-object-mode-fall-back-behaviour-when-using-jit
-
-File &#34;../../../../../../../miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 15:
-@jit(float32[:](float32[:, :]), nogil=True)
-def l2_norm(in_matrix):
-^
+</span><span class="ansi-bold">
+File &#34;../../../../../../.conda/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 15:</span>
+<span class="ansi-bold">@jit(float32[:](float32[:, :]), nogil=True)
+</span><span class="ansi-bold">def l2_norm(in_matrix):
+</span><span class="ansi-bold">^</span>
 
   state.func_ir.loc))
-/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py:14: NumbaWarning: Code running in object mode won&#39;t allow parallel execution despite nogil=True.
+/Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py:14: NumbaWarning: <span class="ansi-bold">Code running in object mode won&#39;t allow parallel execution despite nogil=True.</span>
   @jit(float32[:](float32[:, :]), nogil=True)
-/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/numba/core/object_mode_passes.py:178: NumbaWarning: Function &#34;l2_norm&#34; was compiled in object mode without forceobj=True.
-
-File &#34;../../../../../../../miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 15:
-@jit(float32[:](float32[:, :]), nogil=True)
-def l2_norm(in_matrix):
-^
+/Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/python3.6/site-packages/numba/core/object_mode_passes.py:152: NumbaWarning: <span class="ansi-bold">Function &#34;l2_norm&#34; was compiled in object mode without forceobj=True.
+</span><span class="ansi-bold">
+File &#34;../../../../../../.conda/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 15:</span>
+<span class="ansi-bold">@jit(float32[:](float32[:, :]), nogil=True)
+</span><span class="ansi-bold">def l2_norm(in_matrix):
+</span><span class="ansi-bold">^</span>
 
   state.func_ir.loc))
-/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/numba/core/object_mode_passes.py:188: NumbaDeprecationWarning: 
+/Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/python3.6/site-packages/numba/core/object_mode_passes.py:162: NumbaDeprecationWarning: <span class="ansi-bold">
 Fall-back from the nopython compilation path to the object mode compilation path has been detected, this is deprecated behaviour.
 
 For more information visit https://numba.pydata.org/numba-doc/latest/reference/deprecation.html#deprecation-of-object-mode-fall-back-behaviour-when-using-jit
-
-File &#34;../../../../../../../miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 15:
-@jit(float32[:](float32[:, :]), nogil=True)
-def l2_norm(in_matrix):
-^
+</span><span class="ansi-bold">
+File &#34;../../../../../../.conda/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 15:</span>
+<span class="ansi-bold">@jit(float32[:](float32[:, :]), nogil=True)
+</span><span class="ansi-bold">def l2_norm(in_matrix):
+</span><span class="ansi-bold">^</span>
 
   state.func_ir.loc))
-/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py:14: NumbaWarning: Code running in object mode won&#39;t allow parallel execution despite nogil=True.
+/Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py:14: NumbaWarning: <span class="ansi-bold">Code running in object mode won&#39;t allow parallel execution despite nogil=True.</span>
   @jit(float32[:](float32[:, :]), nogil=True)
-/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py:14: NumbaWarning: 
-Compilation is falling back to object mode WITH looplifting enabled because Function &#34;l2_norm&#34; failed type inference due to: No implementation of function Function(&lt;function norm at 0x7fbf1d42e2f0&gt;) found for signature:
+/Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py:14: NumbaWarning: <span class="ansi-bold">
+Compilation is falling back to object mode WITH looplifting enabled because Function &#34;l2_norm&#34; failed type inference due to: </span><span class="ansi-bold">No implementation of function Function(&lt;function norm at 0x7ff0b5c42840&gt;) found for signature:
  
  &gt;&gt;&gt; norm(x=array(float32, 2d, A), axis=Literal[int](1))
  
 There are 2 candidate implementations:
-    - Of which 2 did not match due to:
+</span><span class="ansi-bold">    - Of which 2 did not match due to:
     Overload in function &#39;norm_impl&#39;: File: numba/np/linalg.py: Line 2352.
-      With argument(s): &#39;(x=array(float32, 2d, A), axis=int64)&#39;:
-     Rejected as the implementation raised a specific error:
-       TypeError: norm_impl() got an unexpected keyword argument &#39;x&#39;
-  raised from /Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/numba/core/typing/templates.py:710
+      With argument(s): &#39;(x=array(float32, 2d, A), axis=int64)&#39;:</span>
+<span class="ansi-bold">     Rejected as the implementation raised a specific error:
+       TypeError: norm_impl() got an unexpected keyword argument &#39;x&#39;</span>
+  raised from /Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/python3.6/site-packages/numba/core/typing/templates.py:710
 
-During: resolving callee type: Function(&lt;function norm at 0x7fbf1d42e2f0&gt;)
-During: typing of call at /Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py (16)
-
-
-File &#34;../../../../../../../miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 16:
-def l2_norm(in_matrix):
-    return np.linalg.norm(x=in_matrix, axis=1)
-    ^
+<span class="ansi-bold">During: resolving callee type: Function(&lt;function norm at 0x7ff0b5c42840&gt;)</span>
+<span class="ansi-bold">During: typing of call at /Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py (16)
+</span>
+<span class="ansi-bold">
+File &#34;../../../../../../.conda/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 16:</span>
+<span class="ansi-bold">def l2_norm(in_matrix):
+</span><span class="ansi-bold">    return np.linalg.norm(x=in_matrix, axis=1)
+</span>    <span class="ansi-bold">^</span>
 
   @jit(float32[:](float32[:, :]), nogil=True)
-/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/numba/core/object_mode_passes.py:178: NumbaWarning: Function &#34;l2_norm&#34; was compiled in object mode without forceobj=True.
-
-File &#34;../../../../../../../miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 15:
-@jit(float32[:](float32[:, :]), nogil=True)
-def l2_norm(in_matrix):
-^
+/Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/python3.6/site-packages/numba/core/object_mode_passes.py:152: NumbaWarning: <span class="ansi-bold">Function &#34;l2_norm&#34; was compiled in object mode without forceobj=True.
+</span><span class="ansi-bold">
+File &#34;../../../../../../.conda/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 15:</span>
+<span class="ansi-bold">@jit(float32[:](float32[:, :]), nogil=True)
+</span><span class="ansi-bold">def l2_norm(in_matrix):
+</span><span class="ansi-bold">^</span>
 
   state.func_ir.loc))
-/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py:14: NumbaWarning: 
-Compilation is falling back to object mode WITH looplifting enabled because Function &#34;l2_norm&#34; failed type inference due to: No implementation of function Function(&lt;function norm at 0x7fbf1d42e2f0&gt;) found for signature:
+/Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/python3.6/site-packages/numba/core/object_mode_passes.py:162: NumbaDeprecationWarning: <span class="ansi-bold">
+Fall-back from the nopython compilation path to the object mode compilation path has been detected, this is deprecated behaviour.
+
+For more information visit https://numba.pydata.org/numba-doc/latest/reference/deprecation.html#deprecation-of-object-mode-fall-back-behaviour-when-using-jit
+</span><span class="ansi-bold">
+File &#34;../../../../../../.conda/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 15:</span>
+<span class="ansi-bold">@jit(float32[:](float32[:, :]), nogil=True)
+</span><span class="ansi-bold">def l2_norm(in_matrix):
+</span><span class="ansi-bold">^</span>
+
+  state.func_ir.loc))
+/Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py:14: NumbaWarning: <span class="ansi-bold">Code running in object mode won&#39;t allow parallel execution despite nogil=True.</span>
+  @jit(float32[:](float32[:, :]), nogil=True)
+/Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py:14: NumbaWarning: <span class="ansi-bold">
+Compilation is falling back to object mode WITH looplifting enabled because Function &#34;l2_norm&#34; failed type inference due to: </span><span class="ansi-bold">No implementation of function Function(&lt;function norm at 0x7ff0b5c42840&gt;) found for signature:
  
  &gt;&gt;&gt; norm(x=array(float32, 2d, A), axis=Literal[int](1))
  
 There are 2 candidate implementations:
-    - Of which 2 did not match due to:
+</span><span class="ansi-bold">    - Of which 2 did not match due to:
     Overload in function &#39;norm_impl&#39;: File: numba/np/linalg.py: Line 2352.
-      With argument(s): &#39;(x=array(float32, 2d, A), axis=int64)&#39;:
-     Rejected as the implementation raised a specific error:
-       TypeError: norm_impl() got an unexpected keyword argument &#39;x&#39;
-  raised from /Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/numba/core/typing/templates.py:710
+      With argument(s): &#39;(x=array(float32, 2d, A), axis=int64)&#39;:</span>
+<span class="ansi-bold">     Rejected as the implementation raised a specific error:
+       TypeError: norm_impl() got an unexpected keyword argument &#39;x&#39;</span>
+  raised from /Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/python3.6/site-packages/numba/core/typing/templates.py:710
 
-During: resolving callee type: Function(&lt;function norm at 0x7fbf1d42e2f0&gt;)
-During: typing of call at /Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py (16)
-
-
-File &#34;../../../../../../../miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 16:
-def l2_norm(in_matrix):
-    return np.linalg.norm(x=in_matrix, axis=1)
-    ^
+<span class="ansi-bold">During: resolving callee type: Function(&lt;function norm at 0x7ff0b5c42840&gt;)</span>
+<span class="ansi-bold">During: typing of call at /Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py (16)
+</span>
+<span class="ansi-bold">
+File &#34;../../../../../../.conda/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 16:</span>
+<span class="ansi-bold">def l2_norm(in_matrix):
+</span><span class="ansi-bold">    return np.linalg.norm(x=in_matrix, axis=1)
+</span>    <span class="ansi-bold">^</span>
 
   @jit(float32[:](float32[:, :]), nogil=True)
-/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/numba/core/object_mode_passes.py:188: NumbaDeprecationWarning: 
-Fall-back from the nopython compilation path to the object mode compilation path has been detected, this is deprecated behaviour.
-
-For more information visit https://numba.pydata.org/numba-doc/latest/reference/deprecation.html#deprecation-of-object-mode-fall-back-behaviour-when-using-jit
-
-File &#34;../../../../../../../miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 15:
-@jit(float32[:](float32[:, :]), nogil=True)
-def l2_norm(in_matrix):
-^
-
-  state.func_ir.loc))
-/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py:14: NumbaWarning: Code running in object mode won&#39;t allow parallel execution despite nogil=True.
-  @jit(float32[:](float32[:, :]), nogil=True)
-/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/numba/core/object_mode_passes.py:178: NumbaWarning: Function &#34;l2_norm&#34; was compiled in object mode without forceobj=True.
-
-File &#34;../../../../../../../miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 15:
-@jit(float32[:](float32[:, :]), nogil=True)
-def l2_norm(in_matrix):
-^
-
-  state.func_ir.loc))
-/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/numba/core/object_mode_passes.py:188: NumbaDeprecationWarning: 
-Fall-back from the nopython compilation path to the object mode compilation path has been detected, this is deprecated behaviour.
-
-For more information visit https://numba.pydata.org/numba-doc/latest/reference/deprecation.html#deprecation-of-object-mode-fall-back-behaviour-when-using-jit
-
-File &#34;../../../../../../../miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 15:
-@jit(float32[:](float32[:, :]), nogil=True)
-def l2_norm(in_matrix):
-^
-
-  state.func_ir.loc))
-/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py:14: NumbaWarning: 
-Compilation is falling back to object mode WITH looplifting enabled because Function &#34;l2_norm&#34; failed type inference due to: No implementation of function Function(&lt;function norm at 0x7fbf1d42e2f0&gt;) found for signature:
+/Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py:14: NumbaWarning: <span class="ansi-bold">
+Compilation is falling back to object mode WITH looplifting enabled because Function &#34;l2_norm&#34; failed type inference due to: </span><span class="ansi-bold">No implementation of function Function(&lt;function norm at 0x7ff0b5c42840&gt;) found for signature:
  
  &gt;&gt;&gt; norm(x=array(float32, 2d, A), axis=Literal[int](1))
  
 There are 2 candidate implementations:
-    - Of which 2 did not match due to:
+</span><span class="ansi-bold">    - Of which 2 did not match due to:
     Overload in function &#39;norm_impl&#39;: File: numba/np/linalg.py: Line 2352.
-      With argument(s): &#39;(x=array(float32, 2d, A), axis=int64)&#39;:
-     Rejected as the implementation raised a specific error:
-       TypeError: norm_impl() got an unexpected keyword argument &#39;x&#39;
-  raised from /Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/numba/core/typing/templates.py:710
+      With argument(s): &#39;(x=array(float32, 2d, A), axis=int64)&#39;:</span>
+<span class="ansi-bold">     Rejected as the implementation raised a specific error:
+       TypeError: norm_impl() got an unexpected keyword argument &#39;x&#39;</span>
+  raised from /Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/python3.6/site-packages/numba/core/typing/templates.py:710
 
-During: resolving callee type: Function(&lt;function norm at 0x7fbf1d42e2f0&gt;)
-During: typing of call at /Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py (16)
-
-
-File &#34;../../../../../../../miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 16:
-def l2_norm(in_matrix):
-    return np.linalg.norm(x=in_matrix, axis=1)
-    ^
+<span class="ansi-bold">During: resolving callee type: Function(&lt;function norm at 0x7ff0b5c42840&gt;)</span>
+<span class="ansi-bold">During: typing of call at /Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py (16)
+</span>
+<span class="ansi-bold">
+File &#34;../../../../../../.conda/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 16:</span>
+<span class="ansi-bold">def l2_norm(in_matrix):
+</span><span class="ansi-bold">    return np.linalg.norm(x=in_matrix, axis=1)
+</span>    <span class="ansi-bold">^</span>
 
   @jit(float32[:](float32[:, :]), nogil=True)
-/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py:14: NumbaWarning: Code running in object mode won&#39;t allow parallel execution despite nogil=True.
-  @jit(float32[:](float32[:, :]), nogil=True)
-/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/numba/core/object_mode_passes.py:178: NumbaWarning: Function &#34;l2_norm&#34; was compiled in object mode without forceobj=True.
-
-File &#34;../../../../../../../miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 15:
-@jit(float32[:](float32[:, :]), nogil=True)
-def l2_norm(in_matrix):
-^
+/Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/python3.6/site-packages/numba/core/object_mode_passes.py:152: NumbaWarning: <span class="ansi-bold">Function &#34;l2_norm&#34; was compiled in object mode without forceobj=True.
+</span><span class="ansi-bold">
+File &#34;../../../../../../.conda/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 15:</span>
+<span class="ansi-bold">@jit(float32[:](float32[:, :]), nogil=True)
+</span><span class="ansi-bold">def l2_norm(in_matrix):
+</span><span class="ansi-bold">^</span>
 
   state.func_ir.loc))
-/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/numba/core/object_mode_passes.py:188: NumbaDeprecationWarning: 
+/Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/python3.6/site-packages/numba/core/object_mode_passes.py:162: NumbaDeprecationWarning: <span class="ansi-bold">
 Fall-back from the nopython compilation path to the object mode compilation path has been detected, this is deprecated behaviour.
 
 For more information visit https://numba.pydata.org/numba-doc/latest/reference/deprecation.html#deprecation-of-object-mode-fall-back-behaviour-when-using-jit
-
-File &#34;../../../../../../../miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 15:
-@jit(float32[:](float32[:, :]), nogil=True)
-def l2_norm(in_matrix):
-^
+</span><span class="ansi-bold">
+File &#34;../../../../../../.conda/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 15:</span>
+<span class="ansi-bold">@jit(float32[:](float32[:, :]), nogil=True)
+</span><span class="ansi-bold">def l2_norm(in_matrix):
+</span><span class="ansi-bold">^</span>
 
   state.func_ir.loc))
-/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py:14: NumbaWarning: Code running in object mode won&#39;t allow parallel execution despite nogil=True.
+/Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py:14: NumbaWarning: <span class="ansi-bold">Code running in object mode won&#39;t allow parallel execution despite nogil=True.</span>
   @jit(float32[:](float32[:, :]), nogil=True)
-/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/numba/core/object_mode_passes.py:178: NumbaWarning: Function &#34;l2_norm&#34; was compiled in object mode without forceobj=True.
-
-File &#34;../../../../../../../miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 15:
-@jit(float32[:](float32[:, :]), nogil=True)
-def l2_norm(in_matrix):
-^
+/Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/python3.6/site-packages/numba/core/object_mode_passes.py:152: NumbaWarning: <span class="ansi-bold">Function &#34;l2_norm&#34; was compiled in object mode without forceobj=True.
+</span><span class="ansi-bold">
+File &#34;../../../../../../.conda/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 15:</span>
+<span class="ansi-bold">@jit(float32[:](float32[:, :]), nogil=True)
+</span><span class="ansi-bold">def l2_norm(in_matrix):
+</span><span class="ansi-bold">^</span>
 
   state.func_ir.loc))
-/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/numba/core/object_mode_passes.py:188: NumbaDeprecationWarning: 
+/Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/python3.6/site-packages/numba/core/object_mode_passes.py:162: NumbaDeprecationWarning: <span class="ansi-bold">
 Fall-back from the nopython compilation path to the object mode compilation path has been detected, this is deprecated behaviour.
 
 For more information visit https://numba.pydata.org/numba-doc/latest/reference/deprecation.html#deprecation-of-object-mode-fall-back-behaviour-when-using-jit
-
-File &#34;../../../../../../../miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 15:
-@jit(float32[:](float32[:, :]), nogil=True)
-def l2_norm(in_matrix):
-^
+</span><span class="ansi-bold">
+File &#34;../../../../../../.conda/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 15:</span>
+<span class="ansi-bold">@jit(float32[:](float32[:, :]), nogil=True)
+</span><span class="ansi-bold">def l2_norm(in_matrix):
+</span><span class="ansi-bold">^</span>
 
   state.func_ir.loc))
-/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py:14: NumbaWarning: Code running in object mode won&#39;t allow parallel execution despite nogil=True.
+/Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py:14: NumbaWarning: <span class="ansi-bold">Code running in object mode won&#39;t allow parallel execution despite nogil=True.</span>
+  @jit(float32[:](float32[:, :]), nogil=True)
+/Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/python3.6/site-packages/numba/core/object_mode_passes.py:152: NumbaWarning: <span class="ansi-bold">Function &#34;l2_norm&#34; was compiled in object mode without forceobj=True.
+</span><span class="ansi-bold">
+File &#34;../../../../../../.conda/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 15:</span>
+<span class="ansi-bold">@jit(float32[:](float32[:, :]), nogil=True)
+</span><span class="ansi-bold">def l2_norm(in_matrix):
+</span><span class="ansi-bold">^</span>
+
+  state.func_ir.loc))
+/Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/python3.6/site-packages/numba/core/object_mode_passes.py:162: NumbaDeprecationWarning: <span class="ansi-bold">
+Fall-back from the nopython compilation path to the object mode compilation path has been detected, this is deprecated behaviour.
+
+For more information visit https://numba.pydata.org/numba-doc/latest/reference/deprecation.html#deprecation-of-object-mode-fall-back-behaviour-when-using-jit
+</span><span class="ansi-bold">
+File &#34;../../../../../../.conda/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 15:</span>
+<span class="ansi-bold">@jit(float32[:](float32[:, :]), nogil=True)
+</span><span class="ansi-bold">def l2_norm(in_matrix):
+</span><span class="ansi-bold">^</span>
+
+  state.func_ir.loc))
+/Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py:14: NumbaWarning: <span class="ansi-bold">Code running in object mode won&#39;t allow parallel execution despite nogil=True.</span>
   @jit(float32[:](float32[:, :]), nogil=True)
 </pre>
 </div>
@@ -14090,39 +14062,39 @@ Step 1 of 5: processing batch 1
 
 
 <div class="output_subarea output_stream output_stderr output_text">
-<pre>/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py:88: NumbaWarning: 
-Compilation is falling back to object mode WITHOUT looplifting enabled because Function &#34;find_mutual_nn&#34; failed type inference due to: non-precise type pyobject
-During: typing of argument at /Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py (94)
-
-File &#34;../../../../../../../miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 94:
-def find_mutual_nn(data1, data2, k1, k2, n_jobs):
+<pre>/Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py:88: NumbaWarning: <span class="ansi-bold">
+Compilation is falling back to object mode WITHOUT looplifting enabled because Function &#34;find_mutual_nn&#34; failed type inference due to: </span><span class="ansi-bold">non-precise type pyobject</span>
+<span class="ansi-bold">During: typing of argument at /Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py (94)</span>
+<span class="ansi-bold">
+File &#34;../../../../../../.conda/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 94:</span>
+<span class="ansi-bold">def find_mutual_nn(data1, data2, k1, k2, n_jobs):
     &lt;source elided&gt;
     mutual_2 = []
-    for index_2 in range(data2.shape[0]):
-    ^
+</span><span class="ansi-bold">    for index_2 in range(data2.shape[0]):
+</span>    <span class="ansi-bold">^</span>
 
   @jit((float32[:, :], float32[:, :], int8, int8, int8))
-/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/numba/core/object_mode_passes.py:178: NumbaWarning: Function &#34;find_mutual_nn&#34; was compiled in object mode without forceobj=True.
-
-File &#34;../../../../../../../miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 94:
-def find_mutual_nn(data1, data2, k1, k2, n_jobs):
+/Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/python3.6/site-packages/numba/core/object_mode_passes.py:152: NumbaWarning: <span class="ansi-bold">Function &#34;find_mutual_nn&#34; was compiled in object mode without forceobj=True.
+</span><span class="ansi-bold">
+File &#34;../../../../../../.conda/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 94:</span>
+<span class="ansi-bold">def find_mutual_nn(data1, data2, k1, k2, n_jobs):
     &lt;source elided&gt;
     mutual_2 = []
-    for index_2 in range(data2.shape[0]):
-    ^
+</span><span class="ansi-bold">    for index_2 in range(data2.shape[0]):
+</span>    <span class="ansi-bold">^</span>
 
   state.func_ir.loc))
-/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/numba/core/object_mode_passes.py:188: NumbaDeprecationWarning: 
+/Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/python3.6/site-packages/numba/core/object_mode_passes.py:162: NumbaDeprecationWarning: <span class="ansi-bold">
 Fall-back from the nopython compilation path to the object mode compilation path has been detected, this is deprecated behaviour.
 
 For more information visit https://numba.pydata.org/numba-doc/latest/reference/deprecation.html#deprecation-of-object-mode-fall-back-behaviour-when-using-jit
-
-File &#34;../../../../../../../miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 94:
-def find_mutual_nn(data1, data2, k1, k2, n_jobs):
+</span><span class="ansi-bold">
+File &#34;../../../../../../.conda/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 94:</span>
+<span class="ansi-bold">def find_mutual_nn(data1, data2, k1, k2, n_jobs):
     &lt;source elided&gt;
     mutual_2 = []
-    for index_2 in range(data2.shape[0]):
-    ^
+</span><span class="ansi-bold">    for index_2 in range(data2.shape[0]):
+</span>    <span class="ansi-bold">^</span>
 
   state.func_ir.loc))
 </pre>
@@ -14146,17 +14118,17 @@ def find_mutual_nn(data1, data2, k1, k2, n_jobs):
 
 
 <div class="output_subarea output_stream output_stderr output_text">
-<pre>/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/numba/core/ir_utils.py:2031: NumbaPendingDeprecationWarning: 
+<pre>/Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/python3.6/site-packages/numba/core/ir_utils.py:2067: NumbaPendingDeprecationWarning: <span class="ansi-bold">
 Encountered the use of a type that is scheduled for deprecation: type &#39;reflected list&#39; found for argument &#39;mnn2&#39; of function &#39;compute_correction&#39;.
 
 For more information visit https://numba.pydata.org/numba-doc/latest/reference/deprecation.html#deprecation-of-reflection-for-list-and-set-types
-
-File &#34;../../../../../../../miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 107:
-def compute_correction(data1, data2, mnn1, mnn2, data2_or_raw2, sigma):
+</span><span class="ansi-bold">
+File &#34;../../../../../../.conda/envs/scRNAseq2021/lib/python3.6/site-packages/mnnpy/utils.py&#34;, line 107:</span>
+<span class="ansi-bold">def compute_correction(data1, data2, mnn1, mnn2, data2_or_raw2, sigma):
     &lt;source elided&gt;
     vect_reduced = np.zeros((data2.shape[0], vect.shape[1]), dtype=np.float32)
-    for index, ve in zip(mnn2, vect):
-    ^
+</span><span class="ansi-bold">    for index, ve in zip(mnn2, vect):
+</span>    <span class="ansi-bold">^</span>
 
   warnings.warn(NumbaPendingDeprecationWarning(msg, loc=loc))
 </pre>
@@ -14240,7 +14212,7 @@ Done.
 
 
 <div class="output_text output_subarea output_execute_result">
-<pre>(5594, 2720)</pre>
+<pre>(5590, 2714)</pre>
 </div>
 
 </div>
@@ -14326,7 +14298,7 @@ height=519
     using &#39;X_pca&#39; with n_pcs = 50
     using the &#39;MulticoreTSNE&#39; package by Ulyanov (2017)
     finished: added
-    &#39;X_tsne&#39;, tSNE coordinates (adata.obsm) (0:00:37)
+    &#39;X_tsne&#39;, tSNE coordinates (adata.obsm) (0:00:36)
 computing neighbors
     using &#39;X_pca&#39; with n_pcs = 50
     finished: added to `.uns[&#39;neighbors&#39;]`
@@ -14334,7 +14306,7 @@ computing neighbors
     `.obsp[&#39;connectivities&#39;]`, weighted adjacency matrix (0:00:03)
 computing UMAP
     finished: added
-    &#39;X_umap&#39;, UMAP coordinates (adata.obsm) (0:00:07)
+    &#39;X_umap&#39;, UMAP coordinates (adata.obsm) (0:00:08)
 </pre>
 </div>
 </div>
@@ -14439,12 +14411,9 @@ height=584
 <div class="prompt input_prompt">In&nbsp;[15]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># create a new object with raw counts</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># create a new object with lognormalized counts</span>
 <span class="n">adata_combat</span> <span class="o">=</span> <span class="n">sc</span><span class="o">.</span><span class="n">AnnData</span><span class="p">(</span><span class="n">X</span><span class="o">=</span><span class="n">adata</span><span class="o">.</span><span class="n">raw</span><span class="o">.</span><span class="n">X</span><span class="p">,</span> <span class="n">var</span><span class="o">=</span><span class="n">adata</span><span class="o">.</span><span class="n">raw</span><span class="o">.</span><span class="n">var</span><span class="p">,</span> <span class="n">obs</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">)</span>
 
-<span class="c1">#normalize and log-transform</span>
-<span class="n">sc</span><span class="o">.</span><span class="n">pp</span><span class="o">.</span><span class="n">normalize_per_cell</span><span class="p">(</span><span class="n">adata_combat</span><span class="p">,</span> <span class="n">counts_per_cell_after</span><span class="o">=</span><span class="mf">1e4</span><span class="p">)</span>
-<span class="n">sc</span><span class="o">.</span><span class="n">pp</span><span class="o">.</span><span class="n">log1p</span><span class="p">(</span><span class="n">adata_combat</span><span class="p">)</span>
 
 <span class="c1"># first store the raw data </span>
 <span class="n">adata_combat</span><span class="o">.</span><span class="n">raw</span> <span class="o">=</span> <span class="n">adata_combat</span>
@@ -14467,9 +14436,7 @@ height=584
 
 
 <div class="output_subarea output_stream output_stdout output_text">
-<pre>normalizing by total count per cell
-    finished (0:00:00): normalized adata.X and added    &#39;n_counts&#39;, counts per cell before normalization (adata.obs)
-Standardizing Data across genes.
+<pre>Standardizing Data across genes.
 
 Found 6 batches
 
@@ -14491,9 +14458,9 @@ Finding parametric adjustments
 
 
 <div class="output_subarea output_stream output_stderr output_text">
-<pre>/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/scanpy/preprocessing/_combat.py:340: RuntimeWarning: invalid value encountered in true_divide
+<pre>/Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/python3.6/site-packages/scanpy/preprocessing/_combat.py:340: RuntimeWarning: invalid value encountered in true_divide
   (abs(g_new - g_old) / g_old).max(), (abs(d_new - d_old) / d_old).max()
-/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/scanpy/preprocessing/_combat.py:340: RuntimeWarning: divide by zero encountered in true_divide
+/Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/python3.6/site-packages/scanpy/preprocessing/_combat.py:340: RuntimeWarning: divide by zero encountered in true_divide
   (abs(g_new - g_old) / g_old).max(), (abs(d_new - d_old) / d_old).max()
 </pre>
 </div>
@@ -14554,7 +14521,7 @@ Finding parametric adjustments
     &#39;means&#39;, float vector (adata.var)
     &#39;dispersions&#39;, float vector (adata.var)
     &#39;dispersions_norm&#39;, float vector (adata.var)
-Highly variable genes: 3904
+Highly variable genes: 3907
 </pre>
 </div>
 </div>
@@ -14597,7 +14564,7 @@ computing tSNE
     using &#39;X_pca&#39; with n_pcs = 30
     using the &#39;MulticoreTSNE&#39; package by Ulyanov (2017)
     finished: added
-    &#39;X_tsne&#39;, tSNE coordinates (adata.obsm) (0:00:35)
+    &#39;X_tsne&#39;, tSNE coordinates (adata.obsm) (0:00:36)
 </pre>
 </div>
 </div>
@@ -14635,11 +14602,11 @@ computing tSNE
 
 
 <div class="output_subarea output_stream output_stdout output_text">
-<pre>With all data 3067
-With combat 3904
-Overlap 2268
-With 2 batches 2720
-Overlap 2037
+<pre>With all data 3065
+With combat 3907
+Overlap 2273
+With 2 batches 2714
+Overlap 2036
 </pre>
 </div>
 </div>
@@ -14719,8 +14686,8 @@ height=584
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h3 id="Scanorama">Scanorama<a class="anchor-link" href="#Scanorama">&#182;</a></h3><p>Try out <a href="https://github.com/brianhie/scanorama">Scanorama</a> for data integration as well. 
-To run Scanorama, you need to install python-annoy (already included in conda environment) and scanorama with pip. 
+<h3 id="Scanorama">Scanorama<a class="anchor-link" href="#Scanorama">&#182;</a></h3><p>Try out <a href="https://github.com/brianhie/scanorama">Scanorama</a> for data integration as well.
+To run Scanorama, you need to install python-annoy (already included in conda environment) and scanorama with pip.
 We can run scanorama to get a corrected matrix with the <code>correct</code> function, or to just get the data projected onto a new common dimension with the function <code>integrate</code>. Or both with the <code>correct_scanpy</code> and setting <code>return_dimred=True</code>. For now, run with just integration.</p>
 
 </div>
@@ -14767,12 +14734,12 @@ covid_17
 ctrl_5
 ctrl_13
 ctrl_14
-Found 2720 genes among all datasets
-[[0.         0.77491409 0.33754864 0.58830409 0.46900585 0.36959064]
- [0.         0.         0.5532646  0.5093412  0.31786942 0.35910653]
- [0.         0.         0.         0.37168142 0.08754864 0.1692607 ]
- [0.         0.         0.         0.         0.86627335 0.76106195]
- [0.         0.         0.         0.         0.         0.85323887]
+Found 2714 genes among all datasets
+[[0.         0.79037801 0.33463035 0.58251473 0.44262295 0.37002342]
+ [0.         0.         0.5652921  0.52652259 0.35051546 0.36597938]
+ [0.         0.         0.         0.37328094 0.11770428 0.1381323 ]
+ [0.         0.         0.         0.         0.86836935 0.75540275]
+ [0.         0.         0.         0.         0.         0.863879  ]
  [0.         0.         0.         0.         0.         0.        ]]
 Processing datasets (3, 4)
 Processing datasets (4, 5)
@@ -14785,9 +14752,10 @@ Processing datasets (0, 4)
 Processing datasets (2, 3)
 Processing datasets (0, 5)
 Processing datasets (1, 5)
-Processing datasets (0, 2)
 Processing datasets (1, 4)
+Processing datasets (0, 2)
 Processing datasets (2, 5)
+Processing datasets (2, 4)
 </pre>
 </div>
 </div>
@@ -14822,7 +14790,7 @@ Processing datasets (2, 5)
 
 
 <div class="output_text output_subarea output_execute_result">
-<pre>(855, 50)</pre>
+<pre>(854, 50)</pre>
 </div>
 
 </div>
@@ -14861,7 +14829,7 @@ Processing datasets (2, 5)
 
 
 <div class="output_subarea output_stream output_stdout output_text">
-<pre>(5594, 50)
+<pre>(5590, 50)
 </pre>
 </div>
 </div>
@@ -14905,7 +14873,7 @@ computing UMAP
 computing tSNE
     using the &#39;MulticoreTSNE&#39; package by Ulyanov (2017)
     finished: added
-    &#39;X_tsne&#39;, tSNE coordinates (adata.obsm) (0:00:37)
+    &#39;X_tsne&#39;, tSNE coordinates (adata.obsm) (0:00:35)
 </pre>
 </div>
 </div>
