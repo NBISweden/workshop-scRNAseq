@@ -2,6 +2,9 @@
 layout: default
 title:  'FAQ'
 ---
+
+{::options parse_block_html="true" /}
+
 <style>
 h1, .h1, h2, .h2, h3, .h3, h4, .h4 { margin-top: 50px }
 p.caption {font-size: 0.9em;font-style: italic;color: grey;margin-right: 10%;margin-left: 10%;text-align: justify}
