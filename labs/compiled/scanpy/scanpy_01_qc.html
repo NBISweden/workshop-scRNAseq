@@ -13540,12 +13540,12 @@ $( document ).ready(function(){
 
 
 <div class="output_subarea output_stream output_stdout output_text">
-<pre>covid_17    1500
-ctrl_5      1500
+<pre>ctrl_5      1500
+covid_17    1500
 covid_1     1500
+covid_15    1500
 ctrl_13     1500
 ctrl_14     1500
-covid_15    1500
 Name: sample, dtype: int64
 </pre>
 </div>
@@ -13957,8 +13957,14 @@ height=318
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h3 id="TASK:-Plot-scatterplots">TASK: Plot scatterplots<a class="anchor-link" href="#TASK:-Plot-scatterplots">&#182;</a></h3><p>Plot additional QC stats that we have calculated as scatter plots. How are the different measures correlated? Can you explain why?</p>
+<p><style>
+div.blue { background-color:#e6f0ff; border-radius: 5px; padding: 10px;}
+</style></p>
+<div class = "blue">
+**Your turn**
 
+Plot additional QC stats that we have calculated as scatter plots. How are the different measures correlated? Can you explain why?
+</div>
 </div>
 </div>
 </div>
@@ -14009,7 +14015,7 @@ filtered out 14760 genes that are detected in less than 3 cells
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<p>Extremely high number of detected genes could indicate doublets. However, depending on the cell type composition in your sample, you may have cells with higher number of genes (and also higher counts) from one cell type. <br>In these datasets, there is also a clear difference between the v2 vs v3 10x chemistry with regards to gene detection, so it may not be fair to apply the same cutoffs to all of them. Also, in the protein assay data there is a lot of cells with few detected genes giving a bimodal distribution. This type of distribution is not seen in the other 2 datasets. Considering that they are all PBMC datasets it makes sense to regard this distribution as low quality libraries. Filter the cells with high gene detection (putative doublets) with cutoffs 4100 for v3 chemistry and 2000 for v2. <br>Here, we will filter the cells with low gene detection (low quality libraries) with less than 1000 genes for v2 and &lt; 500 for v2.</p>
+<p>Extremely high number of detected genes could indicate doublets. However, depending on the cell type composition in your sample, you may have cells with higher number of genes (and also higher counts) from one cell type. <br>In this case, we will run doublet prediction further down, so we will skip this step now, but the code below is an example of how it can be run:</p>
 
 </div>
 </div>
@@ -14019,7 +14025,7 @@ filtered out 14760 genes that are detected in less than 3 cells
 <div class="prompt input_prompt">In&nbsp;[14]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># filter for gene detection for v2</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># skip for now as we are doing doublet prediction</span>
 <span class="c1">#keep_v2 = (adata.obs[&#39;n_genes_by_counts&#39;] &lt; 2000) &amp; (adata.obs[&#39;n_genes_by_counts&#39;] &gt; 500) &amp; (adata.obs[&#39;lib_prep&#39;] == &#39;v2&#39;)</span>
 <span class="c1">#print(sum(keep_v2))</span>
 
@@ -14223,7 +14229,7 @@ height=321
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h2 id="Filter-genes">Filter genes<a class="anchor-link" href="#Filter-genes">&#182;</a></h2><p>As the level of expression of mitochondrial and MALAT1 genes are judged as mainly technical, and hemoglobin genes mainly from RBC contamination, it can be wise to remove them from the dataset bofore any further analysis.</p>
+<h2 id="Filter-genes">Filter genes<a class="anchor-link" href="#Filter-genes">&#182;</a></h2><p>As the level of expression of mitochondrial and MALAT1 genes are judged as mainly technical, it can be wise to remove them from the dataset bofore any further analysis.</p>
 
 </div>
 </div>
@@ -14274,6 +14280,227 @@ height=321
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
+<h1 id="Sample-sex">Sample sex<a class="anchor-link" href="#Sample-sex">&#182;</a></h1><p>When working with human or animal samples, you should ideally constrain you experiments to a single sex to avoid including sex bias in the conclusions. However this may not always be possible. By looking at reads from chromosomeY (males) and XIST (X-inactive specific transcript) expression (mainly female) it is quite easy to determine per sample which sex it is. It can also bee a good way to detect if there has been any sample mixups, if the sample metadata sex does not agree with the computational predictions.</p>
+<p>To get choromosome information for all genes, you should ideally parse the information from the gtf file that you used in the mapping pipeline as it has the exact same annotation version/gene naming. However, it may not always be available, as in this case where we have downloaded public data. Hence, we will use biomart to fetch chromosome information.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[19]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">annot</span> <span class="o">=</span> <span class="n">sc</span><span class="o">.</span><span class="n">queries</span><span class="o">.</span><span class="n">biomart_annotations</span><span class="p">(</span>
+        <span class="s2">&quot;hsapiens&quot;</span><span class="p">,</span>
+        <span class="p">[</span><span class="s2">&quot;ensembl_gene_id&quot;</span><span class="p">,</span> <span class="s2">&quot;external_gene_name&quot;</span><span class="p">,</span> <span class="s2">&quot;start_position&quot;</span><span class="p">,</span> <span class="s2">&quot;end_position&quot;</span><span class="p">,</span> <span class="s2">&quot;chromosome_name&quot;</span><span class="p">],</span>
+    <span class="p">)</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s2">&quot;external_gene_name&quot;</span><span class="p">)</span>
+<span class="c1">#&gt;&gt;&gt; adata.var[annot.columns] = annot</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Now that we have the chromosome information, we can calculate per cell the proportion of reads that comes from chromosome Y.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[20]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">chrY_genes</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">var_names</span><span class="o">.</span><span class="n">intersection</span><span class="p">(</span><span class="n">annot</span><span class="o">.</span><span class="n">index</span><span class="p">[</span><span class="n">annot</span><span class="o">.</span><span class="n">chromosome_name</span> <span class="o">==</span> <span class="s2">&quot;Y&quot;</span><span class="p">])</span>
+<span class="n">chrY_genes</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt output_prompt">Out[20]:</div>
+
+
+
+
+<div class="output_text output_subarea output_execute_result">
+<pre>Index([&#39;RPS4Y1&#39;, &#39;AC006157.1&#39;, &#39;ZFY&#39;, &#39;ZFY-AS1&#39;, &#39;LINC00278&#39;, &#39;PCDH11Y&#39;,
+       &#39;USP9Y&#39;, &#39;DDX3Y&#39;, &#39;UTY&#39;, &#39;TMSB4Y&#39;, &#39;NLGN4Y&#39;, &#39;TTTY14&#39;, &#39;AC010889.1&#39;,
+       &#39;KDM5D&#39;, &#39;EIF1AY&#39;, &#39;RPS4Y2&#39;],
+      dtype=&#39;object&#39;)</pre>
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[21]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s1">&#39;percent_chrY&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span>
+    <span class="n">adata</span><span class="p">[:,</span> <span class="n">chrY_genes</span><span class="p">]</span><span class="o">.</span><span class="n">X</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">A1</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">adata</span><span class="o">.</span><span class="n">X</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">A1</span> <span class="o">*</span> <span class="mi">100</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stderr output_text">
+<pre>Trying to set attribute `.obs` of view, copying.
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Then plot XIST expression vs chrY proportion. As you can see, the samples are clearly on either side, even if some cells do not have detection of either.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[22]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># color inputs must be from either .obs or .var, so add in XIST expression to obs.</span>
+<span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;XIST-counts&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">X</span><span class="p">[:,</span><span class="n">adata</span><span class="o">.</span><span class="n">var_names</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s1">&#39;XIST&#39;</span><span class="p">)]</span><span class="o">.</span><span class="n">toarray</span><span class="p">()</span>
+
+<span class="n">sc</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="s1">&#39;XIST-counts&#39;</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="s1">&#39;percent_chrY&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;sample&quot;</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+
+
+<div class="output_png output_subarea ">
+<img src="scanpy_01_qc_files/scanpy_01_qc_42_0.png"
+width=386
+height=318
+>
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Plot as violins.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[23]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">sc</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">violin</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;XIST-counts&quot;</span><span class="p">,</span> <span class="s2">&quot;percent_chrY&quot;</span><span class="p">],</span> <span class="n">jitter</span><span class="o">=</span><span class="mf">0.4</span><span class="p">,</span> <span class="n">groupby</span> <span class="o">=</span> <span class="s1">&#39;sample&#39;</span><span class="p">,</span> <span class="n">rotation</span><span class="o">=</span> <span class="mi">45</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stderr output_text">
+<pre>/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/seaborn/_decorators.py:43: FutureWarning: Pass the following variable as a keyword arg: x. From version 0.12, the only valid positional argument will be `data`, and passing other arguments without an explicit keyword will result in an error or misinterpretation.
+  FutureWarning
+/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/seaborn/_decorators.py:43: FutureWarning: Pass the following variable as a keyword arg: x. From version 0.12, the only valid positional argument will be `data`, and passing other arguments without an explicit keyword will result in an error or misinterpretation.
+  FutureWarning
+/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/seaborn/_decorators.py:43: FutureWarning: Pass the following variable as a keyword arg: x. From version 0.12, the only valid positional argument will be `data`, and passing other arguments without an explicit keyword will result in an error or misinterpretation.
+  FutureWarning
+/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/seaborn/_decorators.py:43: FutureWarning: Pass the following variable as a keyword arg: x. From version 0.12, the only valid positional argument will be `data`, and passing other arguments without an explicit keyword will result in an error or misinterpretation.
+  FutureWarning
+</pre>
+</div>
+</div>
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+
+
+<div class="output_png output_subarea ">
+<img src="scanpy_01_qc_files/scanpy_01_qc_44_1.png"
+width=579
+height=321
+>
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Here, we can see clearly that we have two males and 4 females, can you see which samples they are? 
+Do you think this will cause any problems for downstream analysis? Discuss with your group: what would be the best way to deal with this type of sex bias?</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
 <h1 id="Calculate-cell-cycle-scores">Calculate cell-cycle scores<a class="anchor-link" href="#Calculate-cell-cycle-scores">&#182;</a></h1><p>We here perform cell cycle scoring. To score a gene list, the algorithm calculates the difference of mean expression of the given list and the mean expression of reference genes. To build the reference, the function randomly chooses a bunch of genes matching the distribution of the expression of the given list. Cell cycle scoring adds three slots in data, a score for S phase, a score for G2M phase and the predicted cell cycle phase.</p>
 <p>First read the file with cell cycle genes, from Regev lab and split into S and G2M phase genes. Cell cycle genes were retrieved from the scanpy_usage github site via web browser at <a href="https://github.com/theislab/scanpy_usage/blob/master/180209_cell_cycle/data/regev_lab_cell_cycle_genes.txt">RegevLab Github repo</a>.</p>
 
@@ -14282,7 +14509,7 @@ height=321
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[19]:</div>
+<div class="prompt input_prompt">In&nbsp;[24]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="o">!</span><span class="k">if</span> <span class="o">[</span> ! -f data/regev_lab_cell_cycle_genes.txt <span class="o">]</span><span class="p">;</span> <span class="k">then</span> curl -o data/regev_lab_cell_cycle_genes.txt https://raw.githubusercontent.com/theislab/scanpy_usage/master/180209_cell_cycle/data/regev_lab_cell_cycle_genes.txt<span class="p">;</span> <span class="k">fi</span>
@@ -14296,7 +14523,7 @@ height=321
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[20]:</div>
+<div class="prompt input_prompt">In&nbsp;[25]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">cell_cycle_genes</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">open</span><span class="p">(</span><span class="s1">&#39;./data/regev_lab_cell_cycle_genes.txt&#39;</span><span class="p">)]</span>
@@ -14344,7 +14571,7 @@ height=321
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[21]:</div>
+<div class="prompt input_prompt">In&nbsp;[26]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># save normalized counts in raw slot.</span>
@@ -14395,7 +14622,7 @@ height=321
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[22]:</div>
+<div class="prompt input_prompt">In&nbsp;[27]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">sc</span><span class="o">.</span><span class="n">tl</span><span class="o">.</span><span class="n">score_genes_cell_cycle</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="n">s_genes</span><span class="o">=</span><span class="n">s_genes</span><span class="p">,</span> <span class="n">g2m_genes</span><span class="o">=</span><span class="n">g2m_genes</span><span class="p">)</span>
@@ -14445,7 +14672,7 @@ WARNING: genes are not in var_names and ignored: [&#39;FAM64A&#39;, &#39;HN1&#39
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[23]:</div>
+<div class="prompt input_prompt">In&nbsp;[28]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">sc</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">violin</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;S_score&#39;</span><span class="p">,</span> <span class="s1">&#39;G2M_score&#39;</span><span class="p">],</span>
@@ -14487,7 +14714,7 @@ WARNING: genes are not in var_names and ignored: [&#39;FAM64A&#39;, &#39;HN1&#39
 
 
 <div class="output_png output_subarea ">
-<img src="scanpy_01_qc_files/scanpy_01_qc_44_1.png"
+<img src="scanpy_01_qc_files/scanpy_01_qc_54_1.png"
 width=571
 height=321
 >
@@ -14514,7 +14741,7 @@ OBS! Ideally doublet prediction should be run on each sample separately, especia
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[24]:</div>
+<div class="prompt input_prompt">In&nbsp;[29]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">scrublet</span> <span class="k">as</span> <span class="nn">scr</span>
@@ -14544,25 +14771,25 @@ Simulating doublets...
 Embedding transcriptomes using PCA...
 Calculating doublet scores...
 Automatically set threshold at doublet score = 0.39
-Detected doublet rate = 2.9%
+Detected doublet rate = 3.0%
 Estimated detectable doublet fraction = 44.7%
 Overall doublet rate:
 	Expected   = 10.0%
-	Estimated  = 6.5%
-Elapsed time: 5.1 seconds
+	Estimated  = 6.7%
+Elapsed time: 14.1 seconds
 </pre>
 </div>
 </div>
 
 <div class="output_area">
 
-    <div class="prompt output_prompt">Out[24]:</div>
+    <div class="prompt output_prompt">Out[29]:</div>
 
 
 
 
 <div class="output_text output_subarea output_execute_result">
-<pre>168</pre>
+<pre>172</pre>
 </div>
 
 </div>
@@ -14575,7 +14802,7 @@ Elapsed time: 5.1 seconds
 
 
 <div class="output_png output_subarea ">
-<img src="scanpy_01_qc_files/scanpy_01_qc_46_2.png"
+<img src="scanpy_01_qc_files/scanpy_01_qc_56_2.png"
 width=624
 height=220
 >
@@ -14589,7 +14816,7 @@ height=220
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[25]:</div>
+<div class="prompt input_prompt">In&nbsp;[30]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># add in column with singlet/doublet instead of True/False</span>
@@ -14612,7 +14839,7 @@ height=220
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[26]:</div>
+<div class="prompt input_prompt">In&nbsp;[31]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">sc</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">violin</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="s1">&#39;n_genes_by_counts&#39;</span><span class="p">,</span>
@@ -14650,7 +14877,7 @@ height=220
 
 
 <div class="output_png output_subarea ">
-<img src="scanpy_01_qc_files/scanpy_01_qc_49_1.png"
+<img src="scanpy_01_qc_files/scanpy_01_qc_59_1.png"
 width=302
 height=304
 >
@@ -14672,7 +14899,7 @@ height=304
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[27]:</div>
+<div class="prompt input_prompt">In&nbsp;[32]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">sc</span><span class="o">.</span><span class="n">pp</span><span class="o">.</span><span class="n">highly_variable_genes</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="n">min_mean</span><span class="o">=</span><span class="mf">0.0125</span><span class="p">,</span> <span class="n">max_mean</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">min_disp</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
@@ -14750,7 +14977,7 @@ regressing out [&#39;total_counts&#39;, &#39;pct_counts_mt&#39;]
 
 
 <div class="output_subarea output_stream output_stdout output_text">
-<pre>    finished (0:00:13)
+<pre>    finished (0:00:18)
 computing PCA
     on highly variable genes
     with n_comps=50
@@ -14759,7 +14986,7 @@ computing neighbors
     using &#39;X_pca&#39; with n_pcs = 40
     finished: added to `.uns[&#39;neighbors&#39;]`
     `.obsp[&#39;distances&#39;]`, distances for each pair of neighbors
-    `.obsp[&#39;connectivities&#39;]`, weighted adjacency matrix (0:00:03)
+    `.obsp[&#39;connectivities&#39;]`, weighted adjacency matrix (0:00:05)
 computing UMAP
     finished: added
     &#39;X_umap&#39;, UMAP coordinates (adata.obsm) (0:00:06)
@@ -14773,7 +15000,7 @@ computing UMAP
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[28]:</div>
+<div class="prompt input_prompt">In&nbsp;[33]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">sc</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">umap</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;doublet_scores&#39;</span><span class="p">,</span><span class="s1">&#39;doublet_info&#39;</span><span class="p">,</span><span class="s1">&#39;sample&#39;</span><span class="p">])</span>
@@ -14795,7 +15022,7 @@ computing UMAP
 
 
 <div class="output_png output_subarea ">
-<img src="scanpy_01_qc_files/scanpy_01_qc_52_0.png"
+<img src="scanpy_01_qc_files/scanpy_01_qc_62_0.png"
 width=1023
 height=299
 >
@@ -14817,7 +15044,7 @@ height=299
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[29]:</div>
+<div class="prompt input_prompt">In&nbsp;[34]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># also revert back to the raw counts as the main matrix in adata</span>
@@ -14841,7 +15068,7 @@ height=299
 
 
 <div class="output_subarea output_stream output_stdout output_text">
-<pre>(5594, 18752)
+<pre>(5590, 18752)
 </pre>
 </div>
 </div>
@@ -14860,7 +15087,7 @@ height=299
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[30]:</div>
+<div class="prompt input_prompt">In&nbsp;[35]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">os</span>
