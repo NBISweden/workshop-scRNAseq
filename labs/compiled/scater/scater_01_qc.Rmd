@@ -326,9 +326,10 @@ if (!file.exists(genes.file)){
   mart <- useMart(host="www.ensembl.org", "ENSEMBL_MART_ENSEMBL", dataset="hsapiens_gene_ensembl")
 
   # fetch chromosome info plus some other annotations
-  genes.table <- getBM(filters= "external_gene_name", attributes= c("ensembl_gene_id",
+  genes.table <- getBM(attributes= c("ensembl_gene_id",
               "external_gene_name", "description","gene_biotype", "chromosome_name","start_position"),
-              values= rownames(sce.filt), mart= mart)
+               mart= mart)
+  if( !dir.exists("data/results") ){dir.create("data/results")}
   write.csv(genes.table, file = genes.file)
 }else{
   genes.table = read.csv(genes.file)
@@ -340,8 +341,7 @@ Now that we have the chromosome information, we can calculate per cell the propo
 ```{r}
 chrY.gene = genes.table$external_gene_name[genes.table$chromosome_name == "Y"]
 
-sce.filt@colData$pct_chrY  = colSums(counts(sce.filt)[chrY.gene,]) / colSums(counts(sce.filt))
-
+sce.filt@colData$pct_chrY  = Matrix::colSums(counts(sce.filt)[chrY.gene,]) / colSums(counts(sce.filt))
 ```
 
 Then plot XIST expression vs chrY proportion. As you can see, the samples are clearly on either side, even if some cells do not have detection of either.
@@ -414,6 +414,8 @@ There is a method to predict if a cluster consists of mainly doublets `findDoubl
 Doublet detection will be performed using PCA, so we need to first normalize the data and run variable gene detection, as well as UMAP for visualization. These steps will be explored in more detail in coming exercises.
 
 ```{r}
+
+
 sce.filt <- logNormCounts(sce.filt)
 dec <- modelGeneVar(sce.filt, block = sce.filt$sample)
 hvgs = getTopHVGs(dec, n=2000)

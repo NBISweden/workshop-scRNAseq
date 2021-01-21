@@ -289,9 +289,10 @@ if (!file.exists(genes.file)){
   mart <- useMart(host="www.ensembl.org", "ENSEMBL_MART_ENSEMBL", dataset="hsapiens_gene_ensembl")
 
   # fetch chromosome info plus some other annotations
-  genes.table <- getBM(filters= "external_gene_name", attributes= c("ensembl_gene_id",
+  genes.table <- getBM(attributes= c("ensembl_gene_id",
               "external_gene_name", "description","gene_biotype", "chromosome_name","start_position"),
-              values= rownames(sce.filt), mart= mart)
+               mart= mart)
+  if( !dir.exists("data/results") ){dir.create("data/results")}
   write.csv(genes.table, file = genes.file)
 }else{
   genes.table = read.csv(genes.file)
@@ -303,8 +304,7 @@ if (!file.exists(genes.file)){
 ```{r}
 chrY.gene = genes.table$external_gene_name[genes.table$chromosome_name == "Y"]
 
-sce.filt@colData$pct_chrY  = colSums(counts(sce.filt)[chrY.gene,]) / colSums(counts(sce.filt))
-
+sce.filt@colData$pct_chrY  = Matrix::colSums(counts(sce.filt)[chrY.gene,]) / colSums(counts(sce.filt))
 ```
 
 #SEX_ALL4:
