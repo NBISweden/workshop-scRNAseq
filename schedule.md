@@ -20,12 +20,12 @@ Lecture slides will be provided as links as they get completed.
 
 | Time  | Description         | Lecturer  |
 | ----- | ------------------- | --------- |
-| 09.00 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [Course introduction](lectures/course_intro_Asa_Bjorklund_2020.pdf) | Åsa & Paulo |
+| 09.00 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [Course introduction](lectures/course_intro_Asa_Bjorklund_2021.pdf) | Åsa & Paulo |
 | 09.30 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [scRNAseq methodologies and ESCG platform](lectures/single_cell_methodologies_Karolina_Wallenborg_2020.pdf) | Karolina Wallenborg |
 | 10.30 | **Break**	| |
 | 11.00 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [scRNAseq Quality Control](lectures/scRNAseq_QC_Asa_Bjorklund_2020.pdf) | Åsa Björklund |
 | 12.00 | **Lunch** | |
-| 13.00 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [Intro to exercises](lectures/exercises_intro_Asa_Bjorklund_2020.pdf) | Åsa Björklund |
+| 13.00 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [Intro to exercises](lectures/exercises_intro_Asa_Bjorklund_2021.pdf) | Åsa Björklund |
 | 13.30 | <img border="0" src="https://www.svgrepo.com/show/6672/exercise.svg" width="20" height="20"> [Exercises: Quality control](exercises.md) | Åsa, Paulo, Lokesh, Erik |
 | 15.30 | [Wrap up session](https://forms.gle/NHUSBHCwdkP4yjtK6) | Åsa & Paulo |
 
@@ -59,7 +59,7 @@ Lecture slides will be provided as links as they get completed.
 | 10.15 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [Clustering techniques and scRNAseq toolkits](lectures/scRNAseq_clustering_Asa_Bjorklund_2020.pdf) | Åsa Björklund |
 | 11.15 | <img border="0" src="https://www.svgrepo.com/show/6672/exercise.svg" width="20" height="20"> [Exercises: Clustering](exercises.md) | Åsa, Paulo, Nikolay, Rui |
 | 12.00 | **Lunch** | |
-| 13.00 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [Differential expression](lectures/differenatial_expression_olga_dethlefsen_2020.pdf) | Olga Dethlefsen |
+| 13.00 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [Differential expression](lectures/differenatial_expression_olga_dethlefsen_2020.pdf) | Åsa/Paulo |
 | 14.00 | <img border="0" src="https://www.svgrepo.com/show/6672/exercise.svg" width="20" height="20"> [Exercises: Differential expression](exercises.md) | Åsa, Paulo, Olga, Erik |
 | 15.30 | [Wrap up session](https://forms.gle/Q1FQYhGSVWn2BoGh6) | Åsa & Paulo |
 
@@ -92,8 +92,7 @@ Lecture slides will be provided as links as they get completed.
 | 11.30 | [Summary of exercises]() | Åsa & Paulo |
 | 12.00 | **Lunch** | |
 | 13.00 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [Multimodal omics integration]()	| Nikolay Oskolkov |
-| 14.00 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [Invited seminar]()  | TBA |
-| 15.00 | [Wrap up and course Summary](lectures/course_summary_2020.pdf) | Åsa & Paulo |
+| 14.00 | [Wrap up and course Summary](lectures/course_summary_2020.pdf) | Åsa & Paulo |
 
 
 <br/>
