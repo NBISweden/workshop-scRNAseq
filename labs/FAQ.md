@@ -19,7 +19,7 @@ Below you can find some common error and problems you might face either during i
 
 
 <details>
-  <summary markdown="span">**Command line developer tools not found (OSX)**</summary>
+  <summary markdown="span">`Command line developer tools not found (OSX)`</summary>
 
   If you don't yet have Mac OSX command line developer tools, please install it using:
 
@@ -31,7 +31,7 @@ Below you can find some common error and problems you might face either during i
 
 
 <details>
-  <summary markdown="span">**Error - umap-learn not found**</summary>
+  <summary markdown="span">`Error - umap-learn not found`</summary>
 
   If your R does not find the correct python version, it will complain that `umap-learn` is not installed and ask you to install it. Here are some tips on how to find the correct python version that was installed in the conda environment.
 
@@ -83,10 +83,41 @@ Below you can find some common error and problems you might face either during i
 
 <br/>
 
+<details>
+  <summary markdown="span">`Unable to load stringi.so` (UNIX/Windows)</summary>
+
+  You can install stringi in R using:
+
+  ```
+  install.packages('stringi')
+  ```
+
+</details>
 
 
+<details>
+  <summary markdown="span">`ERROR: Failed building wheel for gevent` (MacOSX)</summary>
 
+  This is a problem with the MacOSX compiler, in which conda is unable to find it.
 
+  ```
+  #Download MacOSX10.9.sdk from Github
+  curl -o MacOSX10.9.sdk.tar.gz "https://github-production-release-asset-2e65be.s3.amazonaws.com/13597203/f0123b00-34ab-11ea-84b1-27ccc324f983?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAIWNJYAX4CSVEH53A%2F20210122%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20210122T065821Z&X-Amz-Expires=300&X-Amz-Signature=e11864967b0c9a1e1ba1121dbadd35bb3129ae1cd87bdf07b1a9965c731ae129&X-Amz-SignedHeaders=host&actor_id=22674952&key_id=0&repo_id=13597203&response-content-disposition=attachment%3B%20filename%3DMacOSX10.9.sdk.tar.xz&response-content-type=application%2Foctet-stream"
+
+  #extract
+  sudo tar -xzf MacOSX10.9.sdk.tar.xz
+
+  #copy
+  sudo cp -r ~/Downloads/MacOSX10.9.sdk /opt/
+
+  #give executable permissions
+  sudo chmod -R a+rX /opt
+
+  #Link the path where conda looks to where the file is
+  ln -s /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk /opt/MacOSX10.9.sdk
+  ```
+
+</details>
 
 
 ***
