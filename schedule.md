@@ -27,7 +27,7 @@ Lecture slides will be provided as links as they get completed.
 | 12.00 | **Lunch** | |
 | 13.00 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [Intro to exercises](lectures/exercises_intro_Asa_Bjorklund_2021.pdf) | Åsa Björklund |
 | 13.30 | <img border="0" src="https://www.svgrepo.com/show/6672/exercise.svg" width="20" height="20"> [Exercises: Quality control](exercises.md) | Åsa, Paulo, Lokesh, Erik |
-| 15.30 | [Wrap up session](https://forms.gle/NHUSBHCwdkP4yjtK6) | Åsa & Paulo |
+| 15.30 | [Wrap up session](https://forms.gle/D66Y3ShaamWeJZm87) | Åsa & Paulo |
 
 <br/>
 
@@ -44,7 +44,7 @@ Lecture slides will be provided as links as they get completed.
 | 12.00 | **Lunch** | |
 | 13.00 | <img border="0" src="https://www.svgrepo.com/show/6672/exercise.svg" width="20" height="20"> [Exercises: Dimensionality reduction (continued)](exercises.md) | Åsa, Paulo, Anna, Jonathan |
 | 14.30 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [Batch correction + Data integration](lectures/data_integration_paulo_czarnewski_2020.pdf) | Paulo Czarnewski |
-| 15.30 | [Wrap up session](https://forms.gle/NHUSBHCwdkP4yjtK6) | Åsa & Paulo |
+| 15.30 | [Wrap up session](https://forms.gle/iZumacPY1iyscZPHA) | Åsa & Paulo |
 
 <br/>
 
@@ -61,7 +61,7 @@ Lecture slides will be provided as links as they get completed.
 | 12.00 | **Lunch** | |
 | 13.00 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [Differential expression](lectures/differenatial_expression_olga_dethlefsen_2020.pdf) | Åsa/Paulo |
 | 14.00 | <img border="0" src="https://www.svgrepo.com/show/6672/exercise.svg" width="20" height="20"> [Exercises: Differential expression](exercises.md) | Åsa, Paulo, Olga, Erik |
-| 15.30 | [Wrap up session](https://forms.gle/Q1FQYhGSVWn2BoGh6) | Åsa & Paulo |
+| 15.30 | [Wrap up session](https://forms.gle/B9Tt7QqpBJsBmjRV6) | Åsa & Paulo |
 
 <br/>
 
@@ -77,7 +77,7 @@ Lecture slides will be provided as links as they get completed.
 | 12.00 | **Lunch** | |
 | 13.00 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [Spatial Transcriptomics]() | Alma Andersson |
 | 14.00 | <img border="0" src="https://www.svgrepo.com/show/6672/exercise.svg" width="20" height="20"> [Exercises: Spatial Transcriptomics](exercises.md) | Åsa, Paulo, Alma, Anna |
-| 15.30 | [Wrap up session]() | Åsa & Paulo |
+| 15.30 | [Wrap up session](https://forms.gle/i9Vic1o3ZB83vSiH9) | Åsa & Paulo |
 
 <br/>
 
@@ -92,7 +92,7 @@ Lecture slides will be provided as links as they get completed.
 | 11.30 | [Summary of exercises]() | Åsa & Paulo |
 | 12.00 | **Lunch** | |
 | 13.00 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [Multimodal omics integration]()	| Nikolay Oskolkov |
-| 14.00 | [Wrap up and course Summary](lectures/course_summary_2020.pdf) | Åsa & Paulo |
+| 14.00 | [Wrap up](https://forms.gle/gATSp2VCSBXCMDaU9) and [Course Summary](lectures/course_summary_2020.pdf) | Åsa & Paulo |
 
 
 <br/>
