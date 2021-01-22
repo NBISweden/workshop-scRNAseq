@@ -19,7 +19,7 @@ Below you can find some common error and problems you might face either during i
 
 
 <details>
-  <summary markdown="span">`Command line developer tools not found (OSX)`</summary>
+  <summary markdown="span">`Command line developer tools not found` (OSX)</summary>
 
   If you don't yet have Mac OSX command line developer tools, please install it using:
 
@@ -78,10 +78,7 @@ Below you can find some common error and problems you might face either during i
 
   If you have the correct version now, you should be able to run UMAP without issues.
 
-  </p>
 </details>
-
-<br/>
 
 <details>
   <summary markdown="span">`Unable to load stringi.so` (UNIX/Windows)</summary>
@@ -96,7 +93,7 @@ Below you can find some common error and problems you might face either during i
 
 
 <details>
-  <summary markdown="span">`ERROR: Failed building wheel for gevent` (MacOSX)</summary>
+  <summary markdown="span">`ERROR: Failed building wheel for gevent` / `MacOSX10.9.sdk missing` (MacOSX)</summary>
 
   This is a problem with the MacOSX compiler, in which conda is unable to find it.
 
@@ -108,7 +105,7 @@ Below you can find some common error and problems you might face either during i
   sudo tar -xzf MacOSX10.9.sdk.tar.xz
 
   #copy
-  sudo cp -r ~/Downloads/MacOSX10.9.sdk /opt/
+  sudo cp -r MacOSX10.9.sdk /opt/
 
   #give executable permissions
   sudo chmod -R a+rX /opt
