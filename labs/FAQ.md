@@ -19,7 +19,7 @@ Below you can find some common error and problems you might face either during i
 
 
 <details>
-  <summary><b>Command line developer tools not found (OSX)</b></summary>
+  <summary markdown="span">**Command line developer tools not found (OSX)**</summary>
 
   If you don't yet have Mac OSX command line developer tools, please install it using:
 
@@ -31,7 +31,7 @@ Below you can find some common error and problems you might face either during i
 
 
 <details>
-  <summary><b>Error - umap-learn not found</b></summary>
+  <summary markdown="span">**Error - umap-learn not found**</summary>
 
   If your R does not find the correct python version, it will complain that `umap-learn` is not installed and ask you to install it. Here are some tips on how to find the correct python version that was installed in the conda environment.
 
