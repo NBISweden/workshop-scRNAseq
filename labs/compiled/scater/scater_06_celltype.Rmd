@@ -169,9 +169,13 @@ rowData(ctrl.sce) = rd
 
 
 # select features
+counts(ctrl.sce) <- as.matrix(counts(ctrl.sce))
+logcounts(ctrl.sce) <- as.matrix(logcounts(ctrl.sce))
 ctrl.sce <- selectFeatures(ctrl.sce, suppress_plot = TRUE)
-ref.sce <- selectFeatures(ref.sce, suppress_plot = TRUE)
 
+counts(ref.sce) <- as.matrix(counts(ref.sce))
+logcounts(ref.sce) <- as.matrix(logcounts(ref.sce))
+ref.sce <- selectFeatures(ref.sce, suppress_plot = TRUE)
 ```
 
 Then we need to index the reference dataset by cluster, default is the clusters in `cell_type1`.
@@ -360,8 +364,10 @@ ref_DGE <- scran::findMarkers( x = ref.sce,
 
 # Identify the top cell marker genes in reference dataset
 # select top 50 with hihgest foldchange among top 100 signifcant genes.
-ref_list <- lapply(ref_DGE, function(x)
-  x %>% as.data.frame() %>% filter(p.value < 0.01) %>% top_n(-100, p.value) %>% top_n(50, summary.logFC) %>% rownames()
+ref_list <- lapply(ref_DGE, function(x){
+  x$logFC <- rowSums( as.matrix( x[,grep("logFC",colnames(x))] ))
+  x %>% as.data.frame() %>% filter(p.value < 0.01) %>% top_n(-100, p.value) %>% top_n(50, logFC) %>% rownames()
+  }
 )
 
 unlist(lapply(ref_list, length))
@@ -375,8 +381,9 @@ suppressPackageStartupMessages(library(fgsea))
 
 # run fgsea for each of the clusters in the list
 res <- lapply(DGE_list, function(x){
-  gene_rank <- setNames(x$summary.logFC, rownames(x))
-  fgseaRes <- fgsea( pathways=ref_list, stats=gene_rank)
+  x$logFC <- rowSums( as.matrix( x[,grep("logFC",colnames(x))] ))
+  gene_rank <- setNames(x$logFC, rownames(x))
+  fgseaRes <- fgsea( pathways=ref_list, stats=gene_rank,nperm=10000)
   return(fgseaRes)
 })
 names(res) <- names(DGE_list)
@@ -465,8 +472,9 @@ celltype_list <- celltype_list[ unlist(lapply(celltype_list,length)) > 5 ]
 ```{r}
 # run fgsea for each of the clusters in the list
 res <- lapply(DGE_list, function(x){
-  gene_rank <- setNames(x$summary.logFC, rownames(x))
-  fgseaRes <- fgsea( pathways=celltype_list, stats=gene_rank)
+  x$logFC <- rowSums( as.matrix( x[,grep("logFC",colnames(x))] ))
+  gene_rank <- setNames(x$logFC, rownames(x))
+  fgseaRes <- fgsea( pathways=celltype_list, stats=gene_rank,nperm=10000)
   return(fgseaRes)
 })
 names(res) <- names(DGE_list)
