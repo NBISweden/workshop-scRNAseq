@@ -1,7 +1,7 @@
 ---
 title: "Scater/Scran:: Spatial Transcriptomics"
 author: "Åsa Björklund  &  Paulo Czarnewski"
-date: 'January 21, 2021'
+date: 'January 23, 2021'
 output:
   html_document:
     self_contained: true
@@ -74,44 +74,46 @@ cd ..
 ```
 ##   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
 ##                                  Dload  Upload   Total   Spent    Left  Speed
-##   0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0 36 54.8M   36 19.9M    0     0  34.3M      0  0:00:01 --:--:--  0:00:01 34.2M100 54.8M  100 54.8M    0     0  47.6M      0  0:00:01  0:00:01 --:--:-- 47.7M
-## x filtered_feature_bc_matrix/
-## x filtered_feature_bc_matrix/barcodes.tsv.gz
-## x filtered_feature_bc_matrix/matrix.mtx.gz
-## x filtered_feature_bc_matrix/features.tsv.gz
+##   0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0  0 54.8M    0  270k    0     0  1557k      0  0:00:36 --:--:--  0:00:36 1548k  9 54.8M    9 5054k    0     0  4298k      0  0:00:13  0:00:01  0:00:12 4294k 17 54.8M   17 9726k    0     0  4474k      0  0:00:12  0:00:02  0:00:10 4472k 26 54.8M   26 14.4M    0     0  4655k      0  0:00:12  0:00:03  0:00:09 4655k 33 54.8M   33 18.5M    0     0  4541k      0  0:00:12  0:00:04  0:00:08 4540k 41 54.8M   41 22.7M    0     0  4491k      0  0:00:12  0:00:05  0:00:07 4593k 50 54.8M   50 27.5M    0     0  4567k      0  0:00:12  0:00:06  0:00:06 4630k 58 54.8M   58 31.9M    0     0  4563k      0  0:00:12  0:00:07  0:00:05 4602k 66 54.8M   66 36.6M    0     0  4588k      0  0:00:12  0:00:08  0:00:04 4546k 75 54.8M   75 41.4M    0     0  4619k      0  0:00:12  0:00:09  0:00:03 4685k 81 54.8M   81 44.8M    0     0  4515k      0  0:00:12  0:00:10  0:00:02 4539k 89 54.8M   89 49.1M    0     0  4503k      0  0:00:12  0:00:11  0:00:01 4423k 98 54.8M   98 53.7M    0     0  4521k      0  0:00:12  0:00:12 --:--:-- 4460k100 54.8M  100 54.8M    0     0  4535k      0  0:00:12  0:00:12 --:--:-- 4432k
+## filtered_feature_bc_matrix/
+## filtered_feature_bc_matrix/barcodes.tsv.gz
+## filtered_feature_bc_matrix/matrix.mtx.gz
+## filtered_feature_bc_matrix/features.tsv.gz
 ##   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
 ##                                  Dload  Upload   Total   Spent    Left  Speed
-##   0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0100 9480k  100 9480k    0     0  35.3M      0 --:--:-- --:--:-- --:--:-- 35.3M
-## x spatial/
-## x spatial/tissue_positions_list.csv
-## x spatial/tissue_hires_image.png
-## x spatial/scalefactors_json.json
-## x spatial/aligned_fiducials.jpg
-## x spatial/detected_tissue_image.jpg
-## x spatial/tissue_lowres_image.png
+##   0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0  7 9480k    7  754k    0     0  2328k      0  0:00:04 --:--:--  0:00:04 2328k 59 9480k   59 5679k    0     0  4296k      0  0:00:02  0:00:01  0:00:01 4293k100 9480k  100 9480k    0     0  4436k      0  0:00:02  0:00:02 --:--:-- 4438k
+## spatial/
+## spatial/tissue_positions_list.csv
+## spatial/tissue_hires_image.png
+## spatial/scalefactors_json.json
+## spatial/aligned_fiducials.jpg
+## spatial/detected_tissue_image.jpg
+## spatial/tissue_lowres_image.png
 ##   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
 ##                                  Dload  Upload   Total   Spent    Left  Speed
-##   0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0  0 54.8M    0  2148    0     0  29424      0  0:32:33 --:--:--  0:32:33 29027 81 54.8M   81 44.8M    0     0  42.9M      0  0:00:01  0:00:01 --:--:-- 42.9M100 54.8M  100 54.8M    0     0  43.6M      0  0:00:01  0:00:01 --:--:-- 43.5M
-## x filtered_feature_bc_matrix/
-## x filtered_feature_bc_matrix/barcodes.tsv.gz
-## x filtered_feature_bc_matrix/features.tsv.gz
-## x filtered_feature_bc_matrix/matrix.mtx.gz
+##   0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0  5 54.8M    5 3006k    0     0  2965k      0  0:00:18  0:00:01  0:00:17 2968k 13 54.8M   13 7438k    0     0  3749k      0  0:00:14  0:00:01  0:00:13 3747k 21 54.8M   21 11.7M    0     0  4041k      0  0:00:13  0:00:02  0:00:11 4039k 30 54.8M   30 16.8M    0     0  4321k      0  0:00:12  0:00:03  0:00:09 4321k 39 54.8M   39 21.8M    0     0  4482k      0  0:00:12  0:00:04  0:00:08 4481k 48 54.8M   48 26.7M    0     0  4570k      0  0:00:12  0:00:05  0:00:07 4897k 57 54.8M   57 31.6M    0     0  4631k      0  0:00:12  0:00:06  0:00:06 4981k 66 54.8M   66 36.2M    0     0  4651k      0  0:00:12  0:00:07  0:00:05 5014k 75 54.8M   75 41.1M    0     0  4685k      0  0:00:11  0:00:08  0:00:03 4975k 84 54.8M   84 46.2M    0     0  4739k      0  0:00:11  0:00:09  0:00:02 4995k 92 54.8M   92 50.5M    0     0  4710k      0  0:00:11  0:00:10  0:00:01 4877k100 54.8M  100 54.8M    0     0  4709k      0  0:00:11  0:00:11 --:--:-- 4820k
+## filtered_feature_bc_matrix/
+## filtered_feature_bc_matrix/barcodes.tsv.gz
+## filtered_feature_bc_matrix/features.tsv.gz
+## filtered_feature_bc_matrix/matrix.mtx.gz
 ##   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
 ##                                  Dload  Upload   Total   Spent    Left  Speed
-##   0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0100 9017k  100 9017k    0     0  31.9M      0 --:--:-- --:--:-- --:--:-- 31.9M
-## x spatial/
-## x spatial/tissue_positions_list.csv
-## x spatial/tissue_hires_image.png
-## x spatial/scalefactors_json.json
-## x spatial/detected_tissue_image.jpg
-## x spatial/tissue_lowres_image.png
-## x spatial/aligned_fiducials.jpg
+##   0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0 24 9017k   24 2174k    0     0  3446k      0  0:00:02 --:--:--  0:00:02 3446k 81 9017k   81 7342k    0     0  4480k      0  0:00:02  0:00:01  0:00:01 4480k100 9017k  100 9017k    0     0  4612k      0  0:00:01  0:00:01 --:--:-- 4612k
+## spatial/
+## spatial/tissue_positions_list.csv
+## spatial/tissue_hires_image.png
+## spatial/scalefactors_json.json
+## spatial/detected_tissue_image.jpg
+## spatial/tissue_lowres_image.png
+## spatial/aligned_fiducials.jpg
 ```
 
 
 
 ```r
-devtools::install_github("RachelQueen1/Spaniel", ref = "Development")
+BiocManager::install("DropletUtils", update = F)
+devtools::install_github("RachelQueen1/Spaniel", ref = "Development", upgrade = F, 
+    dependencies = F)
 
 library(Spaniel)
 library(biomaRt)
@@ -149,10 +151,9 @@ We can further convert the gene ensembl IDs to gene names.
 
 
 ```r
-mart <- biomaRt::useMart(biomart = "ENSEMBL_MART_ENSEMBL", dataset = "mmusculus_gene_ensembl", 
-    host = "https://nov2020.archive.ensembl.org")
+mart <- biomaRt::useMart(biomart = "ENSEMBL_MART_ENSEMBL", dataset = "mmusculus_gene_ensembl")
 annot <- biomaRt::getBM(attributes = c("ensembl_gene_id", "external_gene_name", "gene_biotype"), 
-    mart = mart)
+    mart = mart, useCache = F)
 
 gene_names <- as.character(annot[match(rownames(sce), annot[, "ensembl_gene_id"]), 
     "external_gene_name"])
@@ -193,7 +194,7 @@ head(colData(sce))
 ```
 
 ```
-## DataFrame with 6 rows and 24 columns
+## DataFrame with 6 rows and 32 columns
 ##        Sample            Barcode   Section    Spot_Y    Spot_X   Image_Y
 ##   <character>        <character> <integer> <integer> <integer> <integer>
 ## 1    Anterior AAACAAGTATCTCCCA-1         1        50       102      7474
@@ -202,38 +203,54 @@ head(colData(sce))
 ## 4    Anterior AAACAGCTTTCAGAAG-1         1        43         9      6636
 ## 5    Anterior AAACAGGGTCTATATT-1         1        47        13      7115
 ## 6    Anterior AAACATGGTGAGAGGA-1         1        62         0      8912
-##     Image_X   pixel_x   pixel_y       sum  detected     total       sum
-##   <integer> <numeric> <numeric> <numeric> <integer> <numeric> <numeric>
-## 1      8500   438.898   214.079     13991      4462     13991     13963
-## 2      2788   143.959   158.417     39797      8126     39797     39764
-## 3      7950   410.499   436.678     29951      6526     29951     29919
-## 4      2100   108.434   257.349     42333      8190     42333     42293
-## 5      2375   122.633   232.616     35700      8090     35700     35686
-## 6      1480    76.420   139.828     22148      6518     22148     22115
-##    detected subsets_mt_sum subsets_mt_detected subsets_mt_percent
-##   <integer>      <numeric>           <integer>          <numeric>
-## 1      4461           1521                  12           10.89307
-## 2      8124           3977                  12           10.00151
-## 3      6525           4265                  12           14.25516
-## 4      8187           2870                  12            6.78599
-## 5      8089           1831                  13            5.13086
-## 6      6517           2390                  12           10.80714
-##   subsets_hb_sum subsets_hb_detected subsets_hb_percent subsets_ribo_sum
-##        <numeric>           <integer>          <numeric>        <numeric>
-## 1             60                   4           0.429707              826
-## 2            831                   6           2.089830             2199
-## 3            111                   5           0.371002             1663
-## 4            117                   5           0.276642             3129
-## 5             73                   5           0.204562             2653
-## 6            134                   5           0.605924             1478
-##   subsets_ribo_detected subsets_ribo_percent     total
-##               <integer>            <numeric> <numeric>
-## 1                    85              5.91563     13963
-## 2                    89              5.53013     39764
-## 3                    88              5.55834     29919
-## 4                    88              7.39839     42293
-## 5                    90              7.43429     35686
-## 6                    84              6.68325     22115
+##     Image_X       pixel_x       pixel_y       sum  detected   percent_top_50
+##   <integer>     <numeric>     <numeric> <numeric> <integer>        <numeric>
+## 1      8500   438.8984605 214.079165438     13991      4462 25.5235508541205
+## 2      2788 143.958695044 158.416513624     39797      8126 20.7603588210167
+## 3      7950  410.49914835 436.678137581     29951      6526 28.4230910487129
+## 4      2100   108.4337373 257.349390132     42333      8190 15.6591784187277
+## 5      2375 122.633393375 232.616171005     35700      8090 13.1960784313725
+## 6      1480   76.41996724 139.827872944     22148      6518 20.3946180242008
+##    percent_top_100  percent_top_200  percent_top_500     total       sum
+##          <numeric>        <numeric>        <numeric> <numeric> <numeric>
+## 1 31.7489814880995  40.132942605961 54.1133585876635     13991     13963
+## 2 26.1326230620399  33.768877051034 47.1442571048069     39797     39764
+## 3 33.6115655570766 40.7498914894327 53.1935494641247     29951     29919
+## 4 21.7608012661517 30.0309451255522  44.157040606619     42333     42293
+## 5 18.9859943977591 27.1652661064426 40.9635854341737     35700     35686
+## 6  26.363554271266 33.9804948528084 47.0200469568358     22148     22115
+##    detected   percent_top_50  percent_top_100  percent_top_200  percent_top_500
+##   <integer>        <numeric>        <numeric>        <numeric>        <numeric>
+## 1      4461 25.5317625152188 31.7123827257753 40.0773472749409 54.0571510420397
+## 2      8124 20.7775877678302 26.1543104315461 33.7792978573584 47.1356000402374
+## 3      6525 28.4534910926167 33.6308031685551 40.7433403522845 53.1735686353153
+## 4      8187  15.673988603315   21.78138226184  30.035703307876  44.142056605112
+## 5      8089 13.2012553942723 18.9934428067029 27.1759233312784 40.9740514487474
+## 6      6517 20.4205290526792 26.3486321501244 33.9407641872033  46.972643002487
+##   subsets_mt_sum subsets_mt_detected subsets_mt_percent subsets_hb_sum
+##        <numeric>           <integer>          <numeric>      <numeric>
+## 1           1521                  12   10.8930745541789             60
+## 2           3977                  12   10.0015089025249            831
+## 3           4265                  12   14.2551555867509            111
+## 4           2870                  12   6.78599295391672            117
+## 5           1831                  13   5.13086364400605             73
+## 6           2390                  12   10.8071444720778            134
+##   subsets_hb_detected subsets_hb_percent subsets_ribo_sum subsets_ribo_detected
+##             <integer>          <numeric>        <numeric>             <integer>
+## 1                   4  0.429707083005085              826                    85
+## 2                   6    2.0898299969822             2199                    89
+## 3                   5  0.371001704602427             1663                    88
+## 4                   5   0.27664152460218             3129                    88
+## 5                   5  0.204562013114387             2653                    90
+## 6                   5  0.605923581279674             1478                    84
+##   subsets_ribo_percent     total
+##              <numeric> <numeric>
+## 1     5.91563417603667     13963
+## 2     5.53012775374711     39764
+## 3     5.55834085363816     29919
+## 4     7.39838744000189     42293
+## 5      7.4342879560612     35686
+## 6     6.68324666515939     22115
 ```
 
 ```r
@@ -462,8 +479,8 @@ gc()
 
 ```
 ##             used   (Mb) gc trigger   (Mb)  max used   (Mb)
-## Ncells   8678320  463.5   15881785  848.2  12399795  662.3
-## Vcells 189347732 1444.7  332601989 2537.6 332601697 2537.6
+## Ncells   7709695  411.8   11801654  630.3  11801654  630.3
+## Vcells 187630638 1431.6  343344438 2619.6 343049786 2617.3
 ```
 
 
@@ -676,8 +693,8 @@ Next, we select the highly variable genes that are present in both datasets.
 common_hvgs <- allen.hvgs[allen.hvgs %in% hvgs]
 
 # Predict cell classes
-pred.grun <- SingleR(test = sce.anterior[common_hvgs, ], de.n = 20, ref = allen_reference_sce[common_hvgs, 
-    ], labels = allen_reference_sce$subclass, de.method = "wilcox")
+pred.grun <- SingleR(test = sce.anterior[common_hvgs, ], ref = allen_reference_sce[common_hvgs, 
+    ], labels = allen_reference_sce$subclass)
 
 # Transfer the classes to the SCE object
 sce.anterior$cell_prediction <- pred.grun$labels
@@ -734,15 +751,18 @@ sessionInfo()
 ```
 
 ```
-## R version 4.0.3 (2020-10-10)
-## Platform: x86_64-apple-darwin13.4.0 (64-bit)
-## Running under: macOS Catalina 10.15.5
+## R version 3.6.1 (2019-07-05)
+## Platform: x86_64-conda_cos6-linux-gnu (64-bit)
+## Running under: Ubuntu 20.04 LTS
 ## 
 ## Matrix products: default
-## BLAS/LAPACK: /Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/libopenblasp-r0.3.12.dylib
+## BLAS/LAPACK: /home/czarnewski/miniconda3/envs/scRNAseq2021/lib/libopenblasp-r0.3.10.so
 ## 
 ## locale:
-## [1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
+##  [1] LC_CTYPE=C.UTF-8       LC_NUMERIC=C           LC_TIME=C.UTF-8       
+##  [4] LC_COLLATE=C.UTF-8     LC_MONETARY=C.UTF-8    LC_MESSAGES=C.UTF-8   
+##  [7] LC_PAPER=C.UTF-8       LC_NAME=C              LC_ADDRESS=C          
+## [10] LC_TELEPHONE=C         LC_MEASUREMENT=C.UTF-8 LC_IDENTIFICATION=C   
 ## 
 ## attached base packages:
 ## [1] parallel  stats4    stats     graphics  grDevices utils     datasets 
@@ -750,100 +770,99 @@ sessionInfo()
 ## 
 ## other attached packages:
 ##  [1] cowplot_1.1.1               patchwork_1.1.1            
-##  [3] scater_1.18.0               ggplot2_3.3.3              
-##  [5] SingleR_1.4.0               scran_1.18.0               
-##  [7] SingleCellExperiment_1.12.0 SummarizedExperiment_1.20.0
-##  [9] Biobase_2.50.0              GenomicRanges_1.42.0       
-## [11] GenomeInfoDb_1.26.0         IRanges_2.24.0             
-## [13] S4Vectors_0.28.0            BiocGenerics_0.36.0        
-## [15] MatrixGenerics_1.2.0        matrixStats_0.57.0         
-## [17] dplyr_1.0.3                 Matrix_1.3-2               
-## [19] biomaRt_2.46.0              Spaniel_1.2.0              
-## [21] RJSONIO_1.3-1.4             optparse_1.6.6             
+##  [3] scater_1.14.0               ggplot2_3.3.3              
+##  [5] SingleR_1.0.0               scran_1.14.1               
+##  [7] SingleCellExperiment_1.8.0  SummarizedExperiment_1.16.0
+##  [9] DelayedArray_0.12.0         BiocParallel_1.20.1        
+## [11] matrixStats_0.57.0          Biobase_2.46.0             
+## [13] GenomicRanges_1.38.0        GenomeInfoDb_1.22.0        
+## [15] IRanges_2.20.2              S4Vectors_0.24.4           
+## [17] BiocGenerics_0.32.0         dplyr_1.0.3                
+## [19] Matrix_1.3-2                biomaRt_2.42.1             
+## [21] Spaniel_1.2.0               RJSONIO_1.3-1.4            
+## [23] optparse_1.6.6             
 ## 
 ## loaded via a namespace (and not attached):
-##   [1] R.utils_2.10.1            reticulate_1.18          
-##   [3] tidyselect_1.1.0          RSQLite_2.2.2            
-##   [5] AnnotationDbi_1.52.0      htmlwidgets_1.5.3        
-##   [7] BiocParallel_1.24.0       grid_4.0.3               
-##   [9] Rtsne_0.15                DropletUtils_1.10.2      
-##  [11] devtools_2.3.2            munsell_0.5.0            
-##  [13] codetools_0.2-18          ica_1.0-2                
-##  [15] statmod_1.4.35            future_1.21.0            
-##  [17] miniUI_0.1.1.1            batchelor_1.6.0          
-##  [19] withr_2.4.0               colorspace_2.0-0         
-##  [21] knitr_1.30                Seurat_3.2.3             
-##  [23] ROCR_1.0-11               tensor_1.5               
-##  [25] listenv_0.8.0             labeling_0.4.2           
-##  [27] GenomeInfoDbData_1.2.4    polyclip_1.10-0          
-##  [29] farver_2.0.3              bit64_4.0.5              
-##  [31] rhdf5_2.34.0              rprojroot_2.0.2          
-##  [33] parallelly_1.23.0         vctrs_0.3.6              
-##  [35] generics_0.1.0            xfun_0.20                
-##  [37] BiocFileCache_1.14.0      R6_2.5.0                 
-##  [39] ggbeeswarm_0.6.0          rsvd_1.0.3               
-##  [41] locfit_1.5-9.4            rhdf5filters_1.2.0       
-##  [43] bitops_1.0-6              spatstat.utils_1.20-2    
-##  [45] DelayedArray_0.16.0       assertthat_0.2.1         
-##  [47] promises_1.1.1            scales_1.1.1             
-##  [49] beeswarm_0.2.3            gtable_0.3.0             
-##  [51] beachmat_2.6.0            globals_0.14.0           
-##  [53] processx_3.4.5            goftest_1.2-2            
-##  [55] rlang_0.4.10              splines_4.0.3            
-##  [57] lazyeval_0.2.2            yaml_2.2.1               
-##  [59] reshape2_1.4.4            abind_1.4-5              
-##  [61] httpuv_1.5.5              tools_4.0.3              
-##  [63] usethis_1.6.3             ellipsis_0.3.1           
-##  [65] RColorBrewer_1.1-2        sessioninfo_1.1.1        
-##  [67] ggridges_0.5.3            Rcpp_1.0.6               
-##  [69] plyr_1.8.6                sparseMatrixStats_1.2.0  
-##  [71] progress_1.2.2            zlibbioc_1.36.0          
-##  [73] purrr_0.3.4               RCurl_1.98-1.2           
-##  [75] ps_1.5.0                  prettyunits_1.1.1        
-##  [77] rpart_4.1-15              openssl_1.4.3            
-##  [79] deldir_0.2-9              viridis_0.5.1            
-##  [81] pbapply_1.4-3             zoo_1.8-8                
-##  [83] ggrepel_0.9.1             cluster_2.1.0            
-##  [85] fs_1.5.0                  magrittr_2.0.1           
-##  [87] RSpectra_0.16-0           data.table_1.13.6        
-##  [89] scattermore_0.7           ResidualMatrix_1.0.0     
-##  [91] lmtest_0.9-38             RANN_2.6.1               
-##  [93] fitdistrplus_1.1-3        pkgload_1.1.0            
-##  [95] hms_1.0.0                 mime_0.9                 
-##  [97] evaluate_0.14             xtable_1.8-4             
-##  [99] XML_3.99-0.5              gridExtra_2.3            
-## [101] testthat_3.0.1            compiler_4.0.3           
-## [103] tibble_3.0.5              KernSmooth_2.23-18       
-## [105] crayon_1.3.4              R.oo_1.24.0              
-## [107] htmltools_0.5.1           mgcv_1.8-33              
-## [109] later_1.1.0.1             tidyr_1.1.2              
-## [111] DBI_1.1.1                 formatR_1.7              
-## [113] dbplyr_2.0.0              MASS_7.3-53              
-## [115] rappdirs_0.3.1            getopt_1.20.3            
-## [117] cli_2.2.0                 R.methodsS3_1.8.1        
-## [119] igraph_1.2.6              pkgconfig_2.0.3          
-## [121] scuttle_1.0.0             plotly_4.9.3             
-## [123] xml2_1.3.2                vipor_0.4.5              
-## [125] dqrng_0.2.1               XVector_0.30.0           
-## [127] stringr_1.4.0             callr_3.5.1              
-## [129] digest_0.6.27             sctransform_0.3.2        
-## [131] RcppAnnoy_0.0.18          spatstat.data_1.7-0      
-## [133] rmarkdown_2.6             leiden_0.3.6             
-## [135] edgeR_3.32.0              uwot_0.1.10              
-## [137] DelayedMatrixStats_1.12.0 curl_4.3                 
-## [139] shiny_1.5.0               lifecycle_0.2.0          
-## [141] nlme_3.1-151              jsonlite_1.7.2           
-## [143] Rhdf5lib_1.12.0           BiocNeighbors_1.8.0      
-## [145] limma_3.46.0              desc_1.2.0               
-## [147] viridisLite_0.3.0         askpass_1.1              
-## [149] fansi_0.4.2               pillar_1.4.7             
-## [151] lattice_0.20-41           fastmap_1.0.1            
-## [153] httr_1.4.2                pkgbuild_1.2.0           
-## [155] survival_3.2-7            glue_1.4.2               
-## [157] remotes_2.2.0             spatstat_1.64-1          
-## [159] png_0.1-7                 bluster_1.0.0            
-## [161] bit_4.0.4                 HDF5Array_1.18.0         
-## [163] stringi_1.5.3             blob_1.2.1               
-## [165] BiocSingular_1.6.0        memoise_1.1.0            
-## [167] irlba_2.3.3               future.apply_1.7.0
+##   [1] R.utils_2.10.1                reticulate_1.18              
+##   [3] tidyselect_1.1.0              RSQLite_2.2.2                
+##   [5] AnnotationDbi_1.48.0          htmlwidgets_1.5.3            
+##   [7] grid_3.6.1                    Rtsne_0.15                   
+##   [9] DropletUtils_1.6.1            devtools_2.3.2               
+##  [11] munsell_0.5.0                 codetools_0.2-18             
+##  [13] ica_1.0-2                     statmod_1.4.35               
+##  [15] future_1.21.0                 miniUI_0.1.1.1               
+##  [17] batchelor_1.2.1               withr_2.4.0                  
+##  [19] colorspace_2.0-0              knitr_1.30                   
+##  [21] Seurat_3.2.3                  ROCR_1.0-11                  
+##  [23] tensor_1.5                    listenv_0.8.0                
+##  [25] labeling_0.4.2                GenomeInfoDbData_1.2.2       
+##  [27] polyclip_1.10-0               farver_2.0.3                 
+##  [29] bit64_4.0.5                   rhdf5_2.30.1                 
+##  [31] rprojroot_2.0.2               parallelly_1.23.0            
+##  [33] vctrs_0.3.6                   generics_0.1.0               
+##  [35] xfun_0.20                     BiocFileCache_1.10.0         
+##  [37] R6_2.5.0                      ggbeeswarm_0.6.0             
+##  [39] rsvd_1.0.3                    locfit_1.5-9.4               
+##  [41] bitops_1.0-6                  spatstat.utils_1.20-2        
+##  [43] assertthat_0.2.1              promises_1.1.1               
+##  [45] scales_1.1.1                  beeswarm_0.2.3               
+##  [47] gtable_0.3.0                  globals_0.14.0               
+##  [49] processx_3.4.5                goftest_1.2-2                
+##  [51] rlang_0.4.10                  splines_3.6.1                
+##  [53] lazyeval_0.2.2                BiocManager_1.30.10          
+##  [55] yaml_2.2.1                    reshape2_1.4.4               
+##  [57] abind_1.4-5                   httpuv_1.5.5                 
+##  [59] tools_3.6.1                   usethis_2.0.0                
+##  [61] ellipsis_0.3.1                RColorBrewer_1.1-2           
+##  [63] sessioninfo_1.1.1             ggridges_0.5.3               
+##  [65] Rcpp_1.0.6                    plyr_1.8.6                   
+##  [67] progress_1.2.2                zlibbioc_1.32.0              
+##  [69] purrr_0.3.4                   RCurl_1.98-1.2               
+##  [71] ps_1.5.0                      prettyunits_1.1.1            
+##  [73] rpart_4.1-15                  openssl_1.4.3                
+##  [75] deldir_0.2-9                  viridis_0.5.1                
+##  [77] pbapply_1.4-3                 zoo_1.8-8                    
+##  [79] ggrepel_0.9.1                 cluster_2.1.0                
+##  [81] fs_1.5.0                      magrittr_2.0.1               
+##  [83] RSpectra_0.16-0               data.table_1.13.6            
+##  [85] scattermore_0.7               lmtest_0.9-38                
+##  [87] RANN_2.6.1                    fitdistrplus_1.1-3           
+##  [89] pkgload_1.1.0                 hms_1.0.0                    
+##  [91] mime_0.9                      evaluate_0.14                
+##  [93] xtable_1.8-4                  XML_3.99-0.3                 
+##  [95] gridExtra_2.3                 testthat_3.0.1               
+##  [97] compiler_3.6.1                tibble_3.0.5                 
+##  [99] KernSmooth_2.23-18            crayon_1.3.4                 
+## [101] R.oo_1.24.0                   htmltools_0.5.1              
+## [103] mgcv_1.8-33                   later_1.1.0.1                
+## [105] tidyr_1.1.2                   DBI_1.1.1                    
+## [107] ExperimentHub_1.12.0          formatR_1.7                  
+## [109] dbplyr_2.0.0                  MASS_7.3-53                  
+## [111] rappdirs_0.3.1                getopt_1.20.3                
+## [113] cli_2.2.0                     R.methodsS3_1.8.1            
+## [115] igraph_1.2.6                  pkgconfig_2.0.3              
+## [117] plotly_4.9.3                  vipor_0.4.5                  
+## [119] dqrng_0.2.1                   XVector_0.26.0               
+## [121] stringr_1.4.0                 callr_3.5.1                  
+## [123] digest_0.6.27                 sctransform_0.3.2            
+## [125] RcppAnnoy_0.0.18              spatstat.data_1.7-0          
+## [127] rmarkdown_2.6                 leiden_0.3.6                 
+## [129] edgeR_3.28.1                  uwot_0.1.10                  
+## [131] DelayedMatrixStats_1.8.0      curl_4.3                     
+## [133] shiny_1.5.0                   lifecycle_0.2.0              
+## [135] nlme_3.1-150                  jsonlite_1.7.2               
+## [137] Rhdf5lib_1.8.0                BiocNeighbors_1.4.0          
+## [139] limma_3.42.2                  desc_1.2.0                   
+## [141] viridisLite_0.3.0             askpass_1.1                  
+## [143] fansi_0.4.2                   pillar_1.4.7                 
+## [145] lattice_0.20-41               fastmap_1.0.1                
+## [147] httr_1.4.2                    pkgbuild_1.2.0               
+## [149] survival_3.2-7                interactiveDisplayBase_1.24.0
+## [151] glue_1.4.2                    remotes_2.2.0                
+## [153] spatstat_1.64-1               png_0.1-7                    
+## [155] BiocVersion_3.10.1            bit_4.0.4                    
+## [157] HDF5Array_1.14.0              stringi_1.5.3                
+## [159] blob_1.2.1                    AnnotationHub_2.18.0         
+## [161] BiocSingular_1.2.0            memoise_1.1.0                
+## [163] irlba_2.3.3                   future.apply_1.7.0
 ```

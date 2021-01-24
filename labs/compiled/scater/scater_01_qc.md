@@ -1,7 +1,7 @@
 ---
 title: "Scater/Scran: Quality control"
 author: "Åsa Björklund  &  Paulo Czarnewski"
-date: 'January 21, 2021'
+date: 'January 22, 2021'
 output:
   html_document:
     self_contained: true
@@ -66,10 +66,28 @@ With data in place, now we can start loading libraries we will use in this tutor
 
 ```r
 suppressMessages(require(scater))
+```
+
+```
+## Warning: package 'matrixStats' was built under R version 3.6.3
+```
+
+```
+## Warning: package 'ggplot2' was built under R version 3.6.3
+```
+
+```r
 suppressMessages(require(scran))
 suppressMessages(require(cowplot))
+```
+
+```
+## Warning: package 'cowplot' was built under R version 3.6.3
+```
+
+```r
 suppressMessages(require(org.Hs.eg.db))
-remotes::install_github("chris-mcginnis-ucsf/DoubletFinder")
+remotes::install_github("chris-mcginnis-ucsf/DoubletFinder", upgrade = F)
 ```
 
 ```
@@ -174,8 +192,8 @@ gc()
 
 ```
 ##            used  (Mb) gc trigger  (Mb) max used  (Mb)
-## Ncells  7559121 403.8   11631317 621.2 11631317 621.2
-## Vcells 32556293 248.4   89959731 686.4 73691737 562.3
+## Ncells  6797732 363.1   10977040 586.3 10977040 586.3
+## Vcells 31221904 238.3   82865614 632.3 82138295 626.7
 ```
 
 
@@ -243,39 +261,55 @@ head(colData(sce))
 ```
 
 ```
-## DataFrame with 6 rows and 14 columns
-##                         sample        type       sum  detected subsets_mt_sum
-##                    <character> <character> <numeric> <integer>      <numeric>
-## AGGGTCCCATGACCCG-1       cov.1       Covid      7698      2140            525
-## TACCCACAGCGGGTTA-1       cov.1       Covid     13416      3391            952
-## CCCAACTTCATATGGC-1       cov.1       Covid     16498      3654           1253
-## TCAAGTGTCCGAACGC-1       cov.1       Covid      1425       608            141
-## ATTCCTAGTGACTGTT-1       cov.1       Covid      7535      1808            470
-## GTGTTCCGTGGGCTCT-1       cov.1       Covid      4378      1345            352
-##                    subsets_mt_detected subsets_mt_percent subsets_hb_sum
-##                              <integer>          <numeric>      <numeric>
-## AGGGTCCCATGACCCG-1                  11            6.81995              2
-## TACCCACAGCGGGTTA-1                  11            7.09600              6
-## CCCAACTTCATATGGC-1                  12            7.59486              1
-## TCAAGTGTCCGAACGC-1                  10            9.89474              1
-## ATTCCTAGTGACTGTT-1                  11            6.23756              4
-## GTGTTCCGTGGGCTCT-1                  10            8.04020              1
-##                    subsets_hb_detected subsets_hb_percent subsets_ribo_sum
-##                              <integer>          <numeric>        <numeric>
-## AGGGTCCCATGACCCG-1                   1         0.02598077             2564
-## TACCCACAGCGGGTTA-1                   2         0.04472272             2264
-## CCCAACTTCATATGGC-1                   1         0.00606134             2723
-## TCAAGTGTCCGAACGC-1                   1         0.07017544              444
-## ATTCCTAGTGACTGTT-1                   3         0.05308560             3397
-## GTGTTCCGTGGGCTCT-1                   1         0.02284148             1588
-##                    subsets_ribo_detected subsets_ribo_percent     total
-##                                <integer>            <numeric> <numeric>
-## AGGGTCCCATGACCCG-1                    82              33.3074      7698
-## TACCCACAGCGGGTTA-1                    85              16.8754     13416
-## CCCAACTTCATATGGC-1                    87              16.5050     16498
-## TCAAGTGTCCGAACGC-1                    68              31.1579      1425
-## ATTCCTAGTGACTGTT-1                    81              45.0829      7535
-## GTGTTCCGTGGGCTCT-1                    79              36.2723      4378
+## DataFrame with 6 rows and 18 columns
+##                         sample        type       sum  detected   percent_top_50
+##                    <character> <character> <numeric> <integer>        <numeric>
+## AGGGTCCCATGACCCG-1       cov.1       Covid      7698      2140 40.4001039230969
+## TACCCACAGCGGGTTA-1       cov.1       Covid     13416      3391 32.7519379844961
+## CCCAACTTCATATGGC-1       cov.1       Covid     16498      3654 34.0647351194084
+## TCAAGTGTCCGAACGC-1       cov.1       Covid      1425       608 47.0877192982456
+## ATTCCTAGTGACTGTT-1       cov.1       Covid      7535      1808 47.8168546781685
+## GTGTTCCGTGGGCTCT-1       cov.1       Covid      4378      1345 43.1018730013705
+##                     percent_top_100  percent_top_200  percent_top_500
+##                           <numeric>        <numeric>        <numeric>
+## AGGGTCCCATGACCCG-1 55.5728760717069 65.4325798908807 75.8508703559366
+## TACCCACAGCGGGTTA-1  43.716457960644 54.8076923076923 67.7027429934407
+## CCCAACTTCATATGGC-1 45.7388774396897 56.6977815492787 69.3720450963753
+## TCAAGTGTCCGAACGC-1 60.7017543859649 71.3684210526316  92.421052631579
+## ATTCCTAGTGACTGTT-1 63.9150630391506 72.1035169210352 81.6854678168547
+## GTGTTCCGTGGGCTCT-1 59.2507994518045 69.1640018273184 80.6989492919141
+##                    subsets_mt_sum subsets_mt_detected subsets_mt_percent
+##                         <numeric>           <integer>          <numeric>
+## AGGGTCCCATGACCCG-1            525                  11   6.81995323460639
+## TACCCACAGCGGGTTA-1            952                  11   7.09600477042338
+## CCCAACTTCATATGGC-1           1253                  12   7.59485998302825
+## TCAAGTGTCCGAACGC-1            141                  10   9.89473684210526
+## ATTCCTAGTGACTGTT-1            470                  11   6.23755806237558
+## GTGTTCCGTGGGCTCT-1            352                  10   8.04020100502512
+##                    subsets_hb_sum subsets_hb_detected  subsets_hb_percent
+##                         <numeric>           <integer>           <numeric>
+## AGGGTCCCATGACCCG-1              2                   1   0.025980774227072
+## TACCCACAGCGGGTTA-1              6                   2  0.0447227191413238
+## CCCAACTTCATATGGC-1              1                   1 0.00606134076857801
+## TCAAGTGTCCGAACGC-1              1                   1  0.0701754385964912
+## ATTCCTAGTGACTGTT-1              4                   3   0.053085600530856
+## GTGTTCCGTGGGCTCT-1              1                   1  0.0228414801279123
+##                    subsets_ribo_sum subsets_ribo_detected subsets_ribo_percent
+##                           <numeric>             <integer>            <numeric>
+## AGGGTCCCATGACCCG-1             2564                    82     33.3073525591063
+## TACCCACAGCGGGTTA-1             2264                    85     16.8753726893262
+## CCCAACTTCATATGGC-1             2723                    87     16.5050309128379
+## TCAAGTGTCCGAACGC-1              444                    68     31.1578947368421
+## ATTCCTAGTGACTGTT-1             3397                    81     45.0829462508295
+## GTGTTCCGTGGGCTCT-1             1588                    79     36.2722704431247
+##                        total
+##                    <numeric>
+## AGGGTCCCATGACCCG-1      7698
+## TACCCACAGCGGGTTA-1     13416
+## CCCAACTTCATATGGC-1     16498
+## TCAAGTGTCCGAACGC-1      1425
+## ATTCCTAGTGACTGTT-1      7535
+## GTGTTCCGTGGGCTCT-1      4378
 ```
 
  Here is an example on how to calculate proportion mitochondria in another way:
@@ -475,13 +509,22 @@ if (!file.exists(genes.file)) {
     mart <- useMart(host = "www.ensembl.org", "ENSEMBL_MART_ENSEMBL", dataset = "hsapiens_gene_ensembl")
     
     # fetch chromosome info plus some other annotations
-    genes.table <- getBM(filters = "external_gene_name", attributes = c("ensembl_gene_id", 
+    genes.table <- try(getBM(filters = "external_gene_name", attributes = c("ensembl_gene_id", 
         "external_gene_name", "description", "gene_biotype", "chromosome_name", "start_position"), 
-        values = rownames(sce.filt), mart = mart)
+        values = rownames(sce.filt), mart = mart))
+    
     if (!dir.exists("data/results")) {
         dir.create("data/results")
     }
-    write.csv(genes.table, file = genes.file)
+    if (is.data.frame(genes.table)) {
+        write.csv(genes.table, file = genes.file)
+    }
+    
+    if (!file.exists(genes.file)) {
+        download.file("https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/master/labs/misc/genes.table.csv", 
+            destfile = "data/results/genes.table.csv")
+        genes.table = read.csv(genes.file)
+    }
 } else {
     genes.table = read.csv(genes.file)
 }
@@ -569,15 +612,15 @@ sce.filt$S.score <- assignments$scores$S
 
 ```
 ## List of 3
-##  $ G1 :'data.frame':	6222 obs. of  2 variables:
-##   ..$ first : chr [1:6222] "ENSG00000100519" "ENSG00000100519" "ENSG00000100519" "ENSG00000100519" ...
-##   ..$ second: chr [1:6222] "ENSG00000065135" "ENSG00000080345" "ENSG00000101266" "ENSG00000124486" ...
-##  $ S  :'data.frame':	8053 obs. of  2 variables:
-##   ..$ first : chr [1:8053] "ENSG00000255302" "ENSG00000119969" "ENSG00000179051" "ENSG00000127586" ...
-##   ..$ second: chr [1:8053] "ENSG00000100519" "ENSG00000100519" "ENSG00000100519" "ENSG00000136856" ...
-##  $ G2M:'data.frame':	6310 obs. of  2 variables:
-##   ..$ first : chr [1:6310] "ENSG00000100519" "ENSG00000136856" "ENSG00000136856" "ENSG00000136856" ...
-##   ..$ second: chr [1:6310] "ENSG00000146457" "ENSG00000007968" "ENSG00000101265" "ENSG00000117676" ...
+##  $ G1 :'data.frame':	6465 obs. of  2 variables:
+##   ..$ first : chr [1:6465] "ENSG00000100519" "ENSG00000100519" "ENSG00000100519" "ENSG00000100519" ...
+##   ..$ second: chr [1:6465] "ENSG00000065135" "ENSG00000080345" "ENSG00000101266" "ENSG00000124486" ...
+##  $ S  :'data.frame':	8325 obs. of  2 variables:
+##   ..$ first : chr [1:8325] "ENSG00000255302" "ENSG00000119969" "ENSG00000179051" "ENSG00000127586" ...
+##   ..$ second: chr [1:8325] "ENSG00000100519" "ENSG00000100519" "ENSG00000100519" "ENSG00000136856" ...
+##  $ G2M:'data.frame':	6432 obs. of  2 variables:
+##   ..$ first : chr [1:6432] "ENSG00000100519" "ENSG00000136856" "ENSG00000136856" "ENSG00000136856" ...
+##   ..$ second: chr [1:6432] "ENSG00000146457" "ENSG00000007968" "ENSG00000101265" "ENSG00000117676" ...
 ```
 
 We can now plot a violin plot for the cell cycle scores as well.
@@ -591,31 +634,31 @@ plot_grid(plotColData(sce.filt, y = "G2M.score", x = "G1.score", colour_by = "sa
 ```
 
 ```
-## Warning: Removed 621 rows containing missing values (geom_point).
+## Warning: Removed 565 rows containing missing values (geom_point).
 ```
 
 ```
-## Warning: Removed 506 rows containing non-finite values (stat_ydensity).
+## Warning: Removed 481 rows containing non-finite values (stat_ydensity).
 ```
 
 ```
-## Warning: Removed 506 rows containing missing values (position_quasirandom).
+## Warning: Removed 481 rows containing missing values (position_quasirandom).
 ```
 
 ```
-## Warning: Removed 584 rows containing non-finite values (stat_ydensity).
+## Warning: Removed 531 rows containing non-finite values (stat_ydensity).
 ```
 
 ```
-## Warning: Removed 584 rows containing missing values (position_quasirandom).
+## Warning: Removed 531 rows containing missing values (position_quasirandom).
 ```
 
 ```
-## Warning: Removed 403 rows containing non-finite values (stat_ydensity).
+## Warning: Removed 379 rows containing non-finite values (stat_ydensity).
 ```
 
 ```
-## Warning: Removed 403 rows containing missing values (position_quasirandom).
+## Warning: Removed 379 rows containing missing values (position_quasirandom).
 ```
 
 ![](scater_01_qc_files/figure-html/unnamed-chunk-22-1.png)<!-- -->
@@ -647,60 +690,34 @@ sce.filt <- runUMAP(sce.filt, pca = 10)
 
 
 ```r
+BiocManager::install("scDblFinder", update = F)
 suppressPackageStartupMessages(require(scDblFinder))
 
 # run computeDoubletDensity with 10 principal components.
-dbl.dens <- computeDoubletDensity(sce.filt, subset.row = hvgs, dims = 10)
-summary(dbl.dens)
-```
-
-```
-##     Min.  1st Qu.   Median     Mean  3rd Qu.     Max. 
-##  0.00000  0.08254  0.22405  0.47355  0.44810 20.64779
-```
-
-```r
-hist(dbl.dens, n = 100)
+sce.filt <- scDblFinder(sce.filt, dims = 10)
 ```
 
 ![](scater_01_qc_files/figure-html/unnamed-chunk-24-1.png)<!-- -->
 
 
 ```r
-# set cutoff at doublet density 2 to predict doublets
-colData(sce.filt)$doublet = ifelse(dbl.dens > 2, "Doublet", "Singlet")
-table(sce.filt$doublet)
+plot_grid(plotUMAP(sce.filt, colour_by = "scDblFinder.score"), plotUMAP(sce.filt, 
+    colour_by = "scDblFinder.class"), plotUMAP(sce.filt, colour_by = "sample"), ncol = 3)
 ```
 
-```
-## 
-## Doublet Singlet 
-##     175    5721
-```
-
-```r
-sce.filt$DoubletScore <- dbl.dens
-```
-
-
-```r
-plot_grid(plotUMAP(sce.filt, colour_by = "DoubletScore"), plotUMAP(sce.filt, colour_by = "doublet"), 
-    plotUMAP(sce.filt, colour_by = "sample"), ncol = 3)
-```
-
-![](scater_01_qc_files/figure-html/unnamed-chunk-26-1.png)<!-- -->
+![](scater_01_qc_files/figure-html/unnamed-chunk-25-1.png)<!-- -->
 
 Now, lets remove all predicted doublets from our data.
 
 
 ```r
-sce.filt = sce.filt[, sce.filt$DoubletScore < 2]
+sce.filt = sce.filt[, sce.filt$scDblFinder.score < 2]
 
 dim(sce.filt)
 ```
 
 ```
-## [1] 18121  5721
+## [1] 18121  5896
 ```
 
 # Save data
@@ -724,106 +741,80 @@ sessionInfo()
 ```
 
 ```
-## R version 4.0.3 (2020-10-10)
-## Platform: x86_64-apple-darwin13.4.0 (64-bit)
-## Running under: macOS Catalina 10.15.5
+## R version 3.6.1 (2019-07-05)
+## Platform: x86_64-conda_cos6-linux-gnu (64-bit)
+## Running under: Ubuntu 20.04 LTS
 ## 
 ## Matrix products: default
-## BLAS/LAPACK: /Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/libopenblasp-r0.3.12.dylib
+## BLAS/LAPACK: /home/czarnewski/miniconda3/envs/scRNAseq2021/lib/libopenblasp-r0.3.10.so
 ## 
 ## locale:
-## [1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
+##  [1] LC_CTYPE=C.UTF-8       LC_NUMERIC=C           LC_TIME=C.UTF-8       
+##  [4] LC_COLLATE=C.UTF-8     LC_MONETARY=C.UTF-8    LC_MESSAGES=C.UTF-8   
+##  [7] LC_PAPER=C.UTF-8       LC_NAME=C              LC_ADDRESS=C          
+## [10] LC_TELEPHONE=C         LC_MEASUREMENT=C.UTF-8 LC_IDENTIFICATION=C   
 ## 
 ## attached base packages:
 ## [1] parallel  stats4    stats     graphics  grDevices utils     datasets 
 ## [8] methods   base     
 ## 
 ## other attached packages:
-##  [1] scDblFinder_1.4.0           biomaRt_2.46.0             
-##  [3] DoubletFinder_2.0.3         org.Hs.eg.db_3.12.0        
-##  [5] AnnotationDbi_1.52.0        cowplot_1.1.1              
-##  [7] scran_1.18.0                scater_1.18.0              
-##  [9] ggplot2_3.3.3               SingleCellExperiment_1.12.0
-## [11] SummarizedExperiment_1.20.0 Biobase_2.50.0             
-## [13] GenomicRanges_1.42.0        GenomeInfoDb_1.26.0        
-## [15] IRanges_2.24.0              S4Vectors_0.28.0           
-## [17] BiocGenerics_0.36.0         MatrixGenerics_1.2.0       
-## [19] matrixStats_0.57.0          RJSONIO_1.3-1.4            
+##  [1] scDblFinder_1.1.8           DoubletFinder_2.0.3        
+##  [3] org.Hs.eg.db_3.10.0         AnnotationDbi_1.48.0       
+##  [5] cowplot_1.1.1               scran_1.14.1               
+##  [7] scater_1.14.0               ggplot2_3.3.3              
+##  [9] SingleCellExperiment_1.8.0  SummarizedExperiment_1.16.0
+## [11] DelayedArray_0.12.0         BiocParallel_1.20.0        
+## [13] matrixStats_0.57.0          Biobase_2.46.0             
+## [15] GenomicRanges_1.38.0        GenomeInfoDb_1.22.0        
+## [17] IRanges_2.20.0              S4Vectors_0.24.0           
+## [19] BiocGenerics_0.32.0         RJSONIO_1.3-1.4            
 ## [21] optparse_1.6.6             
 ## 
 ## loaded via a namespace (and not attached):
-##   [1] BiocFileCache_1.14.0      plyr_1.8.6               
-##   [3] igraph_1.2.6              lazyeval_0.2.2           
-##   [5] splines_4.0.3             BiocParallel_1.24.0      
-##   [7] listenv_0.8.0             scattermore_0.7          
-##   [9] digest_0.6.27             htmltools_0.5.1          
-##  [11] viridis_0.5.1             magrittr_2.0.1           
-##  [13] memoise_1.1.0             tensor_1.5               
-##  [15] cluster_2.1.0             ROCR_1.0-11              
-##  [17] limma_3.46.0              remotes_2.2.0            
-##  [19] globals_0.14.0            askpass_1.1              
-##  [21] prettyunits_1.1.1         colorspace_2.0-0         
-##  [23] rappdirs_0.3.1            blob_1.2.1               
-##  [25] ggrepel_0.9.1             xfun_0.20                
-##  [27] dplyr_1.0.3               crayon_1.3.4             
-##  [29] RCurl_1.98-1.2            jsonlite_1.7.2           
-##  [31] spatstat.data_1.7-0       spatstat_1.64-1          
-##  [33] survival_3.2-7            zoo_1.8-8                
-##  [35] glue_1.4.2                polyclip_1.10-0          
-##  [37] gtable_0.3.0              zlibbioc_1.36.0          
-##  [39] XVector_0.30.0            leiden_0.3.6             
-##  [41] DelayedArray_0.16.0       BiocSingular_1.6.0       
-##  [43] future.apply_1.7.0        abind_1.4-5              
-##  [45] scales_1.1.1              DBI_1.1.1                
-##  [47] edgeR_3.32.0              miniUI_0.1.1.1           
-##  [49] Rcpp_1.0.6                progress_1.2.2           
-##  [51] viridisLite_0.3.0         xtable_1.8-4             
-##  [53] reticulate_1.18           dqrng_0.2.1              
-##  [55] bit_4.0.4                 rsvd_1.0.3               
-##  [57] htmlwidgets_1.5.3         httr_1.4.2               
-##  [59] getopt_1.20.3             RColorBrewer_1.1-2       
-##  [61] ellipsis_0.3.1            Seurat_3.2.3             
-##  [63] ica_1.0-2                 XML_3.99-0.5             
-##  [65] farver_2.0.3              pkgconfig_2.0.3          
-##  [67] scuttle_1.0.0             dbplyr_2.0.0             
-##  [69] uwot_0.1.10               deldir_0.2-9             
-##  [71] locfit_1.5-9.4            labeling_0.4.2           
-##  [73] reshape2_1.4.4            tidyselect_1.1.0         
-##  [75] rlang_0.4.10              later_1.1.0.1            
-##  [77] munsell_0.5.0             tools_4.0.3              
-##  [79] xgboost_1.3.0.1           generics_0.1.0           
-##  [81] RSQLite_2.2.2             ggridges_0.5.3           
-##  [83] evaluate_0.14             stringr_1.4.0            
-##  [85] fastmap_1.0.1             goftest_1.2-2            
-##  [87] yaml_2.2.1                knitr_1.30               
-##  [89] bit64_4.0.5               fitdistrplus_1.1-3       
-##  [91] purrr_0.3.4               RANN_2.6.1               
-##  [93] nlme_3.1-151              pbapply_1.4-3            
-##  [95] future_1.21.0             sparseMatrixStats_1.2.0  
-##  [97] mime_0.9                  formatR_1.7              
-##  [99] xml2_1.3.2                hdf5r_1.3.3              
-## [101] compiler_4.0.3            beeswarm_0.2.3           
-## [103] plotly_4.9.3              curl_4.3                 
-## [105] png_0.1-7                 spatstat.utils_1.20-2    
-## [107] tibble_3.0.5              statmod_1.4.35           
-## [109] stringi_1.5.3             RSpectra_0.16-0          
-## [111] lattice_0.20-41           bluster_1.0.0            
-## [113] Matrix_1.3-2              vctrs_0.3.6              
-## [115] pillar_1.4.7              lifecycle_0.2.0          
-## [117] lmtest_0.9-38             RcppAnnoy_0.0.18         
-## [119] BiocNeighbors_1.8.0       data.table_1.13.6        
-## [121] bitops_1.0-6              irlba_2.3.3              
-## [123] httpuv_1.5.5              patchwork_1.1.1          
-## [125] R6_2.5.0                  promises_1.1.1           
-## [127] KernSmooth_2.23-18        gridExtra_2.3            
-## [129] vipor_0.4.5               parallelly_1.23.0        
-## [131] codetools_0.2-18          MASS_7.3-53              
-## [133] assertthat_0.2.1          openssl_1.4.3            
-## [135] withr_2.4.0               sctransform_0.3.2        
-## [137] GenomeInfoDbData_1.2.4    hms_1.0.0                
-## [139] mgcv_1.8-33               rpart_4.1-15             
-## [141] grid_4.0.3                beachmat_2.6.0           
-## [143] tidyr_1.1.2               rmarkdown_2.6            
-## [145] DelayedMatrixStats_1.12.0 Rtsne_0.15               
-## [147] shiny_1.5.0               ggbeeswarm_0.6.0
+##   [1] plyr_1.8.6               igraph_1.2.6             lazyeval_0.2.2          
+##   [4] splines_3.6.1            listenv_0.8.0            scattermore_0.7         
+##   [7] digest_0.6.27            htmltools_0.5.1          viridis_0.5.1           
+##  [10] magrittr_2.0.1           memoise_1.1.0            tensor_1.5              
+##  [13] cluster_2.1.0            ROCR_1.0-11              limma_3.42.0            
+##  [16] remotes_2.2.0            globals_0.14.0           colorspace_2.0-0        
+##  [19] blob_1.2.1               ggrepel_0.9.1            xfun_0.20               
+##  [22] dplyr_1.0.3              crayon_1.3.4             RCurl_1.98-1.2          
+##  [25] jsonlite_1.7.2           spatstat_1.64-1          spatstat.data_1.7-0     
+##  [28] survival_3.2-7           zoo_1.8-8                glue_1.4.2              
+##  [31] polyclip_1.10-0          gtable_0.3.0             zlibbioc_1.32.0         
+##  [34] XVector_0.26.0           leiden_0.3.6             BiocSingular_1.2.0      
+##  [37] future.apply_1.7.0       abind_1.4-5              scales_1.1.1            
+##  [40] DBI_1.1.1                edgeR_3.28.0             miniUI_0.1.1.1          
+##  [43] Rcpp_1.0.6               viridisLite_0.3.0        xtable_1.8-4            
+##  [46] reticulate_1.18          dqrng_0.2.1              bit_4.0.4               
+##  [49] rsvd_1.0.3               htmlwidgets_1.5.3        httr_1.4.2              
+##  [52] getopt_1.20.3            RColorBrewer_1.1-2       ellipsis_0.3.1          
+##  [55] Seurat_3.2.3             ica_1.0-2                farver_2.0.3            
+##  [58] pkgconfig_2.0.3          uwot_0.1.10              deldir_0.2-3            
+##  [61] locfit_1.5-9.4           labeling_0.4.2           tidyselect_1.1.0        
+##  [64] rlang_0.4.10             reshape2_1.4.4           later_1.1.0.1           
+##  [67] munsell_0.5.0            tools_3.6.1              generics_0.1.0          
+##  [70] RSQLite_2.2.2            ggridges_0.5.3           evaluate_0.14           
+##  [73] stringr_1.4.0            fastmap_1.0.1            goftest_1.2-2           
+##  [76] yaml_2.2.1               knitr_1.30               bit64_4.0.5             
+##  [79] fitdistrplus_1.1-3       randomForest_4.6-14      purrr_0.3.4             
+##  [82] RANN_2.6.1               nlme_3.1-150             pbapply_1.4-3           
+##  [85] future_1.21.0            mime_0.9                 formatR_1.7             
+##  [88] hdf5r_1.3.3              compiler_3.6.1           beeswarm_0.2.3          
+##  [91] plotly_4.9.3             curl_4.3                 png_0.1-7               
+##  [94] spatstat.utils_1.20-2    tibble_3.0.5             statmod_1.4.35          
+##  [97] stringi_1.5.3            RSpectra_0.16-0          lattice_0.20-41         
+## [100] Matrix_1.3-2             vctrs_0.3.6              pillar_1.4.7            
+## [103] lifecycle_0.2.0          BiocManager_1.30.10      lmtest_0.9-38           
+## [106] RcppAnnoy_0.0.18         BiocNeighbors_1.4.0      data.table_1.13.6       
+## [109] bitops_1.0-6             irlba_2.3.3              httpuv_1.5.5            
+## [112] patchwork_1.1.1          R6_2.5.0                 promises_1.1.1          
+## [115] KernSmooth_2.23-18       gridExtra_2.3            vipor_0.4.5             
+## [118] parallelly_1.23.0        codetools_0.2-18         MASS_7.3-53             
+## [121] assertthat_0.2.1         withr_2.4.0              sctransform_0.3.2       
+## [124] GenomeInfoDbData_1.2.2   mgcv_1.8-33              rpart_4.1-15            
+## [127] grid_3.6.1               tidyr_1.1.2              rmarkdown_2.6           
+## [130] DelayedMatrixStats_1.8.0 Rtsne_0.15               shiny_1.5.0             
+## [133] ggbeeswarm_0.6.0
 ```
