@@ -39,7 +39,7 @@ ls -lGa data/raw
 ```{r, message='hide',warning='hide',results='hold'}
 suppressMessages(require(Seurat))
 suppressMessages(require(Matrix))
-remotes::install_github('chris-mcginnis-ucsf/DoubletFinder')
+remotes::install_github('chris-mcginnis-ucsf/DoubletFinder',upgrade = F)
 suppressMessages(require(DoubletFinder))
 ```
 
@@ -286,17 +286,26 @@ if (!file.exists(genes.file)){
   suppressMessages(require(biomaRt))
 
   # initialize connection to mart, may take some time if the sites are unresponsive.
-  mart <- useMart(host="www.ensembl.org", "ENSEMBL_MART_ENSEMBL", dataset="hsapiens_gene_ensembl")
+  mart <- useMart("ENSEMBL_MART_ENSEMBL", dataset="hsapiens_gene_ensembl")
 
   # fetch chromosome info plus some other annotations
-  genes.table <- getBM(filters= "external_gene_name", attributes= c("ensembl_gene_id",
+  genes.table <- try(biomaRt::getBM(attributes = c("ensembl_gene_id",
               "external_gene_name", "description","gene_biotype", "chromosome_name","start_position"),
-              values= rownames(data.filt), mart= mart)
+              mart = mart, useCache = F))
+  
   if(!dir.exists("data/results")){dir.create("data/results")}
-  write.csv(genes.table, file = genes.file)
-}else{
+  if(is.data.frame(genes.table)){write.csv(genes.table, file = genes.file)}
+  
+  if (!file.exists(genes.file)){
+  download.file("https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/master/labs/misc/genes.table.csv",destfile = "data/results/genes.table.csv")
+    genes.table = read.csv(genes.file)
+    }
+
+} else {
   genes.table = read.csv(genes.file)
 }
+
+genes.table <- genes.table[genes.table$external_gene_name %in% rownames(data.filt),]
 
 ```
 
