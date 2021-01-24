@@ -70,7 +70,7 @@ suppressMessages(require(scater))
 suppressMessages(require(scran))
 suppressMessages(require(cowplot))
 suppressMessages(require(org.Hs.eg.db))
-remotes::install_github('chris-mcginnis-ucsf/DoubletFinder')
+remotes::install_github('chris-mcginnis-ucsf/DoubletFinder',upgrade = F)
 suppressMessages(require(DoubletFinder))
 ```
 
@@ -327,11 +327,17 @@ if (!file.exists(genes.file)){
   mart <- useMart(host="www.ensembl.org", "ENSEMBL_MART_ENSEMBL", dataset="hsapiens_gene_ensembl")
 
   # fetch chromosome info plus some other annotations
-  genes.table <- getBM(filters= "external_gene_name", attributes= c("ensembl_gene_id",
+  genes.table <- try(getBM(filters= "external_gene_name", attributes= c("ensembl_gene_id",
               "external_gene_name", "description","gene_biotype", "chromosome_name","start_position"),
-              values= rownames(sce.filt), mart= mart)
+              values= rownames(sce.filt), mart= mart))
+  
   if(!dir.exists("data/results")){dir.create("data/results")}
-  write.csv(genes.table, file = genes.file)
+  if(is.data.frame(genes.table)){write.csv(genes.table, file = genes.file)}
+  
+  if (!file.exists(genes.file)){
+  download.file("https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/master/labs/misc/genes.table.csv",destfile = "data/results/genes.table.csv")
+    genes.table = read.csv(genes.file)
+    }
 }else{
   genes.table = read.csv(genes.file)
 }
@@ -415,8 +421,6 @@ There is a method to predict if a cluster consists of mainly doublets `findDoubl
 Doublet detection will be performed using PCA, so we need to first normalize the data and run variable gene detection, as well as UMAP for visualization. These steps will be explored in more detail in coming exercises.
 
 ```{r}
-
-
 sce.filt <- logNormCounts(sce.filt)
 dec <- modelGeneVar(sce.filt, block = sce.filt$sample)
 hvgs = getTopHVGs(dec, n=2000)
@@ -427,34 +431,23 @@ sce.filt <- runUMAP(sce.filt, pca = 10)
 ```
 
 ```{r}
+BiocManager::install('scDblFinder',update = F)
 suppressPackageStartupMessages(require(scDblFinder))
 
 # run computeDoubletDensity with 10 principal components.
-dbl.dens <- computeDoubletDensity(sce.filt, subset.row=hvgs, dims=10)
-summary(dbl.dens)
-
-hist(dbl.dens, n=100)
-
+sce.filt <- scDblFinder(sce.filt, dims = 10)
 ```
 
 ```{r}
-# set cutoff at doublet density 2 to predict doublets
-colData(sce.filt)$doublet = ifelse(dbl.dens>2, "Doublet","Singlet")
-table(sce.filt$doublet)
-
-sce.filt$DoubletScore <- dbl.dens
-```
-
-```{r}
-plot_grid(plotUMAP(sce.filt, colour_by="DoubletScore"),
-          plotUMAP(sce.filt, colour_by="doublet"),
+plot_grid(plotUMAP(sce.filt, colour_by="scDblFinder.score"),
+          plotUMAP(sce.filt, colour_by="scDblFinder.class"),
           plotUMAP(sce.filt, colour_by="sample"), ncol = 3)
 ```
 
 Now, lets remove all predicted doublets from our data.
 
 ```{r}
-sce.filt = sce.filt[,sce.filt$DoubletScore < 2]
+sce.filt = sce.filt[,sce.filt$scDblFinder.score < 2]
 
 dim(sce.filt)
 ```

@@ -95,7 +95,7 @@ scater::plotExpression(sce, features = unique(top5$gene), x = "louvain_SNNk15", 
 
 ```{r,fig.height=10,fig.width=10}
 #Filter cells from that cluster
-cell_selection <- sce[ , sce$louvain_SNNk15 == 6 ]
+cell_selection <- sce[ , sce$louvain_SNNk15 == 8 ]
 
 #Compute differentiall expression
 DGE_cell_selection <- findMarkers( x = cell_selection,
@@ -139,7 +139,7 @@ library(enrichR)
 enrichR::listEnrichrDbs()
 
 # Perform enrichment
-top_DGE <- DGE_cell_selection$Covid[ (DGE_cell_selection$Covid$p.value < 0.01) & (abs(DGE_cell_selection$Covid$summary.logFC)>0.25), ]
+top_DGE <- DGE_cell_selection$Covid[ (DGE_cell_selection$Covid$p.value < 0.01) & (abs(DGE_cell_selection$Covid[,grep("logFC",colnames(DGE_cell_selection$Covid))])>0.25), ]
 
 enrich_results <- enrichr(
  genes     = rownames(top_DGE),
@@ -150,7 +150,7 @@ enrich_results <- enrichr(
 #DGE_ALL7.1:
 
 ```{r}
-par(mar = c(3, 25, 2, 1))
+par(mfrow=c(1,1), mar = c(3, 25, 2, 1))
 barplot( height    = -log10(enrich_results$P.value)[10:1],
         names.arg = enrich_results$Term[10:1],
         horiz     = TRUE,
@@ -167,7 +167,7 @@ abline(v = 0, lty = 1)
 
 ```{r,fig.height=10,fig.width=10}
 # Create a gene rank based on the gene expression fold change
-gene_rank <- setNames( DGE_cell_selection$Covid$summary.logFC, casefold(rownames(DGE_cell_selection$Covid),upper=T) )
+gene_rank <- setNames( DGE_cell_selection$Covid[,grep("logFC",colnames(DGE_cell_selection$Covid))], casefold(rownames(DGE_cell_selection$Covid),upper=T) )
 ```
 
 #DGE_ALL7.3:
@@ -195,13 +195,14 @@ names(gmt) <- unique(paste0(msigdbgmt_subset$gs_name,"_",msigdbgmt_subset$gs_exa
 library(fgsea)
 
 # Perform enrichemnt analysis
-fgseaRes <- fgsea( pathways=gmt, stats=gene_rank, minSize=15, maxSize=500)
+fgseaRes <- fgsea( pathways=gmt, stats=gene_rank, minSize=15, maxSize=500,nperm = 10000)
 fgseaRes <- fgseaRes[ order(fgseaRes$NES,decreasing = T) ,]
 
 # Filter the results table to show only the top 10 UP or DOWN regulated processes (optional)
 top10_UP <- fgseaRes$pathway [1:10]
 
 # Nice summary table (shown as a plot)
+dev.off()
 plotGseaTable(gmt[top10_UP], gene_rank, fgseaRes, gseaParam = 0.5)
 ```
 
