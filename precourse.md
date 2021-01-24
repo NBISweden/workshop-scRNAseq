@@ -105,7 +105,7 @@ Start by installing Conda. We suggest installing **Miniconda3** and NOT Anaconda
   <img border="0" src="https://logos-download.com/wp-content/uploads/2020/06/Apple_Mac_OS_Logo-700x670.png" width="30" height="30">
 
   First, make sure you have Xcode and CommandLineTools installed and updated to latest version (in AppStore). If you have not already installed CommadLineTools, go to a terminal window and run:
-  
+
   ```
   xcode-select --install
   ```
@@ -130,21 +130,21 @@ Start by installing Conda. We suggest installing **Miniconda3** and NOT Anaconda
 <details>
   <summary markdown="span">**On Ubuntu**</summary>
   <img border="0" src="https://encrypted-tbn0.gstatic.com/images?q=tbn%3AANd9GcR2rSSpKVBohI4AXgBaUjFVYqO73ou2l9AOXw&usqp=CAU" width="30" height="30">
-  
+
   First download the latest version of Miniconda3 and run it to install.
-  
+
   ```
   wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
   sh Miniconda3-latest-Linux-x86_64.sh
   ```
-  
+
   Follow the instructions on screen replying `yes` when necessary. Restart your terminal window to apply modifications. After restarting, you can type the command below to install Mamba:
-  
+
   ```
   conda init
   conda install -n base -c conda-forge mamba
   ```
-  
+
 </details>
 
 
@@ -153,80 +153,80 @@ Start by installing Conda. We suggest installing **Miniconda3** and NOT Anaconda
   <img border="0" src="https://seeklogo.com/images/W/windows-10-icon-logo-5BC5C69712-seeklogo.com.png" width="30" height="30">
 
   Unfortunately, not all packages available on conda are compatible with windows machines. The good news is that Windows 10 offers native linux support via the Windows Subsystem for Linux (WSL2). This allows you to run linux/bash commands from within windows without the need of a virtual machine nor a dual-boot setup (i.e. having 2 operating systems). However, WSL does not offer a complete support for graphical interfaces (such as RStudio in our case), so we need additional steps to make that happen.
-  
+
   1. On Windows 10, install the WSL if you don't have it. Follow the instructions here:
 [https://docs.microsoft.com/en-us/windows/wsl/install-win10](https://docs.microsoft.com/en-us/windows/wsl/install-win10)
-  
+
   2. Once you have that installed, you can download and install MobaXterm (which is the enhanced terminal with graphical capacity):
 [https://mobaxterm.mobatek.net](https://mobaxterm.mobatek.net)  
 It is recommended that you INSTALL the program and not use the portable version.
-  
+
   3. Inside MobaXterm, you will probably will see that your WSL is already listed on the left panel as an available connection. Just double-click it and you will be accessing it via MobaXterm. If by any chance you don't see it there, close MobaXterm and go to the WSL terminal, because probably the WSL is not allowing SSH connections. You can follow this [link](https://www.illuminiastudios.com/dev-diaries/ssh-on-windows-subsystem-for-linux/) for the instructions on how to do it. You need to complete until the step `Start or restart the SSH service`, while the further steps are optional, but might be useful.
-  
+
   4. Inside MobaXterm, download Conda with the command:
-  
+
   ```
   wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
   ```
-  
+
   5. Inside MobaXterm, type the commands below to install Conda. Follow the instructions for the installation there.
-  
+
   ```
   cd ~/Downloads
   sh Miniconda3-latest-Linux-x86_64.sh
   ```
-  
+
   6. Inside MobaXterm, Follow the instructions on screen replying `yes` when necessary. Restart your terminal window to apply modifications. After restarting, you can type the command below to install Mamba:
-  
+
   ```
   conda init
   conda install -n base -c conda-forge mamba
   ```
-  
+
   7. Inside MobaXterm, type the commands below to install the X-server graphical packages that will be used to launch RStudio.
 [https://docs.anaconda.com/anaconda/install/linux/](https://docs.anaconda.com/anaconda/install/linux/)
-  
+
   ```
   sudo apt-get update
   sudo apt-get install libgl1-mesa-glx libegl1-mesa libxrandr2 libxrandr2 libxss1 libxcursor1 libxcomposite1 libasound2 libxi6 libxtst6
   ```
-  
+
   8. Close and open all application and Inside MobaXterm, you will probably will see that your WSL is already listed on the left panel as an available connection. Just double-click it and you will be accessing it via MobaXterm.
-  
+
 </details>
 
 
 <details>
   <summary markdown="span">**On VirtualBox**</summary>
   <img border="0" src="https://upload.wikimedia.org/wikipedia/commons/d/d5/Virtualbox_logo.png" width="30" height="30">
-  
+
   If by any means you see that the installations are not working as it should on your computer, you can try to create a virtual machine to run UBUNTU and install everything there. But please keep this alternative as the last temporary resourse, as we recommend troubleshooting the installation o the up-mentioned methods.
-  
+
   1. Download and install on your machine VIRTUALBOX
 [https://www.virtualbox.org](https://www.virtualbox.org)
-  
+
   2. Download the ISO disk of UBUNTU
 [https://ubuntu.com/download/desktop](https://ubuntu.com/download/desktop)
-  
+
   3. On VIRTUALBOX, click on `Settings` (yellow engine) > `General` > `Advanced` and make sure that both settings **Shared Clipboard** and **Drag'n'Drop** are set to `Bidirectional`.
-  
+
   4. Completely close VIRTUALBOX and start it again to apply changes.
-  
+
   5. On VIRTUALBOX, create a machine called Ubuntu and add the image above
   - set the memory to the maximum allowed in the GREEN bar
   - set the hard disk to be dynamic allocated
   - all other things can be default
-  
+
   6. Proceed with the Ubuntu installation as recommended. You can set to do "Minimal Installation" and deactivate to get updates during installation.
-  
+
   7. Inside Ubuntu, open TERMINAL and type the commands below to install the X-server graphical packages that will be used to launch RStudio.
 [https://docs.anaconda.com/anaconda/install/linux/](https://docs.anaconda.com/anaconda/install/linux/)
-  
+
   ```
   sudo apt-get update
   sudo apt-get install libgl1-mesa-glx libegl1-mesa libxrandr2 libxrandr2 libxss1 libxcursor1 libxcomposite1 libasound2 libxi6 libxtst6
   ```
-  
+
   8. Inside UBUNTU, Download conda:
 
   ```
@@ -267,7 +267,7 @@ It is recommended that you INSTALL the program and not use the portable version.
 To download the `environment_scRNAseq2021.yml` file using the command on Terminal:
 
 ```
-curl -o environment_scRNAseq2021.yml https://raw.githubusercontent.com/NBISweden/workshop-RNAseq/master/environment_scRNAseq2021.yml
+curl -o environment_scRNAseq2021.yml https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/master/labs/environment_scRNAseq2021.yml
 ```
 
 After this, you should have a file named `environment_scRNAseq2021.yml` in your directory (it does not matter where). Next, type:
