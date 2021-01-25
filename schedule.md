@@ -21,7 +21,7 @@ Lecture slides will be provided as links as they get completed.
 | Time  | Description         | Lecturer  |
 | ----- | ------------------- | --------- |
 | 09.00 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [Course introduction](lectures/course_intro_Asa_Bjorklund_2021.pdf) | Åsa & Paulo |
-| 09.30 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [scRNAseq methodologies and ESCG platform](lectures/single_cell_methodologies_Karolina_Wallenborg_2020.pdf) | Karolina Wallenborg |
+| 09.30 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [scRNAseq methodologies and ESCG platform](lectures/single_cell_methodologies_Karolina_Wallenborg_2021.pdf) | Karolina Wallenborg |
 | 10.30 | **Break**	| |
 | 11.00 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [scRNAseq Quality Control](lectures/scRNAseq_QC_Asa_Bjorklund_2020.pdf) | Åsa Björklund |
 | 12.00 | **Lunch** | |
