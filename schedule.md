@@ -37,7 +37,7 @@ Lecture slides will be provided as links as they get completed.
 
 | Time  | Description         | Lecturer  |
 | ----- | ------------------- | --------- |
-| 9.00 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [Data normalization](lectures/scRNAseq_normalization_Asa_Bjorklund_2020.pdf) | Åsa Björklund |
+| 9.00 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [Data normalization](lectures/scRNAseq_normalization_Asa_Bjorklund_2021.pdf) | Åsa Björklund |
 | 10.00 | **Break**     | |
 | 10.15 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [Dimensionality reduction](lectures/dimensionality_reduction_paulo_czarnewski_2021.pdf) | Paulo Czarnewski |
 | 11.30 | <img border="0" src="https://www.svgrepo.com/show/6672/exercise.svg" width="20" height="20"> [Exercises: Dimensionality reduction](exercises.md) | Åsa, Paulo, Anna, Jonathan |
