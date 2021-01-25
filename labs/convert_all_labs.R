@@ -112,12 +112,12 @@ for (file in scripts){
   write(json2,outfile)
 
     # render new notebook
-  render_nb <- sprintf("jupyter nbconvert --execute --to notebook --ExecutePreprocessor.timeout=360 --inplace %s",outfile)
+  render_nb <- sprintf("jupyter nbconvert --execute --to notebook --ExecutePreprocessor.timeout=1000 --inplace %s",outfile)
   print("Convert to notebook...")
   system(render_nb)
 
   out_html <- sub(".ipynb",".html",outfile)  
-  render_html <- sprintf("jupyter nbconvert  --to html_toc --ExecutePreprocessor.timeout=360  %s", outfile)
+  render_html <- sprintf("jupyter nbconvert  --to html_toc --ExecutePreprocessor.timeout=1000  %s", outfile)
   print("Convert to html...")
   system(render_html)
 }

@@ -75,7 +75,8 @@ cd ..
 
 
 ```{r packages}
-devtools::install_github("RachelQueen1/Spaniel", ref = "Development" )
+BiocManager::install('DropletUtils',update = F)
+devtools::install_github("RachelQueen1/Spaniel", ref = "Development" ,upgrade = F,dependencies = F)
 
 library(Spaniel)
 library(biomaRt)
@@ -113,9 +114,8 @@ sce@metadata <- lll
 We can further convert the gene ensembl IDs to gene names.
 
 ```{r}
-mart <- biomaRt::useMart(biomart="ENSEMBL_MART_ENSEMBL", dataset="mmusculus_gene_ensembl",
-                         host = "https://nov2020.archive.ensembl.org")
-annot <- biomaRt::getBM(attributes = c("ensembl_gene_id", "external_gene_name","gene_biotype"), mart = mart)
+mart <- biomaRt::useMart(biomart="ENSEMBL_MART_ENSEMBL", dataset="mmusculus_gene_ensembl")
+annot <- biomaRt::getBM(attributes = c("ensembl_gene_id", "external_gene_name","gene_biotype"), mart = mart, useCache = F)
 
 gene_names <- as.character ( annot[match(rownames(sce),annot[,"ensembl_gene_id"]),"external_gene_name"] )
 gene_names[is.na(gene_names) ] <- ""
@@ -514,10 +514,8 @@ common_hvgs <- allen.hvgs[allen.hvgs %in% hvgs]
 
 #Predict cell classes
 pred.grun <- SingleR(test=sce.anterior[common_hvgs,],
-                     de.n = 20,
                      ref=allen_reference_sce[common_hvgs,],
-                     labels=allen_reference_sce$subclass,
-                     de.method="wilcox")
+                     labels=allen_reference_sce$subclass)
 
 #Transfer the classes to the SCE object
 sce.anterior$cell_prediction <- pred.grun$labels
