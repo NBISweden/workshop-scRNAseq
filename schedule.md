@@ -42,12 +42,11 @@ Lecture slides will be provided as links as they get completed.
 | 10.15 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [Dimensionality reduction](lectures/dimensionality_reduction_paulo_czarnewski_2021.pdf) | Paulo Czarnewski |
 | 11.30 | <img border="0" src="https://www.svgrepo.com/show/6672/exercise.svg" width="20" height="20"> [Exercises: Dimensionality reduction](exercises.md) | Åsa, Paulo, Anna, Jonathan |
 | 12.00 | **Lunch** | |
-| 13.00 | <img border="0" src="https://www.svgrepo.com/show/6672/exercise.svg" width="20" height="20"> [Exercises: Dimensionality reduction (continued)](exercises.md) | Åsa, Paulo, Anna, Jonathan |
-| 14.30 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [Batch correction + Data integration](lectures/data_integration_paulo_czarnewski_2021.pdf) | Paulo Czarnewski |
+| 13.00 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [Batch correction + Data integration](lectures/data_integration_paulo_czarnewski_2021.pdf) | Paulo Czarnewski |
+| 14.00 | <img border="0" src="https://www.svgrepo.com/show/6672/exercise.svg" width="20" height="20"> [Exercises: Dimensionality reduction (continued)](exercises.md) | Åsa, Paulo, Anna, Jonathan |
 | 15.30 | [Wrap up session](https://forms.gle/iZumacPY1iyscZPHA) | Åsa & Paulo |
 
 <br/>
-
 <br/>
 
 ###### Wednesday 27th of January
