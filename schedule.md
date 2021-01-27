@@ -58,7 +58,7 @@ Lecture slides will be provided as links as they get completed.
 | 10.15 | <img border="0" src="https://www.svgrepo.com/show/6672/exercise.svg" width="20" height="20"> [Exercises: Data integration](exercises.md) | Åsa, Paulo, Anna, Lokesh |
 | 11.15 | <img border="0" src="https://www.svgrepo.com/show/6672/exercise.svg" width="20" height="20"> [Exercises: Clustering](exercises.md) | Åsa, Paulo, Anna |
 | 12.00 | **Lunch** | |
-| 13.00 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [Differential expression](lectures/ scDEG_lecture_2021.pdf) | Åsa |
+| 13.00 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [Differential expression](lectures/scDEG_lecture_2021.pdf) | Åsa |
 | 14.00 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [Gene Set Analysis](lectures/gene_set_analysis_paulo_czarnewski_2021.pdf) | Paulo |
 | 14.15 | <img border="0" src="https://www.svgrepo.com/show/6672/exercise.svg" width="20" height="20"> [Exercises: Differential expression](exercises.md) | Åsa, Paulo, Erik |
 | 15.30 | [Wrap up session](https://forms.gle/B9Tt7QqpBJsBmjRV6) | Åsa & Paulo |
