@@ -230,6 +230,8 @@ Gene Set Enrichment Analysis (GSEA)
 Besides the enrichment using hypergeometric test, we can also perform gene set enrichment analysis (GSEA), which scores ranked genes list (usually based on fold changes) and computes permutation test to check if a particular gene set is more present in the Up-regulated genes, amongthe DOWN_regulated genes or not differentially regulated.
 
 ```{r,fig.height=10,fig.width=10}
+DGE_cell_selection <- FindMarkers(cell_selection, ident.1 = "Covid", ident.2 = "Ctrl", logfc.threshold = -Inf, test.use = "wilcox",      min.pct = 0, min.diff.pct = 0, only.pos = FALSE, max.cells.per.ident = 50,     assay = "RNA")
+
 # Create a gene rank based on the gene expression fold change
 gene_rank <- setNames( DGE_cell_selection$avg_logFC, casefold(rownames(DGE_cell_selection),upper=T) )
 ```
@@ -259,7 +261,7 @@ names(gmt) <- unique(paste0(msigdbgmt_subset$gs_name,"_",msigdbgmt_subset$gs_exa
 library(fgsea)
 
 # Perform enrichemnt analysis
-fgseaRes <- fgsea( pathways=gmt, stats=gene_rank, minSize=15, maxSize=500,nperm = 10000)
+fgseaRes <- fgsea( pathways=gmt, stats=gene_rank, minSize=15, maxSize=500)
 fgseaRes <- fgseaRes[ order(fgseaRes$pval) ,]
 
 # Filter the results table to show only the top 10 UP or DOWN regulated processes (optional)
@@ -285,7 +287,6 @@ Finally, lets save the integrated data for further analysis.
 
 ```{r}
 saveRDS(alldata,"data/3pbmc_qc_dr_int_cl_dge.rds")
-write.csv(markers_genes)
 ```
 
 
