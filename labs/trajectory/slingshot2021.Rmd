@@ -1,7 +1,5 @@
 ---
 #CSS_ALL:
-editor_options: 
-  chunk_output_type: console
 ---
 
 #CHUNK_OPT:
@@ -9,15 +7,28 @@ editor_options:
 # Trajectory inference analysis: Slingshot
 
 
-### Loading matrix into R
+### Downloading dataset
+
+```{bash, eval=F}
+#Create data folder
+mkdir data
+
+#Download file from NCBI server into data folder
+curl ftp://ftp.ncbi.nlm.nih.gov/geo/series/GSE72nnn/GSE72857/suppl/GSE72857%5Fumitab%2Etxt%2Egz -o data/GSE72857_umitab.txt.gz
+
+#Decompress it
+gunzip GSE72857_series_matrix.txt.gz
+```
+
+
+### Loading matrix into R and converting it to compressed `.rds` format.
 
 ```{r, eval=FALSE}
-devtools::install_github('satijalab/seurat-data')
-library(SeuratData)
-
-SeuratData::InstallData("bmcite")
-library(bmcite.SeuratData)
+data <- read.delim("data/GSE72857_umitab.txt", header = T, row.names = 1)
+comp_matrix <- Matrix::Matrix(as.matrix(data),sparse = T)
+saveRDS(comp_matrix,"data/GSE72857_umitab.rds")
 ```
+
 
 
 ### Loading data
@@ -25,17 +36,12 @@ library(bmcite.SeuratData)
 In order to speed up the computations during the exercises, we will be selecting every fith cell of the dataset.
 
 ```{r}
-#Subset the data for faster computations
-bmcite <- bmcite.SeuratData::bmcite
-dim(bmcite)
-bmcite <- bmcite[, rep(c(T,F,F,F,F,F,F),20000)[1:ncol(bmcite)] ]
-dim(bmcite)
-umi_counts <- bmcite@assays$RNA@counts
+umi_counts <- readRDS("data/GSE72857_umitab.rds")
+umi_counts <- umi_counts[ , c(T,F,F,F,F)]
+dim(umi_counts)
 
 #Define a color pallete to use
-pal <- c( RColorBrewer::brewer.pal(9, "Set1"), RColorBrewer::brewer.pal(8, "Set2"),
-          RColorBrewer::brewer.pal(9, "Pastel1"),RColorBrewer::brewer.pal(8, "Pastel2"),
-          RColorBrewer::brewer.pal(8, "Set3"))
+pal <- c( RColorBrewer::brewer.pal(9, "Set1"), RColorBrewer::brewer.pal(8, "Set2"))
 ```
 
 
@@ -55,34 +61,26 @@ library(igraph)
 })
 
 #Data analysis with Scran pipeline
-sce <- SingleCellExperiment( assays = list(counts = umi_counts) )
-sce$celltype.l1 <- bmcite$celltype.l1
-sce <- computeSumFactors(sce, sizes=c(20, 40, 60, 80))
-sce <- logNormCounts(sce)
-var.fit <- modelGeneVar(sce)
-top.hvgs <- getTopHVGs(var.fit, n=5000)
-sce <- runPCA(sce, subset_row=top.hvgs, scale=F,ncomponents = 50)
-
-g <- buildSNNGraph(sce, k=3, use.dimred="PCA")
-sce$louvain_SNNk5 <- factor( igraph::cluster_louvain(g)$membership )
-
-sce <- runUMAP(sce, dimred = "PCA", n_dimred = 50,   ncomponents = 2, spread=1,
-               min_dist = .2,n_neighbors=5,repulsion_strength = .01,metric="euclidean",
-               n_epochs = 100,negative_sample_rate = 10)
-
+data <- SingleCellExperiment( assays = list(counts = umi_counts) )
+data <- computeSumFactors(data, sizes=c(20, 40, 60, 80))
+data <- logNormCounts(data)
+var.fit <- modelGeneVar(data)
+top.hvgs <- getTopHVGs(var.fit, n=2000)
+data <- runPCA(data, subset_row=top.hvgs)
+g <- buildSNNGraph(data, k=5, use.dimred="PCA", assay.type="RNA")
+data$louvain_SNNk5 <- factor( igraph::cluster_louvain(g)$membership )
+data <- runUMAP(data, dimred = "PCA", n_dimred = 50,   ncomponents = 2, spread=2, min_dist = .1, n_neighbors=10, metric="cosine")
 
 #Plot the clusters
-set.seed(1)
-sce$kmeans <- kmeans(reducedDim(sce,"UMAP"),centers = 25,nstart = 20)$cluster
-plotReducedDim(sce, dimred = "UMAP",colour_by = "kmeans",text_by = "kmeans")
+plotReducedDim(data, dimred = "UMAP",colour_by = "louvain_SNNk5")
 
 #Save the objects as separate matrices for input in slingshot
-dimred <- reducedDim(sce, type = "UMAP")
-clustering <- sce$kmeans
-counts <- as.matrix( counts(sce)[ top.hvgs , ] )
+dimred <- reducedDim(data, type = "UMAP")
+clustering <- data$louvain_SNNk5
+counts <- as.matrix( counts(data)[ top.hvgs , ] )
 ```
 
- 
+
 
 ### Basic processing with Seurat pipeline
 ***
@@ -100,30 +98,24 @@ library(cowplot)
 
 #Data analysis with Seurat pipeline
 data <- CreateSeuratObject(counts = umi_counts)
-data$celltype.l1 <- bmcite$celltype.l1
 data <- NormalizeData(data)
-data <- FindVariableFeatures(data, nfeatures = 5000)
+data <- FindVariableFeatures(data, nfeatures = 2000)
 data <- ScaleData(data)
-data <- RunPCA(data,npcs = 50)
-
-data <- FindNeighbors(data,k.param = 10)
-data <- FindClusters(data,resolution = 0.8)
-
-data <- RunUMAP(data, n.neighbors = 10, dims = 1:50,spread = 1,min.dist = .2,
-                repulsion.strength = .01,metric="euclidean",n.epochs = 100,negative.sample.rate = 10 )
+data <- RunPCA(data)
+data <- FindNeighbors(data)
+data <- FindClusters(data,resolution = 1)
+data <- RunUMAP(data, n.neighbors = 10, dims = 1:50,spread = 2,min.dist = 0.3 )
 
 #Plot the clusters
-set.seed(1)
-data$kmeans <- kmeans(data@reductions$umap@cell.embeddings,centers = 25,nstart = 20)$cluster
-DimPlot(data, group.by = "kmeans",label = T)
+DimPlot(data, group.by = "RNA_snn_res.1")
 
 #Save the objects as separate matrices for input in slingshot
 dimred <- data@reductions$umap@cell.embeddings
-clustering <- data$kmeans
+clustering <- data$RNA_snn_res.1
 counts <- as.matrix( data@assays$RNA@counts[ data@assays$RNA@var.features , ] )
 ```
 
- 
+
 #### Trajectory inference with Slingshot
 ***
 
@@ -135,21 +127,21 @@ Until up to this point, the steps above have been covered in the previous lectur
 
 ```{r}
 suppressPackageStartupMessages({
-  library(slingshot)})
+library(slingshot)})
 
 #Run default Slingshot lineage identification
 set.seed(1)
 lineages <- getLineages(data = dimred,
-                        clusterLabels = clustering)
+                     clusterLabels = clustering)
 
 lineages
 
 #Plot the lineages
 par(mfrow=c(1,2))
 plot(dimred[,1:2], col = pal[clustering],  cex=.5,pch = 16)
-for(i in levels(factor(clustering))){ 
-  text( mean(dimred[clustering==i,1]),
-        mean(dimred[clustering==i,2]), labels = i,font = 2) }
+for(i in levels(clustering)){ 
+text( mean(dimred[clustering==i,1]),
+     mean(dimred[clustering==i,2]), labels = i,font = 2) }
 plot(dimred[,1:2], col = pal[clustering],cex=.5, pch = 16)
 lines(lineages, lwd = 3, col = 'black')
 ``` 
@@ -157,52 +149,27 @@ lines(lineages, lwd = 3, col = 'black')
 
 Here we see one central issue with trajectory analysis: where does the trajectory begin? Without any extra information, this is nearly an impossible task for a TI method. We need prior biological information to be able to define where the trajectory starts and where it should end.
 
-First, we need to make sure to identify which cluster is the progenitor cell. In this case, they express the marker CD34.
-
-| Marker | Cell Type               |
-|--------|-------------------------|
-| CD34   | HSC progenitor          |
-| MS4A1  | B cell lineage          |
-| CD3E   | T cell lineage          |
-| NKG7   | Cytotoxic NK lineage    |
-| G0S2   | Granulocyte lineage     |
-| CST3   | Monocyte lineage        |
-
-
-```{r}
-#Seurat
-DimPlot(data, group.by = "kmeans",label = T)
-FeaturePlot(data,features = "CD34",order = T)
-
-
-#Scran/Scater
-plotReducedDim(sce, dimred = "UMAP",colour_by = "kmeans",text_by = "kmeans")
-plotReducedDim(sce, dimred = "UMAP",colour_by = "CD34",by_exprs_values = "logcounts")
-```
-
-Then, we can insert that information on where the trajectory starts on the `getLineages` function.
-
 ```{r}
 #Run default Slingshot
 set.seed(1)
 lineages <- getLineages(data = dimred,
-                        clusterLabels = clustering,
-                        #end.clus = c("4","3","13","9"), #define how many branches/lineages to consider
-                        start.clus = "11") #define where to start the trajectories
+                     clusterLabels = clustering,
+                     #end.clus = c("11","7","10","9","5"), #define how many branches/lineages to consider
+                     start.clus = "0") #define where to start the trajectories
 
 lineages
 
 #Plot the lineages
 par(mfrow=c(1,2))
 plot(dimred[,1:2], col = pal[clustering],  cex=.5,pch = 16)
-for(i in levels(factor(clustering))){ 
-  text( mean(dimred[clustering==i,1]),
-        mean(dimred[clustering==i,2]), labels = i,font = 2) }
+for(i in levels(clustering)){ 
+text( mean(dimred[clustering==i,1]),
+     mean(dimred[clustering==i,2]), labels = i,font = 2) }
 plot(dimred, col = pal[clustering],  pch = 16)
 lines(lineages, lwd = 3, col = 'black')
 ```
 
- 
+
 
 #### Defining Principal Curves
 
@@ -212,9 +179,9 @@ Once the clusters are connected, Slingshot allows you to transform them to a smo
 * Lineages with a same set of clusters will be constrained so that their principal curves remain bundled around the overlapping clusters
 
 Since the function `getCurves()` takes some time to run, we can speed up the convergence of the curve fitting process by reducing the amount of cells to use in each lineage. Ideally you could all cells, but here we had set `approx_points` to 300 to speed up. Feel free to adjust that for your dataset.
- 
+
 ```{r}
-curves <- getCurves(lineages, approx_points = 20, thresh = 0.01, stretch = .8, allow.breaks = FALSE, shrink=.99)
+curves <- getCurves(lineages, approx_points = 300, thresh = 0.01, stretch = .8, allow.breaks = FALSE, shrink=.99)
 curves
 
 plot(dimred, col = pal[clustering], asp = 1, pch = 16)
@@ -222,7 +189,7 @@ lines(curves, lwd = 3, col = 'black')
 ```
 
 
- 
+
 
 ### Finding differentially expressed genes
 ***
@@ -247,11 +214,11 @@ The fitting of GAMs can take quite a while, so for demonstration purposes we fir
 library(tradeSeq)
 
 #Removing some genes to speed up the computations for this tutorial
-filt_counts <- counts [ rowSums(counts > 1) > ncol(counts)/20, ] 
+filt_counts <- counts [ rowSums(counts > 5) > ncol(counts)/100, ] 
 dim(filt_counts)
 
-sceGAM <- fitGAM(  counts = as.matrix(filt_counts),
-                sds = curves, parallel=T )
+sce <- fitGAM(  counts = as.matrix(filt_counts),
+             sds = curves )
 
 plotGeneCount(curves, filt_counts, clusters = clustering, models = sce)
 ```
@@ -262,72 +229,51 @@ library(dplyr)
 plot_differential_expression <- function(feature_id) {
 feature_id <- pseudotime_association %>% filter(pvalue < 0.05) %>% top_n(1, -waldStat) %>% pull(feature_id)
 cowplot::plot_grid(
-  plotGeneCount(curves, filt_counts, gene=feature_id[1], clusters = clustering, models = sce)+ ggplot2::theme(legend.position = "none"),
-  plotSmoothers(sceGAM, as.matrix(counts), gene = feature_id[1])
+plotGeneCount(curves, filt_counts, gene=feature_id[1], clusters = clustering, models = sce)+ ggplot2::theme(legend.position = "none"),
+plotSmoothers(sce, as.matrix(counts), gene = feature_id[1])
 )}
 
 ```
 
- 
+
 
 #### Genes that change with pseudotime
 
-
-We can first look at general trends of gene expression across pseudotime.
-
 ```{r}
-pseudotime_association <- associationTest(sceGAM)
+pseudotime_association <- associationTest(sce)
 pseudotime_association$fdr <- p.adjust(pseudotime_association$pvalue, method = "fdr")
 pseudotime_association <- pseudotime_association[ order(pseudotime_association$pvalue), ]
 pseudotime_association$feature_id <- rownames(pseudotime_association)
-pseudotime_association <- pseudotime_association[pseudotime_association$pvalue!=0,]
 ```
 
-And then plot all curves together:
 
 ```{r}
 feature_id <- pseudotime_association %>%
-  filter(pvalue < 0.00001) %>%
-  top_n(-10, waldStat) %>%
-  pull(feature_id)
-
-feature_id
-
-plot_differential_expression(feature_id[1])
+filter(pvalue < 0.05) %>%
+top_n(1, -waldStat) %>%
+pull(feature_id)
+plot_differential_expression(feature_id)
 ```
 
- 
+
 
 #### Genes that change between two pseudotime points
 
 We can define custom pseudotime values of interest if we’re interested in genes that change between particular point in pseudotime. By default, we can look at differences between start and end:
 
 ```{r}
-pseudotime_start_end_association <- startVsEndTest(sceGAM, pseudotimeValues = c(0, 1))
+pseudotime_start_end_association <- startVsEndTest(sce, pseudotimeValues = c(0, 1))
 pseudotime_start_end_association$feature_id <- rownames(pseudotime_start_end_association)
 
 feature_id <- pseudotime_start_end_association %>% 
-  filter(pvalue < 0.05) %>% 
-  top_n(1, waldStat) %>% 
-  pull(feature_id)
-
-feature_id
+filter(pvalue < 0.05) %>% 
+top_n(1, waldStat) %>% 
+pull(feature_id)
 
 plot_differential_expression(feature_id)
-
-
-data(countMatrix, package = "tradeSeq")
-counts <- as.matrix(countMatrix)
-rm(countMatrix)
-data(crv, package = "tradeSeq")
-data(celltype, package = "tradeSeq")
-
-set.seed(5)
-icMat <- evaluateK(counts = counts, sds = crv, k = 3:10, 
-                   nGenes = 200, verbose = T)
 ```
 
- 
+
 
 #### Genes that are different between lineages
 
@@ -339,29 +285,26 @@ More interesting are genes that are different between two branches. We may have 
 * Note that the last function requires that the pseudotimes between two lineages are aligned.
 
 ```{r}
-different_end_association <- diffEndTest(sceGAM)
+different_end_association <- diffEndTest(sce)
 different_end_association$feature_id <- rownames(different_end_association)
-
 feature_id <- different_end_association %>% 
-  filter(pvalue < 0.05) %>% 
-  arrange(desc(waldStat)) %>% 
-  dplyr::slice(1) %>% 
-  pull(feature_id)
-
+filter(pvalue < 0.05) %>% 
+arrange(desc(waldStat)) %>% 
+dplyr::slice(1) %>% 
+pull(feature_id)
 plot_differential_expression(feature_id)
 ```
 
 
 ```{r}
-branch_point_association <- earlyDETest(sceGAM)
+branch_point_association <- earlyDETest(sce)
 branch_point_association$feature_id <- rownames(branch_point_association)
 
 feature_id <- branch_point_association %>% 
-  filter(pvalue < 0.05) %>% 
-  arrange(desc(waldStat)) %>% 
-  dplyr::slice(1) %>% 
-  pull(feature_id)
-
+filter(pvalue < 0.05) %>% 
+arrange(desc(waldStat)) %>% 
+dplyr::slice(1) %>% 
+pull(feature_id)
 plot_differential_expression(feature_id)
 ```
 
@@ -369,7 +312,7 @@ plot_differential_expression(feature_id)
 
 Check out this [vignette](https://statomics.github.io/tradeSeq/articles/tradeSeq.html) for a more in-depth overview of tradeSeq
 
- 
+
 
 ### References
 ***
@@ -377,5 +320,4 @@ Check out this [vignette](https://statomics.github.io/tradeSeq/articles/tradeSeq
 Cannoodt, Robrecht, Wouter Saelens, and Yvan Saeys. 2016. “Computational Methods for Trajectory Inference from Single-Cell Transcriptomics.” *European Journal of Immunology* 46 (11): 2496–2506. [doi](https://doi.org/10.1002/eji.201646347).
 
 Saelens, Wouter, Robrecht Cannoodt, Helena Todorov, and Yvan Saeys. 2019. “A Comparison of Single-Cell Trajectory Inference Methods.” *Nature Biotechnology* 37 (5): 547–54. [doi](https://doi.org/10.1038/s41587-019-0071-9).
-
 
