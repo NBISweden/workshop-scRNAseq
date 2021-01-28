@@ -1,6 +1,6 @@
 ---
 author: "Åsa Björklund  &  Paulo Czarnewski"
-date: 'January 27, 2021'
+date: 'January 28, 2021'
 output:
   html_document:
     self_contained: true
@@ -255,7 +255,7 @@ You visualize your results using a simple barplot, for example:
 
 
 ```r
-par(mar = c(3, 25, 2, 1))
+par(mfrow = c(1, 1), mar = c(3, 25, 2, 1))
 barplot(height = -log10(enrich_results$P.value)[10:1], names.arg = enrich_results$Term[10:1], 
     horiz = TRUE, las = 1, border = FALSE, cex.names = 0.6)
 abline(v = c(-log10(0.05)), lty = 2)
@@ -270,6 +270,10 @@ Besides the enrichment using hypergeometric test, we can also perform gene set e
 
 
 ```r
+DGE_cell_selection <- FindMarkers(cell_selection, ident.1 = "Covid", logfc.threshold = -Inf, 
+    test.use = "wilcox", min.pct = 0.1, min.diff.pct = 0, only.pos = FALSE, max.cells.per.ident = 50, 
+    assay = "RNA")
+
 # Create a gene rank based on the gene expression fold change
 gene_rank <- setNames(DGE_cell_selection$avg_logFC, casefold(rownames(DGE_cell_selection), 
     upper = T))
@@ -300,7 +304,7 @@ unique(msigdbgmt$gs_subcat)
 
 ```r
 # Subset which gene set you want to use.
-msigdbgmt_subset <- msigdbgmt[msigdbgmt$gs_subcat == "CP:KEGG", ]
+msigdbgmt_subset <- msigdbgmt[msigdbgmt$gs_subcat == "CP:WIKIPATHWAYS", ]
 gmt <- lapply(unique(msigdbgmt_subset$gs_name), function(x) {
     msigdbgmt_subset[msigdbgmt_subset$gs_name == x, "gene_symbol"]
 })
@@ -316,7 +320,7 @@ library(fgsea)
 # Perform enrichemnt analysis
 fgseaRes <- fgsea(pathways = gmt, stats = gene_rank, minSize = 15, maxSize = 500, 
     nperm = 10000)
-fgseaRes <- fgseaRes[order(fgseaRes$pval), ]
+fgseaRes <- fgseaRes[order(fgseaRes$RES, decreasing = T), ]
 
 # Filter the results table to show only the top 10 UP or DOWN regulated processes
 # (optional)
@@ -2986,13 +2990,13 @@ sessionInfo()
 ## other attached packages:
 ##  [1] fgsea_1.16.0    msigdbr_7.2.1   rafalib_1.0.0   enrichR_2.1    
 ##  [5] pheatmap_1.0.12 ggplot2_3.3.3   cowplot_1.1.1   dplyr_1.0.3    
-##  [9] venn_1.9        Seurat_3.2.3   
+##  [9] venn_1.9        Seurat_3.2.3    RJSONIO_1.3-1.4 optparse_1.6.6 
 ## 
 ## loaded via a namespace (and not attached):
 ##   [1] Rtsne_0.15            colorspace_2.0-0      rjson_0.2.20         
 ##   [4] deldir_0.2-9          ellipsis_0.3.1        ggridges_0.5.3       
-##   [7] rstudioapi_0.13       spatstat.data_1.7-0   farver_2.0.3         
-##  [10] leiden_0.3.6          listenv_0.8.0         ggrepel_0.9.1        
+##   [7] spatstat.data_1.7-0   farver_2.0.3          leiden_0.3.6         
+##  [10] listenv_0.8.0         getopt_1.20.3         ggrepel_0.9.1        
 ##  [13] codetools_0.2-18      splines_4.0.3         knitr_1.30           
 ##  [16] polyclip_1.10-0       jsonlite_1.7.2        ica_1.0-2            
 ##  [19] cluster_2.1.0         png_0.1-7             uwot_0.1.10          
@@ -3010,7 +3014,7 @@ sessionInfo()
 ##  [55] irlba_2.3.3           goftest_1.2-2         future_1.21.0        
 ##  [58] MASS_7.3-53           zoo_1.8-8             scales_1.1.1         
 ##  [61] promises_1.1.1        spatstat.utils_1.20-2 parallel_4.0.3       
-##  [64] RColorBrewer_1.1-2    yaml_2.2.1            curl_4.3             
+##  [64] RColorBrewer_1.1-2    curl_4.3              yaml_2.2.1           
 ##  [67] reticulate_1.18       pbapply_1.4-3         gridExtra_2.3        
 ##  [70] rpart_4.1-15          stringi_1.5.3         BiocParallel_1.24.0  
 ##  [73] rlang_0.4.10          pkgconfig_2.0.3       matrixStats_0.57.0   

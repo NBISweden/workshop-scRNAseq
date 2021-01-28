@@ -164,7 +164,7 @@ enrich_results <- enrichr(
 #DGE_ALL7.1:
 
 ```{r}
-par(mar = c(3, 25, 2, 1))
+par(mfrow=c(1,1),mar = c(3, 25, 2, 1))
 barplot( height    = -log10(enrich_results$P.value)[10:1],
         names.arg = enrich_results$Term[10:1],
         horiz     = TRUE,
@@ -181,9 +181,10 @@ abline(v = 0, lty = 1)
 
 ```{r,fig.height=10,fig.width=10}
 DGE_cell_selection <- FindMarkers(cell_selection,
+                                  ident.1 = "Covid",
                                logfc.threshold = -Inf,
                                test.use = "wilcox",
-                               min.pct = 0,
+                               min.pct = 0.1,
                                min.diff.pct = 0,
                                only.pos = FALSE,
                                max.cells.per.ident = 50,
@@ -207,7 +208,7 @@ msigdbgmt <- as.data.frame(msigdbgmt)
 unique(msigdbgmt$gs_subcat)
 
 #Subset which gene set you want to use.
-msigdbgmt_subset <- msigdbgmt[msigdbgmt$gs_subcat == "CP:KEGG",]
+msigdbgmt_subset <- msigdbgmt[msigdbgmt$gs_subcat == "CP:WIKIPATHWAYS",]
 gmt <- lapply( unique(msigdbgmt_subset$gs_name),function(x){msigdbgmt_subset [msigdbgmt_subset$gs_name == x ,"gene_symbol"]} )
 names(gmt) <- unique(paste0(msigdbgmt_subset$gs_name,"_",msigdbgmt_subset$gs_exact_source))
 ```
@@ -219,7 +220,7 @@ library(fgsea)
 
 # Perform enrichemnt analysis
 fgseaRes <- fgsea( pathways=gmt, stats=gene_rank, minSize=15, maxSize=500,nperm = 10000)
-fgseaRes <- fgseaRes[ order(fgseaRes$pval) ,]
+fgseaRes <- fgseaRes[ order(fgseaRes$RES, decreasing = T) ,]
 
 # Filter the results table to show only the top 10 UP or DOWN regulated processes (optional)
 top10_UP <- fgseaRes$pathway [1:10]
