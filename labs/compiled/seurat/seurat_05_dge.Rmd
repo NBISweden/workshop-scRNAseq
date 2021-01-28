@@ -214,7 +214,7 @@ Some databases of interest:
 You visualize your results using a simple barplot, for example:
 
 ```{r}
-par(mar = c(3, 25, 2, 1))
+par(mfrow=c(1,1),mar = c(3, 25, 2, 1))
 barplot( height    = -log10(enrich_results$P.value)[10:1],
         names.arg = enrich_results$Term[10:1],
         horiz     = TRUE,
@@ -230,7 +230,15 @@ Gene Set Enrichment Analysis (GSEA)
 Besides the enrichment using hypergeometric test, we can also perform gene set enrichment analysis (GSEA), which scores ranked genes list (usually based on fold changes) and computes permutation test to check if a particular gene set is more present in the Up-regulated genes, amongthe DOWN_regulated genes or not differentially regulated.
 
 ```{r,fig.height=10,fig.width=10}
-DGE_cell_selection <- FindMarkers(cell_selection, ident.1 = "Covid", ident.2 = "Ctrl", logfc.threshold = -Inf, test.use = "wilcox",      min.pct = 0, min.diff.pct = 0, only.pos = FALSE, max.cells.per.ident = 50,     assay = "RNA")
+DGE_cell_selection <- FindMarkers(cell_selection,
+                                  ident.1 = "Covid",
+                               logfc.threshold = -Inf,
+                               test.use = "wilcox",
+                               min.pct = 0.1,
+                               min.diff.pct = 0,
+                               only.pos = FALSE,
+                               max.cells.per.ident = 50,
+                               assay = "RNA")
 
 # Create a gene rank based on the gene expression fold change
 gene_rank <- setNames( DGE_cell_selection$avg_logFC, casefold(rownames(DGE_cell_selection),upper=T) )
@@ -250,7 +258,7 @@ msigdbgmt <- as.data.frame(msigdbgmt)
 unique(msigdbgmt$gs_subcat)
 
 #Subset which gene set you want to use.
-msigdbgmt_subset <- msigdbgmt[msigdbgmt$gs_subcat == "CP:KEGG",]
+msigdbgmt_subset <- msigdbgmt[msigdbgmt$gs_subcat == "CP:WIKIPATHWAYS",]
 gmt <- lapply( unique(msigdbgmt_subset$gs_name),function(x){msigdbgmt_subset [msigdbgmt_subset$gs_name == x ,"gene_symbol"]} )
 names(gmt) <- unique(paste0(msigdbgmt_subset$gs_name,"_",msigdbgmt_subset$gs_exact_source))
 ```
@@ -261,8 +269,8 @@ names(gmt) <- unique(paste0(msigdbgmt_subset$gs_name,"_",msigdbgmt_subset$gs_exa
 library(fgsea)
 
 # Perform enrichemnt analysis
-fgseaRes <- fgsea( pathways=gmt, stats=gene_rank, minSize=15, maxSize=500)
-fgseaRes <- fgseaRes[ order(fgseaRes$pval) ,]
+fgseaRes <- fgsea( pathways=gmt, stats=gene_rank, minSize=15, maxSize=500,nperm = 10000)
+fgseaRes <- fgseaRes[ order(fgseaRes$RES, decreasing = T) ,]
 
 # Filter the results table to show only the top 10 UP or DOWN regulated processes (optional)
 top10_UP <- fgseaRes$pathway [1:10]
@@ -287,6 +295,7 @@ Finally, lets save the integrated data for further analysis.
 
 ```{r}
 saveRDS(alldata,"data/3pbmc_qc_dr_int_cl_dge.rds")
+write.csv(markers_genes)
 ```
 
 

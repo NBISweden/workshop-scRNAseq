@@ -76,7 +76,6 @@ ctrl <- ctrl %>%
   ScaleData() %>%
   RunPCA(verbose = F) %>%
   RunUMAP(dims = 1:30)
-
 ```
 
 ```{r, fig.width=5}
@@ -95,7 +94,6 @@ ctrl <- AddMetaData(object = ctrl, metadata = predictions)
 ```
 
 ```{r}
-
 DimPlot(ctrl, group.by = "predicted.id", label = T, repel = T) + NoAxes()
 ```
 
@@ -156,12 +154,13 @@ alldata <- SetIdent(alldata,value = "CCA_snn_res.0.5")
 DGE_table <- FindAllMarkers(alldata,
                                logfc.threshold = 0,
                                test.use = "wilcox",
-                               min.pct = 0,
+                               min.pct = 0.1,
                                min.diff.pct = 0,
                                only.pos = TRUE,
                                max.cells.per.ident = 20,
                                return.thresh = 1,
                                assay = "RNA")
+
 # split into a list
 DGE_list <- split(DGE_table, DGE_table$cluster)
 
@@ -219,9 +218,7 @@ alldata$ref_gsea <- new.cluster.ids[as.character(alldata@active.ident)]
 
 cowplot::plot_grid( ncol = 2,
 DimPlot(alldata,label = T,group.by = "CCA_snn_res.0.5") + NoAxes(),
-DimPlot(alldata,label = T, group.by = "ref_gsea") + NoAxes()
-)
-
+DimPlot(alldata,label = T, group.by = "ref_gsea") + NoAxes())
 ```
 
 #CT_GSEA5:
@@ -246,14 +243,12 @@ if(!dir.exists("data/CellMarker_list/")) {
                 destfile = "./data/CellMarker_list/Human_cell_markers.txt")
   download.file(url="http://bio-bigdata.hrbmu.edu.cn/CellMarker/download/Mouse_cell_markers.txt",
                 destfile = "./data/CellMarker_list/Mouse_cell_markers.txt")
-
 }
 ```
 
 #CT_GSEA7:
 
 ```{r}
-
 # Load the human marker table
 markers <- read.delim("data/CellMarker_list/Human_cell_markers.txt")
 markers <- markers [ markers$speciesType == "Human", ]
@@ -265,7 +260,6 @@ markers <- markers [ markers$cancerType == "Normal", ]
 # markers <- markers [ markers$tissueType %in% c("Blood","Venous blood",
 #                                                "Serum","Plasma",
 #                                                "Spleen","Bone marrow","Lymph node"), ]
-
 
 # remove strange characters etc.
 celltype_list <- lapply( unique(markers$cellName) , function(x){
@@ -311,7 +305,6 @@ cowplot::plot_grid( ncol = 2,
 DimPlot(alldata,label = T,group.by = "ref_gsea") + NoAxes(),
 DimPlot(alldata,label = T, group.by = "cellmarker_gsea") + NoAxes()
 )
-
 ```
 
 #CT_ALL7:
