@@ -92,7 +92,7 @@ Lecture slides will be provided as links as they get completed.
 | 11.30 | [Summary of exercises]() | Åsa & Paulo |
 | 12.00 | **Lunch** | |
 | 13.00 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [Multimodal omics integration](lectures/SingleCellOmicsIntegration_Oskolkov.pdf)	| Nikolay Oskolkov |
-| 14.00 | [Wrap up](https://forms.gle/gATSp2VCSBXCMDaU9) and [Course Summary](lectures/course_summary_2020.pdf) | Åsa & Paulo |
+| 14.00 | [Wrap up](https://forms.gle/gATSp2VCSBXCMDaU9) and [Course Summary](lectures/course_summary_2021.pdf) | Åsa & Paulo |
 
 
 <br/>
