@@ -87,7 +87,7 @@ Lecture slides will be provided as links as they get completed.
 
 | Time  | Description         | Lecturer  |
 | ----- | ------------------- | --------- |
-| 09.00 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [Celltype prediction]() | Ahmed Mahfouz |
+| 09.00 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [Celltype prediction](lectures/2021.01.29_Mahfouz_cell_prediction.pdf) | Ahmed Mahfouz |
 | 10.00 | <img border="0" src="https://www.svgrepo.com/show/6672/exercise.svg" width="20" height="20"> [Exercises: Celltype prediction](exercises.md) | Åsa, Paulo, Ahmed, Erik |
 | 11.30 | [Summary of exercises]() | Åsa & Paulo |
 | 12.00 | **Lunch** | |
