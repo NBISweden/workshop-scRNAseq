@@ -116,5 +116,22 @@ Below you can find some common error and problems you might face either during i
 
 </details>
 
+<details>
+  <summary markdown="span">`ERROR: option error has NULL value`</summary>
+
+  This error happens when running code inline.
+  
+  One possible solution is to restart Rstudio and type.
+  
+  ```
+  if(interactive()) { options(error = utils::recover)}
+  ```
+  
+  Please try other solutions listed here: https://github.com/rstudio/rstudio/issues/4723
+  
+  If none of those work, you can click on the wheel engine symbol and check `Chunk output in console` 
+
+</details>
+
 
 ***
