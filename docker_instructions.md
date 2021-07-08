@@ -20,13 +20,13 @@ In the last case scenario, if you are having problems installing R packages, ple
 * Windows: https://docs.docker.com/docker-for-windows/install/
 * Ubuntu: https://docs.docker.com/install/linux/docker-ce/ubuntu/
 
-2.Launch docker and got to `Preferences > Advanced`  and set `Memory=8gb, cpu=4, swp=1`. These will set the maximum values possible for your machine.
+2.Launch docker and got to `Preferences > Resources > Advanced`  and set `Memory=8gb, cpu=4, swp=1`. These will set the maximum values possible for your machine.
 
 3.Now go to `Preferences > Security` and tick on "Allow connections from network clients", so that you can communicate with DockerServer.
 
 4.Open a terminal shell.
 
-5.Create a Virtual Machine (VM) named "default" and set the amount of CPU and RAM available for you:
+5.You will need to use `docker-machine`. If your docker version does not automatically install `docker-machine` in terminal, please [follow these instructions](https://github.com/docker/machine/releases/tag/v0.16.2) to install it. Then create a Virtual Machine (VM) named "default" and set the amount of CPU and RAM available for you:
 
 ```bash
 docker-machine create default
