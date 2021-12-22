@@ -99,7 +99,7 @@ Below you can find some common error and problems you might face either during i
 
   ```
   #Download MacOSX10.9.sdk from Github
-  curl -o MacOSX10.9.sdk.tar.gz "https://github-production-release-asset-2e65be.s3.amazonaws.com/13597203/f0123b00-34ab-11ea-84b1-27ccc324f983?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAIWNJYAX4CSVEH53A%2F20210122%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20210122T065821Z&X-Amz-Expires=300&X-Amz-Signature=e11864967b0c9a1e1ba1121dbadd35bb3129ae1cd87bdf07b1a9965c731ae129&X-Amz-SignedHeaders=host&actor_id=22674952&key_id=0&repo_id=13597203&response-content-disposition=attachment%3B%20filename%3DMacOSX10.9.sdk.tar.xz&response-content-type=application%2Foctet-stream"
+  curl -o MacOSX10.9.sdk.tar.gz "https://github.com/phracker/MacOSX-SDKs/releases/download/11.3/MacOSX10.9.sdk.tar.xz"
 
   #extract
   sudo tar -xzf MacOSX10.9.sdk.tar.xz
@@ -113,6 +113,23 @@ Below you can find some common error and problems you might face either during i
   #Link the path where conda looks to where the file is
   ln -s /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk /opt/MacOSX10.9.sdk
   ```
+
+</details>
+
+<details>
+  <summary markdown="span">`ERROR: option error has NULL value`</summary>
+
+  This error happens when running code inline.
+  
+  One possible solution is to restart Rstudio and type.
+  
+  ```
+  if(interactive()) { options(error = utils::recover)}
+  ```
+  
+  Please try other solutions listed here: https://github.com/rstudio/rstudio/issues/4723
+  
+  If none of those work, you can click on the wheel engine symbol and check `Chunk output in console` 
 
 </details>
 
