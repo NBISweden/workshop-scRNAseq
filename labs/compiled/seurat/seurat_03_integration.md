@@ -1,7 +1,7 @@
 ---
 title: #INTEG_TITLE:
 author: "Åsa Björklund  &  Paulo Czarnewski"
-date: 'January 28, 2021'
+date: 'December 22, 2021'
 output:
   html_document:
     self_contained: true
@@ -66,18 +66,116 @@ We split the combined object into a list, with each dataset as an element. We pe
 
 ```r
 alldata.list <- SplitObject(alldata, split.by = "orig.ident")
+```
 
+```
+## Warning: Keys should be one or more alphanumeric characters followed by an
+## underscore, setting key from umap10_on_pca_ to umap10onpca_
+```
+
+```
+## Warning: Keys should be one or more alphanumeric characters followed by an
+## underscore, setting key from umap_on_scaledata_ to umaponscaledata_
+```
+
+```
+## Warning: Keys should be one or more alphanumeric characters followed by an
+## underscore, setting key from umap_on_graph_ to umapongraph_
+```
+
+```
+## Warning: Keys should be one or more alphanumeric characters followed by an
+## underscore, setting key from umap10_on_pca_ to umap10onpca_
+```
+
+```
+## Warning: Keys should be one or more alphanumeric characters followed by an
+## underscore, setting key from umap_on_scaledata_ to umaponscaledata_
+```
+
+```
+## Warning: Keys should be one or more alphanumeric characters followed by an
+## underscore, setting key from umap_on_graph_ to umapongraph_
+```
+
+```
+## Warning: Keys should be one or more alphanumeric characters followed by an
+## underscore, setting key from umap10_on_pca_ to umap10onpca_
+```
+
+```
+## Warning: Keys should be one or more alphanumeric characters followed by an
+## underscore, setting key from umap_on_scaledata_ to umaponscaledata_
+```
+
+```
+## Warning: Keys should be one or more alphanumeric characters followed by an
+## underscore, setting key from umap_on_graph_ to umapongraph_
+```
+
+```
+## Warning: Keys should be one or more alphanumeric characters followed by an
+## underscore, setting key from umap10_on_pca_ to umap10onpca_
+```
+
+```
+## Warning: Keys should be one or more alphanumeric characters followed by an
+## underscore, setting key from umap_on_scaledata_ to umaponscaledata_
+```
+
+```
+## Warning: Keys should be one or more alphanumeric characters followed by an
+## underscore, setting key from umap_on_graph_ to umapongraph_
+```
+
+```
+## Warning: Keys should be one or more alphanumeric characters followed by an
+## underscore, setting key from umap10_on_pca_ to umap10onpca_
+```
+
+```
+## Warning: Keys should be one or more alphanumeric characters followed by an
+## underscore, setting key from umap_on_scaledata_ to umaponscaledata_
+```
+
+```
+## Warning: Keys should be one or more alphanumeric characters followed by an
+## underscore, setting key from umap_on_graph_ to umapongraph_
+```
+
+```
+## Warning: Keys should be one or more alphanumeric characters followed by an
+## underscore, setting key from umap10_on_pca_ to umap10onpca_
+```
+
+```
+## Warning: Keys should be one or more alphanumeric characters followed by an
+## underscore, setting key from umap_on_scaledata_ to umaponscaledata_
+```
+
+```
+## Warning: Keys should be one or more alphanumeric characters followed by an
+## underscore, setting key from umap_on_graph_ to umapongraph_
+```
+
+```r
 for (i in 1:length(alldata.list)) {
     alldata.list[[i]] <- NormalizeData(alldata.list[[i]], verbose = FALSE)
-    alldata.list[[i]] <- FindVariableFeatures(alldata.list[[i]], selection.method = "vst", 
+    alldata.list[[i]] <- FindVariableFeatures(alldata.list[[i]], selection.method = "vst",
         nfeatures = 2000, verbose = FALSE)
 }
 
 hvgs_per_dataset <- lapply(alldata.list, function(x) {
     x@assays$RNA@var.features
 })
-venn::venn(hvgs_per_dataset, opacity = 0.4, zcolor = (scales::hue_pal())(3), cexsn = 1, 
-    cexil = 1, lwd = 1, col = "white", frame = F, borders = NA)
+# venn::venn(hvgs_per_dataset,opacity = .4,zcolor = scales::hue_pal()(3),cexsn
+# = 1,cexil = 1,lwd=1,col='white',frame=F,borders = NA)
+
+temp <- unique(unlist(hvgs_per_dataset))
+overlap <- sapply(hvgs_per_dataset, function(x) {
+    temp %in% x
+})
+pheatmap::pheatmap(t(overlap * 1), cluster_rows = F, color = c("grey90", "grey20"))
 ```
 
 ![](seurat_03_integration_files/figure-html/unnamed-chunk-2-1.png)<!-- -->
@@ -86,7 +184,7 @@ We identify anchors using the FindIntegrationAnchors function, which takes a lis
 
 
 ```r
-alldata.anchors <- FindIntegrationAnchors(object.list = alldata.list, dims = 1:30, 
+alldata.anchors <- FindIntegrationAnchors(object.list = alldata.list, dims = 1:30,
     reduction = "cca")
 ```
 
@@ -127,7 +225,7 @@ alldata.anchors <- FindIntegrationAnchors(object.list = alldata.list, dims = 1:3
 ```
 
 ```
-## 	Retained 1718 anchors
+## 	Retained 1716 anchors
 ```
 
 ```
@@ -155,7 +253,7 @@ alldata.anchors <- FindIntegrationAnchors(object.list = alldata.list, dims = 1:3
 ```
 
 ```
-## 	Retained 1711 anchors
+## 	Retained 1714 anchors
 ```
 
 ```
@@ -175,7 +273,7 @@ alldata.anchors <- FindIntegrationAnchors(object.list = alldata.list, dims = 1:3
 ```
 
 ```
-## 	Found 2679 anchors
+## 	Found 2678 anchors
 ```
 
 ```
@@ -183,7 +281,7 @@ alldata.anchors <- FindIntegrationAnchors(object.list = alldata.list, dims = 1:3
 ```
 
 ```
-## 	Retained 2227 anchors
+## 	Retained 2223 anchors
 ```
 
 ```
@@ -203,7 +301,7 @@ alldata.anchors <- FindIntegrationAnchors(object.list = alldata.list, dims = 1:3
 ```
 
 ```
-## 	Found 1823 anchors
+## 	Found 1824 anchors
 ```
 
 ```
@@ -211,7 +309,7 @@ alldata.anchors <- FindIntegrationAnchors(object.list = alldata.list, dims = 1:3
 ```
 
 ```
-## 	Retained 1463 anchors
+## 	Retained 1460 anchors
 ```
 
 ```
@@ -231,7 +329,7 @@ alldata.anchors <- FindIntegrationAnchors(object.list = alldata.list, dims = 1:3
 ```
 
 ```
-## 	Found 2286 anchors
+## 	Found 2284 anchors
 ```
 
 ```
@@ -239,7 +337,7 @@ alldata.anchors <- FindIntegrationAnchors(object.list = alldata.list, dims = 1:3
 ```
 
 ```
-## 	Retained 1894 anchors
+## 	Retained 1879 anchors
 ```
 
 ```
@@ -259,7 +357,7 @@ alldata.anchors <- FindIntegrationAnchors(object.list = alldata.list, dims = 1:3
 ```
 
 ```
-## 	Found 2527 anchors
+## 	Found 2524 anchors
 ```
 
 ```
@@ -267,7 +365,7 @@ alldata.anchors <- FindIntegrationAnchors(object.list = alldata.list, dims = 1:3
 ```
 
 ```
-## 	Retained 1972 anchors
+## 	Retained 1979 anchors
 ```
 
 ```
@@ -295,7 +393,7 @@ alldata.anchors <- FindIntegrationAnchors(object.list = alldata.list, dims = 1:3
 ```
 
 ```
-## 	Retained 1622 anchors
+## 	Retained 1594 anchors
 ```
 
 ```
@@ -323,7 +421,7 @@ alldata.anchors <- FindIntegrationAnchors(object.list = alldata.list, dims = 1:3
 ```
 
 ```
-## 	Retained 2226 anchors
+## 	Retained 2213 anchors
 ```
 
 ```
@@ -343,7 +441,7 @@ alldata.anchors <- FindIntegrationAnchors(object.list = alldata.list, dims = 1:3
 ```
 
 ```
-## 	Found 2899 anchors
+## 	Found 2898 anchors
 ```
 
 ```
@@ -351,7 +449,7 @@ alldata.anchors <- FindIntegrationAnchors(object.list = alldata.list, dims = 1:3
 ```
 
 ```
-## 	Retained 2171 anchors
+## 	Retained 2173 anchors
 ```
 
 ```
@@ -371,7 +469,7 @@ alldata.anchors <- FindIntegrationAnchors(object.list = alldata.list, dims = 1:3
 ```
 
 ```
-## 	Found 2920 anchors
+## 	Found 2919 anchors
 ```
 
 ```
@@ -379,7 +477,7 @@ alldata.anchors <- FindIntegrationAnchors(object.list = alldata.list, dims = 1:3
 ```
 
 ```
-## 	Retained 2513 anchors
+## 	Retained 2506 anchors
 ```
 
 ```
@@ -399,7 +497,7 @@ alldata.anchors <- FindIntegrationAnchors(object.list = alldata.list, dims = 1:3
 ```
 
 ```
-## 	Found 2081 anchors
+## 	Found 2079 anchors
 ```
 
 ```
@@ -407,7 +505,7 @@ alldata.anchors <- FindIntegrationAnchors(object.list = alldata.list, dims = 1:3
 ```
 
 ```
-## 	Retained 1647 anchors
+## 	Retained 1637 anchors
 ```
 
 ```
@@ -435,7 +533,7 @@ alldata.anchors <- FindIntegrationAnchors(object.list = alldata.list, dims = 1:3
 ```
 
 ```
-## 	Retained 2166 anchors
+## 	Retained 2161 anchors
 ```
 
 ```
@@ -455,7 +553,7 @@ alldata.anchors <- FindIntegrationAnchors(object.list = alldata.list, dims = 1:3
 ```
 
 ```
-## 	Found 2821 anchors
+## 	Found 2819 anchors
 ```
 
 ```
@@ -463,7 +561,7 @@ alldata.anchors <- FindIntegrationAnchors(object.list = alldata.list, dims = 1:3
 ```
 
 ```
-## 	Retained 2174 anchors
+## 	Retained 2173 anchors
 ```
 
 ```
@@ -483,7 +581,7 @@ alldata.anchors <- FindIntegrationAnchors(object.list = alldata.list, dims = 1:3
 ```
 
 ```
-## 	Found 2734 anchors
+## 	Found 2735 anchors
 ```
 
 ```
@@ -491,7 +589,7 @@ alldata.anchors <- FindIntegrationAnchors(object.list = alldata.list, dims = 1:3
 ```
 
 ```
-## 	Retained 2283 anchors
+## 	Retained 2281 anchors
 ```
 
 ```
@@ -519,7 +617,7 @@ alldata.anchors <- FindIntegrationAnchors(object.list = alldata.list, dims = 1:3
 ```
 
 ```
-## 	Retained 2773 anchors
+## 	Retained 2769 anchors
 ```
 
 We then pass these anchors to the IntegrateData function, which returns a Seurat object.
@@ -629,10 +727,6 @@ alldata.int <- IntegrateData(anchorset = alldata.anchors, dims = 1:30, new.assay
 ## Integrating data
 ```
 
-```
-## Warning: Adding a command log without an assay associated with it
-```
-
 We can observe that a new assay slot is now created under the name `CCA`.
 
 
@@ -661,7 +755,7 @@ alldata.int <- RunUMAP(alldata.int, dims = 1:30)
 ```
 
 ```
-## 17:36:42 UMAP embedding parameters a = 0.9922 b = 1.112
+## 14:52:30 UMAP embedding parameters a = 0.9922 b = 1.112
 ```
 
 ```
@@ -673,11 +767,11 @@ alldata.int <- RunUMAP(alldata.int, dims = 1:30)
 ```
 
 ```
-## 17:36:42 Read 5532 rows and found 30 numeric columns
+## 14:52:30 Read 5532 rows and found 30 numeric columns
 ```
 
 ```
-## 17:36:42 Using Annoy for neighbor search, n_neighbors = 30
+## 14:52:30 Using Annoy for neighbor search, n_neighbors = 30
 ```
 
 ```
@@ -689,7 +783,7 @@ alldata.int <- RunUMAP(alldata.int, dims = 1:30)
 ```
 
 ```
-## 17:36:42 Building Annoy index with metric = cosine, n_trees = 50
+## 14:52:30 Building Annoy index with metric = cosine, n_trees = 50
 ```
 
 ```
@@ -702,13 +796,13 @@ alldata.int <- RunUMAP(alldata.int, dims = 1:30)
 
 ```
 ## **************************************************|
-## 17:36:43 Writing NN index file to temp file /var/folders/n0/1679kqxs6s1bbdhj59hgpq0rm04rx6/T//Rtmpei6lqo/file6b0b7710496a
-## 17:36:43 Searching Annoy index using 1 thread, search_k = 3000
-## 17:36:44 Annoy recall = 100%
-## 17:36:44 Commencing smooth kNN distance calibration using 1 thread
-## 17:36:45 Initializing from normalized Laplacian + noise
-## 17:36:46 Commencing optimization for 500 epochs, with 254060 positive edges
-## 17:36:53 Optimization finished
+## 14:52:31 Writing NN index file to temp file /var/folders/n0/1679kqxs6s1bbdhj59hgpq0rm04rx6/T//RtmpLopeeM/file161db19090a57
+## 14:52:31 Searching Annoy index using 1 thread, search_k = 3000
+## 14:52:32 Annoy recall = 100%
+## 14:52:33 Commencing smooth kNN distance calibration using 1 thread
+## 14:52:34 Initializing from normalized Laplacian + noise
+## 14:52:34 Commencing optimization for 500 epochs, with 247290 positive edges
+## 14:52:42 Optimization finished
 ```
 
 ```r
@@ -747,9 +841,14 @@ FCER1A, CST3 | DCs
 
 
 ```r
-FeaturePlot(alldata.int, reduction = "umap", features = c("CD3E", "CD4", "CD8A", 
-    "NKG7", "GNLY", "MS4A1", "CD14", "LYZ", "MS4A7", "FCGR3A", "CST3", "FCER1A"), 
-    order = T, slot = "data", combine = T)
+myfeatures <- c("CD3E", "CD4", "CD8A", "NKG7", "GNLY", "MS4A1", "CD14", "LYZ", "MS4A7",
+    "FCGR3A", "CST3", "FCER1A")
+plot_list <- list()
+for (i in myfeatures) {
+    plot_list[[i]] <- FeaturePlot(alldata, reduction = "umap", dims = 1:2, features = i,
+        ncol = 3, order = T) + NoLegend() + NoAxes() + NoGrid()
+}
+plot_grid(ncol = 3, plotlist = plot_list)
 ```
 
 ![](seurat_03_integration_files/figure-html/unnamed-chunk-8-1.png)<!-- -->
@@ -765,7 +864,7 @@ library(harmony)
 ```
 
 ```r
-alldata.harmony <- RunHarmony(alldata, group.by.vars = "orig.ident", reduction = "pca", 
+alldata.harmony <- RunHarmony(alldata, group.by.vars = "orig.ident", reduction = "pca",
     dims.use = 1:50, assay.use = "RNA")
 ```
 
@@ -806,7 +905,7 @@ alldata.harmony <- RunHarmony(alldata, group.by.vars = "orig.ident", reduction =
 ```
 
 ```
-## Harmony 10/10
+## Harmony converged after 9 iterations
 ```
 
 ```
@@ -822,7 +921,7 @@ alldata.int <- RunUMAP(alldata.int, dims = 1:50, reduction = "harmony", reductio
 ```
 
 ```
-## 17:37:17 UMAP embedding parameters a = 0.9922 b = 1.112
+## 14:53:08 UMAP embedding parameters a = 0.9922 b = 1.112
 ```
 
 ```
@@ -834,11 +933,11 @@ alldata.int <- RunUMAP(alldata.int, dims = 1:50, reduction = "harmony", reductio
 ```
 
 ```
-## 17:37:17 Read 5532 rows and found 50 numeric columns
+## 14:53:08 Read 5532 rows and found 50 numeric columns
 ```
 
 ```
-## 17:37:17 Using Annoy for neighbor search, n_neighbors = 30
+## 14:53:08 Using Annoy for neighbor search, n_neighbors = 30
 ```
 
 ```
@@ -850,7 +949,7 @@ alldata.int <- RunUMAP(alldata.int, dims = 1:50, reduction = "harmony", reductio
 ```
 
 ```
-## 17:37:17 Building Annoy index with metric = cosine, n_trees = 50
+## 14:53:08 Building Annoy index with metric = cosine, n_trees = 50
 ```
 
 ```
@@ -863,23 +962,18 @@ alldata.int <- RunUMAP(alldata.int, dims = 1:50, reduction = "harmony", reductio
 
 ```
 ## **************************************************|
-## 17:37:18 Writing NN index file to temp file /var/folders/n0/1679kqxs6s1bbdhj59hgpq0rm04rx6/T//Rtmpei6lqo/file6b0b6eaacd00
-## 17:37:18 Searching Annoy index using 1 thread, search_k = 3000
-## 17:37:19 Annoy recall = 100%
-## 17:37:19 Commencing smooth kNN distance calibration using 1 thread
-## 17:37:21 Initializing from normalized Laplacian + noise
-## 17:37:21 Commencing optimization for 500 epochs, with 253382 positive edges
-## 17:37:28 Optimization finished
+## 14:53:09 Writing NN index file to temp file /var/folders/n0/1679kqxs6s1bbdhj59hgpq0rm04rx6/T//RtmpLopeeM/file161db18f6481f
+## 14:53:09 Searching Annoy index using 1 thread, search_k = 3000
+## 14:53:10 Annoy recall = 100%
+## 14:53:11 Commencing smooth kNN distance calibration using 1 thread
+## 14:53:12 Initializing from normalized Laplacian + noise
+## 14:53:12 Commencing optimization for 500 epochs, with 253252 positive edges
+## 14:53:20 Optimization finished
 ```
 
 ```
 ## Warning: Cannot add objects with duplicate keys (offending key: UMAP_), setting
 ## key to 'umap_harmony_'
-```
-
-```
-## Warning: Keys should be one or more alphanumeric characters followed by an
-## underscore, setting key from umap_harmony_ to umapharmony_
 ```
 
 
@@ -933,7 +1027,7 @@ rownames(intdimred) <- colnames(alldata.int)
 # Add standard deviations in order to draw Elbow Plots in Seurat
 stdevs <- apply(intdimred, MARGIN = 2, FUN = sd)
 
-alldata.int[["scanorama"]] <- CreateDimReducObject(embeddings = intdimred, stdev = stdevs, 
+alldata.int[["scanorama"]] <- CreateDimReducObject(embeddings = intdimred, stdev = stdevs,
     key = "PC_", assay = "RNA")
 ```
 
@@ -948,7 +1042,7 @@ alldata.int <- RunUMAP(alldata.int, dims = 1:100, reduction = "scanorama", reduc
 ```
 
 ```
-## 17:37:36 UMAP embedding parameters a = 0.9922 b = 1.112
+## 14:53:32 UMAP embedding parameters a = 0.9922 b = 1.112
 ```
 
 ```
@@ -960,11 +1054,11 @@ alldata.int <- RunUMAP(alldata.int, dims = 1:100, reduction = "scanorama", reduc
 ```
 
 ```
-## 17:37:36 Read 5532 rows and found 100 numeric columns
+## 14:53:32 Read 5532 rows and found 100 numeric columns
 ```
 
 ```
-## 17:37:36 Using Annoy for neighbor search, n_neighbors = 30
+## 14:53:32 Using Annoy for neighbor search, n_neighbors = 30
 ```
 
 ```
@@ -976,7 +1070,7 @@ alldata.int <- RunUMAP(alldata.int, dims = 1:100, reduction = "scanorama", reduc
 ```
 
 ```
-## 17:37:36 Building Annoy index with metric = cosine, n_trees = 50
+## 14:53:32 Building Annoy index with metric = cosine, n_trees = 50
 ```
 
 ```
@@ -989,13 +1083,13 @@ alldata.int <- RunUMAP(alldata.int, dims = 1:100, reduction = "scanorama", reduc
 
 ```
 ## **************************************************|
-## 17:37:37 Writing NN index file to temp file /var/folders/n0/1679kqxs6s1bbdhj59hgpq0rm04rx6/T//Rtmpei6lqo/file6b0b6f22ac62
-## 17:37:37 Searching Annoy index using 1 thread, search_k = 3000
-## 17:37:38 Annoy recall = 100%
-## 17:37:38 Commencing smooth kNN distance calibration using 1 thread
-## 17:37:40 Initializing from normalized Laplacian + noise
-## 17:37:40 Commencing optimization for 500 epochs, with 259588 positive edges
-## 17:37:47 Optimization finished
+## 14:53:32 Writing NN index file to temp file /var/folders/n0/1679kqxs6s1bbdhj59hgpq0rm04rx6/T//RtmpLopeeM/file161db623d7e2e
+## 14:53:32 Searching Annoy index using 1 thread, search_k = 3000
+## 14:53:34 Annoy recall = 100%
+## 14:53:34 Commencing smooth kNN distance calibration using 1 thread
+## 14:53:35 Initializing from normalized Laplacian + noise
+## 14:53:36 Commencing optimization for 500 epochs, with 259588 positive edges
+## 14:53:44 Optimization finished
 ```
 
 ```
@@ -1003,24 +1097,19 @@ alldata.int <- RunUMAP(alldata.int, dims = 1:100, reduction = "scanorama", reduc
 ## key to 'umap_scanorama_'
 ```
 
-```
-## Warning: Keys should be one or more alphanumeric characters followed by an
-## underscore, setting key from umap_scanorama_ to umapscanorama_
-```
-
 
 
 ```r
 p1 <- DimPlot(alldata, reduction = "umap", group.by = "orig.ident") + ggtitle("UMAP raw_data")
 p2 <- DimPlot(alldata.int, reduction = "umap", group.by = "orig.ident") + ggtitle("UMAP CCA")
-p3 <- DimPlot(alldata.int, reduction = "umap_harmony", group.by = "orig.ident") + 
+p3 <- DimPlot(alldata.int, reduction = "umap_harmony", group.by = "orig.ident") +
     ggtitle("UMAP Harmony")
-p4 <- DimPlot(alldata.int, reduction = "umap_scanorama", group.by = "orig.ident") + 
+p4 <- DimPlot(alldata.int, reduction = "umap_scanorama", group.by = "orig.ident") +
     ggtitle("UMAP Scanorama")
 leg <- get_legend(p1)
 
-gridExtra::grid.arrange(gridExtra::arrangeGrob(p1 + NoLegend() + NoAxes(), p2 + NoLegend() + 
-    NoAxes(), p3 + NoLegend() + NoAxes(), p4 + NoLegend() + NoAxes(), nrow = 2), 
+gridExtra::grid.arrange(gridExtra::arrangeGrob(p1 + NoLegend() + NoAxes(), p2 + NoLegend() +
+    NoAxes(), p3 + NoLegend() + NoAxes(), p4 + NoLegend() + NoAxes(), nrow = 2),
     leg, ncol = 2, widths = c(8, 2))
 ```
 
@@ -1046,12 +1135,12 @@ sessionInfo()
 ```
 
 ```
-## R version 4.0.3 (2020-10-10)
+## R version 4.0.5 (2021-03-31)
 ## Platform: x86_64-apple-darwin13.4.0 (64-bit)
-## Running under: macOS Catalina 10.15.5
+## Running under: macOS Big Sur 10.16
 ## 
 ## Matrix products: default
-## BLAS/LAPACK: /Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/libopenblasp-r0.3.12.dylib
+## BLAS/LAPACK: /Users/paulo.czarnewski/miniconda3/envs/scRNAseq2022/lib/libopenblasp-r0.3.18.dylib
 ## 
 ## locale:
 ## [1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
@@ -1061,85 +1150,93 @@ sessionInfo()
 ##  [8] datasets  methods   base     
 ## 
 ## other attached packages:
-##  [1] reticulate_1.18             harmony_1.0                
-##  [3] Rcpp_1.0.6                  scran_1.18.0               
+##  [1] reticulate_1.22             harmony_1.0                
+##  [3] Rcpp_1.0.7                  scran_1.18.5               
 ##  [5] SingleCellExperiment_1.12.0 SummarizedExperiment_1.20.0
 ##  [7] Biobase_2.50.0              GenomicRanges_1.42.0       
-##  [9] GenomeInfoDb_1.26.0         IRanges_2.24.0             
-## [11] S4Vectors_0.28.0            BiocGenerics_0.36.0        
-## [13] MatrixGenerics_1.2.0        matrixStats_0.57.0         
-## [15] ggplot2_3.3.3               cowplot_1.1.1              
-## [17] KernSmooth_2.23-18          fields_11.6                
-## [19] spam_2.6-0                  dotCall64_1.0-0            
-## [21] DoubletFinder_2.0.3         Matrix_1.3-2               
-## [23] Seurat_3.2.3                RJSONIO_1.3-1.4            
-## [25] optparse_1.6.6             
+##  [9] GenomeInfoDb_1.26.4         IRanges_2.24.1             
+## [11] S4Vectors_0.28.1            BiocGenerics_0.36.0        
+## [13] MatrixGenerics_1.2.1        matrixStats_0.61.0         
+## [15] ggplot2_3.3.5               cowplot_1.1.1              
+## [17] KernSmooth_2.23-20          fields_13.3                
+## [19] viridis_0.6.2               viridisLite_0.4.0          
+## [21] spam_2.7-0                  dotCall64_1.0-1            
+## [23] DoubletFinder_2.0.3         Matrix_1.4-0               
+## [25] SeuratObject_4.0.4          Seurat_4.0.6               
+## [27] RJSONIO_1.3-1.6             optparse_1.7.1             
 ## 
 ## loaded via a namespace (and not attached):
-##   [1] plyr_1.8.6                igraph_1.2.6             
-##   [3] lazyeval_0.2.2            splines_4.0.3            
-##   [5] BiocParallel_1.24.0       listenv_0.8.0            
-##   [7] scattermore_0.7           digest_0.6.27            
-##   [9] htmltools_0.5.1           magrittr_2.0.1           
-##  [11] tensor_1.5                cluster_2.1.0            
-##  [13] ROCR_1.0-11               limma_3.46.0             
-##  [15] remotes_2.2.0             globals_0.14.0           
-##  [17] colorspace_2.0-0          ggrepel_0.9.1            
-##  [19] xfun_0.20                 dplyr_1.0.3              
-##  [21] crayon_1.3.4              RCurl_1.98-1.2           
-##  [23] jsonlite_1.7.2            spatstat_1.64-1          
-##  [25] spatstat.data_1.7-0       survival_3.2-7           
-##  [27] zoo_1.8-8                 glue_1.4.2               
-##  [29] polyclip_1.10-0           gtable_0.3.0             
-##  [31] zlibbioc_1.36.0           XVector_0.30.0           
-##  [33] leiden_0.3.6              DelayedArray_0.16.0      
-##  [35] BiocSingular_1.6.0        future.apply_1.7.0       
-##  [37] maps_3.3.0                abind_1.4-5              
-##  [39] scales_1.1.1              edgeR_3.32.0             
-##  [41] DBI_1.1.1                 miniUI_0.1.1.1           
-##  [43] viridisLite_0.3.0         xtable_1.8-4             
-##  [45] dqrng_0.2.1               bit_4.0.4                
-##  [47] rsvd_1.0.3                htmlwidgets_1.5.3        
-##  [49] httr_1.4.2                getopt_1.20.3            
-##  [51] RColorBrewer_1.1-2        ellipsis_0.3.1           
-##  [53] ica_1.0-2                 scuttle_1.0.0            
-##  [55] pkgconfig_2.0.3           farver_2.0.3             
-##  [57] uwot_0.1.10               deldir_0.2-9             
-##  [59] locfit_1.5-9.4            tidyselect_1.1.0         
-##  [61] labeling_0.4.2            rlang_0.4.10             
-##  [63] reshape2_1.4.4            later_1.1.0.1            
-##  [65] munsell_0.5.0             tools_4.0.3              
-##  [67] generics_0.1.0            ggridges_0.5.3           
-##  [69] evaluate_0.14             stringr_1.4.0            
-##  [71] fastmap_1.0.1             yaml_2.2.1               
-##  [73] goftest_1.2-2             knitr_1.30               
-##  [75] bit64_4.0.5               fitdistrplus_1.1-3       
-##  [77] admisc_0.11               purrr_0.3.4              
-##  [79] RANN_2.6.1                sparseMatrixStats_1.2.0  
-##  [81] pbapply_1.4-3             future_1.21.0            
-##  [83] nlme_3.1-151              mime_0.9                 
-##  [85] formatR_1.7               venn_1.9                 
-##  [87] hdf5r_1.3.3               compiler_4.0.3           
-##  [89] plotly_4.9.3              curl_4.3                 
-##  [91] png_0.1-7                 spatstat.utils_1.20-2    
-##  [93] statmod_1.4.35            tibble_3.0.5             
-##  [95] stringi_1.5.3             RSpectra_0.16-0          
-##  [97] bluster_1.0.0             lattice_0.20-41          
-##  [99] vctrs_0.3.6               pillar_1.4.7             
-## [101] lifecycle_0.2.0           lmtest_0.9-38            
-## [103] BiocNeighbors_1.8.0       RcppAnnoy_0.0.18         
-## [105] data.table_1.13.6         bitops_1.0-6             
-## [107] irlba_2.3.3               httpuv_1.5.5             
-## [109] patchwork_1.1.1           R6_2.5.0                 
-## [111] promises_1.1.1            gridExtra_2.3            
-## [113] parallelly_1.23.0         codetools_0.2-18         
-## [115] MASS_7.3-53               assertthat_0.2.1         
-## [117] withr_2.4.0               sctransform_0.3.2        
-## [119] GenomeInfoDbData_1.2.4    mgcv_1.8-33              
-## [121] beachmat_2.6.0            rpart_4.1-15             
-## [123] tidyr_1.1.2               DelayedMatrixStats_1.12.0
-## [125] rmarkdown_2.6             Rtsne_0.15               
-## [127] shiny_1.5.0
+##   [1] utf8_1.2.2                tidyselect_1.1.1         
+##   [3] htmlwidgets_1.5.4         BiocParallel_1.24.1      
+##   [5] Rtsne_0.15                munsell_0.5.0            
+##   [7] codetools_0.2-18          ica_1.0-2                
+##   [9] statmod_1.4.36            future_1.23.0            
+##  [11] miniUI_0.1.1.1            withr_2.4.3              
+##  [13] colorspace_2.0-2          highr_0.9                
+##  [15] knitr_1.37                ROCR_1.0-11              
+##  [17] tensor_1.5                listenv_0.8.0            
+##  [19] labeling_0.4.2            GenomeInfoDbData_1.2.4   
+##  [21] polyclip_1.10-0           pheatmap_1.0.12          
+##  [23] bit64_4.0.5               farver_2.1.0             
+##  [25] rprojroot_2.0.2           parallelly_1.30.0        
+##  [27] vctrs_0.3.8               generics_0.1.1           
+##  [29] xfun_0.29                 R6_2.5.1                 
+##  [31] rsvd_1.0.5                locfit_1.5-9.4           
+##  [33] hdf5r_1.3.5               bitops_1.0-7             
+##  [35] spatstat.utils_2.3-0      DelayedArray_0.16.3      
+##  [37] assertthat_0.2.1          promises_1.2.0.1         
+##  [39] scales_1.1.1              gtable_0.3.0             
+##  [41] beachmat_2.6.4            globals_0.14.0           
+##  [43] processx_3.5.2            goftest_1.2-3            
+##  [45] rlang_0.4.12              splines_4.0.5            
+##  [47] lazyeval_0.2.2            spatstat.geom_2.3-1      
+##  [49] yaml_2.2.1                reshape2_1.4.4           
+##  [51] abind_1.4-5               httpuv_1.6.4             
+##  [53] tools_4.0.5               ellipsis_0.3.2           
+##  [55] spatstat.core_2.3-2       jquerylib_0.1.4          
+##  [57] RColorBrewer_1.1-2        ggridges_0.5.3           
+##  [59] plyr_1.8.6                sparseMatrixStats_1.2.1  
+##  [61] zlibbioc_1.36.0           purrr_0.3.4              
+##  [63] RCurl_1.98-1.5            ps_1.6.0                 
+##  [65] prettyunits_1.1.1         rpart_4.1-15             
+##  [67] deldir_1.0-6              pbapply_1.5-0            
+##  [69] zoo_1.8-9                 ggrepel_0.9.1            
+##  [71] cluster_2.1.2             here_1.0.1               
+##  [73] magrittr_2.0.1            data.table_1.14.2        
+##  [75] RSpectra_0.16-0           scattermore_0.7          
+##  [77] lmtest_0.9-39             RANN_2.6.1               
+##  [79] fitdistrplus_1.1-6        patchwork_1.1.1          
+##  [81] mime_0.12                 evaluate_0.14            
+##  [83] xtable_1.8-4              gridExtra_2.3            
+##  [85] compiler_4.0.5            tibble_3.1.6             
+##  [87] maps_3.4.0                crayon_1.4.2             
+##  [89] htmltools_0.5.2           mgcv_1.8-38              
+##  [91] later_1.2.0               tidyr_1.1.4              
+##  [93] DBI_1.1.2                 formatR_1.11             
+##  [95] MASS_7.3-54               getopt_1.20.3            
+##  [97] cli_3.1.0                 igraph_1.2.10            
+##  [99] pkgconfig_2.0.3           scuttle_1.0.4            
+## [101] plotly_4.10.0             spatstat.sparse_2.1-0    
+## [103] bslib_0.3.1               dqrng_0.3.0              
+## [105] XVector_0.30.0            stringr_1.4.0            
+## [107] callr_3.7.0               digest_0.6.29            
+## [109] sctransform_0.3.2         RcppAnnoy_0.0.19         
+## [111] spatstat.data_2.1-2       rmarkdown_2.11           
+## [113] leiden_0.3.9              edgeR_3.32.1             
+## [115] uwot_0.1.11               DelayedMatrixStats_1.12.3
+## [117] curl_4.3.2                shiny_1.7.1              
+## [119] lifecycle_1.0.1           nlme_3.1-153             
+## [121] jsonlite_1.7.2            BiocNeighbors_1.8.2      
+## [123] limma_3.46.0              fansi_0.5.0              
+## [125] pillar_1.6.4              lattice_0.20-45          
+## [127] fastmap_1.1.0             httr_1.4.2               
+## [129] pkgbuild_1.3.1            survival_3.2-13          
+## [131] glue_1.6.0                remotes_2.4.2            
+## [133] png_0.1-7                 bluster_1.0.0            
+## [135] bit_4.0.4                 stringi_1.7.6            
+## [137] sass_0.4.0                BiocSingular_1.6.0       
+## [139] dplyr_1.0.7               irlba_2.3.5              
+## [141] future.apply_1.8.1
 ```
 
 

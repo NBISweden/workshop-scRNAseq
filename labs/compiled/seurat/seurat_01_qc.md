@@ -1,7 +1,7 @@
 ---
 title: "Seurat: Quality control"
 author: "Åsa Björklund  &  Paulo Czarnewski"
-date: 'January 28, 2021'
+date: 'December 22, 2021'
 output:
   html_document:
     self_contained: true
@@ -39,27 +39,23 @@ p.caption {font-size: 0.9em;font-style: italic;color: grey;margin-right: 10%;mar
 In this tutorial, we will run all tutorials with a set of 6 PBMC 10x datasets from 3 covid-19 patients and 3 healthy controls, the samples have been subsampled to 1500 cells per sample. They are part of the github repo and if you have cloned the repo they should be available in folder: `labs/data/covid_data_GSE149689`. Instructions on how to download them can also be found in the Precourse material.
 
 
-```bash
-mkdir -p data/raw
-
-# first check if the files are there
-count=$(ls -l data/raw/*.h5 | grep -v ^d | wc -l )
-echo $count
-
-# if not 4 files, fetch the files from github.
-if (("$count" <  6)); then
-  cd data/raw
-  curl -O https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/new_dataset/labs/data/covid_data_GSE149689/sub/Normal_PBMC_13.h5
-  curl -O https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/new_dataset/labs/data/covid_data_GSE149689/sub/Normal_PBMC_14.h5
-  curl -O https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/new_dataset/labs/data/covid_data_GSE149689/sub/Normal_PBMC_5.h5
-  curl -O https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/new_dataset/labs/data/covid_data_GSE149689/sub/nCoV_PBMC_15.h5
-  curl -O https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/new_dataset/labs/data/covid_data_GSE149689/sub/nCoV_PBMC_17.h5
-  curl -O https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/new_dataset/labs/data/covid_data_GSE149689/sub/nCoV_PBMC_1.h5
-  cd ../..
-fi
-
-ls -lGa data/raw
+```r
+webpath <- "https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/new_dataset/labs/data/covid_data_GSE149689/sub/"
+dir.create("./data/raw", recursive = T)
 ```
+
+```
+## Warning in dir.create("./data/raw", recursive = T): './data/raw' already exists
+```
+
+```r
+file_list <- c("Normal_PBMC_13.h5", "Normal_PBMC_14.h5", "Normal_PBMC_5.h5", "nCoV_PBMC_15.h5",
+    "nCoV_PBMC_17.h5", "nCoV_PBMC_1.h5")
+for (i in file_list) {
+    download.file(url = paste0(webpath, i), destfile = paste0("./data/raw/", i))
+}
+```
+
 
 With data in place, now we can start loading libraries we will use in this tutorial.
 
@@ -71,12 +67,49 @@ remotes::install_github("chris-mcginnis-ucsf/DoubletFinder", upgrade = F)
 ```
 
 ```
-## Skipping install of 'DoubletFinder' from a github remote, the SHA1 (5dfd96b0) has not changed since last install.
-##   Use `force = TRUE` to force installation
+## Downloading GitHub repo chris-mcginnis-ucsf/DoubletFinder@HEAD
+```
+
+```
+## Registered S3 method overwritten by 'cli':
+##   method     from         
+##   print.boxx spatstat.geom
 ```
 
 ```r
 suppressMessages(require(DoubletFinder))
+```
+
+```
+##   
+   checking for file ‘/private/var/folders/n0/1679kqxs6s1bbdhj59hgpq0rm04rx6/T/RtmpLopeeM/remotes161db4939a136/chris-mcginnis-ucsf-DoubletFinder-554097b/DESCRIPTION’ ...
+  
+✔  checking for file ‘/private/var/folders/n0/1679kqxs6s1bbdhj59hgpq0rm04rx6/T/RtmpLopeeM/remotes161db4939a136/chris-mcginnis-ucsf-DoubletFinder-554097b/DESCRIPTION’
+## 
+  
+─  preparing ‘DoubletFinder’:
+## 
+  
+   checking DESCRIPTION meta-information ...
+  
+✔  checking DESCRIPTION meta-information
+## 
+  
+─  checking for LF line-endings in source and make files and shell scripts
+## 
+  
+─  checking for empty or unneeded directories
+## 
+  
+─  building ‘DoubletFinder_2.0.3.tar.gz’
+## 
+  
+   Warning: invalid uid value replaced by that for user 'nobody'
+##    Warning: invalid gid value replaced by that for user 'nobody'
+## 
+  
+   
+## 
 ```
 
 We can first load the data individually by reading directly from HDF5 file format (.h5).
@@ -161,8 +194,8 @@ sdata.ctrl14$type = "Ctrl"
 
 
 # Merge datasets into one single seurat object
-alldata <- merge(sdata.cov15, c(sdata.cov1, sdata.cov17, sdata.ctrl5, sdata.ctrl13, 
-    sdata.ctrl14), add.cell.ids = c("covid_15", "covid_1", "covid_17", "ctrl_5", 
+alldata <- merge(sdata.cov15, c(sdata.cov1, sdata.cov17, sdata.ctrl5, sdata.ctrl13,
+    sdata.ctrl14), add.cell.ids = c("covid_15", "covid_1", "covid_17", "ctrl_5",
     "ctrl_13", "ctrl_14"))
 ```
 
@@ -171,7 +204,7 @@ Once you have created the merged Seurat object, the count matrices and individua
 
 ```r
 # remove all objects that will not be used.
-rm(cov.15, cov.1, cov.17, ctrl.5, ctrl.13, ctrl.14, sdata.cov15, sdata.cov1, sdata.cov17, 
+rm(cov.15, cov.1, cov.17, ctrl.5, ctrl.13, ctrl.14, sdata.cov15, sdata.cov1, sdata.cov17,
     sdata.ctrl5, sdata.ctrl13, sdata.ctrl14)
 
 # run garbage collect to free up memory
@@ -179,9 +212,9 @@ gc()
 ```
 
 ```
-##            used  (Mb) gc trigger  (Mb) max used (Mb)
-## Ncells  2685145 143.5    5241734 280.0  5016344  268
-## Vcells 43537947 332.2  109750030 837.4 95539914  729
+##            used  (Mb) gc trigger  (Mb)  max used  (Mb)
+## Ncells  3047805 162.8    4520721 241.5   4520721 241.5
+## Vcells 44897989 342.6  112217115 856.2 102665011 783.3
 ```
  Here it is how the count matrix and the metatada look like for every cell.
 
@@ -263,7 +296,7 @@ Now we can plot some of the QC-features as violin plots.
 
 ```r
 feats <- c("nFeature_RNA", "nCount_RNA", "percent_mito", "percent_ribo", "percent_hb")
-VlnPlot(alldata, group.by = "orig.ident", features = feats, pt.size = 0.1, ncol = 3) + 
+VlnPlot(alldata, group.by = "orig.ident", features = feats, pt.size = 0.1, ncol = 3) +
     NoLegend()
 ```
 
@@ -339,7 +372,7 @@ par(mar = c(4, 8, 2, 1))
 C <- data.filt@assays$RNA@counts
 C <- Matrix::t(Matrix::t(C)/Matrix::colSums(C)) * 100
 most_expressed <- order(apply(C, 1, median), decreasing = T)[20:1]
-boxplot(as.matrix(t(C[most_expressed, ])), cex = 0.1, las = 1, xlab = "% total count per cell", 
+boxplot(as.matrix(t(C[most_expressed, ])), cex = 0.1, las = 1, xlab = "% total count per cell",
     col = (scales::hue_pal())(20)[20:1], horizontal = TRUE)
 ```
 
@@ -382,7 +415,7 @@ Lets plot the same QC-stats another time.
 ```r
 feats <- c("nFeature_RNA", "nCount_RNA", "percent_mito", "percent_ribo", "percent_hb")
 
-VlnPlot(data.filt, group.by = "orig.ident", features = feats, pt.size = 0.1, ncol = 3) + 
+VlnPlot(data.filt, group.by = "orig.ident", features = feats, pt.size = 0.1, ncol = 3) +
     NoLegend()
 ```
 
@@ -431,34 +464,34 @@ genes.file = "data/results/genes.table.csv"
 
 if (!file.exists(genes.file)) {
     suppressMessages(require(biomaRt))
-    
+
     # initialize connection to mart, may take some time if the sites are
     # unresponsive.
     mart <- useMart("ENSEMBL_MART_ENSEMBL", dataset = "hsapiens_gene_ensembl")
-    
+
     # fetch chromosome info plus some other annotations
-    genes.table <- try(biomaRt::getBM(attributes = c("ensembl_gene_id", "external_gene_name", 
-        "description", "gene_biotype", "chromosome_name", "start_position"), mart = mart, 
+    genes.table <- try(biomaRt::getBM(attributes = c("ensembl_gene_id", "external_gene_name",
+        "description", "gene_biotype", "chromosome_name", "start_position"), mart = mart,
         useCache = F))
-    
+
     if (!dir.exists("data/results")) {
         dir.create("data/results")
     }
     if (is.data.frame(genes.table)) {
         write.csv(genes.table, file = genes.file)
     }
-    
+
     if (!file.exists(genes.file)) {
-        download.file("https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/master/labs/misc/genes.table.csv", 
+        download.file("https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/master/labs/misc/genes.table.csv",
             destfile = "data/results/genes.table.csv")
         genes.table = read.csv(genes.file)
     }
-    
+
 } else {
     genes.table = read.csv(genes.file)
 }
 
-genes.table <- genes.table[genes.table$external_gene_name %in% rownames(data.filt), 
+genes.table <- genes.table[genes.table$external_gene_name %in% rownames(data.filt),
     ]
 ```
 
@@ -504,7 +537,7 @@ We here perform cell cycle scoring. To score a gene list, the algorithm calculat
 data.filt = NormalizeData(data.filt)
 
 
-data.filt <- CellCycleScoring(object = data.filt, g2m.features = cc.genes$g2m.genes, 
+data.filt <- CellCycleScoring(object = data.filt, g2m.features = cc.genes$g2m.genes,
     s.features = cc.genes$s.genes)
 ```
 
@@ -522,7 +555,7 @@ We can now plot a violin plot for the cell cycle scores as well.
 
 
 ```r
-VlnPlot(data.filt, features = c("S.Score", "G2M.Score"), group.by = "orig.ident", 
+VlnPlot(data.filt, features = c("S.Score", "G2M.Score"), group.by = "orig.ident",
     ncol = 4, pt.size = 0.1)
 ```
 
@@ -546,7 +579,7 @@ Here, we will use `DoubletFinder` to predict doublet cells. But before doing dou
 suppressMessages(require(DoubletFinder))
 
 data.filt = FindVariableFeatures(data.filt, verbose = F)
-data.filt = ScaleData(data.filt, vars.to.regress = c("nFeature_RNA", "percent_mito"), 
+data.filt = ScaleData(data.filt, vars.to.regress = c("nFeature_RNA", "percent_mito"),
     verbose = F)
 data.filt = RunPCA(data.filt, verbose = F, npcs = 20)
 data.filt = RunUMAP(data.filt, dims = 1:10, verbose = F)
@@ -558,9 +591,9 @@ Then we run doubletFinder, selecting first 10 PCs and a pK value of 0.9. To opti
 ```r
 # Can run parameter optimization with paramSweep, but skip for now.
 
-# sweep.res <- paramSweep_v3(data.filt) sweep.stats <- summarizeSweep(sweep.res,
-# GT = FALSE) bcmvn <- find.pK(sweep.stats) barplot(bcmvn$BCmetric, names.arg =
-# bcmvn$pK, las=2)
+# sweep.res <- paramSweep_v3(data.filt) sweep.stats <-
+# summarizeSweep(sweep.res, GT = FALSE) bcmvn <- find.pK(sweep.stats)
+# barplot(bcmvn$BCmetric, names.arg = bcmvn$pK, las=2)
 
 # define the expected number of doublet cellscells.
 nExp <- round(ncol(data.filt) * 0.04)  # expect 4% doublets
@@ -586,7 +619,7 @@ DF.name = colnames(data.filt@meta.data)[grepl("DF.classification", colnames(data
 
 
 
-cowplot::plot_grid(ncol = 2, DimPlot(data.filt, group.by = "orig.ident") + NoAxes(), 
+cowplot::plot_grid(ncol = 2, DimPlot(data.filt, group.by = "orig.ident") + NoAxes(),
     DimPlot(data.filt, group.by = DF.name) + NoAxes())
 ```
 
@@ -634,12 +667,12 @@ sessionInfo()
 ```
 
 ```
-## R version 4.0.3 (2020-10-10)
+## R version 4.0.5 (2021-03-31)
 ## Platform: x86_64-apple-darwin13.4.0 (64-bit)
-## Running under: macOS Catalina 10.15.5
+## Running under: macOS Big Sur 10.16
 ## 
 ## Matrix products: default
-## BLAS/LAPACK: /Users/paulo.czarnewski/.conda/envs/scRNAseq2021/lib/libopenblasp-r0.3.12.dylib
+## BLAS/LAPACK: /Users/paulo.czarnewski/miniconda3/envs/scRNAseq2022/lib/libopenblasp-r0.3.18.dylib
 ## 
 ## locale:
 ## [1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
@@ -649,49 +682,54 @@ sessionInfo()
 ## [8] base     
 ## 
 ## other attached packages:
-## [1] KernSmooth_2.23-18  fields_11.6         spam_2.6-0         
-## [4] dotCall64_1.0-0     DoubletFinder_2.0.3 Matrix_1.3-2       
-## [7] Seurat_3.2.3        RJSONIO_1.3-1.4     optparse_1.6.6     
+##  [1] KernSmooth_2.23-20  fields_13.3         viridis_0.6.2      
+##  [4] viridisLite_0.4.0   spam_2.7-0          dotCall64_1.0-1    
+##  [7] DoubletFinder_2.0.3 Matrix_1.4-0        SeuratObject_4.0.4 
+## [10] Seurat_4.0.6        RJSONIO_1.3-1.6     optparse_1.7.1     
 ## 
 ## loaded via a namespace (and not attached):
-##   [1] Rtsne_0.15            colorspace_2.0-0      deldir_0.2-9         
-##   [4] ellipsis_0.3.1        ggridges_0.5.3        spatstat.data_1.7-0  
-##   [7] farver_2.0.3          leiden_0.3.6          listenv_0.8.0        
-##  [10] remotes_2.2.0         bit64_4.0.5           getopt_1.20.3        
-##  [13] ggrepel_0.9.1         RSpectra_0.16-0       codetools_0.2-18     
-##  [16] splines_4.0.3         knitr_1.30            polyclip_1.10-0      
-##  [19] jsonlite_1.7.2        ica_1.0-2             cluster_2.1.0        
-##  [22] png_0.1-7             uwot_0.1.10           shiny_1.5.0          
-##  [25] sctransform_0.3.2     compiler_4.0.3        httr_1.4.2           
-##  [28] assertthat_0.2.1      fastmap_1.0.1         lazyeval_0.2.2       
-##  [31] later_1.1.0.1         formatR_1.7           htmltools_0.5.1      
-##  [34] tools_4.0.3           rsvd_1.0.3            igraph_1.2.6         
-##  [37] gtable_0.3.0          glue_1.4.2            RANN_2.6.1           
-##  [40] reshape2_1.4.4        dplyr_1.0.3           maps_3.3.0           
-##  [43] Rcpp_1.0.6            spatstat_1.64-1       scattermore_0.7      
-##  [46] vctrs_0.3.6           nlme_3.1-151          lmtest_0.9-38        
-##  [49] xfun_0.20             stringr_1.4.0         globals_0.14.0       
-##  [52] mime_0.9              miniUI_0.1.1.1        lifecycle_0.2.0      
-##  [55] irlba_2.3.3           goftest_1.2-2         future_1.21.0        
-##  [58] MASS_7.3-53           zoo_1.8-8             scales_1.1.1         
-##  [61] promises_1.1.1        spatstat.utils_1.20-2 parallel_4.0.3       
-##  [64] RColorBrewer_1.1-2    yaml_2.2.1            curl_4.3             
-##  [67] reticulate_1.18       pbapply_1.4-3         gridExtra_2.3        
-##  [70] ggplot2_3.3.3         rpart_4.1-15          stringi_1.5.3        
-##  [73] rlang_0.4.10          pkgconfig_2.0.3       matrixStats_0.57.0   
-##  [76] evaluate_0.14         lattice_0.20-41       ROCR_1.0-11          
-##  [79] purrr_0.3.4           tensor_1.5            labeling_0.4.2       
-##  [82] patchwork_1.1.1       htmlwidgets_1.5.3     bit_4.0.4            
-##  [85] cowplot_1.1.1         tidyselect_1.1.0      parallelly_1.23.0    
-##  [88] RcppAnnoy_0.0.18      plyr_1.8.6            magrittr_2.0.1       
-##  [91] R6_2.5.0              generics_0.1.0        DBI_1.1.1            
-##  [94] withr_2.4.0           pillar_1.4.7          mgcv_1.8-33          
-##  [97] fitdistrplus_1.1-3    survival_3.2-7        abind_1.4-5          
-## [100] tibble_3.0.5          future.apply_1.7.0    crayon_1.3.4         
-## [103] hdf5r_1.3.3           plotly_4.9.3          rmarkdown_2.6        
-## [106] data.table_1.13.6     digest_0.6.27         xtable_1.8-4         
-## [109] tidyr_1.1.2           httpuv_1.5.5          munsell_0.5.0        
-## [112] viridisLite_0.3.0
+##   [1] plyr_1.8.6            igraph_1.2.10         lazyeval_0.2.2       
+##   [4] splines_4.0.5         listenv_0.8.0         scattermore_0.7      
+##   [7] ggplot2_3.3.5         digest_0.6.29         htmltools_0.5.2      
+##  [10] fansi_0.5.0           magrittr_2.0.1        tensor_1.5           
+##  [13] cluster_2.1.2         ROCR_1.0-11           remotes_2.4.2        
+##  [16] globals_0.14.0        matrixStats_0.61.0    spatstat.sparse_2.1-0
+##  [19] prettyunits_1.1.1     colorspace_2.0-2      ggrepel_0.9.1        
+##  [22] xfun_0.29             dplyr_1.0.7           callr_3.7.0          
+##  [25] crayon_1.4.2          jsonlite_1.7.2        spatstat.data_2.1-2  
+##  [28] survival_3.2-13       zoo_1.8-9             glue_1.6.0           
+##  [31] polyclip_1.10-0       gtable_0.3.0          leiden_0.3.9         
+##  [34] pkgbuild_1.3.1        future.apply_1.8.1    maps_3.4.0           
+##  [37] abind_1.4-5           scales_1.1.1          DBI_1.1.2            
+##  [40] miniUI_0.1.1.1        Rcpp_1.0.7            xtable_1.8-4         
+##  [43] reticulate_1.22       spatstat.core_2.3-2   bit_4.0.4            
+##  [46] htmlwidgets_1.5.4     httr_1.4.2            getopt_1.20.3        
+##  [49] RColorBrewer_1.1-2    ellipsis_0.3.2        ica_1.0-2            
+##  [52] pkgconfig_2.0.3       farver_2.1.0          sass_0.4.0           
+##  [55] uwot_0.1.11           deldir_1.0-6          utf8_1.2.2           
+##  [58] tidyselect_1.1.1      labeling_0.4.2        rlang_0.4.12         
+##  [61] reshape2_1.4.4        later_1.2.0           munsell_0.5.0        
+##  [64] tools_4.0.5           cli_3.1.0             generics_0.1.1       
+##  [67] ggridges_0.5.3        evaluate_0.14         stringr_1.4.0        
+##  [70] fastmap_1.1.0         yaml_2.2.1            goftest_1.2-3        
+##  [73] processx_3.5.2        knitr_1.37            bit64_4.0.5          
+##  [76] fitdistrplus_1.1-6    purrr_0.3.4           RANN_2.6.1           
+##  [79] pbapply_1.5-0         future_1.23.0         nlme_3.1-153         
+##  [82] mime_0.12             formatR_1.11          hdf5r_1.3.5          
+##  [85] compiler_4.0.5        plotly_4.10.0         curl_4.3.2           
+##  [88] png_0.1-7             spatstat.utils_2.3-0  tibble_3.1.6         
+##  [91] bslib_0.3.1           stringi_1.7.6         highr_0.9            
+##  [94] ps_1.6.0              RSpectra_0.16-0       lattice_0.20-45      
+##  [97] vctrs_0.3.8           pillar_1.6.4          lifecycle_1.0.1      
+## [100] spatstat.geom_2.3-1   lmtest_0.9-39         jquerylib_0.1.4      
+## [103] RcppAnnoy_0.0.19      data.table_1.14.2     cowplot_1.1.1        
+## [106] irlba_2.3.5           httpuv_1.6.4          patchwork_1.1.1      
+## [109] R6_2.5.1              promises_1.2.0.1      gridExtra_2.3        
+## [112] parallelly_1.30.0     codetools_0.2-18      MASS_7.3-54          
+## [115] assertthat_0.2.1      rprojroot_2.0.2       withr_2.4.3          
+## [118] sctransform_0.3.2     mgcv_1.8-38           parallel_4.0.5       
+## [121] rpart_4.1-15          tidyr_1.1.4           rmarkdown_2.11       
+## [124] Rtsne_0.15            shiny_1.7.1
 ```
 
 

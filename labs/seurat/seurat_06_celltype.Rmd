@@ -17,7 +17,6 @@ editor_options:
 ```{r}
 suppressPackageStartupMessages({
   library(Seurat)
-  library(venn)
   library(dplyr)
   library(cowplot)
   library(ggplot2)
@@ -177,11 +176,11 @@ reference_markers <- FindAllMarkers( reference , min.pct = .1 ,
 
 # Identify the top cell marker genes in reference dataset
 # select top 50 with hihgest foldchange among top 100 signifcant genes.
-reference_markers <- reference_markers [ order(reference_markers$avg_logFC,decreasing = T), ]
+reference_markers <- reference_markers [ order(reference_markers$avg_log2FC,decreasing = T), ]
 reference_markers %>% 
   group_by(cluster) %>% 
   top_n(-100, p_val) %>% 
-  top_n(50, avg_logFC) -> top50_cell_selection
+  top_n(50, avg_log2FC) -> top50_cell_selection
 
 # Transform the markers into a list
 ref_list = split(top50_cell_selection$gene, top50_cell_selection$cluster)
@@ -196,7 +195,7 @@ suppressPackageStartupMessages(library(fgsea))
 
 # run fgsea for each of the clusters in the list
 res <- lapply(DGE_list, function(x){
-  gene_rank <- setNames(x$avg_logFC, x$gene)
+  gene_rank <- setNames(x$avg_log2FC, x$gene)
   fgseaRes <- fgsea( pathways=ref_list, stats=gene_rank,nperm=10000)
   return(fgseaRes)
 })
@@ -279,7 +278,7 @@ celltype_list <- celltype_list[ unlist(lapply(celltype_list,length)) > 5 ]
 ```{r}
 # run fgsea for each of the clusters in the list
 res <- lapply(DGE_list, function(x){
-  gene_rank <- setNames(x$avg_logFC, x$gene)
+  gene_rank <- setNames(x$avg_log2FC, x$gene)
   fgseaRes <- fgsea( pathways=celltype_list, stats=gene_rank,nperm=10000)
   return(fgseaRes)
 })

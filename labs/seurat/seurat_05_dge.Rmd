@@ -15,7 +15,6 @@ editor_options:
 ```{r}
 suppressPackageStartupMessages({
   library(Seurat)
-  library(venn)
   library(dplyr)
   library(cowplot)
   library(ggplot2)
@@ -39,8 +38,6 @@ plot_grid(ncol = 3,
   DimPlot(alldata, label = T) + NoAxes(),
   DimPlot(alldata, group.by = "orig.ident") + NoAxes(),
   DimPlot(alldata, group.by = "type") + NoAxes() )
-
-
 ```
 
 #DGE_TITLE1:
@@ -50,7 +47,7 @@ plot_grid(ncol = 3,
 ```{r}
 #Compute differentiall expression
 markers_genes <- FindAllMarkers(alldata,
-                               logfc.threshold = 0.2,
+                               log2FC.threshold = 0.2,
                                test.use = "wilcox",
                                min.pct = 0.1,
                                min.diff.pct = 0.2,
@@ -71,7 +68,7 @@ top25
 ```{r}
 mypar(2,5,mar=c(4,6,3,1))
 for(i in unique(top25$cluster)){
-  barplot( sort( setNames(top25$avg_logFC, top25$gene) [top25$cluster == i], F),
+  barplot( sort( setNames(top25$avg_log2FC, top25$gene) [top25$cluster == i], F),
            horiz = T,las=1 ,main=paste0(i," vs. rest"),border = "white", yaxs="i" )
   abline(v=c(0,0.25),lty=c(1,2))
 }
@@ -116,7 +113,7 @@ cell_selection <- subset(alldata, cells = colnames(alldata)[ alldata@meta.data[,
 cell_selection <- SetIdent(cell_selection, value = "type")
 #Compute differentiall expression
 DGE_cell_selection <- FindAllMarkers(cell_selection,
-                               logfc.threshold = 0.2,
+                               log2FC.threshold = 0.2,
                                test.use = "wilcox",
                                min.pct = 0.1,
                                min.diff.pct = 0.2,
@@ -182,7 +179,7 @@ abline(v = 0, lty = 1)
 ```{r,fig.height=10,fig.width=10}
 DGE_cell_selection <- FindMarkers(cell_selection,
                                   ident.1 = "Covid",
-                               logfc.threshold = -Inf,
+                               log2FC.threshold = -Inf,
                                test.use = "wilcox",
                                min.pct = 0.1,
                                min.diff.pct = 0,
@@ -191,7 +188,7 @@ DGE_cell_selection <- FindMarkers(cell_selection,
                                assay = "RNA")
 
 # Create a gene rank based on the gene expression fold change
-gene_rank <- setNames( DGE_cell_selection$avg_logFC, casefold(rownames(DGE_cell_selection),upper=T) )
+gene_rank <- setNames( DGE_cell_selection$avg_log2FC, casefold(rownames(DGE_cell_selection),upper=T) )
 ```
 
 #DGE_ALL7.3:
@@ -219,7 +216,7 @@ names(gmt) <- unique(paste0(msigdbgmt_subset$gs_name,"_",msigdbgmt_subset$gs_exa
 library(fgsea)
 
 # Perform enrichemnt analysis
-fgseaRes <- fgsea( pathways=gmt, stats=gene_rank, minSize=15, maxSize=500,nperm = 10000)
+fgseaRes <- fgsea( pathways=gmt, stats=gene_rank, minSize=15, maxSize=500)
 fgseaRes <- fgseaRes[ order(fgseaRes$RES, decreasing = T) ,]
 
 # Filter the results table to show only the top 10 UP or DOWN regulated processes (optional)
