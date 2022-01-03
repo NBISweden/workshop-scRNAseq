@@ -69,7 +69,12 @@ for (i in 1:length(alldata.list)) {
 }
 
 hvgs_per_dataset <- lapply(alldata.list, function(x) { x@assays$RNA@var.features })
-venn::venn(hvgs_per_dataset,opacity = .4,zcolor = scales::hue_pal()(3),cexsn = 1,cexil = 1,lwd=1,col="white",frame=F,borders = NA)
+# venn::venn(hvgs_per_dataset,opacity = .4,zcolor = scales::hue_pal()(3),cexsn = 1,cexil = 1,lwd=1,col="white",frame=F,borders = NA)
+
+temp <- unique(unlist(hvgs_per_dataset))
+overlap <- sapply( hvgs_per_dataset , function(x) { temp %in% x } )
+pheatmap::pheatmap(t(overlap*1),cluster_rows = F ,
+                   color = c("grey90","grey20"))
 ```
 
 We identify anchors using the FindIntegrationAnchors function, which takes a list of Seurat objects as input.
@@ -132,12 +137,12 @@ FCGR3A, LYZ, CST3, MS4A7	| FCGR3A+  Monocytes
 FCER1A, CST3 | DCs
 
 ```{r,message='hide',warning='hide', results='hold',results='hold',fig.asp=.65,fig.width=16}
-FeaturePlot(alldata.int, 
-            reduction = "umap", 
-            features = c("CD3E","CD4","CD8A","NKG7",
-                         "GNLY","MS4A1","CD14","LYZ",
-                         "MS4A7","FCGR3A","CST3","FCER1A"),
-            order = T,slot = "data",combine = T)
+myfeatures <- c("CD3E","CD4","CD8A","NKG7","GNLY","MS4A1","CD14","LYZ","MS4A7","FCGR3A","CST3","FCER1A")
+plot_list <- list()
+for(i in myfeatures){
+  plot_list[[i]] <- FeaturePlot(alldata, reduction = "umap",dims = 1:2,
+            features = i,ncol = 3,order = T) + NoLegend() + NoAxes() + NoGrid() }
+plot_grid(ncol=3, plotlist = plot_list)
 ```
 
 
