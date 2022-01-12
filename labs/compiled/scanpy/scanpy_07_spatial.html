@@ -13105,7 +13105,7 @@ $( document ).ready(function(){
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 <h1 id="Spatial-transcriptomics">Spatial transcriptomics<a class="anchor-link" href="#Spatial-transcriptomics">&#182;</a></h1><hr>
-<p>Adapted from tutorial by Giovanni Palla (<a href="https://scanpy-tutorials.readthedocs.io/en/latest/spatial/integration-scanorama.html">https://scanpy-tutorials.readthedocs.io/en/latest/spatial/integration-scanorama.html</a>)</p>
+<p>Adapted from tutorials by Giovanni Palla (<a href="https://scanpy-tutorials.readthedocs.io/en/latest/spatial/integration-scanorama.html">https://scanpy-tutorials.readthedocs.io/en/latest/spatial/integration-scanorama.html</a>) and Carlos Talavera-López (<a href="https://docs.scvi-tools.org/en/latest/tutorials/notebooks/stereoscope_heart_LV_tutorial.html">https://docs.scvi-tools.org/en/latest/tutorials/notebooks/stereoscope_heart_LV_tutorial.html</a>)</p>
 <p>Spatial transcriptomic data with the Visium platform is in many ways similar to scRNAseq data. It contains UMI counts for 5-20 cells instead of single cells, but is still quite sparse in the same way as scRNAseq data is, but with the additional information about spatial location in the tissue.</p>
 <p>Here we will first run quality control in a similar manner to scRNAseq data, then QC filtering, dimensionality reduction, integration and clustering. Then we will use scRNAseq data from mouse cortex to run LabelTransfer to predict celltypes in the Visium spots.</p>
 <p>We will use two <strong>Visium</strong> spatial transcriptomics dataset of the mouse brain (Sagittal), which are publicly available from the <a href="https://support.10xgenomics.com/spatial-gene-expression/datasets/">10x genomics website</a>. Note, that these dataset have already been filtered for spots that does not overlap with the tissue.</p>
@@ -13118,7 +13118,10 @@ $( document ).ready(function(){
 <div class="prompt input_prompt">In&nbsp;[1]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">scanpy</span> <span class="k">as</span> <span class="nn">sc</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">warnings</span>
+<span class="n">warnings</span><span class="o">.</span><span class="n">simplefilter</span><span class="p">(</span><span class="n">action</span><span class="o">=</span><span class="s1">&#39;ignore&#39;</span><span class="p">,</span> <span class="n">category</span><span class="o">=</span><span class="ne">FutureWarning</span><span class="p">)</span>
+
+<span class="kn">import</span> <span class="nn">scanpy</span> <span class="k">as</span> <span class="nn">sc</span>
 <span class="kn">import</span> <span class="nn">anndata</span> <span class="k">as</span> <span class="nn">an</span>
 <span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
@@ -13184,7 +13187,7 @@ $( document ).ready(function(){
 
 
 <div class="output_subarea output_stream output_stdout output_text">
-<pre>reading /Users/asbj/local/misc/course_git/workshop-scRNAseq/labs/scanpy/data/V1_Mouse_Brain_Sagittal_Anterior/filtered_feature_bc_matrix.h5
+<pre>reading /Users/asbj/local/misc/course_git/workshop-scRNAseq/labs/compiled/scanpy/data/V1_Mouse_Brain_Sagittal_Anterior/filtered_feature_bc_matrix.h5
 </pre>
 </div>
 </div>
@@ -13228,7 +13231,7 @@ $( document ).ready(function(){
 
 
 <div class="output_subarea output_stream output_stdout output_text">
-<pre>reading /Users/asbj/local/misc/course_git/workshop-scRNAseq/labs/scanpy/data/V1_Mouse_Brain_Sagittal_Posterior/filtered_feature_bc_matrix.h5
+<pre>reading /Users/asbj/local/misc/course_git/workshop-scRNAseq/labs/compiled/scanpy/data/V1_Mouse_Brain_Sagittal_Posterior/filtered_feature_bc_matrix.h5
 </pre>
 </div>
 </div>
@@ -13298,11 +13301,13 @@ $( document ).ready(function(){
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># merge into one dataset</span>
+<span class="n">library_names</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;V1_Mouse_Brain_Sagittal_Anterior&quot;</span><span class="p">,</span> <span class="s2">&quot;V1_Mouse_Brain_Sagittal_Posterior&quot;</span><span class="p">]</span>
+
 <span class="n">adata</span> <span class="o">=</span> <span class="n">adata_anterior</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span>
     <span class="n">adata_posterior</span><span class="p">,</span>
     <span class="n">batch_key</span><span class="o">=</span><span class="s2">&quot;library_id&quot;</span><span class="p">,</span>
     <span class="n">uns_merge</span><span class="o">=</span><span class="s2">&quot;unique&quot;</span><span class="p">,</span>
-    <span class="n">batch_categories</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;V1_Mouse_Brain_Sagittal_Anterior&quot;</span><span class="p">,</span> <span class="s2">&quot;V1_Mouse_Brain_Sagittal_Posterior&quot;</span><span class="p">]</span>
+    <span class="n">batch_categories</span><span class="o">=</span><span class="n">library_names</span>
 <span class="p">)</span>
 </pre></div>
 
@@ -13407,22 +13412,6 @@ $( document ).ready(function(){
 <div class="output_subarea output_stream output_stderr output_text">
 <pre>... storing &#39;feature_types&#39; as categorical
 ... storing &#39;genome&#39; as categorical
-/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/seaborn/_decorators.py:43: FutureWarning: Pass the following variable as a keyword arg: x. From version 0.12, the only valid positional argument will be `data`, and passing other arguments without an explicit keyword will result in an error or misinterpretation.
-  FutureWarning
-/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/seaborn/_decorators.py:43: FutureWarning: Pass the following variable as a keyword arg: x. From version 0.12, the only valid positional argument will be `data`, and passing other arguments without an explicit keyword will result in an error or misinterpretation.
-  FutureWarning
-/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/seaborn/_decorators.py:43: FutureWarning: Pass the following variable as a keyword arg: x. From version 0.12, the only valid positional argument will be `data`, and passing other arguments without an explicit keyword will result in an error or misinterpretation.
-  FutureWarning
-/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/seaborn/_decorators.py:43: FutureWarning: Pass the following variable as a keyword arg: x. From version 0.12, the only valid positional argument will be `data`, and passing other arguments without an explicit keyword will result in an error or misinterpretation.
-  FutureWarning
-/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/seaborn/_decorators.py:43: FutureWarning: Pass the following variable as a keyword arg: x. From version 0.12, the only valid positional argument will be `data`, and passing other arguments without an explicit keyword will result in an error or misinterpretation.
-  FutureWarning
-/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/seaborn/_decorators.py:43: FutureWarning: Pass the following variable as a keyword arg: x. From version 0.12, the only valid positional argument will be `data`, and passing other arguments without an explicit keyword will result in an error or misinterpretation.
-  FutureWarning
-/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/seaborn/_decorators.py:43: FutureWarning: Pass the following variable as a keyword arg: x. From version 0.12, the only valid positional argument will be `data`, and passing other arguments without an explicit keyword will result in an error or misinterpretation.
-  FutureWarning
-/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/seaborn/_decorators.py:43: FutureWarning: Pass the following variable as a keyword arg: x. From version 0.12, the only valid positional argument will be `data`, and passing other arguments without an explicit keyword will result in an error or misinterpretation.
-  FutureWarning
 </pre>
 </div>
 </div>
@@ -13463,7 +13452,7 @@ height=697
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># need to plot the two sections separately and specify the library_id</span>
 
-<span class="k">for</span> <span class="n">library</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;V1_Mouse_Brain_Sagittal_Anterior&quot;</span><span class="p">,</span> <span class="s2">&quot;V1_Mouse_Brain_Sagittal_Posterior&quot;</span><span class="p">]:</span>
+<span class="k">for</span> <span class="n">library</span> <span class="ow">in</span> <span class="n">library_names</span><span class="p">:</span>
     <span class="n">sc</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">spatial</span><span class="p">(</span><span class="n">adata</span><span class="p">[</span><span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="o">.</span><span class="n">library_id</span> <span class="o">==</span> <span class="n">library</span><span class="p">,:],</span> <span class="n">library_id</span><span class="o">=</span><span class="n">library</span><span class="p">,</span> <span class="n">color</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;total_counts&quot;</span><span class="p">,</span> <span class="s2">&quot;n_genes_by_counts&quot;</span><span class="p">,</span><span class="s1">&#39;pct_counts_mt&#39;</span><span class="p">,</span> <span class="s1">&#39;pct_counts_hb&#39;</span><span class="p">])</span>
 </pre></div>
 
@@ -13568,7 +13557,7 @@ height=517
 <div class="prompt input_prompt">In&nbsp;[11]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="k">for</span> <span class="n">library</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;V1_Mouse_Brain_Sagittal_Anterior&quot;</span><span class="p">,</span> <span class="s2">&quot;V1_Mouse_Brain_Sagittal_Posterior&quot;</span><span class="p">]:</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="k">for</span> <span class="n">library</span> <span class="ow">in</span> <span class="n">library_names</span><span class="p">:</span>
     <span class="n">sc</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">spatial</span><span class="p">(</span><span class="n">adata</span><span class="p">[</span><span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="o">.</span><span class="n">library_id</span> <span class="o">==</span> <span class="n">library</span><span class="p">,:],</span> <span class="n">library_id</span><span class="o">=</span><span class="n">library</span><span class="p">,</span> <span class="n">color</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;total_counts&quot;</span><span class="p">,</span> <span class="s2">&quot;n_genes_by_counts&quot;</span><span class="p">,</span><span class="s1">&#39;pct_counts_mt&#39;</span><span class="p">,</span> <span class="s1">&#39;pct_counts_hb&#39;</span><span class="p">])</span>
 </pre></div>
 
@@ -13590,7 +13579,7 @@ height=517
 <div class="output_png output_subarea ">
 <img src="scanpy_07_spatial_files/scanpy_07_spatial_18_0.png"
 width=2308
-height=519
+height=517
 >
 </div>
 
@@ -13645,7 +13634,7 @@ height=508
 
 
 <div class="output_subarea output_stream output_stderr output_text">
-<pre>/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/scanpy/preprocessing/_normalization.py:138: UserWarning: Revieved a view of an AnnData. Making a copy.
+<pre>/Users/asbj/miniconda3/envs/python_spatial/lib/python3.7/site-packages/scanpy/preprocessing/_normalization.py:155: UserWarning: Revieved a view of an AnnData. Making a copy.
   view_to_actual(adata)
 </pre>
 </div>
@@ -13672,7 +13661,7 @@ height=508
 
 <div class="output_png output_subarea ">
 <img src="scanpy_07_spatial_files/scanpy_07_spatial_20_2.png"
-width=391
+width=390
 height=391
 >
 </div>
@@ -13748,7 +13737,10 @@ height=391
 <div class="prompt input_prompt">In&nbsp;[14]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">sc</span><span class="o">.</span><span class="n">pp</span><span class="o">.</span><span class="n">normalize_total</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># save the counts to a separate object for later, we need the normalized counts in raw for DEG dete</span>
+<span class="n">counts_adata</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+<span class="n">sc</span><span class="o">.</span><span class="n">pp</span><span class="o">.</span><span class="n">normalize_total</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 <span class="n">sc</span><span class="o">.</span><span class="n">pp</span><span class="o">.</span><span class="n">log1p</span><span class="p">(</span><span class="n">adata</span><span class="p">)</span>
 <span class="c1"># take 1500 variable genes per batch and then use the union of them.</span>
 <span class="n">sc</span><span class="o">.</span><span class="n">pp</span><span class="o">.</span><span class="n">highly_variable_genes</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="n">flavor</span><span class="o">=</span><span class="s2">&quot;seurat&quot;</span><span class="p">,</span> <span class="n">n_top_genes</span><span class="o">=</span><span class="mi">1500</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">batch_key</span><span class="o">=</span><span class="s2">&quot;library_id&quot;</span><span class="p">)</span>
@@ -13775,7 +13767,7 @@ height=391
 
 
 <div class="output_subarea output_stream output_stderr output_text">
-<pre>/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/scanpy/preprocessing/_normalization.py:138: UserWarning: Revieved a view of an AnnData. Making a copy.
+<pre>/Users/asbj/miniconda3/envs/python_spatial/lib/python3.7/site-packages/scanpy/preprocessing/_normalization.py:155: UserWarning: Revieved a view of an AnnData. Making a copy.
   view_to_actual(adata)
 </pre>
 </div>
@@ -13791,7 +13783,7 @@ height=391
     finished (0:00:00)
 If you pass `n_top_genes`, all cutoffs are ignored.
 extracting highly variable genes
-    finished (0:00:02)
+    finished (0:00:03)
 --&gt; added
     &#39;highly_variable&#39;, boolean vector (adata.var)
     &#39;means&#39;, float vector (adata.var)
@@ -13807,9 +13799,12 @@ extracting highly variable genes
 
 
 <div class="output_subarea output_stream output_stderr output_text">
-<pre>/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/scanpy/preprocessing/_highly_variable_genes.py:504: FutureWarning: Slicing a positional slice with .loc is not supported, and will raise TypeError in a future version.  Use .loc with labels or .iloc with positions instead.
-  df.loc[:n_top_genes, &#39;highly_variable&#39;] = True
-/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/scanpy/preprocessing/_simple.py:806: UserWarning: Revieved a view of an AnnData. Making a copy.
+<pre>/Users/asbj/miniconda3/envs/python_spatial/lib/python3.7/site-packages/pandas/core/indexing.py:1732: SettingWithCopyWarning: 
+A value is trying to be set on a copy of a slice from a DataFrame
+
+See the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#returning-a-view-versus-a-copy
+  self._setitem_single_block(indexer, value, name)
+/Users/asbj/miniconda3/envs/python_spatial/lib/python3.7/site-packages/scanpy/preprocessing/_simple.py:843: UserWarning: Revieved a view of an AnnData. Making a copy.
   view_to_actual(adata)
 </pre>
 </div>
@@ -13843,7 +13838,7 @@ extracting highly variable genes
 <div class="prompt input_prompt">In&nbsp;[15]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="k">for</span> <span class="n">library</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;V1_Mouse_Brain_Sagittal_Anterior&quot;</span><span class="p">,</span> <span class="s2">&quot;V1_Mouse_Brain_Sagittal_Posterior&quot;</span><span class="p">]:</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="k">for</span> <span class="n">library</span> <span class="ow">in</span> <span class="n">library_names</span><span class="p">:</span>
     <span class="n">sc</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">spatial</span><span class="p">(</span><span class="n">adata</span><span class="p">[</span><span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="o">.</span><span class="n">library_id</span> <span class="o">==</span> <span class="n">library</span><span class="p">,:],</span> <span class="n">library_id</span><span class="o">=</span><span class="n">library</span><span class="p">,</span> <span class="n">color</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;Ttr&quot;</span><span class="p">,</span> <span class="s2">&quot;Hpca&quot;</span><span class="p">])</span>
 </pre></div>
 
@@ -13865,7 +13860,7 @@ extracting highly variable genes
 <div class="output_png output_subarea ">
 <img src="scanpy_07_spatial_files/scanpy_07_spatial_26_0.png"
 width=1158
-height=530
+height=528
 >
 </div>
 
@@ -13881,7 +13876,7 @@ height=530
 <div class="output_png output_subarea ">
 <img src="scanpy_07_spatial_files/scanpy_07_spatial_26_1.png"
 width=1171
-height=519
+height=517
 >
 </div>
 
@@ -13929,14 +13924,35 @@ WARNING: You’re trying to run this on 2404 dimensions of `.X`, if you really w
 computing PCA
     with n_comps=50
     finished (0:00:00)
-    finished: added to `.uns[&#39;neighbors&#39;]`
+</pre>
+</div>
+</div>
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stderr output_text">
+<pre>OMP: Info #271: omp_set_nested routine deprecated, please use omp_set_max_active_levels instead.
+</pre>
+</div>
+</div>
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>    finished: added to `.uns[&#39;neighbors&#39;]`
     `.obsp[&#39;distances&#39;]`, distances for each pair of neighbors
-    `.obsp[&#39;connectivities&#39;]`, weighted adjacency matrix (0:00:04)
+    `.obsp[&#39;connectivities&#39;]`, weighted adjacency matrix (0:00:14)
 computing UMAP
     finished: added
     &#39;X_umap&#39;, UMAP coordinates (adata.obsm) (0:00:07)
 running Leiden clustering
-    finished: found 21 clusters and added
+    finished: found 22 clusters and added
     &#39;clusters&#39;, the cluster labels (adata.obs, categorical) (0:00:00)
 </pre>
 </div>
@@ -13978,7 +13994,7 @@ running Leiden clustering
 
 
 <div class="output_subarea output_stream output_stdout output_text">
-<pre>WARNING: Length of palette colors is smaller than the number of categories (palette length: 20, categories length: 21. Some categories will have the same color.
+<pre>WARNING: Length of palette colors is smaller than the number of categories (palette length: 20, categories length: 22. Some categories will have the same color.
 </pre>
 </div>
 </div>
@@ -14062,8 +14078,8 @@ height=545
 
 <div class="output_png output_subarea ">
 <img src="scanpy_07_spatial_files/scanpy_07_spatial_32_0.png"
-width=1181
-height=596
+width=1182
+height=595
 >
 </div>
 
@@ -14087,9 +14103,8 @@ height=596
 <div class="prompt input_prompt">In&nbsp;[19]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">batches</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;V1_Mouse_Brain_Sagittal_Anterior&quot;</span><span class="p">,</span> <span class="s2">&quot;V1_Mouse_Brain_Sagittal_Posterior&quot;</span><span class="p">]</span>
-<span class="n">adatas</span> <span class="o">=</span> <span class="p">{}</span>
-<span class="k">for</span> <span class="n">batch</span> <span class="ow">in</span> <span class="n">batches</span><span class="p">:</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">adatas</span> <span class="o">=</span> <span class="p">{}</span>
+<span class="k">for</span> <span class="n">batch</span> <span class="ow">in</span> <span class="n">library_names</span><span class="p">:</span>
     <span class="n">adatas</span><span class="p">[</span><span class="n">batch</span><span class="p">]</span> <span class="o">=</span> <span class="n">adata</span><span class="p">[</span><span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s1">&#39;library_id&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">batch</span><span class="p">,]</span>
 
 <span class="n">adatas</span> 
@@ -14259,9 +14274,9 @@ Processing datasets (0, 1)
     `.obsp[&#39;connectivities&#39;]`, weighted adjacency matrix (0:00:01)
 computing UMAP
     finished: added
-    &#39;X_umap&#39;, UMAP coordinates (adata.obsm) (0:00:07)
+    &#39;X_umap&#39;, UMAP coordinates (adata.obsm) (0:00:11)
 running Leiden clustering
-    finished: found 20 clusters and added
+    finished: found 21 clusters and added
     &#39;clusters&#39;, the cluster labels (adata.obs, categorical) (0:00:00)
 </pre>
 </div>
@@ -14294,10 +14309,21 @@ running Leiden clustering
     <div class="prompt"></div>
 
 
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>WARNING: Length of palette colors is smaller than the number of categories (palette length: 20, categories length: 21. Some categories will have the same color.
+</pre>
+</div>
+</div>
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
 
 
 <div class="output_png output_subarea ">
-<img src="scanpy_07_spatial_files/scanpy_07_spatial_39_0.png"
+<img src="scanpy_07_spatial_files/scanpy_07_spatial_39_1.png"
 width=1382
 height=545
 >
@@ -14312,7 +14338,7 @@ height=545
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<p>We can also visualize the clustering result in spatial coordinates. For that, we first need to save the cluster colors in a dictionary. We can then plot the Visium tissue fo the Anterior and Posterior Sagittal view, alongside each other.</p>
+<p>As we have new clusters, we again need to make a new dict for cluster colors</p>
 
 </div>
 </div>
@@ -14369,8 +14395,8 @@ height=545
 
 <div class="output_png output_subarea ">
 <img src="scanpy_07_spatial_files/scanpy_07_spatial_41_0.png"
-width=1181
-height=596
+width=1182
+height=595
 >
 </div>
 
@@ -14429,8 +14455,38 @@ As a reference, you can compare to brain regions in the <a href="https://mouse.b
     &#39;scores&#39;, sorted np.recarray to be indexed by group ids
     &#39;logfoldchanges&#39;, sorted np.recarray to be indexed by group ids
     &#39;pvals&#39;, sorted np.recarray to be indexed by group ids
-    &#39;pvals_adj&#39;, sorted np.recarray to be indexed by group ids (0:00:19)
-WARNING: dendrogram data not found (using key=dendrogram_clusters). Running `sc.tl.dendrogram` with default parameters. For fine tuning it is recommended to run `sc.tl.dendrogram` independently.
+    &#39;pvals_adj&#39;, sorted np.recarray to be indexed by group ids (0:00:25)
+</pre>
+</div>
+</div>
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stderr output_text">
+<pre>/Users/asbj/miniconda3/envs/python_spatial/lib/python3.7/site-packages/scanpy/tools/_rank_genes_groups.py:394: PerformanceWarning: DataFrame is highly fragmented.  This is usually the result of calling `frame.insert` many times, which has poor performance.  Consider joining all columns at once using pd.concat(axis=1) instead.  To get a de-fragmented frame, use `newframe = frame.copy()`
+  self.stats[group_name, &#39;names&#39;] = self.var_names[global_indices]
+/Users/asbj/miniconda3/envs/python_spatial/lib/python3.7/site-packages/scanpy/tools/_rank_genes_groups.py:396: PerformanceWarning: DataFrame is highly fragmented.  This is usually the result of calling `frame.insert` many times, which has poor performance.  Consider joining all columns at once using pd.concat(axis=1) instead.  To get a de-fragmented frame, use `newframe = frame.copy()`
+  self.stats[group_name, &#39;scores&#39;] = scores[global_indices]
+/Users/asbj/miniconda3/envs/python_spatial/lib/python3.7/site-packages/scanpy/tools/_rank_genes_groups.py:399: PerformanceWarning: DataFrame is highly fragmented.  This is usually the result of calling `frame.insert` many times, which has poor performance.  Consider joining all columns at once using pd.concat(axis=1) instead.  To get a de-fragmented frame, use `newframe = frame.copy()`
+  self.stats[group_name, &#39;pvals&#39;] = pvals[global_indices]
+/Users/asbj/miniconda3/envs/python_spatial/lib/python3.7/site-packages/scanpy/tools/_rank_genes_groups.py:409: PerformanceWarning: DataFrame is highly fragmented.  This is usually the result of calling `frame.insert` many times, which has poor performance.  Consider joining all columns at once using pd.concat(axis=1) instead.  To get a de-fragmented frame, use `newframe = frame.copy()`
+  self.stats[group_name, &#39;pvals_adj&#39;] = pvals_adj[global_indices]
+/Users/asbj/miniconda3/envs/python_spatial/lib/python3.7/site-packages/scanpy/tools/_rank_genes_groups.py:421: PerformanceWarning: DataFrame is highly fragmented.  This is usually the result of calling `frame.insert` many times, which has poor performance.  Consider joining all columns at once using pd.concat(axis=1) instead.  To get a de-fragmented frame, use `newframe = frame.copy()`
+  foldchanges[global_indices]
+</pre>
+</div>
+</div>
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>WARNING: dendrogram data not found (using key=dendrogram_clusters). Running `sc.tl.dendrogram` with default parameters. For fine tuning it is recommended to run `sc.tl.dendrogram` independently.
     using &#39;X_pca&#39; with n_pcs = 50
 Storing dendrogram info using `.uns[&#39;dendrogram_clusters&#39;]`
 WARNING: Groups are not reordered because the `groupby` categories and the `var_group_labels` are different.
@@ -14448,7 +14504,7 @@ var_group_labels: 5
 
 
 <div class="output_png output_subarea ">
-<img src="scanpy_07_spatial_files/scanpy_07_spatial_44_1.png"
+<img src="scanpy_07_spatial_files/scanpy_07_spatial_44_3.png"
 width=335
 height=495
 >
@@ -14491,7 +14547,7 @@ height=495
 <div class="output_png output_subarea ">
 <img src="scanpy_07_spatial_files/scanpy_07_spatial_45_0.png"
 width=1742
-height=524
+height=523
 >
 </div>
 
@@ -14612,31 +14668,6 @@ height=517
 </pre></div>
 
     </div>
-</div>
-</div>
-
-<div class="output_wrapper">
-<div class="output">
-
-
-<div class="output_area">
-
-    <div class="prompt"></div>
-
-
-<div class="output_subarea output_stream output_stderr output_text">
-<pre>/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/anndata/compat/__init__.py:182: FutureWarning: Moving element from .uns[&#39;neighbors&#39;][&#39;distances&#39;] to .obsp[&#39;distances&#39;].
-
-This is where adjacency matrices should go now.
-  FutureWarning,
-/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/anndata/compat/__init__.py:182: FutureWarning: Moving element from .uns[&#39;neighbors&#39;][&#39;connectivities&#39;] to .obsp[&#39;connectivities&#39;].
-
-This is where adjacency matrices should go now.
-  FutureWarning,
-</pre>
-</div>
-</div>
-
 </div>
 </div>
 
@@ -14777,22 +14808,22 @@ Name: cell_subclass, dtype: int64</pre>
 
 
 <div class="output_text output_subarea output_execute_result">
-<pre>Pvalb         200
+<pre>Astro         200
 L6b           200
-L5 PT         200
 Vip           200
-Lamp5         200
-L2/3 IT       200
-NP            200
-Astro         200
-L6 IT         200
-nan           200
 Sst           200
-L5 IT         200
 Sncg          200
+Pvalb         200
 No Class      200
+NP            200
+Lamp5         200
+nan           200
+L6 IT         200
 L6 CT         200
+L5 PT         200
+L5 IT         200
 L4            200
+L2/3 IT       200
 Oligo         183
 Endo          145
 VLMC          130
@@ -14879,7 +14910,7 @@ WARNING: Length of palette colors is smaller than the number of categories (pale
 
 <div class="output_png output_subarea ">
 <img src="scanpy_07_spatial_files/scanpy_07_spatial_55_2.png"
-width=2956
+width=2955
 height=545
 >
 </div>
@@ -14930,6 +14961,7 @@ height=539
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 <h3 id="Subset-ST-for-cortex">Subset ST for cortex<a class="anchor-link" href="#Subset-ST-for-cortex">&#182;</a></h3><p>Since the scRNAseq dataset was generated from the mouse cortex, we will subset the visium dataset in order to select mainly the spots part of the cortex. Note that the integration can also be performed on the whole brain slice, but it would give rise to false positive cell type assignments and and therefore it should be interpreted with more care.</p>
+<p>OBS! For deconvolution we will need the counts data, so we will subset from the <code>counts_adata</code> object that we created earlier.</p>
 
 </div>
 </div>
@@ -14940,19 +14972,16 @@ height=539
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">lib_a</span> <span class="o">=</span> <span class="s2">&quot;V1_Mouse_Brain_Sagittal_Anterior&quot;</span>
-<span class="n">lib_p</span> <span class="o">=</span> <span class="s2">&quot;V1_Mouse_Brain_Sagittal_Posterior&quot;</span>
 
-<span class="n">adata_anterior_subset</span> <span class="o">=</span> <span class="n">adata</span><span class="p">[</span>
-    <span class="p">(</span><span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="o">.</span><span class="n">library_id</span> <span class="o">==</span> <span class="n">lib_a</span><span class="p">)</span> 
-    <span class="o">&amp;</span> <span class="p">(</span><span class="n">adata</span><span class="o">.</span><span class="n">obsm</span><span class="p">[</span><span class="s2">&quot;spatial&quot;</span><span class="p">][:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">6000</span><span class="p">),</span> <span class="p">:</span>
+<span class="n">counts_adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s1">&#39;clusters&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="o">.</span><span class="n">clusters</span>
+
+<span class="n">adata_anterior_subset</span> <span class="o">=</span> <span class="n">counts_adata</span><span class="p">[</span>
+    <span class="p">(</span><span class="n">counts_adata</span><span class="o">.</span><span class="n">obs</span><span class="o">.</span><span class="n">library_id</span> <span class="o">==</span> <span class="n">lib_a</span><span class="p">)</span> 
+    <span class="o">&amp;</span> <span class="p">(</span><span class="n">counts_adata</span><span class="o">.</span><span class="n">obsm</span><span class="p">[</span><span class="s2">&quot;spatial&quot;</span><span class="p">][:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">6000</span><span class="p">),</span> <span class="p">:</span>
 <span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
 
-<span class="n">adata_posterior_subset</span> <span class="o">=</span> <span class="n">adata</span><span class="p">[</span>
-    <span class="p">(</span><span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="o">.</span><span class="n">library_id</span> <span class="o">==</span> <span class="n">lib_p</span><span class="p">)</span> 
-    <span class="o">&amp;</span> <span class="p">(</span><span class="n">adata</span><span class="o">.</span><span class="n">obsm</span><span class="p">[</span><span class="s2">&quot;spatial&quot;</span><span class="p">][:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">4000</span><span class="p">)</span> 
-    <span class="o">&amp;</span> <span class="p">(</span><span class="n">adata</span><span class="o">.</span><span class="n">obsm</span><span class="p">[</span><span class="s2">&quot;spatial&quot;</span><span class="p">][:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">6000</span><span class="p">),</span>
-    <span class="p">:,</span>
-<span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+<span class="c1"># select also the cortex clusters</span>
+<span class="n">adata_anterior_subset</span> <span class="o">=</span> <span class="n">adata_anterior_subset</span><span class="p">[</span><span class="n">adata_anterior_subset</span><span class="o">.</span><span class="n">obs</span><span class="o">.</span><span class="n">clusters</span><span class="o">.</span><span class="n">isin</span><span class="p">([</span><span class="s1">&#39;2&#39;</span><span class="p">,</span><span class="s1">&#39;3&#39;</span><span class="p">,</span><span class="s1">&#39;5&#39;</span><span class="p">,</span><span class="s1">&#39;6&#39;</span><span class="p">]),:]</span>
 </pre></div>
 
     </div>
@@ -14967,144 +14996,12 @@ height=539
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># plot to check that we have the correct regions</span>
 
-<span class="n">fig</span><span class="p">,</span> <span class="n">axs</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span> <span class="mi">10</span><span class="p">))</span>
-
 <span class="n">sc</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">spatial</span><span class="p">(</span>
     <span class="n">adata_anterior_subset</span><span class="p">,</span>
     <span class="n">img_key</span><span class="o">=</span><span class="s2">&quot;hires&quot;</span><span class="p">,</span>
     <span class="n">library_id</span> <span class="o">=</span> <span class="n">lib_a</span><span class="p">,</span>
-    <span class="n">color</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;n_genes_by_counts&#39;</span><span class="p">],</span>
-    <span class="n">size</span><span class="o">=</span><span class="mf">1.5</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">axs</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">show</span><span class="o">=</span><span class="kc">False</span>
-<span class="p">)</span>
-<span class="n">sc</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">spatial</span><span class="p">(</span>
-    <span class="n">adata_posterior_subset</span><span class="p">,</span>
-    <span class="n">img_key</span><span class="o">=</span><span class="s2">&quot;hires&quot;</span><span class="p">,</span>
-    <span class="n">library_id</span> <span class="o">=</span> <span class="n">lib_p</span><span class="p">,</span>
-    <span class="n">color</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;n_genes_by_counts&#39;</span><span class="p">],</span>
-    <span class="n">size</span><span class="o">=</span><span class="mf">1.5</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">axs</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">show</span><span class="o">=</span><span class="kc">False</span>
-<span class="p">)</span>
-</pre></div>
-
-    </div>
-</div>
-</div>
-
-<div class="output_wrapper">
-<div class="output">
-
-
-<div class="output_area">
-
-    <div class="prompt output_prompt">Out[36]:</div>
-
-
-
-
-<div class="output_text output_subarea output_execute_result">
-<pre>&lt;AxesSubplot:title={&#39;center&#39;:&#39;n_genes_by_counts&#39;}, xlabel=&#39;spatial1&#39;, ylabel=&#39;spatial2&#39;&gt;</pre>
-</div>
-
-</div>
-
-<div class="output_area">
-
-    <div class="prompt"></div>
-
-
-
-
-<div class="output_png output_subarea ">
-<img src="scanpy_07_spatial_files/scanpy_07_spatial_59_1.png"
-width=999
-height=624
->
-</div>
-
-</div>
-
-</div>
-</div>
-
-</div>
-<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
-</div><div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
-<h3 id="Integrate-with-scRNAseq">Integrate with scRNAseq<a class="anchor-link" href="#Integrate-with-scRNAseq">&#182;</a></h3><p>The integration task will be performed with Scanorama: each Visium dataset will be integrated with the smart-seq2 data.</p>
-
-</div>
-</div>
-</div>
-<div class="cell border-box-sizing code_cell rendered">
-<div class="input">
-<div class="prompt input_prompt">In&nbsp;[37]:</div>
-<div class="inner_cell">
-    <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># make one list per section</span>
-<span class="n">adatas_anterior</span> <span class="o">=</span> <span class="p">[</span><span class="n">adata_cortex</span><span class="p">,</span> <span class="n">adata_anterior_subset</span><span class="p">]</span>
-<span class="n">adatas_posterior</span> <span class="o">=</span> <span class="p">[</span><span class="n">adata_cortex</span><span class="p">,</span> <span class="n">adata_posterior_subset</span><span class="p">]</span>
-
-
-<span class="c1"># Integration.</span>
-<span class="n">scanorama</span><span class="o">.</span><span class="n">integrate_scanpy</span><span class="p">(</span><span class="n">adatas_anterior</span><span class="p">)</span>
-<span class="n">scanorama</span><span class="o">.</span><span class="n">integrate_scanpy</span><span class="p">(</span><span class="n">adatas_posterior</span><span class="p">)</span>
-</pre></div>
-
-    </div>
-</div>
-</div>
-
-<div class="output_wrapper">
-<div class="output">
-
-
-<div class="output_area">
-
-    <div class="prompt"></div>
-
-
-<div class="output_subarea output_stream output_stdout output_text">
-<pre>Found 2093 genes among all datasets
-[[0.        0.0786268]
- [0.        0.       ]]
-Found 2093 genes among all datasets
-[[0.         0.17676768]
- [0.         0.        ]]
-Processing datasets (0, 1)
-</pre>
-</div>
-</div>
-
-</div>
-</div>
-
-</div>
-<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
-</div><div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
-<p>Concatenate datasets and assign integrated embeddings to anndata objects.</p>
-<p>Notice that we are concatenating datasets with the <code>join="outer"</code> and <code>uns_merge="first"</code> strategies. This is because we want to keep the <code>obsm['coords']</code> as well as the images of the visium datasets.</p>
-
-</div>
-</div>
-</div>
-<div class="cell border-box-sizing code_cell rendered">
-<div class="input">
-<div class="prompt input_prompt">In&nbsp;[38]:</div>
-<div class="inner_cell">
-    <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">adata_cortex_anterior</span> <span class="o">=</span> <span class="n">adata_cortex</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span>
-    <span class="n">adata_anterior_subset</span><span class="p">,</span>
-    <span class="n">batch_key</span><span class="o">=</span><span class="s2">&quot;dataset&quot;</span><span class="p">,</span>
-    <span class="n">batch_categories</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;smart-seq&quot;</span><span class="p">,</span> <span class="s2">&quot;visium&quot;</span><span class="p">],</span>
-    <span class="n">join</span><span class="o">=</span><span class="s2">&quot;outer&quot;</span><span class="p">,</span>
-    <span class="n">uns_merge</span><span class="o">=</span><span class="s2">&quot;first&quot;</span><span class="p">,</span>
-<span class="p">)</span>
-<span class="n">adata_cortex_posterior</span> <span class="o">=</span> <span class="n">adata_cortex</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span>
-    <span class="n">adata_posterior_subset</span><span class="p">,</span>
-    <span class="n">batch_key</span><span class="o">=</span><span class="s2">&quot;dataset&quot;</span><span class="p">,</span>
-    <span class="n">batch_categories</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;smart-seq&quot;</span><span class="p">,</span> <span class="s2">&quot;visium&quot;</span><span class="p">],</span>
-    <span class="n">join</span><span class="o">=</span><span class="s2">&quot;outer&quot;</span><span class="p">,</span>
-    <span class="n">uns_merge</span><span class="o">=</span><span class="s2">&quot;first&quot;</span><span class="p">,</span>
+    <span class="n">color</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;clusters&#39;</span><span class="p">],</span>
+    <span class="n">size</span><span class="o">=</span><span class="mf">1.5</span>
 <span class="p">)</span>
 </pre></div>
 
@@ -15122,10 +15019,317 @@ Processing datasets (0, 1)
 
 
 <div class="output_subarea output_stream output_stderr output_text">
-<pre>/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/anndata/_core/merge.py:894: UserWarning: Only some AnnData objects have `.raw` attribute, not concatenating `.raw` attributes.
-  UserWarning,
+<pre>Trying to set attribute `._uns` of view, copying.
 </pre>
 </div>
+</div>
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+
+
+<div class="output_png output_subarea ">
+<img src="scanpy_07_spatial_files/scanpy_07_spatial_59_1.png"
+width=573
+height=303
+>
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="Deconvolution">Deconvolution<a class="anchor-link" href="#Deconvolution">&#182;</a></h2><p>Deconvolution is a method to estimate the abundance (or proportion) of different celltypes in a bulkRNAseq dataset using a single cell reference. As the Visium data can be seen as a small bulk, we can both use methods for traditional bulkRNAseq as well as methods especially developed for Visium data.
+ Some methods for deconvolution are DWLS, cell2location, Tangram, Stereoscope, RCTD, SCDC and many more.</p>
+<p>Here, we will use deconvolution with Stereoscope implemented in the SCVI-tools package. To read more about Stereoscope please check out this github page (<a href="https://github.com/almaan/stereoscope">https://github.com/almaan/stereoscope</a>)</p>
+<h3 id=":Select-genes-for-deconvolution">:Select genes for deconvolution<a class="anchor-link" href="#:Select-genes-for-deconvolution">&#182;</a></h3><p>Most deconvolution methods does a prior gene selection and there are different options that are used:</p>
+<ul>
+<li>Use variable genes in the SC data.</li>
+<li>Use variable genes in both SC and ST data</li>
+<li>DE genes between clusters in the SC data.</li>
+</ul>
+<p>In this case we will use top DEG genes per cluster, so first we have to run DEG detection on the scRNAseq data.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[37]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">sc</span><span class="o">.</span><span class="n">tl</span><span class="o">.</span><span class="n">rank_genes_groups</span><span class="p">(</span><span class="n">adata_cortex</span><span class="p">,</span> <span class="s1">&#39;cell_subclass&#39;</span><span class="p">,</span> <span class="n">method</span> <span class="o">=</span> <span class="s2">&quot;t-test&quot;</span><span class="p">,</span> <span class="n">n_genes</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
+<span class="n">sc</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">rank_genes_groups_dotplot</span><span class="p">(</span><span class="n">adata_cortex</span><span class="p">,</span> <span class="n">n_genes</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>ranking genes
+    finished: added to `.uns[&#39;rank_genes_groups&#39;]`
+    &#39;names&#39;, sorted np.recarray to be indexed by group ids
+    &#39;scores&#39;, sorted np.recarray to be indexed by group ids
+    &#39;logfoldchanges&#39;, sorted np.recarray to be indexed by group ids
+    &#39;pvals&#39;, sorted np.recarray to be indexed by group ids
+    &#39;pvals_adj&#39;, sorted np.recarray to be indexed by group ids (0:00:34)
+</pre>
+</div>
+</div>
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stderr output_text">
+<pre>/Users/asbj/miniconda3/envs/python_spatial/lib/python3.7/site-packages/scanpy/tools/_rank_genes_groups.py:394: PerformanceWarning: DataFrame is highly fragmented.  This is usually the result of calling `frame.insert` many times, which has poor performance.  Consider joining all columns at once using pd.concat(axis=1) instead.  To get a de-fragmented frame, use `newframe = frame.copy()`
+  self.stats[group_name, &#39;names&#39;] = self.var_names[global_indices]
+/Users/asbj/miniconda3/envs/python_spatial/lib/python3.7/site-packages/scanpy/tools/_rank_genes_groups.py:396: PerformanceWarning: DataFrame is highly fragmented.  This is usually the result of calling `frame.insert` many times, which has poor performance.  Consider joining all columns at once using pd.concat(axis=1) instead.  To get a de-fragmented frame, use `newframe = frame.copy()`
+  self.stats[group_name, &#39;scores&#39;] = scores[global_indices]
+/Users/asbj/miniconda3/envs/python_spatial/lib/python3.7/site-packages/scanpy/tools/_rank_genes_groups.py:399: PerformanceWarning: DataFrame is highly fragmented.  This is usually the result of calling `frame.insert` many times, which has poor performance.  Consider joining all columns at once using pd.concat(axis=1) instead.  To get a de-fragmented frame, use `newframe = frame.copy()`
+  self.stats[group_name, &#39;pvals&#39;] = pvals[global_indices]
+/Users/asbj/miniconda3/envs/python_spatial/lib/python3.7/site-packages/scanpy/tools/_rank_genes_groups.py:409: PerformanceWarning: DataFrame is highly fragmented.  This is usually the result of calling `frame.insert` many times, which has poor performance.  Consider joining all columns at once using pd.concat(axis=1) instead.  To get a de-fragmented frame, use `newframe = frame.copy()`
+  self.stats[group_name, &#39;pvals_adj&#39;] = pvals_adj[global_indices]
+/Users/asbj/miniconda3/envs/python_spatial/lib/python3.7/site-packages/scanpy/tools/_rank_genes_groups.py:421: PerformanceWarning: DataFrame is highly fragmented.  This is usually the result of calling `frame.insert` many times, which has poor performance.  Consider joining all columns at once using pd.concat(axis=1) instead.  To get a de-fragmented frame, use `newframe = frame.copy()`
+  foldchanges[global_indices]
+</pre>
+</div>
+</div>
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>WARNING: dendrogram data not found (using key=dendrogram_cell_subclass). Running `sc.tl.dendrogram` with default parameters. For fine tuning it is recommended to run `sc.tl.dendrogram` independently.
+    using &#39;X_pca&#39; with n_pcs = 30
+Storing dendrogram info using `.uns[&#39;dendrogram_cell_subclass&#39;]`
+</pre>
+</div>
+</div>
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+
+
+<div class="output_png output_subarea ">
+<img src="scanpy_07_spatial_files/scanpy_07_spatial_61_3.png"
+width=1975
+height=745
+>
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[&nbsp;]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span> 
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[38]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">sc</span><span class="o">.</span><span class="n">tl</span><span class="o">.</span><span class="n">filter_rank_genes_groups</span><span class="p">(</span><span class="n">adata_cortex</span><span class="p">,</span> <span class="n">min_fold_change</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+<span class="n">genes</span> <span class="o">=</span> <span class="n">sc</span><span class="o">.</span><span class="n">get</span><span class="o">.</span><span class="n">rank_genes_groups_df</span><span class="p">(</span><span class="n">adata_cortex</span><span class="p">,</span> <span class="n">group</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span>
+<span class="n">genes</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>Filtering genes using: min_in_group_fraction: 0.25 min_fold_change: 1, max_out_group_fraction: 0.5
+</pre>
+</div>
+</div>
+
+<div class="output_area">
+
+    <div class="prompt output_prompt">Out[38]:</div>
+
+
+
+<div class="output_html rendered_html output_subarea output_execute_result">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>group</th>
+      <th>names</th>
+      <th>scores</th>
+      <th>logfoldchanges</th>
+      <th>pvals</th>
+      <th>pvals_adj</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>Astro</td>
+      <td>Slc1a3</td>
+      <td>187.573410</td>
+      <td>12.699084</td>
+      <td>0.000000e+00</td>
+      <td>0.000000e+00</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>Astro</td>
+      <td>Cldn10</td>
+      <td>185.580582</td>
+      <td>13.047205</td>
+      <td>5.563159e-318</td>
+      <td>3.719994e-316</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>Astro</td>
+      <td>Ntsr2</td>
+      <td>183.421204</td>
+      <td>12.866629</td>
+      <td>0.000000e+00</td>
+      <td>0.000000e+00</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>Astro</td>
+      <td>Gpr37l1</td>
+      <td>174.906357</td>
+      <td>13.525583</td>
+      <td>9.881313e-324</td>
+      <td>6.719293e-322</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>Astro</td>
+      <td>Gjb6</td>
+      <td>165.159912</td>
+      <td>12.888643</td>
+      <td>0.000000e+00</td>
+      <td>0.000000e+00</td>
+    </tr>
+    <tr>
+      <th>...</th>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+    </tr>
+    <tr>
+      <th>2495</th>
+      <td>nan</td>
+      <td>Syngr1</td>
+      <td>27.384808</td>
+      <td>1.977148</td>
+      <td>1.081371e-116</td>
+      <td>3.840127e-114</td>
+    </tr>
+    <tr>
+      <th>2496</th>
+      <td>nan</td>
+      <td>Atcay</td>
+      <td>27.351534</td>
+      <td>2.616293</td>
+      <td>2.625003e-96</td>
+      <td>4.949213e-94</td>
+    </tr>
+    <tr>
+      <th>2497</th>
+      <td>nan</td>
+      <td>Necap1</td>
+      <td>27.262054</td>
+      <td>2.301202</td>
+      <td>1.816355e-116</td>
+      <td>6.327315e-114</td>
+    </tr>
+    <tr>
+      <th>2498</th>
+      <td>nan</td>
+      <td>App</td>
+      <td>27.235752</td>
+      <td>1.733814</td>
+      <td>3.233941e-126</td>
+      <td>1.442535e-123</td>
+    </tr>
+    <tr>
+      <th>2499</th>
+      <td>nan</td>
+      <td>Chp1</td>
+      <td>27.221622</td>
+      <td>2.231402</td>
+      <td>2.501038e-107</td>
+      <td>6.878229e-105</td>
+    </tr>
+  </tbody>
+</table>
+<p>2500 rows × 6 columns</p>
+</div>
+</div>
+
 </div>
 
 </div>
@@ -15137,33 +15341,45 @@ Processing datasets (0, 1)
 <div class="prompt input_prompt">In&nbsp;[39]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># add in the concatenated scanorama embeddings.</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">deg</span> <span class="o">=</span> <span class="n">genes</span><span class="o">.</span><span class="n">names</span><span class="o">.</span><span class="n">unique</span><span class="p">()</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">deg</span><span class="p">))</span>
+<span class="c1"># check that the genes are also present in the ST data</span>
 
-<span class="n">embedding_anterior</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">ad</span><span class="o">.</span><span class="n">obsm</span><span class="p">[</span><span class="s1">&#39;X_scanorama&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">ad</span> <span class="ow">in</span> <span class="n">adatas_anterior</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-<span class="n">adata_cortex_anterior</span><span class="o">.</span><span class="n">obsm</span><span class="p">[</span><span class="s2">&quot;scanorama_embedding&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">embedding_anterior</span>
 
-<span class="n">embedding_posterior</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">ad</span><span class="o">.</span><span class="n">obsm</span><span class="p">[</span><span class="s1">&#39;X_scanorama&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">ad</span> <span class="ow">in</span> <span class="n">adatas_posterior</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-<span class="n">adata_cortex_posterior</span><span class="o">.</span><span class="n">obsm</span><span class="p">[</span><span class="s2">&quot;scanorama_embedding&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">embedding_posterior</span>
+<span class="n">deg</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">intersect1d</span><span class="p">(</span><span class="n">deg</span><span class="p">,</span><span class="n">adata_anterior_subset</span><span class="o">.</span><span class="n">var</span><span class="o">.</span><span class="n">index</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">deg</span><span class="p">))</span>
 </pre></div>
 
     </div>
 </div>
 </div>
 
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>1427
+1343
+</pre>
 </div>
-<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
-</div><div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
-<p>At this step, we have integrated each visium dataset in a common embedding with the scRNA-seq dataset. In such embedding space, we can compute distances between samples and use such distances as <em>weights</em> to be used for for <em>propagating</em> labels from the scRNA-seq dataset to the Visium dataset.</p>
-<p>Such approach is very similar to the <code>TransferData</code> function in Seurat (see <a href="https://www.cell.com/cell/fulltext/S0092-8674(19">paper</a>30559-8)). Here, we re-implement the label transfer function with a simple python function, see below.</p>
+</div>
 
 </div>
 </div>
+
 </div>
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<p>Frist, let's compute cosine distances between the visium dataset and the scRNA-seq dataset, in the common embedding space</p>
+<h3 id="Train-the-model">Train the model<a class="anchor-link" href="#Train-the-model">&#182;</a></h3><p>First, train the model using scRNAseq data.</p>
+<p>Stereoscope requires the data to be in counts, earlier in this tutorial we saved the spatial counts in a separate object <code>counts_adata</code>.</p>
+<p>However, the single cell dataset that we dowloaded only has the lognormalized data in the adata.X slot, hence we will have to recalculate the count matrix.</p>
 
 </div>
 </div>
@@ -15173,159 +15389,16 @@ Processing datasets (0, 1)
 <div class="prompt input_prompt">In&nbsp;[40]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">from</span> <span class="nn">sklearn.metrics.pairwise</span> <span class="kn">import</span> <span class="n">cosine_distances</span>
-
-<span class="n">distances_anterior</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">cosine_distances</span><span class="p">(</span>
-    <span class="n">adata_cortex_anterior</span><span class="p">[</span><span class="n">adata_cortex_anterior</span><span class="o">.</span><span class="n">obs</span><span class="o">.</span><span class="n">dataset</span> <span class="o">==</span> <span class="s2">&quot;smart-seq&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">obsm</span><span class="p">[</span>
-        <span class="s2">&quot;scanorama_embedding&quot;</span>
-    <span class="p">],</span>
-    <span class="n">adata_cortex_anterior</span><span class="p">[</span><span class="n">adata_cortex_anterior</span><span class="o">.</span><span class="n">obs</span><span class="o">.</span><span class="n">dataset</span> <span class="o">==</span> <span class="s2">&quot;visium&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">obsm</span><span class="p">[</span>
-        <span class="s2">&quot;scanorama_embedding&quot;</span>
-    <span class="p">],</span>
-<span class="p">)</span>
-<span class="n">distances_posterior</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">cosine_distances</span><span class="p">(</span>
-    <span class="n">adata_cortex_posterior</span><span class="p">[</span><span class="n">adata_cortex_posterior</span><span class="o">.</span><span class="n">obs</span><span class="o">.</span><span class="n">dataset</span> <span class="o">==</span> <span class="s2">&quot;smart-seq&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">obsm</span><span class="p">[</span>
-        <span class="s2">&quot;scanorama_embedding&quot;</span>
-    <span class="p">],</span>
-    <span class="n">adata_cortex_posterior</span><span class="p">[</span><span class="n">adata_cortex_posterior</span><span class="o">.</span><span class="n">obs</span><span class="o">.</span><span class="n">dataset</span> <span class="o">==</span> <span class="s2">&quot;visium&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">obsm</span><span class="p">[</span>
-        <span class="s2">&quot;scanorama_embedding&quot;</span>
-    <span class="p">],</span>
-<span class="p">)</span>
-</pre></div>
-
-    </div>
-</div>
-</div>
-
-</div>
-<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
-</div><div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
-<p>Then, let's propagate labels from the scRNA-seq dataset to the visium dataset</p>
-
-</div>
-</div>
-</div>
-<div class="cell border-box-sizing code_cell rendered">
-<div class="input">
-<div class="prompt input_prompt">In&nbsp;[41]:</div>
-<div class="inner_cell">
-    <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="k">def</span> <span class="nf">label_transfer</span><span class="p">(</span><span class="n">dist</span><span class="p">,</span> <span class="n">labels</span><span class="p">):</span>
-    <span class="n">lab</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">get_dummies</span><span class="p">(</span><span class="n">labels</span><span class="p">)</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span><span class="o">.</span><span class="n">T</span>
-    <span class="n">class_prob</span> <span class="o">=</span> <span class="n">lab</span> <span class="o">@</span> <span class="n">dist</span>
-    <span class="n">norm</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">class_prob</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-    <span class="n">class_prob</span> <span class="o">=</span> <span class="n">class_prob</span> <span class="o">/</span> <span class="n">norm</span>
-    <span class="n">class_prob</span> <span class="o">=</span> <span class="p">(</span><span class="n">class_prob</span><span class="o">.</span><span class="n">T</span> <span class="o">-</span> <span class="n">class_prob</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span> <span class="o">/</span> <span class="n">class_prob</span><span class="o">.</span><span class="n">ptp</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">class_prob</span>
-</pre></div>
-
-    </div>
-</div>
-</div>
-
-</div>
-<div class="cell border-box-sizing code_cell rendered">
-<div class="input">
-<div class="prompt input_prompt">In&nbsp;[42]:</div>
-<div class="inner_cell">
-    <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">class_prob_anterior</span> <span class="o">=</span> <span class="n">label_transfer</span><span class="p">(</span><span class="n">distances_anterior</span><span class="p">,</span> <span class="n">adata_cortex</span><span class="o">.</span><span class="n">obs</span><span class="o">.</span><span class="n">cell_subclass</span><span class="p">)</span>
-<span class="n">class_prob_posterior</span> <span class="o">=</span> <span class="n">label_transfer</span><span class="p">(</span>
-    <span class="n">distances_posterior</span><span class="p">,</span> <span class="n">adata_cortex</span><span class="o">.</span><span class="n">obs</span><span class="o">.</span><span class="n">cell_subclass</span>
-<span class="p">)</span>
-</pre></div>
-
-    </div>
-</div>
-</div>
-
-</div>
-<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
-</div><div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
-<p>The <code>class_prob_[anterior-posterior]</code> objects is a numpy array of shape <code>(cell_type, visium_spots)</code> that contains <em>assigned weights</em> of each spots to each cell types. This value essentially tells us how similar that spots look like, from an expression profile perspective, to all the other annotated cell types from the scRNA-seq dataset.</p>
-
-</div>
-</div>
-</div>
-<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
-</div><div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
-<p>We convert the <code>class_prob_[anterior-posterior]</code> object to a dataframe and assign it to the respective anndata</p>
-
-</div>
-</div>
-</div>
-<div class="cell border-box-sizing code_cell rendered">
-<div class="input">
-<div class="prompt input_prompt">In&nbsp;[43]:</div>
-<div class="inner_cell">
-    <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">cp_anterior_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
-    <span class="n">class_prob_anterior</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">adata_cortex</span><span class="o">.</span><span class="n">obs</span><span class="o">.</span><span class="n">cell_subclass</span><span class="o">.</span><span class="n">unique</span><span class="p">())</span>
-<span class="p">)</span>
-<span class="n">cp_posterior_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
-    <span class="n">class_prob_posterior</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">adata_cortex</span><span class="o">.</span><span class="n">obs</span><span class="o">.</span><span class="n">cell_subclass</span><span class="o">.</span><span class="n">unique</span><span class="p">())</span>
-<span class="p">)</span>
-
-<span class="n">cp_anterior_df</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="n">adata_anterior_subset</span><span class="o">.</span><span class="n">obs</span><span class="o">.</span><span class="n">index</span>
-<span class="n">cp_posterior_df</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="n">adata_posterior_subset</span><span class="o">.</span><span class="n">obs</span><span class="o">.</span><span class="n">index</span>
-</pre></div>
-
-    </div>
-</div>
-</div>
-
-</div>
-<div class="cell border-box-sizing code_cell rendered">
-<div class="input">
-<div class="prompt input_prompt">In&nbsp;[44]:</div>
-<div class="inner_cell">
-    <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">adata_anterior_subset_transfer</span> <span class="o">=</span> <span class="n">adata_anterior_subset</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-<span class="n">adata_anterior_subset_transfer</span><span class="o">.</span><span class="n">obs</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span>
-    <span class="p">[</span><span class="n">adata_anterior_subset</span><span class="o">.</span><span class="n">obs</span><span class="p">,</span> <span class="n">cp_anterior_df</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span>
-<span class="p">)</span>
-
-<span class="n">adata_posterior_subset_transfer</span> <span class="o">=</span> <span class="n">adata_posterior_subset</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-<span class="n">adata_posterior_subset_transfer</span><span class="o">.</span><span class="n">obs</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span>
-    <span class="p">[</span><span class="n">adata_posterior_subset</span><span class="o">.</span><span class="n">obs</span><span class="p">,</span> <span class="n">cp_posterior_df</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span>
-<span class="p">)</span>
-</pre></div>
-
-    </div>
-</div>
-</div>
-
-</div>
-<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
-</div><div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
-<p>We are then able to explore how cell types are propagated from the scRNA-seq dataset to the visium dataset. Let's first visualize the neurons cortical layers.</p>
-
-</div>
-</div>
-</div>
-<div class="cell border-box-sizing code_cell rendered">
-<div class="input">
-<div class="prompt input_prompt">In&nbsp;[45]:</div>
-<div class="inner_cell">
-    <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">sc</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">spatial</span><span class="p">(</span>
-    <span class="n">adata_anterior_subset_transfer</span><span class="p">,</span>
-    <span class="n">img_key</span><span class="o">=</span><span class="s2">&quot;hires&quot;</span><span class="p">,</span>
-    <span class="n">color</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;L2/3 IT&quot;</span><span class="p">,</span> <span class="s2">&quot;L4&quot;</span><span class="p">,</span> <span class="s2">&quot;L5 PT&quot;</span><span class="p">,</span> <span class="s2">&quot;L6 CT&quot;</span><span class="p">],</span>
-    <span class="n">library_id</span> <span class="o">=</span> <span class="n">lib_a</span><span class="p">,</span>
-    <span class="n">size</span><span class="o">=</span><span class="mf">1.5</span><span class="p">,</span>
-<span class="p">)</span>
-<span class="n">sc</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">spatial</span><span class="p">(</span>
-    <span class="n">adata_posterior_subset_transfer</span><span class="p">,</span>
-    <span class="n">img_key</span><span class="o">=</span><span class="s2">&quot;hires&quot;</span><span class="p">,</span>
-    <span class="n">color</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;L2/3 IT&quot;</span><span class="p">,</span> <span class="s2">&quot;L4&quot;</span><span class="p">,</span> <span class="s2">&quot;L5 PT&quot;</span><span class="p">,</span> <span class="s2">&quot;L6 CT&quot;</span><span class="p">],</span>
-    <span class="n">library_id</span> <span class="o">=</span> <span class="n">lib_p</span><span class="p">,</span>
-    <span class="n">size</span><span class="o">=</span><span class="mf">1.5</span><span class="p">,</span>
-<span class="p">)</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># first do exponent and subtract pseudocount</span>
+<span class="n">E</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">adata_cortex</span><span class="o">.</span><span class="n">X</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span>
+<span class="n">n</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">E</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">n</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">n</span><span class="p">))</span>
+<span class="c1"># all sums to 1.7M</span>
+<span class="n">factor</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+<span class="n">nC</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">adata_cortex</span><span class="o">.</span><span class="n">obs</span><span class="o">.</span><span class="n">total_counts</span><span class="p">)</span> <span class="c1"># true number of counts</span>
+<span class="n">scaleF</span> <span class="o">=</span> <span class="n">nC</span><span class="o">/</span><span class="n">factor</span>
+<span class="n">C</span> <span class="o">=</span> <span class="n">E</span> <span class="o">*</span> <span class="n">scaleF</span><span class="p">[:,</span><span class="kc">None</span><span class="p">]</span>
+<span class="n">C</span> <span class="o">=</span> <span class="n">C</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">&quot;int&quot;</span><span class="p">)</span>
 </pre></div>
 
     </div>
@@ -15341,15 +15414,144 @@ Processing datasets (0, 1)
     <div class="prompt"></div>
 
 
-
-
-<div class="output_png output_subarea ">
-<img src="scanpy_07_spatial_files/scanpy_07_spatial_76_0.png"
-width=2312
-height=523
->
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>1728362.2 1728362.8
+</pre>
+</div>
 </div>
 
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[41]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">sc_adata</span> <span class="o">=</span> <span class="n">adata_cortex</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+<span class="n">sc_adata</span><span class="o">.</span><span class="n">X</span> <span class="o">=</span> <span class="n">C</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Setup the anndata, the implementation requires the counts matrix to be in the "counts" layer as a copy.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[42]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">scvi</span>
+<span class="kn">from</span> <span class="nn">scvi.data</span> <span class="kn">import</span> <span class="n">register_tensor_from_anndata</span>
+<span class="kn">from</span> <span class="nn">scvi.external</span> <span class="kn">import</span> <span class="n">RNAStereoscope</span><span class="p">,</span> <span class="n">SpatialStereoscope</span>
+
+<span class="c1"># add counts layer</span>
+<span class="n">sc_adata</span><span class="o">.</span><span class="n">layers</span><span class="p">[</span><span class="s2">&quot;counts&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sc_adata</span><span class="o">.</span><span class="n">X</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+<span class="c1"># subset for the selected genes</span>
+<span class="n">sc_adata</span> <span class="o">=</span> <span class="n">sc_adata</span><span class="p">[:,</span> <span class="n">deg</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+<span class="c1"># create stereoscope object</span>
+<span class="n">RNAStereoscope</span><span class="o">.</span><span class="n">setup_anndata</span><span class="p">(</span><span class="n">sc_adata</span><span class="p">,</span> <span class="n">layer</span> <span class="o">=</span> <span class="s2">&quot;counts&quot;</span><span class="p">,</span> <span class="n">labels_key</span> <span class="o">=</span> <span class="s2">&quot;cell_subclass&quot;</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stderr output_text">
+<pre>Global seed set to 0
+</pre>
+</div>
+</div>
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre><span class="ansi-blue-fg">INFO    </span> No batch_key inputted, assuming all cells are same batch                            
+<span class="ansi-blue-fg">INFO    </span> Using labels from adata.obs<span class="ansi-bold">[</span><span class="ansi-green-fg">&#34;cell_subclass&#34;</span><span class="ansi-bold">]</span>                                        
+<span class="ansi-blue-fg">INFO    </span> Using data from adata.layers<span class="ansi-bold">[</span><span class="ansi-green-fg">&#34;counts&#34;</span><span class="ansi-bold">]</span>                                              
+<span class="ansi-blue-fg">INFO    </span> Successfully registered anndata object containing <span class="ansi-cyan-intense-fg ansi-bold">4067</span> cells, <span class="ansi-cyan-intense-fg ansi-bold">1343</span> vars, <span class="ansi-cyan-intense-fg ansi-bold">1</span> batches, 
+         <span class="ansi-cyan-intense-fg ansi-bold">25</span> labels, and <span class="ansi-cyan-intense-fg ansi-bold">0</span> proteins. Also registered <span class="ansi-cyan-intense-fg ansi-bold">0</span> extra categorical covariates and <span class="ansi-cyan-intense-fg ansi-bold">0</span>     
+         extra continuous covariates.                                                        
+<span class="ansi-blue-fg">INFO    </span> Please do not further modify adata until model is trained.                          
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[43]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># the model is saved to a file, so if is slow to run, you can simply reload it from disk by setting train = False</span>
+
+<span class="n">train</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="k">if</span> <span class="n">train</span><span class="p">:</span>
+    <span class="n">sc_model</span> <span class="o">=</span> <span class="n">RNAStereoscope</span><span class="p">(</span><span class="n">sc_adata</span><span class="p">)</span>
+    <span class="n">sc_model</span><span class="o">.</span><span class="n">train</span><span class="p">(</span><span class="n">max_epochs</span> <span class="o">=</span> <span class="mi">300</span><span class="p">)</span>
+    <span class="n">sc_model</span><span class="o">.</span><span class="n">history</span><span class="p">[</span><span class="s2">&quot;elbo_train&quot;</span><span class="p">][</span><span class="mi">10</span><span class="p">:]</span><span class="o">.</span><span class="n">plot</span><span class="p">()</span>
+    <span class="n">sc_model</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">&quot;./data/spatial/scmodel&quot;</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="n">sc_model</span> <span class="o">=</span> <span class="n">RNAStereoscope</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;./data/spatial/scmodel&quot;</span><span class="p">,</span> <span class="n">sc_adata</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Loaded RNA model from file!&quot;</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stderr output_text">
+<pre>GPU available: False, used: False
+TPU available: False, using: 0 TPU cores
+</pre>
+</div>
+</div>
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>Epoch 300/300: 100%|███████████████████████████████████████████████████████████████████████████████████████████| 300/300 [02:11&lt;00:00,  2.28it/s, loss=1.39e+07, v_num=1]
+</pre>
+</div>
 </div>
 
 <div class="output_area">
@@ -15360,9 +15562,9 @@ height=523
 
 
 <div class="output_png output_subarea ">
-<img src="scanpy_07_spatial_files/scanpy_07_spatial_76_1.png"
-width=2312
-height=523
+<img src="scanpy_07_spatial_files/scanpy_07_spatial_70_2.png"
+width=544
+height=558
 >
 </div>
 
@@ -15375,8 +15577,124 @@ height=523
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<p>Interestingly, it seems that this approach worked, since sequential layers of cortical neurons could be correctly identified, both in the anterior and posterior sagittal slide.</p>
-<p>We can go ahead an visualize astrocytes and oligodendrocytes as well.</p>
+<h3 id="Predict-propritions-on-the-spatial-data">Predict propritions on the spatial data<a class="anchor-link" href="#Predict-propritions-on-the-spatial-data">&#182;</a></h3><p>First create a new st object with the correct genes and counts as a layer.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[44]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">st_adata</span> <span class="o">=</span> <span class="n">adata_anterior_subset</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+<span class="n">st_adata</span><span class="o">.</span><span class="n">layers</span><span class="p">[</span><span class="s2">&quot;counts&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">st_adata</span><span class="o">.</span><span class="n">X</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+<span class="n">st_adata</span> <span class="o">=</span> <span class="n">st_adata</span><span class="p">[:,</span> <span class="n">deg</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+<span class="n">SpatialStereoscope</span><span class="o">.</span><span class="n">setup_anndata</span><span class="p">(</span><span class="n">st_adata</span><span class="p">,</span> <span class="n">layer</span><span class="o">=</span><span class="s2">&quot;counts&quot;</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre><span class="ansi-blue-fg">INFO    </span> No batch_key inputted, assuming all cells are same batch                            
+<span class="ansi-blue-fg">INFO    </span> No label_key inputted, assuming all cells have same label                           
+<span class="ansi-blue-fg">INFO    </span> Using data from adata.layers<span class="ansi-bold">[</span><span class="ansi-green-fg">&#34;counts&#34;</span><span class="ansi-bold">]</span>                                              
+<span class="ansi-blue-fg">INFO    </span> Successfully registered anndata object containing <span class="ansi-cyan-intense-fg ansi-bold">723</span> cells, <span class="ansi-cyan-intense-fg ansi-bold">1343</span> vars, <span class="ansi-cyan-intense-fg ansi-bold">1</span> batches, <span class="ansi-cyan-intense-fg ansi-bold">1</span>
+         labels, and <span class="ansi-cyan-intense-fg ansi-bold">0</span> proteins. Also registered <span class="ansi-cyan-intense-fg ansi-bold">0</span> extra categorical covariates and <span class="ansi-cyan-intense-fg ansi-bold">0</span> extra  
+         continuous covariates.                                                              
+<span class="ansi-blue-fg">INFO    </span> Please do not further modify adata until model is trained.                          
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[45]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">train</span><span class="o">=</span><span class="kc">True</span>
+<span class="k">if</span> <span class="n">train</span><span class="p">:</span>
+    <span class="n">spatial_model</span> <span class="o">=</span> <span class="n">SpatialStereoscope</span><span class="o">.</span><span class="n">from_rna_model</span><span class="p">(</span><span class="n">st_adata</span><span class="p">,</span> <span class="n">sc_model</span><span class="p">)</span>
+    <span class="n">spatial_model</span><span class="o">.</span><span class="n">train</span><span class="p">(</span><span class="n">max_epochs</span> <span class="o">=</span> <span class="mi">3000</span><span class="p">)</span>
+    <span class="n">spatial_model</span><span class="o">.</span><span class="n">history</span><span class="p">[</span><span class="s2">&quot;elbo_train&quot;</span><span class="p">][</span><span class="mi">10</span><span class="p">:]</span><span class="o">.</span><span class="n">plot</span><span class="p">()</span>
+    <span class="n">spatial_model</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">&quot;./data/spatial/stmodel&quot;</span><span class="p">,</span> <span class="n">overwrite</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="n">spatial_model</span> <span class="o">=</span> <span class="n">SpatialStereoscope</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;./data/spatial/stmodel&quot;</span><span class="p">,</span> <span class="n">st_adata</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Loaded Spatial model from file!&quot;</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stderr output_text">
+<pre>GPU available: False, used: False
+TPU available: False, using: 0 TPU cores
+</pre>
+</div>
+</div>
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>Epoch 3000/3000: 100%|███████████████████████████████████████████████████████████████████████████████████████| 3000/3000 [03:51&lt;00:00, 12.95it/s, loss=1.49e+06, v_num=1]
+</pre>
+</div>
+</div>
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+
+
+<div class="output_png output_subarea ">
+<img src="scanpy_07_spatial_files/scanpy_07_spatial_73_2.png"
+width=566
+height=543
+>
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Get the results from the model, also put them in the <code>.obs</code> slot.</p>
 
 </div>
 </div>
@@ -15386,11 +15704,38 @@ height=523
 <div class="prompt input_prompt">In&nbsp;[46]:</div>
 <div class="inner_cell">
     <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">st_adata</span><span class="o">.</span><span class="n">obsm</span><span class="p">[</span><span class="s2">&quot;deconvolution&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">spatial_model</span><span class="o">.</span><span class="n">get_proportions</span><span class="p">()</span>
+
+<span class="c1"># also copy to the obsm data frame</span>
+<span class="k">for</span> <span class="n">ct</span> <span class="ow">in</span> <span class="n">st_adata</span><span class="o">.</span><span class="n">obsm</span><span class="p">[</span><span class="s2">&quot;deconvolution&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+    <span class="n">st_adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="n">ct</span><span class="p">]</span> <span class="o">=</span> <span class="n">st_adata</span><span class="o">.</span><span class="n">obsm</span><span class="p">[</span><span class="s2">&quot;deconvolution&quot;</span><span class="p">][</span><span class="n">ct</span><span class="p">]</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>We are then able to explore how cell types in the scRNA-seq dataset are predicted onto the visium dataset. Let's first visualize the neurons cortical layers.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[47]:</div>
+<div class="inner_cell">
+    <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">sc</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">spatial</span><span class="p">(</span>
-    <span class="n">adata_anterior_subset_transfer</span><span class="p">,</span> <span class="n">img_key</span><span class="o">=</span><span class="s2">&quot;hires&quot;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;Oligo&quot;</span><span class="p">,</span> <span class="s2">&quot;Astro&quot;</span><span class="p">],</span> <span class="n">size</span><span class="o">=</span><span class="mf">1.5</span><span class="p">,</span> <span class="n">library_id</span> <span class="o">=</span> <span class="n">lib_a</span>
-<span class="p">)</span>
-<span class="n">sc</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">spatial</span><span class="p">(</span>
-    <span class="n">adata_posterior_subset_transfer</span><span class="p">,</span> <span class="n">img_key</span><span class="o">=</span><span class="s2">&quot;hires&quot;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;Oligo&quot;</span><span class="p">,</span> <span class="s2">&quot;Astro&quot;</span><span class="p">],</span> <span class="n">size</span><span class="o">=</span><span class="mf">1.5</span><span class="p">,</span> <span class="n">library_id</span> <span class="o">=</span> <span class="n">lib_p</span>
+    <span class="n">st_adata</span><span class="p">,</span>
+    <span class="n">img_key</span><span class="o">=</span><span class="s2">&quot;hires&quot;</span><span class="p">,</span>
+    <span class="n">color</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;L2/3 IT&quot;</span><span class="p">,</span> <span class="s2">&quot;L4&quot;</span><span class="p">,</span> <span class="s2">&quot;L5 PT&quot;</span><span class="p">,</span> <span class="s2">&quot;L6 CT&quot;</span><span class="p">],</span>
+    <span class="n">library_id</span><span class="o">=</span><span class="n">lib_a</span><span class="p">,</span>
+    <span class="n">size</span><span class="o">=</span><span class="mf">1.5</span><span class="p">,</span>
+    <span class="n">ncols</span><span class="o">=</span><span class="mi">2</span>
 <span class="p">)</span>
 </pre></div>
 
@@ -15410,13 +15755,43 @@ height=523
 
 
 <div class="output_png output_subarea ">
-<img src="scanpy_07_spatial_files/scanpy_07_spatial_78_0.png"
-width=1171
-height=523
+<img src="scanpy_07_spatial_files/scanpy_07_spatial_77_0.png"
+width=1178
+height=1065
 >
 </div>
 
 </div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>We can go ahead an visualize astrocytes and oligodendrocytes as well.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[48]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">sc</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">spatial</span><span class="p">(</span>
+    <span class="n">st_adata</span><span class="p">,</span> <span class="n">img_key</span><span class="o">=</span><span class="s2">&quot;hires&quot;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;Oligo&quot;</span><span class="p">,</span> <span class="s2">&quot;Astro&quot;</span><span class="p">],</span> <span class="n">size</span><span class="o">=</span><span class="mf">1.5</span><span class="p">,</span> <span class="n">library_id</span> <span class="o">=</span> <span class="n">lib_a</span>
+<span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
 
 <div class="output_area">
 
@@ -15426,9 +15801,9 @@ height=523
 
 
 <div class="output_png output_subarea ">
-<img src="scanpy_07_spatial_files/scanpy_07_spatial_78_1.png"
-width=1171
-height=523
+<img src="scanpy_07_spatial_files/scanpy_07_spatial_79_0.png"
+width=1179
+height=513
 >
 </div>
 
@@ -15448,10 +15823,10 @@ height=523
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[47]:</div>
+<div class="prompt input_prompt">In&nbsp;[49]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">sc</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">violin</span><span class="p">(</span><span class="n">adata_anterior_subset_transfer</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;L2/3 IT&quot;</span><span class="p">,</span> <span class="s2">&quot;L6 CT&quot;</span><span class="p">,</span><span class="s2">&quot;Oligo&quot;</span><span class="p">,</span><span class="s2">&quot;Astro&quot;</span><span class="p">],</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">sc</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">violin</span><span class="p">(</span><span class="n">st_adata</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;L2/3 IT&quot;</span><span class="p">,</span> <span class="s2">&quot;L6 CT&quot;</span><span class="p">,</span><span class="s2">&quot;Oligo&quot;</span><span class="p">,</span><span class="s2">&quot;Astro&quot;</span><span class="p">],</span>
             <span class="n">jitter</span><span class="o">=</span><span class="mf">0.4</span><span class="p">,</span> <span class="n">groupby</span> <span class="o">=</span> <span class="s1">&#39;clusters&#39;</span><span class="p">,</span> <span class="n">rotation</span><span class="o">=</span> <span class="mi">45</span><span class="p">)</span>
 </pre></div>
 
@@ -15468,38 +15843,12 @@ height=523
     <div class="prompt"></div>
 
 
-<div class="output_subarea output_stream output_stderr output_text">
-<pre>/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/seaborn/_decorators.py:43: FutureWarning: Pass the following variable as a keyword arg: x. From version 0.12, the only valid positional argument will be `data`, and passing other arguments without an explicit keyword will result in an error or misinterpretation.
-  FutureWarning
-/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/seaborn/_decorators.py:43: FutureWarning: Pass the following variable as a keyword arg: x. From version 0.12, the only valid positional argument will be `data`, and passing other arguments without an explicit keyword will result in an error or misinterpretation.
-  FutureWarning
-/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/seaborn/_decorators.py:43: FutureWarning: Pass the following variable as a keyword arg: x. From version 0.12, the only valid positional argument will be `data`, and passing other arguments without an explicit keyword will result in an error or misinterpretation.
-  FutureWarning
-/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/seaborn/_decorators.py:43: FutureWarning: Pass the following variable as a keyword arg: x. From version 0.12, the only valid positional argument will be `data`, and passing other arguments without an explicit keyword will result in an error or misinterpretation.
-  FutureWarning
-/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/seaborn/_decorators.py:43: FutureWarning: Pass the following variable as a keyword arg: x. From version 0.12, the only valid positional argument will be `data`, and passing other arguments without an explicit keyword will result in an error or misinterpretation.
-  FutureWarning
-/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/seaborn/_decorators.py:43: FutureWarning: Pass the following variable as a keyword arg: x. From version 0.12, the only valid positional argument will be `data`, and passing other arguments without an explicit keyword will result in an error or misinterpretation.
-  FutureWarning
-/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/seaborn/_decorators.py:43: FutureWarning: Pass the following variable as a keyword arg: x. From version 0.12, the only valid positional argument will be `data`, and passing other arguments without an explicit keyword will result in an error or misinterpretation.
-  FutureWarning
-/Users/asbj/miniconda3/envs/scRNAseq2021/lib/python3.6/site-packages/seaborn/_decorators.py:43: FutureWarning: Pass the following variable as a keyword arg: x. From version 0.12, the only valid positional argument will be `data`, and passing other arguments without an explicit keyword will result in an error or misinterpretation.
-  FutureWarning
-</pre>
-</div>
-</div>
-
-<div class="output_area">
-
-    <div class="prompt"></div>
-
-
 
 
 <div class="output_png output_subarea ">
-<img src="scanpy_07_spatial_files/scanpy_07_spatial_80_1.png"
-width=2890
-height=532
+<img src="scanpy_07_spatial_files/scanpy_07_spatial_81_0.png"
+width=2899
+height=527
 >
 </div>
 
@@ -15512,8 +15861,7 @@ height=532
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<p>Keep in mind, that the scores are "just" prediction scores, and do not correspond to proportion of cells that are of a certain celltype or similar. It mainly tells you that gene expression in a certain spot is hihgly similar/dissimilar to gene expression of a celltype.</p>
-<p>If we look at the scores, we see that some spots got really clear predictions by celltype, while others did not have high scores for any of the celltypes.</p>
+<p>Keep in mind that the deconvolution results are just predictions, depending on how well your scRNAseq data covers the celltypes that are present in the ST data and on how parameters, gene selection etc. are tuned you may get different results.</p>
 <p><style>
 div.blue { background-color:#e6f0ff; border-radius: 5px; padding: 10px;}
 </style></p>
@@ -15530,7 +15878,7 @@ Suggested region is the right end of the posterial section that you can select l
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[48]:</div>
+<div class="prompt input_prompt">In&nbsp;[50]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">lib_p</span> <span class="o">=</span> <span class="s2">&quot;V1_Mouse_Brain_Sagittal_Posterior&quot;</span>
@@ -15549,7 +15897,7 @@ Suggested region is the right end of the posterial section that you can select l
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[49]:</div>
+<div class="prompt input_prompt">In&nbsp;[51]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">sc</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">spatial</span><span class="p">(</span>
@@ -15577,8 +15925,8 @@ Suggested region is the right end of the posterial section that you can select l
 
 
 <div class="output_png output_subarea ">
-<img src="scanpy_07_spatial_files/scanpy_07_spatial_83_0.png"
-width=410
+<img src="scanpy_07_spatial_files/scanpy_07_spatial_84_0.png"
+width=382
 height=539
 >
 </div>

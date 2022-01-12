@@ -3,6 +3,7 @@
 # render as new Rmd and html for scater/seurat
 
 # OBS! Requires jupyter_contrib_nbextensions to be installed.
+# OBS! scanpy_07_spatial.ipynb requires a different conda env, has conflicts with nbconvert version.
 
 # to run conversion of all labs just run
 # Rscript convert_all_labs.R -f all -t all
@@ -111,15 +112,19 @@ for (file in scripts){
   print(sprintf("Writing output to %s",outfile))  
   write(json2,outfile)
 
+  if (file == "scanpy_07_spatial.ipynb"){
+      print("scanpy_07_spatial was parsed, please run convert_scanpy_spatial.sh to execute notebook and convert to html")
+  }else{    
     # render new notebook
-  render_nb <- sprintf("jupyter nbconvert --execute --to notebook --ExecutePreprocessor.timeout=1000 --inplace %s",outfile)
-  print("Convert to notebook...")
-  system(render_nb)
+    render_nb <- sprintf("jupyter nbconvert --execute --to notebook --ExecutePreprocessor.timeout=1000 --inplace %s",outfile)
+    print("Convert to notebook...")
+    system(render_nb)
 
-  out_html <- sub(".ipynb",".html",outfile)  
-  render_html <- sprintf("jupyter nbconvert  --to html_toc --ExecutePreprocessor.timeout=1000  %s", outfile)
-  print("Convert to html...")
-  system(render_html)
+    out_html <- sub(".ipynb",".html",outfile)  
+    render_html <- sprintf("jupyter nbconvert  --to html_toc --ExecutePreprocessor.timeout=1000  %s", outfile)
+    print("Convert to html...")
+    system(render_html)
+  }      
 }
 }
 
