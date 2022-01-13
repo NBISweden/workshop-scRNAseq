@@ -1,0 +1,390 @@
+---
+author: "Åsa Björklund  &  Paulo Czarnewski"
+date: '`r format(Sys.Date(), "%B %d, %Y")`'
+output:
+  html_document:
+    self_contained: true
+    highlight: tango
+    toc: yes
+    toc_float:
+      collapsed: false
+      smooth_scroll: true
+    toc_depth: 3
+editor_options:
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(message=FALSE, warning=FALSE, result='hold',fig.width=12,tidy=TRUE)
+knitr::opts_knit$set(progress=TRUE,verbose=TRUE)
+```
+<style>
+h1, .h1, h2, .h2, h3, .h3, h4, .h4 { margin-top: 50px }
+p.caption {font-size: 0.9em;font-style: italic;color: grey;margin-right: 10%;margin-left: 10%;text-align: justify}
+</style>
+
+# Differential gene expression across patients
+
+Continuing from the differential expression tutorial, we will now look more into detail into differential expression across conditions and the confounding patient effect. 
+
+We can first load the data from the clustering session. Moreover, we can already decide which clustering resolution to use. First let's define using the `louvain` clustering to identifying differentially expressed genes.  
+
+```{r}
+suppressPackageStartupMessages({
+  library(Seurat)
+#  library(venn)
+  library(dplyr)
+  library(cowplot)
+  library(ggplot2)
+  library(pheatmap)
+#  library(rafalib)
+})
+
+alldata <- readRDS("data/results/covid_qc_dr_int_cl.rds")
+```
+
+```{r, fig.width=12, fig.height=6}
+#Set the identity as louvain with resolution 0.5
+sel.clust = "CCA_snn_res.0.5"
+
+alldata <- SetIdent(alldata, value = sel.clust)
+table(alldata@active.ident)
+
+# plot this clustering
+plot_grid(ncol = 3,
+  DimPlot(alldata, label = T) + NoAxes(),
+  DimPlot(alldata, group.by = "orig.ident") + NoAxes(),
+  DimPlot(alldata, group.by = "type") + NoAxes() )
+
+
+```
+
+## Remove sex chromosome genes
+
+Since we have uneven balance of male/female patients, exclude the sex chromosome genes. 
+
+```{r}
+gene.info = read.csv("data/results/genes.table.csv")
+
+sex.genes = gene.info$external_gene_name[gene.info$chromosome_name %in% c("X","Y")]
+keep.genes = setdiff(rownames(alldata@assays$RNA@counts), sex.genes)
+
+alldata@active.assay = "RNA"
+alldata = alldata[keep.genes,]
+
+# Normalize again
+alldata = NormalizeData(alldata)
+
+```
+
+
+## Differential expression across conditions
+***
+
+The second way of computing differential expression is to answer which genes are differentially expressed within a cluster. For example, in our case we have libraries comming from patients and controls and we would like to know which genes are influenced the most in a particular cell type.
+
+For this end, we will first subset our data for the desired cell cluster, then change the cell identities to the variable of comparison (which now in our case is the "type", e.g. Covid/Ctrl).
+
+```{r,fig.height=10,fig.width=10}
+# select all cells in cluster 1
+cell_selection <- subset(alldata, cells = colnames(alldata)[ alldata@meta.data[,sel.clust] == 2])
+cell_selection <- SetIdent(cell_selection, value = "type")
+#Compute differentiall expression
+DGE_cell_selection <- FindMarkers(cell_selection,
+                               ident.1 = "Covid",
+                               logfc.threshold = 0.2,
+                               test.use = "wilcox",
+                               min.pct = 0.1,
+                               min.diff.pct = 0.2,
+                               max.cells.per.ident = 50,
+                               assay = "RNA")
+
+DGE_cell_selection$dir = ifelse(DGE_cell_selection$avg_log2FC>0, "Covid","Ctrl")
+DGE_cell_selection$gene = rownames(DGE_cell_selection)
+```
+
+We can now plot the expression across the "type".
+
+```{r, fig.height=10}
+DGE_cell_selection %>% group_by(dir)  %>% top_n(-5, p_val) %>% arrange(dir)  -> top5_cell_selection
+
+VlnPlot(cell_selection, features = as.character(unique(top5_cell_selection$gene)),
+        ncol = 5,group.by = "type",assay = "RNA", pt.size = .1)
+```
+
+
+
+Dotplot per patient within cluster2
+
+```{r}
+DotPlot(cell_selection, features = as.character(unique(top5_cell_selection$gene)),group.by = "orig.ident", assay = "RNA") + RotatedAxis() + coord_flip()
+```
+
+As you can see, many of the genes that comes up as DE for Covid patients are dominated by the covid_17 patient and not found in the other 2. 
+
+
+
+## Cluster 2
+
+Look in more detail at cluster1
+
+```{r}
+cell_selection = alldata[,alldata[[sel.clust]] == 2]
+
+t1 = table(alldata$orig.ident)
+t2 = table(cell_selection$orig.ident)
+stats = data.frame(all=t1, cl2=as.vector(t2), prop=as.vector(t2/t1*100))
+stats
+
+cell_selection <- SetIdent(cell_selection, value = "type")
+```
+
+Clearly cells from covid_17 and ctrl_5 are dominating cluster2.
+
+## Subsample 
+
+As the distribution of samples is uneven in the cluster, some of the patient effect can be removed by subsampling to an equal number of cells per patient. 
+
+Subsample and rerun same DGE test.
+
+```{r}
+print(table(cell_selection$orig.ident))
+cell_selection <- SetIdent(cell_selection, value = "orig.ident")
+
+sub_data <- subset(cell_selection, cells = WhichCells(cell_selection, downsample = 30))
+
+```
+
+```{r, fig.width=12}
+sub_data <- SetIdent(sub_data, value = "type")
+
+DGE_sub <- FindMarkers(sub_data,
+                               ident.1 = "Covid",
+                               logfc.threshold = 0.2,
+                               test.use = "wilcox",
+                               min.pct = 0.1,
+                               min.diff.pct = 0.2,
+                               max.cells.per.ident = 50,
+                               assay = "RNA")
+
+DGE_sub$dir = ifelse(DGE_sub$avg_log2FC>0, "Covid","Ctrl")
+DGE_sub$gene = rownames(DGE_sub)
+
+DGE_sub %>% group_by(dir)  %>% top_n(-5, p_val)  %>% arrange(dir) -> top5_sub
+
+p1 = DotPlot(cell_selection, features = as.character(unique(top5_sub$gene)),group.by = "orig.ident", assay = "RNA") +  coord_flip() + ggtitle("With subsampled data") + RotatedAxis()
+  
+p2 = DotPlot(cell_selection, features = as.character(unique(top5_cell_selection$gene)),group.by = "orig.ident", assay = "RNA") +  coord_flip()  + ggtitle("With full data") + RotatedAxis()
+
+p1 + p2  
+  
+```
+
+Still have some patient specific genes, but less dominance of covid_17.
+
+
+## Pseudobulk
+
+One option is to treat the samples as pseudobulks and do differential expression for the 3 patients vs 3 controls. You do lose some information about cell variability within each patient, but instead you gain the advantage of mainly looking for effects that are seen in multiple patients.
+
+However, having only 3 patients is probably too low, with many more patients it will work better to run pseudobulk analysis.
+
+For a fair comparison we should have equal number of cells per sample, so we will use the subsampled object.
+
+```{r}
+library(Matrix)
+library(edgeR)
+
+table(sub_data$orig.ident)
+
+DGE_DATA <- sub_data@assays$RNA@counts
+
+#Compute pseudobulk
+mm <- sparse.model.matrix( ~ 0 + sub_data$orig.ident )
+pseudobulk <-  DGE_DATA %*% mm
+
+bulk.labels = c("Covid","Covid","Covid","Ctrl","Ctrl","Ctrl")
+
+dge.list  <- DGEList(counts=pseudobulk,group=factor(bulk.labels))
+keep <- filterByExpr(dge.list)
+dge.list <- dge.list[keep,,keep.lib.sizes=FALSE]
+
+dge.list <- calcNormFactors(dge.list)
+design = model.matrix(~bulk.labels)
+
+dge.list <- estimateDisp(dge.list,design)
+
+fit <- glmQLFit(dge.list,design)
+qlf <- glmQLFTest(fit,coef=2) 
+topTags(qlf)
+ 
+res.edgeR <- topTags(qlf, 100)$table
+res.edgeR$dir = ifelse(res.edgeR$logFC>0, "Covid","Ctrl")
+res.edgeR$gene = rownames(res.edgeR)
+
+res.edgeR %>%
+    group_by(dir) %>%
+    top_n(-5, PValue) %>%
+    arrange(dir)-> top.edgeR
+
+
+
+DotPlot(cell_selection, features = as.character(unique(top.edgeR$gene)),group.by = "orig.ident", assay = "RNA") +  coord_flip()  + ggtitle("EdgeR pseudobulk") + RotatedAxis()
+```
+
+
+
+# MAST with random effect
+
+MAST has the option to add a random effect for the patient when running DGE analysis. It works quite well but is very slow, even with this small dataset, so it may not be practical for a larger dataset.
+
+We will run MAST with and without patient info as random effect and compare the results
+
+First, filter genes a bit to only have genes expressed in at least one of the groups for speed.
+
+```{r}
+nE_covid = rowSums(cell_selection@assays$RNA@counts[,cell_selection$type == "Covid"]>0)
+nE_ctrl = rowSums(cell_selection@assays$RNA@counts[,cell_selection$type == "Ctrl"]>0)
+
+# require expression in at least 10 cells from one of the group
+
+sel = nE_covid >= 10 | nE_ctrl >=10
+
+cell_selection = cell_selection[sel,]
+```
+
+
+Setup the MAST object.
+
+```{r}
+library(MAST)
+
+fData <- data.frame(primerid=rownames(cell_selection))
+
+m = cell_selection@meta.data
+m$wellKey = rownames(m)
+
+# make sure type and orig.ident are factors
+m$orig.ident = factor(m$orig.ident)
+m$type = factor(m$type)
+
+sca <- MAST::FromMatrix(
+    exprsArray = as.matrix(x = cell_selection@assays$RNA@data),
+    check_sanity = FALSE,
+    cData = m,
+    fData = fData
+  )
+```
+
+Run regular MAST with bayesglm
+
+```{r}
+# takes a while to run, save to tmpdir
+tmpdir = "tmp_dge"
+dir.create(tmpdir, showWarnings = F)
+
+tmpfile1 = file.path(tmpdir, "mast_bayesglm_cl1.Rds")
+if (file.exists(tmpfile1)) {
+    fcHurdle1 = readRDS(tmpfile1)
+} else {
+    zlmCond <- suppressMessages(MAST::zlm(~type, sca, method = "bayesglm", ebayes = T))
+
+    summaryCond <- suppressMessages(MAST::summary(zlmCond, doLRT = "typeCtrl"))
+    summaryDt <- summaryCond$datatable
+    fcHurdle <- merge(summaryDt[summaryDt$contrast == "typeCtrl" & summaryDt$component ==
+        "logFC", c(1, 7, 5, 6, 8)], summaryDt[summaryDt$contrast == "typeCtrl" &
+        summaryDt$component == "H", c(1, 4)], by = "primerid")
+    fcHurdle1 <- stats::na.omit(as.data.frame(fcHurdle))
+    saveRDS(fcHurdle1, tmpfile1)
+}
+```
+
+Run with glmer and random effect.
+
+```{r}
+library(lme4)
+
+tmpfile2 = file.path(tmpdir, "mast_glme_cl1.Rds")
+if (file.exists(tmpfile2)) {
+    fcHurdle2 = readRDS(tmpfile2)
+} else {
+    zlmCond <- suppressMessages(MAST::zlm(~type + (1 | orig.ident), sca, method = "glmer",
+        ebayes = F, strictConvergence = FALSE))
+
+    summaryCond <- suppressMessages(MAST::summary(zlmCond, doLRT = "typeCtrl"))
+    summaryDt <- summaryCond$datatable
+    fcHurdle <- merge(summaryDt[summaryDt$contrast == "typeCtrl" & summaryDt$component ==
+        "logFC", c(1, 7, 5, 6, 8)], summaryDt[summaryDt$contrast == "typeCtrl" &
+        summaryDt$component == "H", c(1, 4)], by = "primerid")
+    fcHurdle2 <- stats::na.omit(as.data.frame(fcHurdle))
+    saveRDS(fcHurdle2, tmpfile2)
+}
+
+```
+
+Top genes with normal:
+
+```{r}
+top1 = head(fcHurdle1[order(fcHurdle1$`Pr(>Chisq)`), ], 10)
+top1
+fcHurdle1$pval = fcHurdle1$`Pr(>Chisq)`
+fcHurdle1$dir = ifelse(fcHurdle1$z>0, "up","down")
+fcHurdle1 %>%
+    group_by(dir) %>%
+    top_n(-5, pval) %>%
+    arrange(z)-> mastN
+
+mastN = mastN$primerid
+
+```
+
+Top genes with random effect:
+
+```{r}
+top2 = head(fcHurdle2[order(fcHurdle2$`Pr(>Chisq)`), ], 10)
+top2
+
+fcHurdle2$pval = fcHurdle2$`Pr(>Chisq)`
+fcHurdle2$dir = ifelse(fcHurdle2$z>0, "up","down")
+fcHurdle2 %>%
+    group_by(dir) %>%
+    top_n(-5, pval) %>%
+    arrange(z)-> mastR
+
+mastR = mastR$primerid
+
+```
+
+Plot
+
+```{r, fig.width=12}
+p1 = DotPlot(cell_selection, features = mastN, group.by = "orig.ident", assay = "RNA") +
+    coord_flip() + RotatedAxis() + ggtitle("Regular MAST")
+
+p2 = DotPlot(cell_selection, features = mastR, group.by = "orig.ident", assay = "RNA") +
+    coord_flip() + RotatedAxis() + ggtitle("With random effect")
+
+
+p1 + p2
+```
+
+
+## Refs
+
+More on this topic can be found in these papers:
+
+Muscat paper: https://www.nature.com/articles/s41467-020-19894-4
+
+Covid paper (diffxpy): https://www.nature.com/articles/s41591-020-01227-z
+
+
+Muscat also has many different methods for differential expression in patient samples, see their tutorial at: https://bioconductor.org/packages/release/bioc/vignettes/muscat/inst/doc/analysis.html
+
+
+
+### Session Info
+***
+
+```{r}
+sessionInfo()
+```
