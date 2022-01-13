@@ -1,7 +1,7 @@
 ---
 title: "Seurat: Spatial Transcriptomics"
 author: "Åsa Björklund  &  Paulo Czarnewski"
-date: 'January 10, 2022'
+date: 'January 13, 2022'
 output:
   html_document:
     self_contained: true
@@ -70,9 +70,9 @@ dir.create(outdir, showWarnings = F)
 # to list available datasets in SeuratData you can run AvailableData()
 
 # first we dowload the dataset
-InstallData("stxBrain")
-
-## Check again that it works, did not work at first...
+if (!("stxBrain.SeuratData" %in% rownames(InstalledData()))) {
+    InstallData("stxBrain")
+}
 
 
 # now we can list what datasets we have downloaded
@@ -109,7 +109,7 @@ brain
 As you can see, now we do not have the assay "RNA", but instead an assay called "Spatial". 
 
 
-##Quality control
+# Quality control
 ***
 
 Similar to scRNAseq we use statistics on number of counts, number of features and percent mitochondria for quality control. 
@@ -208,7 +208,7 @@ dim(brain)
 ## [1] 31031  5789
 ```
 
-## Analysis
+# Analysis
 ***
 
 For ST data, the Seurat team recommends to use SCTranform for normalization, so we will do that. `SCTransform` will select variable genes and normalize in one step.
@@ -448,7 +448,7 @@ SpatialDimPlot(brain, cells.highlight = CellsByIdentities(brain), facet.highligh
 
 ![](seurat_07_spatial_files/figure-html/unnamed-chunk-13-1.png)<!-- -->
 
-## Integration
+### Integration
 
 Quite often there are strong batch effects between different ST sections, so it may be a good idea to integrate the data across sections.
 
@@ -813,8 +813,8 @@ gc()
 
 ```
 ##             used (Mb) gc trigger   (Mb)   max used   (Mb)
-## Ncells   3108272  166    4977345  265.9    4977345  265.9
-## Vcells 589549134 4498 1176297363 8974.5 1175644264 8969.5
+## Ncells   3108177  166    4981868  266.1    4981868  266.1
+## Vcells 589549979 4498 1176299466 8974.5 1175645088 8969.5
 ```
 
 Then we run dimensionality reduction and clustering as before.
@@ -843,7 +843,7 @@ SpatialDimPlot(brain.integrated)
 Do you see any differences between the integrated and non-integrated clusering? Judge for yourself, which of the clusterings do you think looks best? 
 As a reference, you can compare to brain regions in the [Allen brain atlas](https://mouse.brain-map.org/experiment/thumbnails/100042147?image_type=atlas). 
 
-## Identification of Spatially Variable Features
+### Identification of Spatially Variable Features
 
  There are two main workflows to identify molecular features that correlate with spatial location within a tissue. The first is to perform differential expression based on spatially distinct clusters, the other is to find features that are have spatial patterning without taking clusters or spatial annotation into account. 
 
@@ -882,9 +882,11 @@ In `FindSpatiallyVariables` the default method in Seurat (method = 'markvariogra
 
 
 
-## Single cell data
+# Single cell data
 
-We can also perform data integration between one scRNA-seq dataset and one spatial transcriptomics dataset. Such task is particularly useful because it allows us to transfer cell type labels to the Visium dataset, which were dentified from the scRNA-seq dataset. 
+We can use a scRNA-seq dataset as a referenced to predict the proportion of different celltypes in the Visium spots. 
+
+Keep in mind that it is important to have a reference that contains all the celltypes you expect to find in your spots. Ideally it should be a scRNAseq reference from the exact same tissue. 
 
 We will use a reference scRNA-seq dataset of ~14,000 adult mouse cortical cell taxonomy from the Allen Institute, generated with the SMART-Seq2 protocol.
 
@@ -970,7 +972,7 @@ DimPlot(allen_reference, label = TRUE)
 
 ![](seurat_07_spatial_files/figure-html/unnamed-chunk-21-1.png)<!-- -->
 
-### Subset ST for cortex
+# Subset ST for cortex
 Since the scRNAseq dataset was generated from the mouse cortex, we will subset the visium dataset in order to select mainly the spots part of the cortex. Note that the integration can also be performed on the whole brain slice, but it would give rise to false positive cell type assignments and and therefore it should be interpreted with more care.
 
 
@@ -997,48 +999,165 @@ p1 + p2
 
 ![](seurat_07_spatial_files/figure-html/unnamed-chunk-22-1.png)<!-- -->
 
+
+
+# Deconvolution
+Deconvolution is a method to estimate the abundance (or proportion) of different celltypes in a bulkRNAseq dataset using a single cell reference. As the Visium data can be seen as a small bulk, we can both use methods for traditional bulkRNAseq as well as methods especially developed for Visium data.
+ Some methods for deconvolution are DWLS, cell2location, Tangram, Stereoscope, RCTD, SCDC and many more. 
+
+Here we will use SCDC for deconvolution of celltypes in the Visium spots. For more information on the tool please check their website: https://meichendong.github.io/SCDC/articles/SCDC.html
+First, make sure the packages you need are installed. All dependencies should be in the conda environment.
+
+
+
 ```r
-# After subsetting, we renormalize cortex
-cortex <- SCTransform(cortex, assay = "Spatial", verbose = FALSE, method = "poisson") %>%
-    RunPCA(verbose = FALSE)
+inst = installed.packages()
+
+if (!("xbioc" %in% rownames(inst))) {
+    remotes::install_github("renozao/xbioc", dependencies = FALSE)
+}
+if (!("SCDC" %in% rownames(inst))) {
+    remotes::install_github("meichendong/SCDC", dependencies = FALSE)
+}
+
+suppressPackageStartupMessages(require(SCDC))
+suppressPackageStartupMessages(require(Biobase))
 ```
 
 
-### Integrate with scRNAseq
+### Select genes for deconvolution
+Most deconvolution methods does a prior gene selection and there are different options that are used:
 
-Instead of the functions `FindIntegrationAnchors` and `IntegrateData` in Seurat, we will instead use `FindTransferAnchors` and `TransferData` which will create a new assay that contains the predictions scores (e.g. closeness of each spot to each celltype in the aligned spaces).
+* Use variable genes in the SC data.
+* Use variable genes in both SC and ST data
+* DE genes between clusters in the SC data.
+
+In this case we will use top DEG genes per cluster, so first we have to run DEG detection on the scRNAseq data.
+
+For SCDC we want to find a we unique markers per cluster, so we select top 20 DEGs per cluster.
+Ideally you should run with a larger set of genes, perhaps 100 genes per cluster to get better results. However, for the sake of speed, we are now selecting only top20 genes and it still takes about 10 minutes to run.
 
 
 ```r
-anchors <- FindTransferAnchors(reference = allen_reference, query = cortex, normalization.method = "SCT")
-predictions.assay <- TransferData(anchorset = anchors, refdata = allen_reference$subclass,
-    prediction.assay = TRUE, weight.reduction = cortex[["pca"]], dims = 1:30)
-cortex[["predictions"]] <- predictions.assay
+allen_reference@active.assay = "RNA"
+
+markers_sc <- FindAllMarkers(allen_reference, only.pos = TRUE, logfc.threshold = 0.1,
+    test.use = "wilcox", min.pct = 0.05, min.diff.pct = 0.1, max.cells.per.ident = 200,
+    return.thresh = 0.05, assay = "RNA")
+
+# Filter for genes that are also present in the ST data
+markers_sc <- markers_sc[markers_sc$gene %in% rownames(cortex), ]
+
+
+# Select top 20 genes per cluster, select top by first p-value, then absolute
+# diff in pct, then quota of pct.
+markers_sc$pct.diff <- markers_sc$pct.1 - markers_sc$pct.2
+markers_sc$log.pct.diff <- log2((markers_sc$pct.1 * 99 + 1)/(markers_sc$pct.2 * 99 +
+    1))
+markers_sc %>%
+    group_by(cluster) %>%
+    top_n(-100, p_val) %>%
+    top_n(50, pct.diff) %>%
+    top_n(20, log.pct.diff) -> top20
+m_feats <- unique(as.character(top20$gene))
+```
+
+### Create Expression Sets
+
+For SCDC both the SC and the ST data need to be in the format of an Expression set with the count matrices as `AssayData`. We also subset the matrices for the genes we selected in the previous step.
+
+
+```r
+eset_SC <- ExpressionSet(assayData = as.matrix(allen_reference@assays$RNA@counts[m_feats,
+    ]), phenoData = AnnotatedDataFrame(allen_reference@meta.data))
+eset_ST <- ExpressionSet(assayData = as.matrix(cortex@assays$Spatial@counts[m_feats,
+    ]), phenoData = AnnotatedDataFrame(cortex@meta.data))
+```
+
+### Deconvolve
+We then run the deconvolution defining the celltype of interest as "subclass" column in the single cell data.
+
+
+```r
+deconvolution_crc <- SCDC::SCDC_prop(bulk.eset = eset_ST, sc.eset = eset_SC, ct.varname = "subclass",
+    ct.sub = as.character(unique(eset_SC$subclass)))
+```
+
+Now we have a matrix with predicted proportions of each celltypes for each visium spot in `prop.est.mvw`:
+
+
+```r
+head(deconvolution_crc$prop.est.mvw)
+```
+
+```
+##                            Lamp5 Sncg Serpinf1 Vip Sst       Pvalb        Endo
+## AAACAGAGCGACTCCT-1_1 0.006797406    0        0   0   0 0.000000000 0.000000000
+## AAACCGGGTAGGTACC-1_1 0.201721755    0        0   0   0 0.000360455 0.002899676
+## AAAGGGATGTAGCAAG-1_1 0.000000000    0        0   0   0 0.162334952 0.000000000
+## AAATAACCATACGGGA-1_1 0.005390595    0        0   0   0 0.000000000 0.000000000
+## AAATCGTGTACCACAA-1_1 0.272123152    0        0   0   0 0.000000000 0.004560075
+## AAATGATTCGATCAGC-1_1 0.000000000    0        0   0   0 0.000000000 0.005133105
+##                      Peri        L6 CT          L6b      L6 IT CR   L2/3 IT
+## AAACAGAGCGACTCCT-1_1    0 0.0000000000 0.0000000000 0.00000000  0 0.1223194
+## AAACCGGGTAGGTACC-1_1    0 0.0000000000 0.0000000000 0.27648660  0 0.0000000
+## AAAGGGATGTAGCAAG-1_1    0 0.0000000000 0.0000000000 0.02674848  0 0.0000000
+## AAATAACCATACGGGA-1_1    0 0.0000000000 0.0000000000 0.49829132  0 0.4827978
+## AAATCGTGTACCACAA-1_1    0 0.0000000000 0.3092342251 0.15698769  0 0.0000000
+## AAATGATTCGATCAGC-1_1    0 0.0009239876 0.0007522028 0.10424357  0 0.0000000
+##                            L5 PT        NP          L4      Oligo        L5 IT
+## AAACAGAGCGACTCCT-1_1 0.584690243 0.0000000 0.239770783 0.00000000 2.010815e-05
+## AAACCGGGTAGGTACC-1_1 0.003054563 0.0310128 0.397843187 0.00000000 3.210555e-06
+## AAAGGGATGTAGCAAG-1_1 0.194414624 0.0000000 0.064653803 0.00000000 4.815953e-01
+## AAATAACCATACGGGA-1_1 0.000000000 0.0000000 0.001771256 0.00000000 0.000000e+00
+## AAATCGTGTACCACAA-1_1 0.000000000 0.0000000 0.187529309 0.05624842 0.000000e+00
+## AAATGATTCGATCAGC-1_1 0.611475752 0.0459624 0.000000000 0.00000000 1.796951e-01
+##                      Meis2      Astro  Macrophage VLMC SMC
+## AAACAGAGCGACTCCT-1_1     0 0.04093742 0.005464622    0   0
+## AAACCGGGTAGGTACC-1_1     0 0.08457383 0.002043925    0   0
+## AAAGGGATGTAGCAAG-1_1     0 0.06688284 0.003369983    0   0
+## AAATAACCATACGGGA-1_1     0 0.00000000 0.011749003    0   0
+## AAATCGTGTACCACAA-1_1     0 0.00000000 0.013317128    0   0
+## AAATGATTCGATCAGC-1_1     0 0.04824279 0.003571095    0   0
+```
+
+Now we take the deconvolution output and add it to the Seurat object as a new assay.
+
+
+```r
+cortex@assays[["SCDC"]] <- CreateAssayObject(data = t(deconvolution_crc$prop.est.mvw))
+
+# Seems to be a bug in SeuratData package that the key is not set and any
+# plotting function etc. will throw an error.
+if (length(cortex@assays$SCDC@key) == 0) {
+    cortex@assays$SCDC@key = "scdc_"
+}
 ```
 
 
+
 ```r
-DefaultAssay(cortex) <- "predictions"
+DefaultAssay(cortex) <- "SCDC"
 SpatialFeaturePlot(cortex, features = c("L2/3 IT", "L4"), pt.size.factor = 1.6, ncol = 2,
     crop = TRUE)
 ```
 
-![](seurat_07_spatial_files/figure-html/unnamed-chunk-24-1.png)<!-- -->
+![](seurat_07_spatial_files/figure-html/unnamed-chunk-29-1.png)<!-- -->
+
 
 Based on these prediction scores, we can also predict cell types whose location is spatially restricted. We use the same methods based on marked point processes to define spatially variable features, but use the cell type prediction scores as the "marks" rather than gene expression.
 
 
 ```r
-cortex <- FindSpatiallyVariableFeatures(cortex, assay = "predictions", selection.method = "markvariogram",
+cortex <- FindSpatiallyVariableFeatures(cortex, assay = "SCDC", selection.method = "markvariogram",
     features = rownames(cortex), r.metric = 5, slot = "data")
 top.clusters <- head(SpatiallyVariableFeatures(cortex), 4)
 SpatialPlot(object = cortex, features = top.clusters, ncol = 2)
 ```
 
-![](seurat_07_spatial_files/figure-html/unnamed-chunk-25-1.png)<!-- -->
+![](seurat_07_spatial_files/figure-html/unnamed-chunk-30-1.png)<!-- -->
 
-
-We can also visualize the scores per cluster in ST data
+#ST_R13.7:
 
 
 ```r
@@ -1046,12 +1165,9 @@ VlnPlot(cortex, group.by = "seurat_clusters", features = top.clusters, pt.size =
     ncol = 2)
 ```
 
-![](seurat_07_spatial_files/figure-html/unnamed-chunk-26-1.png)<!-- -->
+![](seurat_07_spatial_files/figure-html/unnamed-chunk-31-1.png)<!-- -->
 
-
-Keep in mind, that the scores are "just" prediction scores, and do not correspond to proportion of cells that are of a certain celltype or similar. It mainly tells you that gene expression in a certain spot is hihgly similar/dissimilar to gene expression of a celltype.
-
-If we look at the scores, we see that some spots got really clear predictions by celltype, while others did not have high scores for any of the celltypes.
+Keep in mind that the deconvolution results are just predictions, depending on how well your scRNAseq data covers the celltypes that are present in the ST data and on how parameters, gene selection etc. are tuned you may get different results.
 
 <style>
 div.blue { background-color:#e6f0ff; border-radius: 5px; padding: 10px;}
@@ -1078,22 +1194,12 @@ subregion@images$anterior1 = NULL
 # subset for a specific region
 subregion <- subset(subregion, posterior1_imagecol > 400, invert = FALSE)
 
-# SpatialDimPlot(subregion ,cells.highlight = WhichCells(subregion, expression
-# = posterior1_imagecol > 50))
-
-
 p1 <- SpatialDimPlot(subregion, crop = TRUE, label = TRUE)
 p2 <- SpatialDimPlot(subregion, crop = FALSE, label = TRUE, pt.size.factor = 1, label.size = 3)
 p1 + p2
 ```
 
-![](seurat_07_spatial_files/figure-html/unnamed-chunk-27-1.png)<!-- -->
-
-```r
-# After subsetting, we renormalize cortex
-subregion <- SCTransform(subregion, assay = "Spatial", verbose = FALSE, method = "poisson") %>%
-    RunPCA(verbose = FALSE)
-```
+![](seurat_07_spatial_files/figure-html/unnamed-chunk-32-1.png)<!-- -->
 
 
 ### Session info
@@ -1115,58 +1221,67 @@ sessionInfo()
 ## [1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
 ## 
 ## attached base packages:
-## [1] stats     graphics  grDevices utils     datasets  methods   base     
+## [1] parallel  stats     graphics  grDevices utils     datasets  methods  
+## [8] base     
 ## 
 ## other attached packages:
-##  [1] patchwork_1.1.1           ggplot2_3.3.5            
-##  [3] SeuratObject_4.0.4        Seurat_4.0.6             
-##  [5] stxBrain.SeuratData_0.1.1 SeuratData_0.2.1         
-##  [7] dplyr_1.0.7               Matrix_1.4-0             
-##  [9] RJSONIO_1.3-1.6           optparse_1.7.1           
+##  [1] Biobase_2.50.0            BiocGenerics_0.36.0      
+##  [3] SCDC_0.0.0.9000           patchwork_1.1.1          
+##  [5] ggplot2_3.3.5             SeuratObject_4.0.4       
+##  [7] Seurat_4.0.6              stxBrain.SeuratData_0.1.1
+##  [9] SeuratData_0.2.1          dplyr_1.0.7              
+## [11] Matrix_1.4-0              RJSONIO_1.3-1.6          
+## [13] optparse_1.7.1           
 ## 
 ## loaded via a namespace (and not attached):
-##   [1] plyr_1.8.6            igraph_1.2.11         lazyeval_0.2.2       
-##   [4] splines_4.0.5         listenv_0.8.0         scattermore_0.7      
-##   [7] usethis_2.1.5         digest_0.6.29         htmltools_0.5.2      
-##  [10] fansi_1.0.0           magrittr_2.0.1        memoise_2.0.1        
-##  [13] tensor_1.5            cluster_2.1.2         ROCR_1.0-11          
-##  [16] limma_3.46.0          remotes_2.4.2         globals_0.14.0       
-##  [19] matrixStats_0.61.0    spatstat.sparse_2.1-0 prettyunits_1.1.1    
-##  [22] colorspace_2.0-2      rappdirs_0.3.3        ggrepel_0.9.1        
-##  [25] xfun_0.29             callr_3.7.0           crayon_1.4.2         
-##  [28] jsonlite_1.7.2        spatstat.data_2.1-2   survival_3.2-13      
-##  [31] zoo_1.8-9             glue_1.6.0            polyclip_1.10-0      
-##  [34] gtable_0.3.0          leiden_0.3.9          pkgbuild_1.3.1       
-##  [37] future.apply_1.8.1    abind_1.4-5           scales_1.1.1         
-##  [40] DBI_1.1.2             miniUI_0.1.1.1        Rcpp_1.0.7           
-##  [43] viridisLite_0.4.0     xtable_1.8-4          reticulate_1.22      
-##  [46] spatstat.core_2.3-2   htmlwidgets_1.5.4     httr_1.4.2           
-##  [49] getopt_1.20.3         RColorBrewer_1.1-2    ellipsis_0.3.2       
-##  [52] ica_1.0-2             farver_2.1.0          pkgconfig_2.0.3      
-##  [55] uwot_0.1.11           sass_0.4.0            deldir_1.0-6         
-##  [58] utf8_1.2.2            labeling_0.4.2        tidyselect_1.1.1     
-##  [61] rlang_0.4.12          reshape2_1.4.4        later_1.2.0          
-##  [64] munsell_0.5.0         tools_4.0.5           cachem_1.0.6         
-##  [67] cli_3.1.0             generics_0.1.1        devtools_2.4.3       
-##  [70] ggridges_0.5.3        evaluate_0.14         stringr_1.4.0        
-##  [73] fastmap_1.1.0         yaml_2.2.1            goftest_1.2-3        
-##  [76] processx_3.5.2        knitr_1.37            fs_1.5.2             
-##  [79] fitdistrplus_1.1-6    purrr_0.3.4           RANN_2.6.1           
-##  [82] pbapply_1.5-0         future_1.23.0         nlme_3.1-153         
-##  [85] mime_0.12             formatR_1.11          compiler_4.0.5       
-##  [88] plotly_4.10.0         curl_4.3.2            png_0.1-7            
-##  [91] testthat_3.1.1        spatstat.utils_2.3-0  tibble_3.1.6         
-##  [94] bslib_0.3.1           stringi_1.7.6         highr_0.9            
-##  [97] ps_1.6.0              RSpectra_0.16-0       desc_1.4.0           
-## [100] lattice_0.20-45       vctrs_0.3.8           pillar_1.6.4         
-## [103] lifecycle_1.0.1       spatstat.geom_2.3-1   lmtest_0.9-39        
-## [106] jquerylib_0.1.4       RcppAnnoy_0.0.19      data.table_1.14.2    
-## [109] cowplot_1.1.1         irlba_2.3.5           httpuv_1.6.5         
-## [112] R6_2.5.1              promises_1.2.0.1      KernSmooth_2.23-20   
-## [115] gridExtra_2.3         parallelly_1.30.0     sessioninfo_1.2.2    
-## [118] codetools_0.2-18      MASS_7.3-54           assertthat_0.2.1     
-## [121] pkgload_1.2.4         rprojroot_2.0.2       withr_2.4.3          
-## [124] sctransform_0.3.2     mgcv_1.8-38           parallel_4.0.5       
-## [127] grid_4.0.5            rpart_4.1-15          tidyr_1.1.4          
-## [130] rmarkdown_2.11        Rtsne_0.15            shiny_1.7.1
+##   [1] backports_1.4.1       plyr_1.8.6            igraph_1.2.11        
+##   [4] lazyeval_0.2.2        splines_4.0.5         listenv_0.8.0        
+##   [7] scattermore_0.7       usethis_2.1.5         digest_0.6.29        
+##  [10] htmltools_0.5.2       fansi_1.0.0           checkmate_2.0.0      
+##  [13] magrittr_2.0.1        memoise_2.0.1         tensor_1.5           
+##  [16] cluster_2.1.2         ROCR_1.0-11           limma_3.46.0         
+##  [19] remotes_2.4.2         globals_0.14.0        matrixStats_0.61.0   
+##  [22] spatstat.sparse_2.1-0 prettyunits_1.1.1     colorspace_2.0-2     
+##  [25] blob_1.2.2            rappdirs_0.3.3        ggrepel_0.9.1        
+##  [28] xfun_0.29             callr_3.7.0           crayon_1.4.2         
+##  [31] jsonlite_1.7.2        spatstat.data_2.1-2   survival_3.2-13      
+##  [34] zoo_1.8-9             glue_1.6.0            polyclip_1.10-0      
+##  [37] registry_0.5-1        gtable_0.3.0          nnls_1.4             
+##  [40] leiden_0.3.9          pkgbuild_1.3.1        future.apply_1.8.1   
+##  [43] abind_1.4-5           scales_1.1.1          pheatmap_1.0.12      
+##  [46] DBI_1.1.2             miniUI_0.1.1.1        Rcpp_1.0.7           
+##  [49] viridisLite_0.4.0     xtable_1.8-4          reticulate_1.22      
+##  [52] spatstat.core_2.3-2   bit_4.0.4             stats4_4.0.5         
+##  [55] htmlwidgets_1.5.4     httr_1.4.2            getopt_1.20.3        
+##  [58] RColorBrewer_1.1-2    ellipsis_0.3.2        ica_1.0-2            
+##  [61] farver_2.1.0          pkgconfig_2.0.3       uwot_0.1.11          
+##  [64] sass_0.4.0            deldir_1.0-6          utf8_1.2.2           
+##  [67] AnnotationDbi_1.52.0  labeling_0.4.2        tidyselect_1.1.1     
+##  [70] rlang_0.4.12          reshape2_1.4.4        later_1.2.0          
+##  [73] munsell_0.5.0         tools_4.0.5           cachem_1.0.6         
+##  [76] cli_3.1.0             RSQLite_2.2.8         generics_0.1.1       
+##  [79] xbioc_0.1.19          devtools_2.4.3        ggridges_0.5.3       
+##  [82] evaluate_0.14         stringr_1.4.0         fastmap_1.1.0        
+##  [85] yaml_2.2.1            goftest_1.2-3         fastmatrix_0.3-8196  
+##  [88] bit64_4.0.5           processx_3.5.2        knitr_1.37           
+##  [91] fs_1.5.2              fitdistrplus_1.1-6    purrr_0.3.4          
+##  [94] RANN_2.6.1            pbapply_1.5-0         future_1.23.0        
+##  [97] nlme_3.1-153          mime_0.12             formatR_1.11         
+## [100] compiler_4.0.5        plotly_4.10.0         curl_4.3.2           
+## [103] png_0.1-7             testthat_3.1.1        spatstat.utils_2.3-0 
+## [106] tibble_3.1.6          bslib_0.3.1           stringi_1.7.6        
+## [109] highr_0.9             ps_1.6.0              RSpectra_0.16-0      
+## [112] desc_1.4.0            lattice_0.20-45       vctrs_0.3.8          
+## [115] pillar_1.6.4          lifecycle_1.0.1       BiocManager_1.30.16  
+## [118] spatstat.geom_2.3-1   lmtest_0.9-39         jquerylib_0.1.4      
+## [121] RcppAnnoy_0.0.19      data.table_1.14.2     cowplot_1.1.1        
+## [124] irlba_2.3.5           httpuv_1.6.5          R6_2.5.1             
+## [127] promises_1.2.0.1      KernSmooth_2.23-20    gridExtra_2.3        
+## [130] IRanges_2.24.1        parallelly_1.30.0     sessioninfo_1.2.2    
+## [133] codetools_0.2-18      MASS_7.3-54           assertthat_0.2.1     
+## [136] pkgload_1.2.4         pkgmaker_0.32.2       rprojroot_2.0.2      
+## [139] withr_2.4.3           sctransform_0.3.2     S4Vectors_0.28.1     
+## [142] mgcv_1.8-38           grid_4.0.5            rpart_4.1-15         
+## [145] L1pack_0.38.196       tidyr_1.1.4           rmarkdown_2.11       
+## [148] Rtsne_0.15            shiny_1.7.1
 ```
