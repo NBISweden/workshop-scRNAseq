@@ -1,7 +1,7 @@
 ---
 title: #INTEG_TITLE:
 author: "Åsa Björklund  &  Paulo Czarnewski"
-date: 'December 22, 2021'
+date: 'January 14, 2022'
 output:
   html_document:
     self_contained: true
@@ -755,7 +755,7 @@ alldata.int <- RunUMAP(alldata.int, dims = 1:30)
 ```
 
 ```
-## 14:52:30 UMAP embedding parameters a = 0.9922 b = 1.112
+## 16:13:50 UMAP embedding parameters a = 0.9922 b = 1.112
 ```
 
 ```
@@ -767,11 +767,11 @@ alldata.int <- RunUMAP(alldata.int, dims = 1:30)
 ```
 
 ```
-## 14:52:30 Read 5532 rows and found 30 numeric columns
+## 16:13:50 Read 5532 rows and found 30 numeric columns
 ```
 
 ```
-## 14:52:30 Using Annoy for neighbor search, n_neighbors = 30
+## 16:13:50 Using Annoy for neighbor search, n_neighbors = 30
 ```
 
 ```
@@ -783,7 +783,7 @@ alldata.int <- RunUMAP(alldata.int, dims = 1:30)
 ```
 
 ```
-## 14:52:30 Building Annoy index with metric = cosine, n_trees = 50
+## 16:13:50 Building Annoy index with metric = cosine, n_trees = 50
 ```
 
 ```
@@ -796,13 +796,13 @@ alldata.int <- RunUMAP(alldata.int, dims = 1:30)
 
 ```
 ## **************************************************|
-## 14:52:31 Writing NN index file to temp file /var/folders/n0/1679kqxs6s1bbdhj59hgpq0rm04rx6/T//RtmpLopeeM/file161db19090a57
-## 14:52:31 Searching Annoy index using 1 thread, search_k = 3000
-## 14:52:32 Annoy recall = 100%
-## 14:52:33 Commencing smooth kNN distance calibration using 1 thread
-## 14:52:34 Initializing from normalized Laplacian + noise
-## 14:52:34 Commencing optimization for 500 epochs, with 247290 positive edges
-## 14:52:42 Optimization finished
+## 16:13:51 Writing NN index file to temp file /var/folders/1s/j9ck5c_162s487xcprlxtmdh0000gp/T//RtmpLPXWAN/filed9e1a41c295
+## 16:13:51 Searching Annoy index using 1 thread, search_k = 3000
+## 16:13:54 Annoy recall = 100%
+## 16:13:55 Commencing smooth kNN distance calibration using 1 thread
+## 16:13:56 Initializing from normalized Laplacian + noise
+## 16:13:57 Commencing optimization for 500 epochs, with 247290 positive edges
+## 16:14:10 Optimization finished
 ```
 
 ```r
@@ -921,7 +921,7 @@ alldata.int <- RunUMAP(alldata.int, dims = 1:50, reduction = "harmony", reductio
 ```
 
 ```
-## 14:53:08 UMAP embedding parameters a = 0.9922 b = 1.112
+## 16:15:36 UMAP embedding parameters a = 0.9922 b = 1.112
 ```
 
 ```
@@ -933,11 +933,11 @@ alldata.int <- RunUMAP(alldata.int, dims = 1:50, reduction = "harmony", reductio
 ```
 
 ```
-## 14:53:08 Read 5532 rows and found 50 numeric columns
+## 16:15:36 Read 5532 rows and found 50 numeric columns
 ```
 
 ```
-## 14:53:08 Using Annoy for neighbor search, n_neighbors = 30
+## 16:15:36 Using Annoy for neighbor search, n_neighbors = 30
 ```
 
 ```
@@ -949,7 +949,7 @@ alldata.int <- RunUMAP(alldata.int, dims = 1:50, reduction = "harmony", reductio
 ```
 
 ```
-## 14:53:08 Building Annoy index with metric = cosine, n_trees = 50
+## 16:15:36 Building Annoy index with metric = cosine, n_trees = 50
 ```
 
 ```
@@ -962,13 +962,13 @@ alldata.int <- RunUMAP(alldata.int, dims = 1:50, reduction = "harmony", reductio
 
 ```
 ## **************************************************|
-## 14:53:09 Writing NN index file to temp file /var/folders/n0/1679kqxs6s1bbdhj59hgpq0rm04rx6/T//RtmpLopeeM/file161db18f6481f
-## 14:53:09 Searching Annoy index using 1 thread, search_k = 3000
-## 14:53:10 Annoy recall = 100%
-## 14:53:11 Commencing smooth kNN distance calibration using 1 thread
-## 14:53:12 Initializing from normalized Laplacian + noise
-## 14:53:12 Commencing optimization for 500 epochs, with 253252 positive edges
-## 14:53:20 Optimization finished
+## 16:15:37 Writing NN index file to temp file /var/folders/1s/j9ck5c_162s487xcprlxtmdh0000gp/T//RtmpLPXWAN/filed9e11df63694
+## 16:15:37 Searching Annoy index using 1 thread, search_k = 3000
+## 16:15:39 Annoy recall = 100%
+## 16:15:39 Commencing smooth kNN distance calibration using 1 thread
+## 16:15:41 Initializing from normalized Laplacian + noise
+## 16:15:41 Commencing optimization for 500 epochs, with 253252 positive edges
+## 16:15:50 Optimization finished
 ```
 
 ```
@@ -1042,7 +1042,7 @@ alldata.int <- RunUMAP(alldata.int, dims = 1:100, reduction = "scanorama", reduc
 ```
 
 ```
-## 14:53:32 UMAP embedding parameters a = 0.9922 b = 1.112
+## 16:16:08 UMAP embedding parameters a = 0.9922 b = 1.112
 ```
 
 ```
@@ -1054,11 +1054,11 @@ alldata.int <- RunUMAP(alldata.int, dims = 1:100, reduction = "scanorama", reduc
 ```
 
 ```
-## 14:53:32 Read 5532 rows and found 100 numeric columns
+## 16:16:08 Read 5532 rows and found 100 numeric columns
 ```
 
 ```
-## 14:53:32 Using Annoy for neighbor search, n_neighbors = 30
+## 16:16:08 Using Annoy for neighbor search, n_neighbors = 30
 ```
 
 ```
@@ -1070,7 +1070,7 @@ alldata.int <- RunUMAP(alldata.int, dims = 1:100, reduction = "scanorama", reduc
 ```
 
 ```
-## 14:53:32 Building Annoy index with metric = cosine, n_trees = 50
+## 16:16:08 Building Annoy index with metric = cosine, n_trees = 50
 ```
 
 ```
@@ -1083,13 +1083,13 @@ alldata.int <- RunUMAP(alldata.int, dims = 1:100, reduction = "scanorama", reduc
 
 ```
 ## **************************************************|
-## 14:53:32 Writing NN index file to temp file /var/folders/n0/1679kqxs6s1bbdhj59hgpq0rm04rx6/T//RtmpLopeeM/file161db623d7e2e
-## 14:53:32 Searching Annoy index using 1 thread, search_k = 3000
-## 14:53:34 Annoy recall = 100%
-## 14:53:34 Commencing smooth kNN distance calibration using 1 thread
-## 14:53:35 Initializing from normalized Laplacian + noise
-## 14:53:36 Commencing optimization for 500 epochs, with 259588 positive edges
-## 14:53:44 Optimization finished
+## 16:16:10 Writing NN index file to temp file /var/folders/1s/j9ck5c_162s487xcprlxtmdh0000gp/T//RtmpLPXWAN/filed9e16ccf5ada
+## 16:16:10 Searching Annoy index using 1 thread, search_k = 3000
+## 16:16:12 Annoy recall = 100%
+## 16:16:13 Commencing smooth kNN distance calibration using 1 thread
+## 16:16:14 Initializing from normalized Laplacian + noise
+## 16:16:15 Commencing optimization for 500 epochs, with 259588 positive edges
+## 16:16:28 Optimization finished
 ```
 
 ```
@@ -1135,108 +1135,110 @@ sessionInfo()
 ```
 
 ```
-## R version 4.0.5 (2021-03-31)
+## R version 4.1.2 (2021-11-01)
 ## Platform: x86_64-apple-darwin13.4.0 (64-bit)
-## Running under: macOS Big Sur 10.16
+## Running under: macOS Catalina 10.15.7
 ## 
 ## Matrix products: default
-## BLAS/LAPACK: /Users/paulo.czarnewski/miniconda3/envs/scRNAseq2022/lib/libopenblasp-r0.3.18.dylib
+## BLAS/LAPACK: /Users/asbj/miniconda3/envs/scRNAseq2022_tmp/lib/libopenblasp-r0.3.18.dylib
 ## 
 ## locale:
 ## [1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
 ## 
 ## attached base packages:
-##  [1] parallel  stats4    grid      stats     graphics  grDevices utils    
-##  [8] datasets  methods   base     
+## [1] stats4    stats     graphics  grDevices utils     datasets  methods  
+## [8] base     
 ## 
 ## other attached packages:
 ##  [1] reticulate_1.22             harmony_1.0                
-##  [3] Rcpp_1.0.7                  scran_1.18.5               
-##  [5] SingleCellExperiment_1.12.0 SummarizedExperiment_1.20.0
-##  [7] Biobase_2.50.0              GenomicRanges_1.42.0       
-##  [9] GenomeInfoDb_1.26.4         IRanges_2.24.1             
-## [11] S4Vectors_0.28.1            BiocGenerics_0.36.0        
-## [13] MatrixGenerics_1.2.1        matrixStats_0.61.0         
-## [15] ggplot2_3.3.5               cowplot_1.1.1              
-## [17] KernSmooth_2.23-20          fields_13.3                
-## [19] viridis_0.6.2               viridisLite_0.4.0          
-## [21] spam_2.7-0                  dotCall64_1.0-1            
+##  [3] Rcpp_1.0.8                  scran_1.22.0               
+##  [5] scuttle_1.4.0               SingleCellExperiment_1.16.0
+##  [7] SummarizedExperiment_1.24.0 Biobase_2.54.0             
+##  [9] GenomicRanges_1.46.0        GenomeInfoDb_1.30.0        
+## [11] IRanges_2.28.0              S4Vectors_0.32.0           
+## [13] BiocGenerics_0.40.0         MatrixGenerics_1.6.0       
+## [15] matrixStats_0.61.0          ggplot2_3.3.5              
+## [17] cowplot_1.1.1               KernSmooth_2.23-20         
+## [19] fields_13.3                 viridis_0.6.2              
+## [21] viridisLite_0.4.0           spam_2.8-0                 
 ## [23] DoubletFinder_2.0.3         Matrix_1.4-0               
 ## [25] SeuratObject_4.0.4          Seurat_4.0.6               
 ## [27] RJSONIO_1.3-1.6             optparse_1.7.1             
 ## 
 ## loaded via a namespace (and not attached):
 ##   [1] utf8_1.2.2                tidyselect_1.1.1         
-##   [3] htmlwidgets_1.5.4         BiocParallel_1.24.1      
-##   [5] Rtsne_0.15                munsell_0.5.0            
-##   [7] codetools_0.2-18          ica_1.0-2                
-##   [9] statmod_1.4.36            future_1.23.0            
-##  [11] miniUI_0.1.1.1            withr_2.4.3              
-##  [13] colorspace_2.0-2          highr_0.9                
-##  [15] knitr_1.37                ROCR_1.0-11              
-##  [17] tensor_1.5                listenv_0.8.0            
-##  [19] labeling_0.4.2            GenomeInfoDbData_1.2.4   
-##  [21] polyclip_1.10-0           pheatmap_1.0.12          
-##  [23] bit64_4.0.5               farver_2.1.0             
-##  [25] rprojroot_2.0.2           parallelly_1.30.0        
-##  [27] vctrs_0.3.8               generics_0.1.1           
-##  [29] xfun_0.29                 R6_2.5.1                 
-##  [31] rsvd_1.0.5                locfit_1.5-9.4           
-##  [33] hdf5r_1.3.5               bitops_1.0-7             
-##  [35] spatstat.utils_2.3-0      DelayedArray_0.16.3      
-##  [37] assertthat_0.2.1          promises_1.2.0.1         
-##  [39] scales_1.1.1              gtable_0.3.0             
-##  [41] beachmat_2.6.4            globals_0.14.0           
-##  [43] processx_3.5.2            goftest_1.2-3            
-##  [45] rlang_0.4.12              splines_4.0.5            
-##  [47] lazyeval_0.2.2            spatstat.geom_2.3-1      
-##  [49] yaml_2.2.1                reshape2_1.4.4           
-##  [51] abind_1.4-5               httpuv_1.6.4             
-##  [53] tools_4.0.5               ellipsis_0.3.2           
-##  [55] spatstat.core_2.3-2       jquerylib_0.1.4          
-##  [57] RColorBrewer_1.1-2        ggridges_0.5.3           
-##  [59] plyr_1.8.6                sparseMatrixStats_1.2.1  
-##  [61] zlibbioc_1.36.0           purrr_0.3.4              
-##  [63] RCurl_1.98-1.5            ps_1.6.0                 
-##  [65] prettyunits_1.1.1         rpart_4.1-15             
-##  [67] deldir_1.0-6              pbapply_1.5-0            
-##  [69] zoo_1.8-9                 ggrepel_0.9.1            
-##  [71] cluster_2.1.2             here_1.0.1               
-##  [73] magrittr_2.0.1            data.table_1.14.2        
-##  [75] RSpectra_0.16-0           scattermore_0.7          
-##  [77] lmtest_0.9-39             RANN_2.6.1               
-##  [79] fitdistrplus_1.1-6        patchwork_1.1.1          
-##  [81] mime_0.12                 evaluate_0.14            
-##  [83] xtable_1.8-4              gridExtra_2.3            
-##  [85] compiler_4.0.5            tibble_3.1.6             
-##  [87] maps_3.4.0                crayon_1.4.2             
-##  [89] htmltools_0.5.2           mgcv_1.8-38              
-##  [91] later_1.2.0               tidyr_1.1.4              
-##  [93] DBI_1.1.2                 formatR_1.11             
-##  [95] MASS_7.3-54               getopt_1.20.3            
-##  [97] cli_3.1.0                 igraph_1.2.10            
-##  [99] pkgconfig_2.0.3           scuttle_1.0.4            
-## [101] plotly_4.10.0             spatstat.sparse_2.1-0    
-## [103] bslib_0.3.1               dqrng_0.3.0              
-## [105] XVector_0.30.0            stringr_1.4.0            
-## [107] callr_3.7.0               digest_0.6.29            
-## [109] sctransform_0.3.2         RcppAnnoy_0.0.19         
-## [111] spatstat.data_2.1-2       rmarkdown_2.11           
-## [113] leiden_0.3.9              edgeR_3.32.1             
-## [115] uwot_0.1.11               DelayedMatrixStats_1.12.3
-## [117] curl_4.3.2                shiny_1.7.1              
-## [119] lifecycle_1.0.1           nlme_3.1-153             
-## [121] jsonlite_1.7.2            BiocNeighbors_1.8.2      
-## [123] limma_3.46.0              fansi_0.5.0              
-## [125] pillar_1.6.4              lattice_0.20-45          
-## [127] fastmap_1.1.0             httr_1.4.2               
-## [129] pkgbuild_1.3.1            survival_3.2-13          
-## [131] glue_1.6.0                remotes_2.4.2            
-## [133] png_0.1-7                 bluster_1.0.0            
-## [135] bit_4.0.4                 stringi_1.7.6            
-## [137] sass_0.4.0                BiocSingular_1.6.0       
-## [139] dplyr_1.0.7               irlba_2.3.5              
-## [141] future.apply_1.8.1
+##   [3] htmlwidgets_1.5.4         grid_4.1.2               
+##   [5] BiocParallel_1.28.0       Rtsne_0.15               
+##   [7] munsell_0.5.0             ScaledMatrix_1.2.0       
+##   [9] codetools_0.2-18          ica_1.0-2                
+##  [11] statmod_1.4.36            future_1.23.0            
+##  [13] miniUI_0.1.1.1            withr_2.4.3              
+##  [15] colorspace_2.0-2          highr_0.9                
+##  [17] knitr_1.37                ROCR_1.0-11              
+##  [19] tensor_1.5                listenv_0.8.0            
+##  [21] labeling_0.4.2            GenomeInfoDbData_1.2.7   
+##  [23] polyclip_1.10-0           pheatmap_1.0.12          
+##  [25] bit64_4.0.5               farver_2.1.0             
+##  [27] rprojroot_2.0.2           parallelly_1.30.0        
+##  [29] vctrs_0.3.8               generics_0.1.1           
+##  [31] xfun_0.29                 R6_2.5.1                 
+##  [33] rsvd_1.0.5                locfit_1.5-9.4           
+##  [35] hdf5r_1.3.5               bitops_1.0-7             
+##  [37] spatstat.utils_2.3-0      DelayedArray_0.20.0      
+##  [39] assertthat_0.2.1          promises_1.2.0.1         
+##  [41] scales_1.1.1              gtable_0.3.0             
+##  [43] beachmat_2.10.0           globals_0.14.0           
+##  [45] processx_3.5.2            goftest_1.2-3            
+##  [47] rlang_0.4.12              splines_4.1.2            
+##  [49] lazyeval_0.2.2            spatstat.geom_2.3-1      
+##  [51] yaml_2.2.1                reshape2_1.4.4           
+##  [53] abind_1.4-5               httpuv_1.6.5             
+##  [55] tools_4.1.2               ellipsis_0.3.2           
+##  [57] spatstat.core_2.3-2       jquerylib_0.1.4          
+##  [59] RColorBrewer_1.1-2        ggridges_0.5.3           
+##  [61] plyr_1.8.6                sparseMatrixStats_1.6.0  
+##  [63] zlibbioc_1.40.0           purrr_0.3.4              
+##  [65] RCurl_1.98-1.5            ps_1.6.0                 
+##  [67] prettyunits_1.1.1         rpart_4.1-15             
+##  [69] deldir_1.0-6              pbapply_1.5-0            
+##  [71] zoo_1.8-9                 ggrepel_0.9.1            
+##  [73] cluster_2.1.2             here_1.0.1               
+##  [75] magrittr_2.0.1            data.table_1.14.2        
+##  [77] RSpectra_0.16-0           scattermore_0.7          
+##  [79] lmtest_0.9-39             RANN_2.6.1               
+##  [81] fitdistrplus_1.1-6        patchwork_1.1.1          
+##  [83] mime_0.12                 evaluate_0.14            
+##  [85] xtable_1.8-4              gridExtra_2.3            
+##  [87] compiler_4.1.2            tibble_3.1.6             
+##  [89] maps_3.4.0                crayon_1.4.2             
+##  [91] htmltools_0.5.2           mgcv_1.8-38              
+##  [93] later_1.2.0               tidyr_1.1.4              
+##  [95] DBI_1.1.2                 formatR_1.11             
+##  [97] MASS_7.3-55               getopt_1.20.3            
+##  [99] cli_3.1.0                 metapod_1.2.0            
+## [101] parallel_4.1.2            dotCall64_1.0-1          
+## [103] igraph_1.2.11             pkgconfig_2.0.3          
+## [105] plotly_4.10.0             spatstat.sparse_2.1-0    
+## [107] bslib_0.3.1               dqrng_0.3.0              
+## [109] XVector_0.34.0            stringr_1.4.0            
+## [111] callr_3.7.0               digest_0.6.29            
+## [113] sctransform_0.3.3         RcppAnnoy_0.0.19         
+## [115] spatstat.data_2.1-2       rmarkdown_2.11           
+## [117] leiden_0.3.9              edgeR_3.36.0             
+## [119] uwot_0.1.11               DelayedMatrixStats_1.16.0
+## [121] curl_4.3.2                shiny_1.7.1              
+## [123] lifecycle_1.0.1           nlme_3.1-155             
+## [125] jsonlite_1.7.2            BiocNeighbors_1.12.0     
+## [127] limma_3.50.0              fansi_1.0.0              
+## [129] pillar_1.6.4              lattice_0.20-45          
+## [131] fastmap_1.1.0             httr_1.4.2               
+## [133] pkgbuild_1.3.1            survival_3.2-13          
+## [135] glue_1.6.0                remotes_2.4.2            
+## [137] png_0.1-7                 bluster_1.4.0            
+## [139] bit_4.0.4                 stringi_1.7.6            
+## [141] sass_0.4.0                BiocSingular_1.10.0      
+## [143] dplyr_1.0.7               irlba_2.3.5              
+## [145] future.apply_1.8.1
 ```
 
 
