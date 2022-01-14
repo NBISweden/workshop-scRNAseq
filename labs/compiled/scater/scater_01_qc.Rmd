@@ -41,26 +41,15 @@ p.caption {font-size: 0.9em;font-style: italic;color: grey;margin-right: 10%;mar
 
 In this tutorial, we will run all tutorials with a set of 6 PBMC 10x datasets from 3 covid-19 patients and 3 healthy controls, the samples have been subsampled to 1500 cells per sample. They are part of the github repo and if you have cloned the repo they should be available in folder: `labs/data/covid_data_GSE149689`. Instructions on how to download them can also be found in the Precourse material.
 
-```{bash, results='hide'}
-mkdir -p data/raw
-
-# first check if the files are there
-count=$(ls -l data/raw/*.h5 | grep -v ^d | wc -l )
-echo $count
-
-# if not 4 files, fetch the files from github.
-if (("$count" <  6)); then
-  cd data/raw
-  curl -O https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/new_dataset/labs/data/covid_data_GSE149689/sub/Normal_PBMC_13.h5
-  curl -O https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/new_dataset/labs/data/covid_data_GSE149689/sub/Normal_PBMC_14.h5
-  curl -O https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/new_dataset/labs/data/covid_data_GSE149689/sub/Normal_PBMC_5.h5
-  curl -O https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/new_dataset/labs/data/covid_data_GSE149689/sub/nCoV_PBMC_15.h5
-  curl -O https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/new_dataset/labs/data/covid_data_GSE149689/sub/nCoV_PBMC_17.h5
-  curl -O https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/new_dataset/labs/data/covid_data_GSE149689/sub/nCoV_PBMC_1.h5
-  cd ../..
-fi
-
-ls -lGa data/raw
+```{r,message='hide',warning='hide',results='hold'}
+webpath <- "https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/new_dataset/labs/data/covid_data_GSE149689/sub/"
+dir.create("./data/raw",recursive = T)
+file_list <- c("Normal_PBMC_13.h5","Normal_PBMC_14.h5","Normal_PBMC_5.h5",
+               "nCoV_PBMC_15.h5","nCoV_PBMC_17.h5","nCoV_PBMC_1.h5")
+for(i in file_list){
+  download.file( url = paste0(webpath,i) , 
+                 destfile = paste0("./data/raw/",i))
+}
 ```
 
 With data in place, now we can start loading libraries we will use in this tutorial.
@@ -324,16 +313,16 @@ if (!file.exists(genes.file)){
   suppressMessages(require(biomaRt))
 
   # initialize connection to mart, may take some time if the sites are unresponsive.
-  mart <- useMart(host="www.ensembl.org", "ENSEMBL_MART_ENSEMBL", dataset="hsapiens_gene_ensembl")
+  mart <- useMart("ENSEMBL_MART_ENSEMBL", dataset="hsapiens_gene_ensembl")
 
   # fetch chromosome info plus some other annotations
-  genes.table <- try(getBM(filters= "external_gene_name", attributes= c("ensembl_gene_id",
+  genes.table <- try(biomaRt::getBM(attributes = c("ensembl_gene_id",
               "external_gene_name", "description","gene_biotype", "chromosome_name","start_position"),
-              values= rownames(sce.filt), mart= mart))
-  
+              mart = mart, useCache = F))
+
   if(!dir.exists("data/results")){dir.create("data/results")}
   if(is.data.frame(genes.table)){write.csv(genes.table, file = genes.file)}
-  
+
   if (!file.exists(genes.file)){
   download.file("https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/master/labs/misc/genes.table.csv",destfile = "data/results/genes.table.csv")
     genes.table = read.csv(genes.file)
@@ -341,6 +330,8 @@ if (!file.exists(genes.file)){
 }else{
   genes.table = read.csv(genes.file)
 }
+
+genes.table <- genes.table[genes.table$external_gene_name %in% rownames(sce.filt),]
 ```
 
 Now that we have the chromosome information, we can calculate per cell the proportion of reads that comes from chromosome Y.
