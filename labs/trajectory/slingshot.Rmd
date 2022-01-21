@@ -22,7 +22,7 @@ output:
       collapsed: false
       smooth_scroll: true
     toc_depth: 3
-editor_options: 
+editor_options:
   chunk_output_type: console
 ---
 
@@ -39,14 +39,14 @@ knitr::opts_chunk$set(message=FALSE, warning=FALSE, result='hold',fig.width=12, 
 suppressPackageStartupMessages({
   # Single cell libraries
   library(Seurat) ;  library(scran) ;  library(scater)
-  
+
   # Plotting
   library(rafalib) ;  library(cowplot) ; library(rgl) ;  library(plotly)
   options(rgl.printRglwidget = TRUE)
 
   # Sparse Matrix manipulation tools
   library(Matrix) ; library(sparseMatrixStats)
-  
+
   # Trajectory analysis
   library(slingshot)
   library(tradeSeq)
@@ -73,7 +73,7 @@ draw_graph <- function( layout , graph , lwd = 0.2 , col = "grey" ){
 
 ### Loading data
 
-In order to speed up the computations during the exercises, we will be using a subset of a bone marrow dataset (originally containing about 100K cells). The bone marrow is the source of adult immune cells, and contains virtually all differentiation stages of cell from the **imune** system which later circulate in the blood to all other organs. 
+In order to speed up the computations during the exercises, we will be using a subset of a bone marrow dataset (originally containing about 100K cells). The bone marrow is the source of adult immune cells, and contains virtually all differentiation stages of cell from the **imune** system which later circulate in the blood to all other organs.
 
 ![](Hematopoiesis.png)
 
@@ -125,10 +125,10 @@ You can check, for example how many cells are in each cluster:
 
 ```{r}
 #SEURAT
-table(obj$clusters) 
+table(obj$clusters)
 
 #SCRAN
-table(sce$clusters) 
+table(sce$clusters)
 ```
 
 
@@ -166,7 +166,7 @@ for(i in vars){ pl[[i]] <- plotReducedDim(sce,"umap",colour_by = i,by_exprs_valu
 plot_grid(plotlist = pl)
 ```
 
-Another way to better explore your data is look in higher dimensions, to really get a sense for what is right or wrong. As mentioned in the dimensionality reduction exercises, here we ran umap with **3** dimensions (**IMPORTANT: the umap needs to be computed to results in _exactly_ 3 dimensions**). 
+Another way to better explore your data is look in higher dimensions, to really get a sense for what is right or wrong. As mentioned in the dimensionality reduction exercises, here we ran umap with **3** dimensions (**IMPORTANT: the umap needs to be computed to results in _exactly_ 3 dimensions**).
 
 Since the steps below are identical to both `Seurat` and `Scran` pipelines, we ill extract the matrices from both, so it is clear what is being used where and to remove long lines of code used to get those matrices. We will use them all.
 
@@ -176,8 +176,8 @@ NORM_COUNTS      <- obj@assays$RNA@data
 UMAP2            <- obj@reductions$umap@cell.embeddings
 UMAP3            <- obj@reductions$umap3d@cell.embeddings
 HARMONY          <- obj@reductions$harmony_Phase@cell.embeddings
-PCA              <- obj@reductions$pca@cell.embeddings 
-PCA_loadings     <- obj@reductions$pca@feature.loadings 
+PCA              <- obj@reductions$pca@cell.embeddings
+PCA_loadings     <- obj@reductions$pca@feature.loadings
 clustering       <- factor(obj$clusters)
 KNN              <- obj@graphs$knn
 
@@ -217,7 +217,7 @@ Or Plot in 3D with `Plotly`:
 ```{r}
 df <- data.frame( UMAP3 , variable=clustering )
 colnames(df)[1:3] <- c("UMAP_1","UMAP_2","UMAP_3")
-p_State <- plot_ly(df,x = ~UMAP_1, y = ~UMAP_2, z=~UMAP_3,color = ~variable, colors = pal, size=.5) 
+p_State <- plot_ly(df,x = ~UMAP_1, y = ~UMAP_2, z=~UMAP_3,color = ~variable, colors = pal, size=.5)
 try(htmlwidgets::saveWidget(p_State,
     selfcontained = T,"umap_3d_clustering_plotly.html"),silent = T)
 browseURL("umap_3d_clustering_plotly.html")
@@ -229,7 +229,7 @@ p_State
 
 Before we take a dive into trajectory itself, we need to clean up the data a bit, so we can get nice figures later. This dataset is already clean in terms of guality of the cells and so on, but as you probably noticed in the clustering exercise, there is always some outlier cells in the "wrong" part of the plot (as in, far away from cell from the same cluster ).
 
-In reality, this is distotion caused by the graph layout algorithm (UMAP in this case) that tries to **force the data to be shown in 2 dimensions**. If you check the 3D plots, the data points are in the "correct" position closer to other points in the same clusters (there is not a single misplaced point). Still, in most cases not even 3 dimensions is enough to represent the data correctly. 
+In reality, this is distotion caused by the graph layout algorithm (UMAP in this case) that tries to **force the data to be shown in 2 dimensions**. If you check the 3D plots, the data points are in the "correct" position closer to other points in the same clusters (there is not a single misplaced point). Still, in most cases not even 3 dimensions is enough to represent the data correctly.
 
 ```{r}
 # calculate the distance from every cell to its neighbors
@@ -243,8 +243,8 @@ to_keep <- ( d < cutoff )
 mypar()
 plot( UMAP2 , type="n")
 draw_graph( layout = UMAP2 , graph = KNN )
-points( UMAP2 , cex = ifelse(!to_keep,1,0.3) , 
-                lwd = ifelse(!to_keep,2,0) , 
+points( UMAP2 , cex = ifelse(!to_keep,1,0.3) ,
+                lwd = ifelse(!to_keep,2,0) ,
                 bg = pal[ clustering ], pch=21 )
 text(centroids2d,labels = rownames(centroids2d),cex=1,font=2)
 ```
@@ -266,8 +266,8 @@ And let's plot the UMAP again:
 mypar()
 plot( new_UMAP2 , type="n")
 draw_graph( layout = new_UMAP2 , graph = KNN )
-points( new_UMAP2 , cex = ifelse(!to_keep,1,0.3) , 
-                lwd = ifelse(!to_keep,2,0) , 
+points( new_UMAP2 , cex = ifelse(!to_keep,1,0.3) ,
+                lwd = ifelse(!to_keep,2,0) ,
                 bg = pal[ clustering ], pch=21 )
 text(new_centroids2d,labels = rownames(new_centroids2d),cex=1,font=2)
 ```
@@ -278,7 +278,7 @@ Much better!
 #### Trajectory inference with Slingshot
 ***
 
-Until up to this point, the steps above have been somewhat covered in the previous lectures. From now on, we will start using that clustering and data reduction techniques for trajectory inference. 
+Until up to this point, the steps above have been somewhat covered in the previous lectures. From now on, we will start using that clustering and data reduction techniques for trajectory inference.
 
 #### Which dimensionality reduction to use?
 
@@ -298,8 +298,8 @@ mypar(3,3)
 plot( new_UMAP2 , pch=16, col=pal[ clustering ])
 text(new_centroids2d,labels = rownames(new_centroids2d),cex=1,font=2)
 
-for(i in 1:8){ 
-  cc <- t( t(ICA[,c(i*2-1,i*2)]) %*% mm  ) / Matrix::colSums(mm) 
+for(i in 1:8){
+  cc <- t( t(ICA[,c(i*2-1,i*2)]) %*% mm  ) / Matrix::colSums(mm)
   plot( ICA[,c(i*2-1,i*2)] , pch=16, col=pal[ clustering ])
   text(cc[,1],cc[,2],labels = rownames(cc),cex=1,font=2)}
 ```
@@ -316,8 +316,8 @@ mypar(3,3)
 plot( new_UMAP2 , pch=16, col=pal[ clustering ])
 text(new_centroids2d,labels = rownames(new_centroids2d),cex=1,font=2)
 
-for(i in 1:8){ 
-  cc <- t( t(DM[,c(i*2-1,i*2)]) %*% mm  ) / Matrix::colSums(mm) 
+for(i in 1:8){
+  cc <- t( t(DM[,c(i*2-1,i*2)]) %*% mm  ) / Matrix::colSums(mm)
   plot( DM[,c(i*2-1,i*2)] , pch=16, col=pal[ clustering ])
   text(cc[,1],cc[,2],labels = rownames(cc),cex=1,font=2) }
 ```
@@ -353,11 +353,11 @@ text(new_centroids2d,labels = rownames(new_centroids2d),cex=0.8,font=2,col = "wh
 # Check the umap in 2D
 plot( new_UMAP2 , type="n")
 draw_graph( layout = new_UMAP2 , graph = KNN )
-points( new_UMAP2 , cex = ifelse(!to_keep,1,0.3) , 
-                lwd = ifelse(!to_keep,2,0) , 
+points( new_UMAP2 , cex = ifelse(!to_keep,1,0.3) ,
+                lwd = ifelse(!to_keep,2,0) ,
                 bg = pal[ clustering ], pch=21 )
 text(new_centroids2d,labels = rownames(new_centroids2d),cex=0.8,font=2)
-``` 
+```
 
 Now take a closer look on the object, which lineages you see? Which is the starting cell cluster?
 
@@ -487,13 +487,13 @@ pheatmap::pheatmap(to_merge,cluster_rows = F,cluster_cols = F)
 
 
 # Merge the cluster labels
-mappings <- cbind( from = colnames(to_merge) [ to_merge@i+1 ] , 
-                   to=colnames(to_merge) [rep(x = 1:(length(to_merge@p)-1) , 
+mappings <- cbind( from = colnames(to_merge) [ to_merge@i+1 ] ,
+                   to=colnames(to_merge) [rep(x = 1:(length(to_merge@p)-1) ,
                    times = (to_merge@p[-1] - to_merge@p[-length(to_merge@p)]) )] )
 merged_filt_clustering <- factor( mappings[match(filt_clustering,mappings[,1]),2] )
 merged_filt_mm <- sparse.model.matrix( ~ 0 + factor( merged_filt_clustering ) )
 colnames(merged_filt_mm) <- levels( factor( merged_filt_clustering ) )
-merged_filt_new_centroids2d <- as.matrix( t( t(filt_new_UMAP2) %*% merged_filt_mm  ) / Matrix::colSums(merged_filt_mm)) 
+merged_filt_new_centroids2d <- as.matrix( t( t(filt_new_UMAP2) %*% merged_filt_mm  ) / Matrix::colSums(merged_filt_mm))
 
 
 
@@ -518,7 +518,7 @@ lineages <- getLineages(data = filt_new_UMAP2,
 
 
 # IF NEEDED, ONE CAN ALSO MANULALLY EDIT THE LINEAGES, FOR EXAMPLE:
-# sel <- sapply( lineages@lineages, function(x){rev(x)[1]} ) %in% ENDS 
+# sel <- sapply( lineages@lineages, function(x){rev(x)[1]} ) %in% ENDS
 # lineages@lineages <- lineages@lineages[ sel ]
 # names(lineages@lineages) <- paste0("Lineage",1:length(lineages@lineages))
 # lineages
@@ -544,7 +544,7 @@ Once the clusters are connected, Slingshot allows you to transform them to a smo
 * Lineages with a same set of clusters will be constrained so that their principal curves remain bundled around the overlapping clusters
 
 Since the function `getCurves()` takes some time to run, we can speed up the convergence of the curve fitting process by reducing the amount of cells to use in each lineage. Ideally you could all cells, but here we had set `approx_points` to 300 to speed up. Feel free to adjust that for your dataset.
- 
+
 ```{r, fig.width=6, fig.height=6}
 # Define curves
 curves <- getCurves(lineages, thresh = 1e-1, stretch = 1e-1, allow.breaks = F,approx_points = 100)
@@ -617,7 +617,7 @@ text(merged_filt_new_centroids2d [,1],merged_filt_new_centroids2d[,2],
      labels = rownames(merged_filt_new_centroids2d),cex=0.8,font=2)
 
 vars <- c("Cd34","Ms4a1","Cd3e","Ltf","Cst3","Mcpt8","Alas2","Siglech");
-for(i in vars){ 
+for(i in vars){
   plot(filt_NORM_COUNTS[i,],CORRECTED_NORMCOUNTS[i,],main=i,pch=16,cex=0.4)
   rr <- c( diff(range(filt_NORM_COUNTS[i,]))/50 , (range(CORRECTED_NORMCOUNTS[i,])) )
   polygon(c(-rr[1],-rr[1],rr[1],rr[1]),c(rr[3],rr[2],rr[2],rr[3]),border = "red")
@@ -639,7 +639,7 @@ for(j in c("filt_NORM_COUNTS","CORRECTED_NORMCOUNTS")){
   draw_graph( layout = filt_new_UMAP2 , graph = filt_KNN )
   points( filt_new_UMAP2, col = pal[merged_filt_clustering], pch = 16 )
   text(merged_filt_new_centroids2d, labels = rownames(merged_filt_new_centroids2d),cex=0.8,font=2)
-  for(i in vars){ 
+  for(i in vars){
   x <- get(j)[i, ] ; x <- x - min(x)/ (max(x)-min(x)) ; o <- order(x)
   plot(filt_new_UMAP2[o,],main=paste0(i),pch=16,cex=0.4,axes=F,xlab="",ylab="",
        col=colorRampPalette(c("lightgray","blue"))(99)[x[o]*98+1])  }}
@@ -716,7 +716,7 @@ res  <- res[ order( res$waldStat , decreasing = T ) , ]
 res[1:10,]
 ```
 
-We can plot their expression: 
+We can plot their expression:
 
 ```{r}
 mypar(4,4,mar=c(.1,.1,2,1))
@@ -728,7 +728,7 @@ text(merged_filt_new_centroids2d[lc,], labels = names(lc) , cex=1,font=2,col="wh
 
 vars <- rownames(res[1:15,])
 
-for(i in vars){ 
+for(i in vars){
 x <- CORRECTED_NORMCOUNTS[i, ] ; x <- (x - min(x))/ ( max(x)-min(x) ) ; o <- order(x)
 plot( filt_new_UMAP2[o,], main=paste0(i), pch=16,cex=0.5,axes=F,xlab="",ylab="",
      col=colorRampPalette(c("lightgray","grey60","navy"))(99)[x[o]*98+1])  }
@@ -748,7 +748,7 @@ res[1:10,1:6]
 ```
 
 You can see now that there are several more columns, one for each lineage. This table represents the differential expression within each lineage, to identify which genes go up or down. Let's check lineage 1:
- 
+
 ```{r}
 # Get the top UP and Down regulated in lineage 1
 res_lin1 <- sort(setNames(res$logFClineage1,rownames(res)) )
@@ -761,13 +761,13 @@ lines(curves, lwd = 2, col = 'black')
 points(merged_filt_new_centroids2d[lc,], col = "black", pch = 15,cex=3,xpd=T)
 text(merged_filt_new_centroids2d[lc,], labels = names(lc) , cex=1,font=2,col="white",xpd=T)
 
-for(i in vars){ 
+for(i in vars){
 x <- CORRECTED_NORMCOUNTS[i, ] ; x <- (x - min(x))/ ( max(x)-min(x) ) ; o <- order(x)
 plot( filt_new_UMAP2[o,], main=paste0(i), pch=16,cex=0.5,axes=F,xlab="",ylab="",
      col=colorRampPalette(c("lightgray","grey60","navy"))(99)[x[o]*98+1])  }
 ```
 
- 
+
 
 #### Genes that are different between lineages
 
@@ -788,7 +788,7 @@ res[1:10,1:6]
 
 
 You can see now that there are even more columns, one for the pair-wise comparisson between each lineage. Let's check lineage 1 vs lineage 2:
- 
+
 ```{r}
 # Get the top UP and Down regulated in lineage 1 vs 2
 res_lin1_2 <- sort(setNames(res$logFC1_2,rownames(res)) )
@@ -801,7 +801,7 @@ lines(curves, lwd = 2, col = 'black')
 points(merged_filt_new_centroids2d[lc,], col = "black", pch = 15,cex=3,xpd=T)
 text(merged_filt_new_centroids2d[lc,], labels = names(lc) , cex=1,font=2,col="white",xpd=T)
 
-for(i in vars){ 
+for(i in vars){
 x <- CORRECTED_NORMCOUNTS[i, ] ; x <- (x - min(x))/ ( max(x)-min(x) ) ; o <- order(x)
 plot( filt_new_UMAP2[o,], main=paste0(i), pch=16,cex=0.5,axes=F,xlab="",ylab="",
      col=colorRampPalette(c("lightgray","grey60","navy"))(99)[x[o]*98+1])  }
@@ -811,7 +811,7 @@ plot( filt_new_UMAP2[o,], main=paste0(i), pch=16,cex=0.5,axes=F,xlab="",ylab="",
 
 Check out this [vignette](https://statomics.github.io/tradeSeq/articles/tradeSeq.html) for a more in-depth overview of tradeSeq and many other differential expression tests.
 
- 
+
 
 ### References
 ***
@@ -834,20 +834,20 @@ You can recreate your object in `Seurat` like so:
 # # Create object with counts and metadata
 # obj <- CreateSeuratObject( counts = Read10X_h5("./data/subset_BM_counts.h5") ,
 #                            meta.data = read.csv2("./data/subset_BM_metadata.csv",row.names = 1))
-# 
+#
 # # Add normalized counts and variable features
 # obj@assays$RNA@data <- Read10X_h5("./data/subset_BM_normdata.h5")
 # obj@assays$RNA@var.features <- read.csv2("./data/subset_BM_var_features.csv",row.names = 1)
-# 
+#
 # # Add reductions and PCA loadings
 # for(i in c("pca","harmony","harmony_Phase","umap","umap3d")){
 # obj@reductions[[i]] <- CreateDimReducObject(
 #   embeddings = as.matrix(Read10X_h5(paste0("./data/subset_BM_",i,".h5"))) ,key = paste0(i,"_"))}
 # obj@reductions$pca@feature.loadings <- as.matrix(Read10X_h5(paste0("./data/subset_BM_pca_feature_loadings.h5")))
-# 
+#
 # # Add KNN graph
 # obj@graphs[['knn']] <- Read10X_h5(paste0("./data/subset_BM_knn.h5"))
-# 
+#
 # obj
 # saveRDS(obj,"trajectory_seurat.rds")
 ```
@@ -869,9 +869,6 @@ You can recreate your object in `Scran` like so:
 #   )
 # sce@colData <- DataFrame(read.csv2("./data/subset_BM_metadata.csv",row.names = 1))
 # attr(x = reducedDim(sce,"pca"),which = "rotation") <- as.matrix(Read10X_h5(paste0("./data/subset_BM_pca_feature_loadings.h5")))
-# 
+#
 # saveRDS(sce,"trajectory_scran.rds")
 ```
-
-
-
