@@ -54,7 +54,7 @@ suppressPackageStartupMessages({
   library(cowplot)
   library(ggplot2)
   library(rafalib)
-  library(venn)
+#  library(venn)
 })
 
 sce <- readRDS("data/results/covid_qc_dm.rds")
@@ -79,7 +79,12 @@ hvgs_per_dataset <- lapply( sce.list, function(x){
 })
 names(hvgs_per_dataset) <- unique(sce$sample)
 
-venn::venn(hvgs_per_dataset,opacity = .4,zcolor = scales::hue_pal()(3),cexsn = 1,cexil = 1,lwd=1,col="white",borders = NA)
+# venn::venn(hvgs_per_dataset,opacity = .4,zcolor = scales::hue_pal()(3),cexsn = 1,cexil = 1,lwd=1,col="white",borders = NA)
+
+temp <- unique(unlist(hvgs_per_dataset))
+overlap <- sapply( hvgs_per_dataset , function(x) { temp %in% x } )
+pheatmap::pheatmap(t(overlap*1),cluster_rows = F ,
+                   color = c("grey90","grey20"))
 ```
 
 The mutual nearest neighbors (MNN) approach within the scran package utilizes a novel approach to adjust for batch effects. The `fastMNN()` function returns a representation of the data with reduced dimensionality, which can be used in a similar fashion to other lower-dimensional representations such as PCA. In particular, this representation can be used for downstream methods such as clustering. The BNPARAM can be used to specify the specific nearest neighbors method to use from the BiocNeighbors package. Here we make use of the [Annoy library](https://github.com/spotify/annoy) via the `BiocNeighbors::AnnoyParam()` argument. We save the reduced-dimension MNN representation into the reducedDims slot of our sce object.

@@ -1,0 +1,350 @@
+---
+title: "Seurat: Quality control"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(message=FALSE, warning=FALSE, result='hold',fig.width=12,tidy=TRUE)
+```
+
+
+***
+# Get data
+
+In this tutorial, we will run all tutorials with a set of 6 PBMC 10x datasets from 3 covid-19 patients and 3 healthy controls, the samples have been subsampled to 1500 cells per sample. They are part of the github repo and if you have cloned the repo they should be available in folder: `labs/data/covid_data_GSE149689`. Instructions on how to download them can also be found in the Precourse material.
+
+```{bash, results='hide'}
+mkdir -p data/raw
+
+# first check if the files are there
+count=$(ls -l data/raw/*.h5 | grep -v ^d | wc -l )
+echo $count
+
+# if not 4 files, fetch the files from github.
+if (("$count" <  4)); then
+  cd data/raw
+  curl  -O https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/raw/master/labs/data/covid_data_GSE149689/raw/Normal_PBMC_13.h5
+  curl  -O https://github.com/NBISweden/workshop-scRNAseq/raw/master/labs/data/covid_data_GSE149689/raw/Normal_PBMC_14.h5
+  curl  -O https://github.com/NBISweden/workshop-scRNAseq/raw/master/labs/data/covid_data_GSE149689/raw/nCoV_PBMC_15.h5
+  curl  -O https://github.com/NBISweden/workshop-scRNAseq/raw/master/labs/data/covid_data_GSE149689/raw/nCoV_PBMC_17.h5
+  cd ../..
+fi  
+```
+
+With data in place, now we can start loading libraries we will use in this tutorial.
+
+```{r, message='hide',warning='hide',results='hold'}
+suppressMessages(require(Seurat))
+suppressMessages(require(Matrix))
+```
+
+We can first load the data individually by reading directly from HDF5 file format (.h5).
+
+```{r,message='hide',warning='hide',results='hold'}
+cov.17 <- Seurat::Read10X_h5(
+  filename = "data/raw/nCoV_PBMC_17.h5",
+  use.names = T)
+cov.15 <- Seurat::Read10X_h5(
+  filename = "data/raw/nCoV_PBMC_15.h5",
+  use.names = T)
+ctrl.14 <- Seurat::Read10X_h5(
+  filename = "data/raw/Normal_PBMC_14.h5",
+  use.names = T)
+ctrl.13 <- Seurat::Read10X_h5(
+  filename = "data/raw/Normal_PBMC_13.h5",
+  use.names = T)
+
+```
+
+***
+# Create one merged object
+
+We can now load the expression matricies into objects and then merge them into a single merged object. Each analysis workflow (Seurat, Scater, Scranpy, etc) has its own way of storing data. We will add dataset labels as cell.ids just in case you have overlapping barcodes between the datasets. After that we add a column `Chemistry` in the metadata for plotting later on.
+
+```{r}
+sdata.cov15 <- CreateSeuratObject(cov.15,  project = "covid_15")
+sdata.cov17 <- CreateSeuratObject(cov.17,  project = "covid_17")
+sdata.ctrl13 <- CreateSeuratObject(ctrl.13,  project = "ctrl_13")
+sdata.ctrl14 <- CreateSeuratObject(ctrl.14,  project = "ctrl_14")
+
+
+# Merge datasets into one single seurat object
+alldata <- merge(sdata.cov15, c(sdata.cov17, sdata.ctrl13, sdata.ctrl14), add.cell.ids=c("covid_15","covid_17","ctrl_13", "ctrl_14"))
+
+```
+
+Once you have created the merged Seurat object, the count matrices and individual count matrices and objects are not needed anymore. It is a good idea to remove them and run garbage collect to free up some memory.
+
+```{r}
+# remove all objects that will not be used.
+rm(cov.15, cov.17, ctrl.13, ctrl.14, sdata.cov15, sdata.cov17, sdata.ctrl13, sdata.ctrl14)
+
+# run garbage collect to free up memory
+gc()
+```
+ Here it is how the count matrix and the metatada look like for every cell.
+
+```{r ,  results='hold'}
+as.data.frame(alldata@assays$RNA@counts[1:10,1:2])
+head(alldata@meta.data,10)
+```
+
+
+***
+# Calculate QC
+
+Having the data in a suitable format, we can start calculating some quality metrics. We can for example calculate the percentage of mitocondrial and ribosomal genes per cell and add to the metadata. This will be helpfull to visualize them across different metadata parameteres (i.e. datasetID and chemistry version). There are several ways of doing this, and here manually calculate the proportion of mitochondrial reads and add to the metadata table.
+
+Citing from "Simple Single Cell" workflows (Lun, McCarthy & Marioni, 2017): "High proportions are indicative of poor-quality cells (Islam et al. 2014; Ilicic et al. 2016), possibly because of loss of cytoplasmic RNA from perforated cells. The reasoning is that mitochondria are larger than individual transcript molecules and less likely to escape through tears in the cell membrane."
+
+```{r, results='hold'}
+# Way1: Doing it using Seurat function
+alldata <- PercentageFeatureSet(alldata, "^MT-", col.name = "percent_mito")
+
+# Way2: Doing it manually
+total_counts_per_cell <- colSums(  alldata@assays$RNA@counts  )
+mito_genes <- rownames(alldata)[grep("^MT-",rownames(alldata))]
+alldata$percent_mito <- colSums(  alldata@assays$RNA@counts[mito_genes,]  ) / total_counts_per_cell
+
+head(mito_genes,10)
+```
+
+In the same manner we will calculate the proportion gene expression that comes from ribosomal proteins.
+
+```{r, results='hold'}
+# Way1: Doing it using Seurat function
+alldata <- PercentageFeatureSet(alldata, "^RP[SL]", col.name = "percent_ribo")
+
+# Way2: Doing it manually
+ribo_genes <- rownames(alldata)[grep("^RP[SL]",rownames(alldata))]
+head(ribo_genes,10)
+alldata$percent_ribo <- colSums(  alldata@assays$RNA@counts[ribo_genes,]  ) / total_counts_per_cell
+```
+
+And finally, with the same method we will calculate proportion hemoglobin genes, which can give an indication of red blood cell contamination.
+
+```{r, results='hold'}
+# Percentage hemoglobin genes - includes all genes starting with HB except HBP.
+alldata <- PercentageFeatureSet(alldata, "^HB[^(P)]", col.name = "percent_hb")
+
+```
+
+***
+# Plot QC
+
+Now we can plot some of the QC-features as violin plots.
+
+```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=8,fig.width=16}
+feats <- c("nFeature_RNA","nCount_RNA","percent_mito","percent_ribo", "percent_hb")
+VlnPlot(alldata, group.by= "orig.ident", features = feats, pt.size = 0.1,ncol = 3) + NoLegend()
+```
+
+As you can see, there is quite some difference in quality for the 4 datasets, with for instance the covid_15 sample having fewer cells with many detected genes and more mitochondrial content. As the ribosomal proteins are highly expressed they will make up a larger proportion of the transcriptional landscape when fewer of the lowly expressed genes are detected. And we can plot the different QC-measures as scatter plots.
+
+```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=16}
+cowplot::plot_grid(ncol = 4,
+  FeatureScatter(alldata, "nCount_RNA"  , "nFeature_RNA", group.by = "orig.ident", pt.size = .5),
+  FeatureScatter(alldata, "percent_mito", "nFeature_RNA", group.by = "orig.ident", pt.size = .5),
+  FeatureScatter(alldata, "percent_ribo", "nFeature_RNA", group.by = "orig.ident", pt.size = .5),
+  FeatureScatter(alldata, "percent_ribo", "percent_mito", group.by = "orig.ident", pt.size = .5)
+)
+```
+
+***
+# Filtering
+
+## Detection-based filtering
+
+A standard approach is to filter cells with low amount of reads as well as genes that are present in at least a certain amount of cells. Here we will only consider cells with at least 200 detected genes and genes need to be expressed in at least 3 cells. Please note that those values are highly dependent on the library preparation method used.
+
+```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=4}
+selected_c <- WhichCells(alldata, expression = nFeature_RNA > 200)
+selected_f <- rownames(alldata)[ Matrix::rowSums(alldata) > 3]
+
+data.filt <- subset(alldata, features=selected_f, cells=selected_c)
+dim(data.filt)
+```
+
+ Extremely high number of detected genes could indicate doublets. However, depending on the cell type composition in your sample, you may have cells with higher number of genes (and also higher counts) from one cell type. <br>In this case, we will run doublet prediction further down, so we will skip this step now, but the code below is an example of how it can be run:
+
+```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=16}
+#start with cells with many genes detected.
+
+# skip for now and run DoubletFinder first!
+#high.det.v3 <- WhichCells(data.filt, expression = nFeature_RNA > 4100)
+#high.det.v2 <- WhichCells(data.filt, expression = nFeature_RNA > 2000 & orig.ident == "v2.1k")
+
+# remove these cells
+#data.filt <- subset(data.filt, cells=setdiff(WhichCells(data.filt),c(high.det.v2,high.det.v3)))
+
+# check number of cells
+ncol(data.filt)
+```
+
+Additionally, we can also see which genes contribute the most to such reads. We can for instance plot the percentage of counts per gene.
+
+
+```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=8,fig.width=12}
+#Compute the relative expression of each gene per cell
+#Use sparse matrix operations, if your dataset is large, doing matrix devisions the regular way will take a very long time.
+C = data.filt@assays$RNA@counts
+C@x = C@x / rep.int(colSums(C), diff(C@p))
+most_expressed <- order(Matrix::rowSums( C ),decreasing = T)[20:1]
+boxplot( as.matrix(t(C[most_expressed,])),cex=.1, las=1, xlab="% total count per cell",col=scales::hue_pal()(20)[20:1],horizontal=TRUE)
+
+```
+
+As you can see, MALAT1 constitutes up to 30% of the UMIs from a single cell and the other top genes are mitochondrial and ribosomal genes. It is quite common that nuclear lincRNAs have correlation with quality and mitochondrial reads, so high detection of MALAT1 may be a technical issue. Let us assemble some information about such genes, which are important for quality control and downstream filtering.
+
+## Mito/Ribo filtering
+
+We also have quite a lot of cells with high proportion of mitochondrial and low proportion ofribosomal reads. It could be wise to remove those cells, if we have enough cells left after filtering. <br>Another option would be to either remove all mitochondrial reads from the dataset and hope that the remaining genes still have enough biological signal. <br>A third option would be to just regress out the `percent_mito` variable during scaling. In this case we had as much as 99.7% mitochondrial reads in some of the cells, so it is quite unlikely that there is much cell type signature left in those. <br>Looking at the plots, make reasonable decisions on where to draw the cutoff. In this case, the bulk of the cells are below 20% mitochondrial reads and that will be used as a cutoff. We will also remove cells with less than 5% ribosomal reads.
+
+Skip filtering by ribo, instead filter for percent_hb.
+
+```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=16}
+selected_mito <- WhichCells(data.filt, expression = percent_mito < 0.20)
+selected_hb <- WhichCells(data.filt, expression = percent_hb < 0.05)
+
+# and subset the object to only keep those cells
+data.filt <- subset(data.filt, cells = selected_mito)
+data.filt <- subset(data.filt, cells = selected_hb)
+
+dim(data.filt)
+
+table(data.filt$orig.ident)
+```
+
+ As you can see, a large proportion of sample covid_15 is filtered out. Also, there is still quite a lot of variation in `percent_mito`, so it will have to be dealt with in the data analysis step. We can also notice that the `percent_ribo` are also highly variable, but that is expected since different cell types have different proportions of ribosomal content, according to their function.
+
+## Plot filtered QC
+
+Lets plot the same QC-stats another time.
+
+```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=8,fig.width=16}
+feats <- c("nFeature_RNA","nCount_RNA","percent_mito","percent_ribo", "percent_hb")
+cowplot::plot_grid(ncol = 1,
+VlnPlot(data.filt, group.by= "orig.ident", features = feats, pt.size = 0.1,ncol = 3) + NoLegend())
+```
+
+## Filter genes
+
+As the level of expression of mitochondrial and MALAT1 genes are judged as mainly technical, it can be wise to remove them from the dataset bofore any further analysis.
+
+```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=4,fig.width=4}
+dim(data.filt)
+
+# Filter MALAT1
+data.filt <- data.filt[ ! grepl("MALAT1", rownames(data.filt)), ]
+
+# Filter Mitocondrial
+data.filt <- data.filt[ ! grepl("^MT-", rownames(data.filt)), ]
+
+# Filter Ribossomal gene (optional if that is a problem on your data)
+# data.filt <- data.filt[ ! grepl("^RP[SL]", rownames(data.filt)), ]
+
+# Filter Hemoglobin gene (optional if that is a problem on your data)
+data.filt <- data.filt[ ! grepl("^HB[^(P)]", rownames(data.filt)), ]
+
+dim(data.filt)
+```
+
+
+
+
+# Calculate cell-cycle scores
+
+We here perform cell cycle scoring. To score a gene list, the algorithm calculates the difference of mean expression of the given list and the mean expression of reference genes. To build the reference, the function randomly chooses a bunch of genes matching the distribution of the expression of the given list. Cell cycle scoring adds three slots in data, a score for S phase, a score for G2M phase and the predicted cell cycle phase.
+
+```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=8,fig.width=8}
+# Before running CellCycleScoring the data need to be normalized and logtransformed.
+data.filt = NormalizeData(data.filt)
+
+
+data.filt <- CellCycleScoring(object = data.filt,
+                              g2m.features = cc.genes$g2m.genes,
+                              s.features = cc.genes$s.genes)
+```
+
+We can now plot a violin plot for the cell cycle scores as well.
+
+```{r,message='hide',warning='hide', results='hold',results='hold',fig.height=5,fig.width=16}
+VlnPlot(data.filt, features = c("S.Score","G2M.Score"), group.by= "orig.ident",ncol = 4, pt.size = .1)
+```
+
+In this case it looks like we only have a few cycling cells in the datasets.
+
+
+# Predict doublets
+
+Doublets/Mulitples of cells in the same well/droplet is a common issue in scRNAseq protocols. Especially in droplet-based methods whith overloading of cells. In a typical 10x experiment the proportion of doublets is linearly dependent on the amount of loaded cells. As  indicated from the Chromium user guide, doublet rates are about as follows:
+![](../../figs/10x_doublet_rate.png)
+Most doublet detectors simulates doublets by merging cell counts and predicts doublets as cells that have similar embeddings as the simulated doublets. Most such packages need an assumption about the number/proportion of expected doublets in the dataset. The data you are using is subsampled, but the orignial datasets contained about 5 000 cells per sample, hence we can assume that they loaded about 9 000 cells and should have a doublet rate at about 4%.
+OBS! Ideally doublet prediction should be run on each sample separately, especially if your different samples have different proportions of celltypes. In this case, the data is subsampled so we have very few cells per sample and all samples are sorted PBMCs so it is okay to run them together.
+
+Here, we will use `DoubletFinder` to predict doublet cells. But before doing doublet detection we need to run scaling, variable gene selection and pca, as well as UMAP for visualization. These steps will be explored in more detail in coming exercises.
+
+```{r}
+suppressMessages(require(DoubletFinder))
+
+data.filt = FindVariableFeatures(data.filt, verbose = F)
+data.filt = ScaleData(data.filt, vars.to.regress = c("nFeature_RNA", "percent_mito"), verbose = F)
+data.filt = RunPCA(data.filt, verbose = F, npcs = 20)
+data.filt = RunUMAP(data.filt, dims = 1:10, verbose = F)
+
+data.filt = FindNeighbors(data.filt, dims = 1:10)
+data.filt = FindClusters(data.filt, resolution = 0.4)
+
+p1 = DimPlot(data.filt, group.by="orig.ident")
+p2 = DimPlot(data.filt, label=T)
+gridExtra::grid.arrange(p1,p2)
+```
+
+
+
+# plot features on umap
+
+```{r}
+FeaturePlot(data.filt, features = feats)
+VlnPlot(data.filt, features = feats, pt.size = .1)
+```
+
+
+Clearly cluster 6 & 10 are of low quality. Mainly cells from the 2 covid patients. Both low number of genes and low percent_ribo.
+
+Check for marker genes for the clusters.
+
+```{r}
+markers = FindAllMarkers(data.filt, only.pos = T, max.cells.per.ident = 200, verbose = F)
+```
+
+```{r}
+per.cl = split(markers$gene, markers$cluster)
+lapply(per.cl, head,10)
+
+```
+
+```{r}
+FeaturePlot(data.filt, features= per.cl$`6`[1:10])
+FeaturePlot(data.filt, features= per.cl$`10`[1:10])
+```
+
+
+
+
+
+Cluster6 has some platelet genes, most likely platelets?
+
+Cluster10 - more unclear...
+
+
+### Session Info
+***
+
+```{r}
+sessionInfo()
+```
+
+
+
+

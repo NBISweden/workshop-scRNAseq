@@ -1,6 +1,6 @@
 ---
 author: "Åsa Björklund  &  Paulo Czarnewski"
-date: 'December 22, 2021'
+date: 'January 14, 2022'
 output:
   html_document:
     self_contained: true
@@ -293,110 +293,112 @@ sessionInfo()
 ```
 
 ```
-## R version 4.0.5 (2021-03-31)
+## R version 4.1.2 (2021-11-01)
 ## Platform: x86_64-apple-darwin13.4.0 (64-bit)
-## Running under: macOS Big Sur 10.16
+## Running under: macOS Catalina 10.15.7
 ## 
 ## Matrix products: default
-## BLAS/LAPACK: /Users/paulo.czarnewski/miniconda3/envs/scRNAseq2022/lib/libopenblasp-r0.3.18.dylib
+## BLAS/LAPACK: /Users/asbj/miniconda3/envs/scRNAseq2022_tmp/lib/libopenblasp-r0.3.18.dylib
 ## 
 ## locale:
 ## [1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
 ## 
 ## attached base packages:
-##  [1] parallel  stats4    grid      stats     graphics  grDevices utils    
-##  [8] datasets  methods   base     
+## [1] stats4    stats     graphics  grDevices utils     datasets  methods  
+## [8] base     
 ## 
 ## other attached packages:
 ##  [1] rafalib_1.0.0               pheatmap_1.0.12            
 ##  [3] clustree_0.4.4              ggraph_2.0.5               
 ##  [5] reticulate_1.22             harmony_1.0                
-##  [7] Rcpp_1.0.7                  scran_1.18.5               
-##  [9] SingleCellExperiment_1.12.0 SummarizedExperiment_1.20.0
-## [11] Biobase_2.50.0              GenomicRanges_1.42.0       
-## [13] GenomeInfoDb_1.26.4         IRanges_2.24.1             
-## [15] S4Vectors_0.28.1            BiocGenerics_0.36.0        
-## [17] MatrixGenerics_1.2.1        matrixStats_0.61.0         
-## [19] ggplot2_3.3.5               cowplot_1.1.1              
-## [21] KernSmooth_2.23-20          fields_13.3                
-## [23] viridis_0.6.2               viridisLite_0.4.0          
-## [25] spam_2.7-0                  dotCall64_1.0-1            
+##  [7] Rcpp_1.0.8                  scran_1.22.0               
+##  [9] scuttle_1.4.0               SingleCellExperiment_1.16.0
+## [11] SummarizedExperiment_1.24.0 Biobase_2.54.0             
+## [13] GenomicRanges_1.46.0        GenomeInfoDb_1.30.0        
+## [15] IRanges_2.28.0              S4Vectors_0.32.0           
+## [17] BiocGenerics_0.40.0         MatrixGenerics_1.6.0       
+## [19] matrixStats_0.61.0          ggplot2_3.3.5              
+## [21] cowplot_1.1.1               KernSmooth_2.23-20         
+## [23] fields_13.3                 viridis_0.6.2              
+## [25] viridisLite_0.4.0           spam_2.8-0                 
 ## [27] DoubletFinder_2.0.3         Matrix_1.4-0               
 ## [29] SeuratObject_4.0.4          Seurat_4.0.6               
 ## [31] RJSONIO_1.3-1.6             optparse_1.7.1             
 ## 
 ## loaded via a namespace (and not attached):
 ##   [1] utf8_1.2.2                tidyselect_1.1.1         
-##   [3] htmlwidgets_1.5.4         BiocParallel_1.24.1      
-##   [5] Rtsne_0.15                munsell_0.5.0            
-##   [7] codetools_0.2-18          ica_1.0-2                
-##   [9] statmod_1.4.36            future_1.23.0            
-##  [11] miniUI_0.1.1.1            withr_2.4.3              
-##  [13] colorspace_2.0-2          highr_0.9                
-##  [15] knitr_1.37                ROCR_1.0-11              
-##  [17] tensor_1.5                listenv_0.8.0            
-##  [19] labeling_0.4.2            GenomeInfoDbData_1.2.4   
-##  [21] polyclip_1.10-0           bit64_4.0.5              
-##  [23] farver_2.1.0              rprojroot_2.0.2          
-##  [25] parallelly_1.30.0         vctrs_0.3.8              
-##  [27] generics_0.1.1            xfun_0.29                
-##  [29] R6_2.5.1                  graphlayouts_0.7.2       
-##  [31] rsvd_1.0.5                locfit_1.5-9.4           
-##  [33] hdf5r_1.3.5               bitops_1.0-7             
-##  [35] spatstat.utils_2.3-0      DelayedArray_0.16.3      
-##  [37] assertthat_0.2.1          promises_1.2.0.1         
-##  [39] scales_1.1.1              gtable_0.3.0             
-##  [41] beachmat_2.6.4            globals_0.14.0           
-##  [43] processx_3.5.2            goftest_1.2-3            
-##  [45] tidygraph_1.2.0           rlang_0.4.12             
-##  [47] splines_4.0.5             lazyeval_0.2.2           
-##  [49] checkmate_2.0.0           spatstat.geom_2.3-1      
-##  [51] yaml_2.2.1                reshape2_1.4.4           
-##  [53] abind_1.4-5               backports_1.4.1          
-##  [55] httpuv_1.6.4              tools_4.0.5              
-##  [57] ellipsis_0.3.2            spatstat.core_2.3-2      
-##  [59] jquerylib_0.1.4           RColorBrewer_1.1-2       
-##  [61] ggridges_0.5.3            plyr_1.8.6               
-##  [63] sparseMatrixStats_1.2.1   zlibbioc_1.36.0          
-##  [65] purrr_0.3.4               RCurl_1.98-1.5           
-##  [67] ps_1.6.0                  prettyunits_1.1.1        
-##  [69] rpart_4.1-15              deldir_1.0-6             
-##  [71] pbapply_1.5-0             zoo_1.8-9                
-##  [73] ggrepel_0.9.1             cluster_2.1.2            
-##  [75] here_1.0.1                magrittr_2.0.1           
-##  [77] data.table_1.14.2         RSpectra_0.16-0          
-##  [79] scattermore_0.7           lmtest_0.9-39            
-##  [81] RANN_2.6.1                fitdistrplus_1.1-6       
-##  [83] patchwork_1.1.1           mime_0.12                
-##  [85] evaluate_0.14             xtable_1.8-4             
-##  [87] gridExtra_2.3             compiler_4.0.5           
-##  [89] tibble_3.1.6              maps_3.4.0               
-##  [91] crayon_1.4.2              htmltools_0.5.2          
-##  [93] mgcv_1.8-38               later_1.2.0              
-##  [95] tidyr_1.1.4               DBI_1.1.2                
-##  [97] tweenr_1.0.2              formatR_1.11             
-##  [99] MASS_7.3-54               getopt_1.20.3            
-## [101] cli_3.1.0                 igraph_1.2.10            
-## [103] pkgconfig_2.0.3           scuttle_1.0.4            
-## [105] plotly_4.10.0             spatstat.sparse_2.1-0    
-## [107] bslib_0.3.1               dqrng_0.3.0              
-## [109] XVector_0.30.0            stringr_1.4.0            
-## [111] callr_3.7.0               digest_0.6.29            
-## [113] sctransform_0.3.2         RcppAnnoy_0.0.19         
-## [115] spatstat.data_2.1-2       rmarkdown_2.11           
-## [117] leiden_0.3.9              edgeR_3.32.1             
-## [119] uwot_0.1.11               DelayedMatrixStats_1.12.3
-## [121] curl_4.3.2                shiny_1.7.1              
-## [123] lifecycle_1.0.1           nlme_3.1-153             
-## [125] jsonlite_1.7.2            BiocNeighbors_1.8.2      
-## [127] limma_3.46.0              fansi_0.5.0              
-## [129] pillar_1.6.4              lattice_0.20-45          
-## [131] fastmap_1.1.0             httr_1.4.2               
-## [133] pkgbuild_1.3.1            survival_3.2-13          
-## [135] glue_1.6.0                remotes_2.4.2            
-## [137] png_0.1-7                 bluster_1.0.0            
-## [139] bit_4.0.4                 ggforce_0.3.3            
-## [141] stringi_1.7.6             sass_0.4.0               
-## [143] BiocSingular_1.6.0        dplyr_1.0.7              
-## [145] irlba_2.3.5               future.apply_1.8.1
+##   [3] htmlwidgets_1.5.4         grid_4.1.2               
+##   [5] BiocParallel_1.28.0       Rtsne_0.15               
+##   [7] munsell_0.5.0             ScaledMatrix_1.2.0       
+##   [9] codetools_0.2-18          ica_1.0-2                
+##  [11] statmod_1.4.36            future_1.23.0            
+##  [13] miniUI_0.1.1.1            withr_2.4.3              
+##  [15] colorspace_2.0-2          highr_0.9                
+##  [17] knitr_1.37                ROCR_1.0-11              
+##  [19] tensor_1.5                listenv_0.8.0            
+##  [21] labeling_0.4.2            GenomeInfoDbData_1.2.7   
+##  [23] polyclip_1.10-0           bit64_4.0.5              
+##  [25] farver_2.1.0              rprojroot_2.0.2          
+##  [27] parallelly_1.30.0         vctrs_0.3.8              
+##  [29] generics_0.1.1            xfun_0.29                
+##  [31] R6_2.5.1                  graphlayouts_0.8.0       
+##  [33] rsvd_1.0.5                locfit_1.5-9.4           
+##  [35] hdf5r_1.3.5               bitops_1.0-7             
+##  [37] spatstat.utils_2.3-0      DelayedArray_0.20.0      
+##  [39] assertthat_0.2.1          promises_1.2.0.1         
+##  [41] scales_1.1.1              gtable_0.3.0             
+##  [43] beachmat_2.10.0           globals_0.14.0           
+##  [45] processx_3.5.2            goftest_1.2-3            
+##  [47] tidygraph_1.2.0           rlang_0.4.12             
+##  [49] splines_4.1.2             lazyeval_0.2.2           
+##  [51] checkmate_2.0.0           spatstat.geom_2.3-1      
+##  [53] yaml_2.2.1                reshape2_1.4.4           
+##  [55] abind_1.4-5               backports_1.4.1          
+##  [57] httpuv_1.6.5              tools_4.1.2              
+##  [59] ellipsis_0.3.2            spatstat.core_2.3-2      
+##  [61] jquerylib_0.1.4           RColorBrewer_1.1-2       
+##  [63] ggridges_0.5.3            plyr_1.8.6               
+##  [65] sparseMatrixStats_1.6.0   zlibbioc_1.40.0          
+##  [67] purrr_0.3.4               RCurl_1.98-1.5           
+##  [69] ps_1.6.0                  prettyunits_1.1.1        
+##  [71] rpart_4.1-15              deldir_1.0-6             
+##  [73] pbapply_1.5-0             zoo_1.8-9                
+##  [75] ggrepel_0.9.1             cluster_2.1.2            
+##  [77] here_1.0.1                magrittr_2.0.1           
+##  [79] data.table_1.14.2         RSpectra_0.16-0          
+##  [81] scattermore_0.7           lmtest_0.9-39            
+##  [83] RANN_2.6.1                fitdistrplus_1.1-6       
+##  [85] patchwork_1.1.1           mime_0.12                
+##  [87] evaluate_0.14             xtable_1.8-4             
+##  [89] gridExtra_2.3             compiler_4.1.2           
+##  [91] tibble_3.1.6              maps_3.4.0               
+##  [93] crayon_1.4.2              htmltools_0.5.2          
+##  [95] mgcv_1.8-38               later_1.2.0              
+##  [97] tidyr_1.1.4               DBI_1.1.2                
+##  [99] tweenr_1.0.2              formatR_1.11             
+## [101] MASS_7.3-55               getopt_1.20.3            
+## [103] cli_3.1.0                 metapod_1.2.0            
+## [105] parallel_4.1.2            dotCall64_1.0-1          
+## [107] igraph_1.2.11             pkgconfig_2.0.3          
+## [109] plotly_4.10.0             spatstat.sparse_2.1-0    
+## [111] bslib_0.3.1               dqrng_0.3.0              
+## [113] XVector_0.34.0            stringr_1.4.0            
+## [115] callr_3.7.0               digest_0.6.29            
+## [117] sctransform_0.3.3         RcppAnnoy_0.0.19         
+## [119] spatstat.data_2.1-2       rmarkdown_2.11           
+## [121] leiden_0.3.9              edgeR_3.36.0             
+## [123] uwot_0.1.11               DelayedMatrixStats_1.16.0
+## [125] curl_4.3.2                shiny_1.7.1              
+## [127] lifecycle_1.0.1           nlme_3.1-155             
+## [129] jsonlite_1.7.2            BiocNeighbors_1.12.0     
+## [131] limma_3.50.0              fansi_1.0.0              
+## [133] pillar_1.6.4              lattice_0.20-45          
+## [135] fastmap_1.1.0             httr_1.4.2               
+## [137] pkgbuild_1.3.1            survival_3.2-13          
+## [139] glue_1.6.0                remotes_2.4.2            
+## [141] png_0.1-7                 bluster_1.4.0            
+## [143] bit_4.0.4                 ggforce_0.3.3            
+## [145] stringi_1.7.6             sass_0.4.0               
+## [147] BiocSingular_1.10.0       dplyr_1.0.7              
+## [149] irlba_2.3.5               future.apply_1.8.1
 ```

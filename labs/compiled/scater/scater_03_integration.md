@@ -1,7 +1,7 @@
 ---
 title: #INTEG_TITLE:
 author: "Åsa Björklund  &  Paulo Czarnewski"
-date: 'January 22, 2021'
+date: 'January 14, 2022'
 output:
   html_document:
     self_contained: true
@@ -52,15 +52,9 @@ suppressPackageStartupMessages({
     library(cowplot)
     library(ggplot2)
     library(rafalib)
-    library(venn)
+    # library(venn)
 })
-```
 
-```
-## Warning: package 'venn' was built under R version 3.6.3
-```
-
-```r
 sce <- readRDS("data/results/covid_qc_dm.rds")
 print(reducedDims(sce))
 ```
@@ -91,20 +85,30 @@ hvgs_per_dataset <- lapply(sce.list, function(x) {
 ```
 
 ```
-## Warning in FUN(...): encountered negative size factor estimates
+## Warning in (function (x, sizes, min.mean = NULL, positive = FALSE, scaling =
+## NULL) : encountered non-positive size factor estimates
 
-## Warning in FUN(...): encountered negative size factor estimates
+## Warning in (function (x, sizes, min.mean = NULL, positive = FALSE, scaling =
+## NULL) : encountered non-positive size factor estimates
 
-## Warning in FUN(...): encountered negative size factor estimates
+## Warning in (function (x, sizes, min.mean = NULL, positive = FALSE, scaling =
+## NULL) : encountered non-positive size factor estimates
 
-## Warning in FUN(...): encountered negative size factor estimates
+## Warning in (function (x, sizes, min.mean = NULL, positive = FALSE, scaling =
+## NULL) : encountered non-positive size factor estimates
 ```
 
 ```r
 names(hvgs_per_dataset) <- unique(sce$sample)
 
-venn::venn(hvgs_per_dataset, opacity = 0.4, zcolor = (scales::hue_pal())(3), cexsn = 1, 
-    cexil = 1, lwd = 1, col = "white", borders = NA)
+# venn::venn(hvgs_per_dataset,opacity = .4,zcolor = scales::hue_pal()(3),cexsn
+# = 1,cexil = 1,lwd=1,col='white',borders = NA)
+
+temp <- unique(unlist(hvgs_per_dataset))
+overlap <- sapply(hvgs_per_dataset, function(x) {
+    temp %in% x
+})
+pheatmap::pheatmap(t(overlap * 1), cluster_rows = F, color = c("grey90", "grey20"))
 ```
 
 ![](scater_03_integration_files/figure-html/unnamed-chunk-2-1.png)<!-- -->
@@ -113,7 +117,7 @@ The mutual nearest neighbors (MNN) approach within the scran package utilizes a 
 
 
 ```r
-mnn_out <- batchelor::fastMNN(sce, subset.row = unique(unlist(hvgs_per_dataset)), 
+mnn_out <- batchelor::fastMNN(sce, subset.row = unique(unlist(hvgs_per_dataset)),
     batch = factor(sce$sample), k = 20, d = 50)
 ```
 
@@ -184,43 +188,13 @@ FCER1A, CST3 | DCs
 
 ```r
 plotlist <- list()
-for (i in c("CD3E", "CD4", "CD8A", "NKG7", "GNLY", "MS4A1", "CD14", "LYZ", "MS4A7", 
+for (i in c("CD3E", "CD4", "CD8A", "NKG7", "GNLY", "MS4A1", "CD14", "LYZ", "MS4A7",
     "FCGR3A", "CST3", "FCER1A")) {
-    plotlist[[i]] <- plotReducedDim(sce, dimred = "UMAP_on_MNN", colour_by = i, by_exprs_values = "logcounts", 
-        point_size = 0.6) + scale_fill_gradientn(colours = colorRampPalette(c("grey90", 
-        "orange3", "firebrick", "firebrick", "red", "red"))(10)) + ggtitle(label = i) + 
+    plotlist[[i]] <- plotReducedDim(sce, dimred = "UMAP_on_MNN", colour_by = i, by_exprs_values = "logcounts",
+        point_size = 0.6) + scale_fill_gradientn(colours = colorRampPalette(c("grey90",
+        "orange3", "firebrick", "firebrick", "red", "red"))(10)) + ggtitle(label = i) +
         theme(plot.title = element_text(size = 20))
 }
-```
-
-```
-## Scale for 'fill' is already present. Adding another scale for 'fill', which
-## will replace the existing scale.
-## Scale for 'fill' is already present. Adding another scale for 'fill', which
-## will replace the existing scale.
-## Scale for 'fill' is already present. Adding another scale for 'fill', which
-## will replace the existing scale.
-## Scale for 'fill' is already present. Adding another scale for 'fill', which
-## will replace the existing scale.
-## Scale for 'fill' is already present. Adding another scale for 'fill', which
-## will replace the existing scale.
-## Scale for 'fill' is already present. Adding another scale for 'fill', which
-## will replace the existing scale.
-## Scale for 'fill' is already present. Adding another scale for 'fill', which
-## will replace the existing scale.
-## Scale for 'fill' is already present. Adding another scale for 'fill', which
-## will replace the existing scale.
-## Scale for 'fill' is already present. Adding another scale for 'fill', which
-## will replace the existing scale.
-## Scale for 'fill' is already present. Adding another scale for 'fill', which
-## will replace the existing scale.
-## Scale for 'fill' is already present. Adding another scale for 'fill', which
-## will replace the existing scale.
-## Scale for 'fill' is already present. Adding another scale for 'fill', which
-## will replace the existing scale.
-```
-
-```r
 plot_grid(ncol = 3, plotlist = plotlist)
 ```
 
@@ -239,14 +213,10 @@ library(harmony)
 ## Loading required package: Rcpp
 ```
 
-```
-## Warning: package 'Rcpp' was built under R version 3.6.3
-```
-
 ```r
 reducedDimNames(sce)
 
-sce <- RunHarmony(sce, group.by.vars = "sample", reduction.save = "harmony", reduction = "PCA", 
+sce <- RunHarmony(sce, group.by.vars = "sample", reduction.save = "harmony", reduction = "PCA",
     dims.use = 1:50)
 ```
 
@@ -330,13 +300,6 @@ lapply(scelist, dim)
 
 ```r
 library(reticulate)
-```
-
-```
-## Warning: package 'reticulate' was built under R version 3.6.3
-```
-
-```r
 scanorama <- import("scanorama")
 
 integrated.data <- scanorama$integrate(datasets_full = scelist, genes_list = genelist)
@@ -359,19 +322,19 @@ sce <- runUMAP(sce, dimred = "Scanorama_PCA", n_dimred = 50, ncomponents = 2, na
 
 
 ```r
-p1 <- plotReducedDim(sce, dimred = "UMAP_on_PCA", colour_by = "sample", point_size = 0.6) + 
+p1 <- plotReducedDim(sce, dimred = "UMAP_on_PCA", colour_by = "sample", point_size = 0.6) +
     ggplot2::ggtitle(label = "UMAP_on_PCA")
-p2 <- plotReducedDim(sce, dimred = "UMAP_on_MNN", colour_by = "sample", point_size = 0.6) + 
+p2 <- plotReducedDim(sce, dimred = "UMAP_on_MNN", colour_by = "sample", point_size = 0.6) +
     ggplot2::ggtitle(label = "UMAP_on_MNN")
-p3 <- plotReducedDim(sce, dimred = "UMAP_on_Harmony", colour_by = "sample", point_size = 0.6) + 
+p3 <- plotReducedDim(sce, dimred = "UMAP_on_Harmony", colour_by = "sample", point_size = 0.6) +
     ggplot2::ggtitle(label = "UMAP_on_Harmony")
-p4 <- plotReducedDim(sce, dimred = "UMAP_on_Scanorama", colour_by = "sample", point_size = 0.6) + 
+p4 <- plotReducedDim(sce, dimred = "UMAP_on_Scanorama", colour_by = "sample", point_size = 0.6) +
     ggplot2::ggtitle(label = "UMAP_on_Scanorama")
 leg <- get_legend(p1)
 
-gridExtra::grid.arrange(gridExtra::arrangeGrob(p1 + Seurat::NoLegend() + Seurat::NoAxes(), 
-    p2 + Seurat::NoLegend() + Seurat::NoAxes(), p3 + Seurat::NoLegend() + Seurat::NoAxes(), 
-    p4 + Seurat::NoLegend() + Seurat::NoAxes(), nrow = 2), leg, ncol = 2, widths = c(8, 
+gridExtra::grid.arrange(gridExtra::arrangeGrob(p1 + Seurat::NoLegend() + Seurat::NoAxes(),
+    p2 + Seurat::NoLegend() + Seurat::NoAxes(), p3 + Seurat::NoLegend() + Seurat::NoAxes(),
+    p4 + Seurat::NoLegend() + Seurat::NoAxes(), nrow = 2), leg, ncol = 2, widths = c(8,
     2))
 ```
 
@@ -396,85 +359,114 @@ sessionInfo()
 ```
 
 ```
-## R version 3.6.1 (2019-07-05)
-## Platform: x86_64-conda_cos6-linux-gnu (64-bit)
-## Running under: Ubuntu 20.04 LTS
+## R version 4.1.2 (2021-11-01)
+## Platform: x86_64-apple-darwin13.4.0 (64-bit)
+## Running under: macOS Catalina 10.15.7
 ## 
 ## Matrix products: default
-## BLAS/LAPACK: /home/czarnewski/miniconda3/envs/scRNAseq2021/lib/libopenblasp-r0.3.10.so
+## BLAS/LAPACK: /Users/asbj/miniconda3/envs/scRNAseq2022_tmp/lib/libopenblasp-r0.3.18.dylib
 ## 
 ## locale:
-##  [1] LC_CTYPE=C.UTF-8       LC_NUMERIC=C           LC_TIME=C.UTF-8       
-##  [4] LC_COLLATE=C.UTF-8     LC_MONETARY=C.UTF-8    LC_MESSAGES=C.UTF-8   
-##  [7] LC_PAPER=C.UTF-8       LC_NAME=C              LC_ADDRESS=C          
-## [10] LC_TELEPHONE=C         LC_MEASUREMENT=C.UTF-8 LC_IDENTIFICATION=C   
+## [1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
 ## 
 ## attached base packages:
-## [1] parallel  stats4    stats     graphics  grDevices utils     datasets 
-## [8] methods   base     
+## [1] stats4    stats     graphics  grDevices utils     datasets  methods  
+## [8] base     
 ## 
 ## other attached packages:
-##  [1] reticulate_1.18             harmony_1.0                
-##  [3] Rcpp_1.0.6                  venn_1.9                   
-##  [5] umap_0.2.7.0                rafalib_1.0.0              
-##  [7] scDblFinder_1.1.8           DoubletFinder_2.0.3        
-##  [9] org.Hs.eg.db_3.10.0         AnnotationDbi_1.48.0       
-## [11] cowplot_1.1.1               scran_1.14.1               
-## [13] scater_1.14.0               ggplot2_3.3.3              
-## [15] SingleCellExperiment_1.8.0  SummarizedExperiment_1.16.0
-## [17] DelayedArray_0.12.0         BiocParallel_1.20.0        
-## [19] matrixStats_0.57.0          Biobase_2.46.0             
-## [21] GenomicRanges_1.38.0        GenomeInfoDb_1.22.0        
-## [23] IRanges_2.20.0              S4Vectors_0.24.0           
-## [25] BiocGenerics_0.32.0         RJSONIO_1.3-1.4            
-## [27] optparse_1.6.6             
+##  [1] reticulate_1.22             harmony_1.0                
+##  [3] Rcpp_1.0.8                  umap_0.2.7.0               
+##  [5] rafalib_1.0.0               scDblFinder_1.8.0          
+##  [7] DoubletFinder_2.0.3         org.Hs.eg.db_3.14.0        
+##  [9] AnnotationDbi_1.56.1        cowplot_1.1.1              
+## [11] scran_1.22.0                scater_1.22.0              
+## [13] ggplot2_3.3.5               scuttle_1.4.0              
+## [15] SingleCellExperiment_1.16.0 SummarizedExperiment_1.24.0
+## [17] Biobase_2.54.0              GenomicRanges_1.46.0       
+## [19] GenomeInfoDb_1.30.0         IRanges_2.28.0             
+## [21] S4Vectors_0.32.0            BiocGenerics_0.40.0        
+## [23] MatrixGenerics_1.6.0        matrixStats_0.61.0         
+## [25] RJSONIO_1.3-1.6             optparse_1.7.1             
 ## 
 ## loaded via a namespace (and not attached):
-##   [1] plyr_1.8.6               igraph_1.2.6             lazyeval_0.2.2          
-##   [4] splines_3.6.1            listenv_0.8.0            scattermore_0.7         
-##   [7] digest_0.6.27            htmltools_0.5.1          viridis_0.5.1           
-##  [10] magrittr_2.0.1           memoise_1.1.0            tensor_1.5              
-##  [13] cluster_2.1.0            ROCR_1.0-11              limma_3.42.0            
-##  [16] remotes_2.2.0            globals_0.14.0           askpass_1.1             
-##  [19] colorspace_2.0-0         rappdirs_0.3.1           blob_1.2.1              
-##  [22] ggrepel_0.9.1            xfun_0.20                dplyr_1.0.3             
-##  [25] crayon_1.3.4             RCurl_1.98-1.2           jsonlite_1.7.2          
-##  [28] spatstat_1.64-1          spatstat.data_1.7-0      survival_3.2-7          
-##  [31] zoo_1.8-8                glue_1.4.2               polyclip_1.10-0         
-##  [34] gtable_0.3.0             zlibbioc_1.32.0          XVector_0.26.0          
-##  [37] leiden_0.3.6             BiocSingular_1.2.0       future.apply_1.7.0      
-##  [40] abind_1.4-5              scales_1.1.1             DBI_1.1.1               
-##  [43] edgeR_3.28.0             miniUI_0.1.1.1           viridisLite_0.3.0       
-##  [46] xtable_1.8-4             dqrng_0.2.1              bit_4.0.4               
-##  [49] rsvd_1.0.3               htmlwidgets_1.5.3        httr_1.4.2              
-##  [52] getopt_1.20.3            RColorBrewer_1.1-2       ellipsis_0.3.1          
-##  [55] Seurat_3.2.3             ica_1.0-2                farver_2.0.3            
-##  [58] pkgconfig_2.0.3          uwot_0.1.10              deldir_0.2-3            
-##  [61] locfit_1.5-9.4           labeling_0.4.2           tidyselect_1.1.0        
-##  [64] rlang_0.4.10             reshape2_1.4.4           later_1.1.0.1           
-##  [67] munsell_0.5.0            tools_3.6.1              generics_0.1.0          
-##  [70] RSQLite_2.2.2            ggridges_0.5.3           batchelor_1.2.1         
-##  [73] evaluate_0.14            stringr_1.4.0            fastmap_1.0.1           
-##  [76] goftest_1.2-2            yaml_2.2.1               knitr_1.30              
-##  [79] bit64_4.0.5              fitdistrplus_1.1-3       admisc_0.11             
-##  [82] randomForest_4.6-14      purrr_0.3.4              RANN_2.6.1              
-##  [85] nlme_3.1-150             pbapply_1.4-3            future_1.21.0           
-##  [88] mime_0.9                 formatR_1.7              hdf5r_1.3.3             
-##  [91] compiler_3.6.1           beeswarm_0.2.3           plotly_4.9.3            
-##  [94] curl_4.3                 png_0.1-7                spatstat.utils_1.20-2   
-##  [97] tibble_3.0.5             statmod_1.4.35           stringi_1.5.3           
-## [100] RSpectra_0.16-0          lattice_0.20-41          Matrix_1.3-2            
-## [103] vctrs_0.3.6              pillar_1.4.7             lifecycle_0.2.0         
-## [106] BiocManager_1.30.10      lmtest_0.9-38            RcppAnnoy_0.0.18        
-## [109] BiocNeighbors_1.4.0      data.table_1.13.6        bitops_1.0-6            
-## [112] irlba_2.3.3              httpuv_1.5.5             patchwork_1.1.1         
-## [115] R6_2.5.0                 promises_1.1.1           KernSmooth_2.23-18      
-## [118] gridExtra_2.3            vipor_0.4.5              parallelly_1.23.0       
-## [121] codetools_0.2-18         MASS_7.3-53              assertthat_0.2.1        
-## [124] openssl_1.4.3            withr_2.4.0              sctransform_0.3.2       
-## [127] GenomeInfoDbData_1.2.2   mgcv_1.8-33              rpart_4.1-15            
-## [130] grid_3.6.1               tidyr_1.1.2              rmarkdown_2.6           
-## [133] DelayedMatrixStats_1.8.0 Rtsne_0.15               shiny_1.5.0             
-## [136] ggbeeswarm_0.6.0
+##   [1] utf8_1.2.2                tidyselect_1.1.1         
+##   [3] RSQLite_2.2.8             htmlwidgets_1.5.4        
+##   [5] grid_4.1.2                BiocParallel_1.28.0      
+##   [7] Rtsne_0.15                munsell_0.5.0            
+##   [9] ScaledMatrix_1.2.0        codetools_0.2-18         
+##  [11] ica_1.0-2                 xgboost_1.5.0.1          
+##  [13] statmod_1.4.36            future_1.23.0            
+##  [15] miniUI_0.1.1.1            batchelor_1.10.0         
+##  [17] withr_2.4.3               colorspace_2.0-2         
+##  [19] highr_0.9                 knitr_1.37               
+##  [21] Seurat_4.0.6              ROCR_1.0-11              
+##  [23] tensor_1.5                listenv_0.8.0            
+##  [25] labeling_0.4.2            GenomeInfoDbData_1.2.7   
+##  [27] polyclip_1.10-0           pheatmap_1.0.12          
+##  [29] bit64_4.0.5               farver_2.1.0             
+##  [31] rprojroot_2.0.2           parallelly_1.30.0        
+##  [33] vctrs_0.3.8               generics_0.1.1           
+##  [35] xfun_0.29                 R6_2.5.1                 
+##  [37] ggbeeswarm_0.6.0          rsvd_1.0.5               
+##  [39] locfit_1.5-9.4            hdf5r_1.3.5              
+##  [41] bitops_1.0-7              spatstat.utils_2.3-0     
+##  [43] cachem_1.0.6              DelayedArray_0.20.0      
+##  [45] assertthat_0.2.1          promises_1.2.0.1         
+##  [47] scales_1.1.1              beeswarm_0.4.0           
+##  [49] gtable_0.3.0              beachmat_2.10.0          
+##  [51] globals_0.14.0            goftest_1.2-3            
+##  [53] rlang_0.4.12              splines_4.1.2            
+##  [55] lazyeval_0.2.2            spatstat.geom_2.3-1      
+##  [57] BiocManager_1.30.16       yaml_2.2.1               
+##  [59] reshape2_1.4.4            abind_1.4-5              
+##  [61] httpuv_1.6.5              tools_4.1.2              
+##  [63] ellipsis_0.3.2            spatstat.core_2.3-2      
+##  [65] jquerylib_0.1.4           RColorBrewer_1.1-2       
+##  [67] ggridges_0.5.3            plyr_1.8.6               
+##  [69] sparseMatrixStats_1.6.0   zlibbioc_1.40.0          
+##  [71] purrr_0.3.4               RCurl_1.98-1.5           
+##  [73] openssl_1.4.6             rpart_4.1-15             
+##  [75] deldir_1.0-6              pbapply_1.5-0            
+##  [77] viridis_0.6.2             zoo_1.8-9                
+##  [79] SeuratObject_4.0.4        ggrepel_0.9.1            
+##  [81] cluster_2.1.2             here_1.0.1               
+##  [83] magrittr_2.0.1            RSpectra_0.16-0          
+##  [85] data.table_1.14.2         scattermore_0.7          
+##  [87] ResidualMatrix_1.4.0      lmtest_0.9-39            
+##  [89] RANN_2.6.1                fitdistrplus_1.1-6       
+##  [91] patchwork_1.1.1           mime_0.12                
+##  [93] evaluate_0.14             xtable_1.8-4             
+##  [95] gridExtra_2.3             compiler_4.1.2           
+##  [97] tibble_3.1.6              KernSmooth_2.23-20       
+##  [99] crayon_1.4.2              htmltools_0.5.2          
+## [101] mgcv_1.8-38               later_1.2.0              
+## [103] tidyr_1.1.4               DBI_1.1.2                
+## [105] formatR_1.11              MASS_7.3-55              
+## [107] Matrix_1.4-0              getopt_1.20.3            
+## [109] parallel_4.1.2            metapod_1.2.0            
+## [111] igraph_1.2.11             pkgconfig_2.0.3          
+## [113] plotly_4.10.0             spatstat.sparse_2.1-0    
+## [115] vipor_0.4.5               bslib_0.3.1              
+## [117] dqrng_0.3.0               XVector_0.34.0           
+## [119] stringr_1.4.0             digest_0.6.29            
+## [121] sctransform_0.3.3         RcppAnnoy_0.0.19         
+## [123] spatstat.data_2.1-2       Biostrings_2.62.0        
+## [125] rmarkdown_2.11            leiden_0.3.9             
+## [127] uwot_0.1.11               edgeR_3.36.0             
+## [129] DelayedMatrixStats_1.16.0 curl_4.3.2               
+## [131] shiny_1.7.1               lifecycle_1.0.1          
+## [133] nlme_3.1-155              jsonlite_1.7.2           
+## [135] BiocNeighbors_1.12.0      askpass_1.1              
+## [137] viridisLite_0.4.0         limma_3.50.0             
+## [139] fansi_1.0.0               pillar_1.6.4             
+## [141] lattice_0.20-45           KEGGREST_1.34.0          
+## [143] fastmap_1.1.0             httr_1.4.2               
+## [145] survival_3.2-13           glue_1.6.0               
+## [147] remotes_2.4.2             png_0.1-7                
+## [149] bluster_1.4.0             bit_4.0.4                
+## [151] stringi_1.7.6             sass_0.4.0               
+## [153] blob_1.2.2                BiocSingular_1.10.0      
+## [155] memoise_2.0.1             dplyr_1.0.7              
+## [157] irlba_2.3.5               future.apply_1.8.1
 ```
 

@@ -353,7 +353,7 @@ for( pipeline in c("seurat","scater")){
 #UMAP_ALL1.1:We have now done Variable gene selection, PCA and UMAP with the settings we chose. Test a few different ways of selecting variable genes, number of PCs for UMAP and check how it influences your embedding.
 #UMAP_ALL1.1:</div>
 
-#UMAP_ALL1.1:### TASK: Test settings
+
 
 
 #UMAP_ALL2:Another usefullness of UMAP is that it is not limitted by the number of dimensions the data cen be reduced into (unlike tSNE). We can simply reduce the dimentions altering the `n.components` parameter.
@@ -747,7 +747,7 @@ for( pipeline in c("seurat","scater")){
 #DGE_ALL7.1:
 #DGE_ALL7.1:You visualize your results using a simple barplot, for example:
 
-#DGE_TITLE3.2:Gene Set Enrichment Analysis (GSEA)
+#DGE_TITLE3.2:## Gene Set Enrichment Analysis (GSEA)
 
 #DGE_ALL7.2:Besides the enrichment using hypergeometric test, we can also perform gene set enrichment analysis (GSEA), which scores ranked genes list (usually based on fold changes) and computes permutation test to check if a particular gene set is more present in the Up-regulated genes, amongthe DOWN_regulated genes or not differentially regulated.
 
@@ -933,7 +933,7 @@ for( pipeline in c("seurat","scater")){
 
 #ST_TITLE2:### Load ST data
 
-#ST_TITLE3:##Quality control
+#ST_TITLE3:# Quality control
 #ST_TITLE3:***
 
 #ST_ALL3:Similar to scRNAseq we use statistics on number of counts, number of features and percent mitochondria for quality control. 
@@ -954,7 +954,7 @@ for( pipeline in c("seurat","scater")){
 #ST_TITLE6:### Filter genes
 #ST_TITLE6:We will remove the Bc1 gene, hemoglobin genes (blood contamination) and the mitochondrial genes.
 
-#ST_TITLE7:## Analysis
+#ST_TITLE7:# Analysis
 #ST_TITLE7:***
 #ST_TITLE77:We will proceed with the data in a very similar manner to scRNAseq data.
 
@@ -965,7 +965,7 @@ for( pipeline in c("seurat","scater")){
 
 #ST_ALL7.2:We can then plot clusters onto umap or onto the tissue section.
 
-#ST_TITLE8:## Integration
+#ST_TITLE8:### Integration
 
 #ST_ALL8:Quite often there are strong batch effects between different ST sections, so it may be a good idea to integrate the data across sections.
 #ST_ALL8.1:Then we run dimensionality reduction and clustering as before.
@@ -974,7 +974,7 @@ for( pipeline in c("seurat","scater")){
 #ST_ALL8.2:As a reference, you can compare to brain regions in the [Allen brain atlas](https://mouse.brain-map.org/experiment/thumbnails/100042147?image_type=atlas). 
 
 
-#ST_TITLE9:## Identification of Spatially Variable Features
+#ST_TITLE9:### Identification of Spatially Variable Features
 #ST_ALL9: There are two main workflows to identify molecular features that correlate with spatial location within a tissue. The first is to perform differential expression based on spatially distinct clusters, the other is to find features that are have spatial patterning without taking clusters or spatial annotation into account. 
 #ST_ALL9:
 #ST_ALL9:First, we will do differential expression between clusters just as we did for the scRNAseq data before.
@@ -984,27 +984,70 @@ for( pipeline in c("seurat","scater")){
 Spatial transcriptomics allows researchers to investigate how gene expression trends varies in space, thus identifying spatial patterns of gene expression. For this purpose there are multiple methods, such as SpatailDE, SPARK, Trendsceek, HMRF and Splotch.
 
 
-#ST_TITLE10:## Single cell data
+#ST_TITLE10:# Single cell data
 
-#ST_ALL10:We can also perform data integration between one scRNA-seq dataset and one spatial transcriptomics dataset. Such task is particularly useful because it allows us to transfer cell type labels to the Visium dataset, which were dentified from the scRNA-seq dataset. 
+#ST_ALL10:We can use a scRNA-seq dataset as a referenced to predict the proportion of different celltypes in the Visium spots. 
+#ST_ALL10:
+#ST_ALL10:Keep in mind that it is important to have a reference that contains all the celltypes you expect to find in your spots. Ideally it should be a scRNAseq reference from the exact same tissue. 
+
 #ST_ALL10:
 #ST_ALL10:We will use a reference scRNA-seq dataset of ~14,000 adult mouse cortical cell taxonomy from the Allen Institute, generated with the SMART-Seq2 protocol.
 
 #ST_ALL10.1:For speed, and for a more fair comparison of the celltypes, we will subsample all celltypes to a maximum of 200 cells per class (`subclass`).
 
 
-#ST_ALL10.1b:### Subset ST for cortex
+#ST_ALL10.1b:# Subset ST for cortex
 #ST_ALL10.1b:Since the scRNAseq dataset was generated from the mouse cortex, we will subset the visium dataset in order to select mainly the spots part of the cortex. Note that the integration can also be performed on the whole brain slice, but it would give rise to false positive cell type assignments and and therefore it should be interpreted with more care.
 
 
 
-#ST_ALL10.2:### Integrate with scRNAseq
+#ST_ALL10.2:# Integrate with scRNAseq
 
 #ST_ALL10.3:We can also visualize the scores per cluster in ST data
 
-#ST_ALL10.4:Keep in mind, that the scores are "just" prediction scores, and do not correspond to proportion of cells that are of a certain celltype or similar. It mainly tells you that gene expression in a certain spot is hihgly similar/dissimilar to gene expression of a celltype.
+#ST_ALL10.4:Keep in mind, that the scores are "just" prediction scores, and do not correspond to proportion of cells that are of a certain celltype or similar. It mainly tell you that gene expression in a certain spot is hihgly similar/dissimilar to gene expression of a celltype.
 #ST_ALL10.4:
 #ST_ALL10.4:If we look at the scores, we see that some spots got really clear predictions by celltype, while others did not have high scores for any of the celltypes.
+
+#ST_ALL12:# Deconvolution
+
+#ST_ALL12:Deconvolution is a method to estimate the abundance (or proportion) of different celltypes in a bulkRNAseq dataset using a single cell reference. As the Visium data can be seen as a small bulk, we can both use methods for traditional bulkRNAseq as well as methods especially developed for Visium data.
+#ST_ALL12: Some methods for deconvolution are DWLS, cell2location, Tangram, Stereoscope, RCTD, SCDC and many more. 
+
+#ST_R12.1:Here we will use SCDC for deconvolution of celltypes in the Visium spots. For more information on the tool please check their website: https://meichendong.github.io/SCDC/articles/SCDC.html
+
+#ST_R12.1:First, make sure the packages you need are installed. All dependencies should be in the conda environment.
+
+#ST_ALL13:### Select genes for deconvolution
+#ST_ALL13:Most deconvolution methods does a prior gene selection and there are different options that are used:
+#ST_ALL13:
+#ST_ALL13:* Use variable genes in the SC data.
+#ST_ALL13:* Use variable genes in both SC and ST data
+#ST_ALL13:* DE genes between clusters in the SC data.
+#ST_ALL13:
+#ST_ALL13:In this case we will use top DEG genes per cluster, so first we have to run DEG detection on the scRNAseq data.
+
+#ST_R13.1:For SCDC we want to find a we unique markers per cluster, so we select top 20 DEGs per cluster.
+#ST_R13.1:Ideally you should run with a larger set of genes, perhaps 100 genes per cluster to get better results. However, for the sake of speed, we are now selecting only top20 genes and it still takes about 10 minutes to run.
+
+#ST_R13.2:### Create Expression Sets
+#ST_R13.2:
+#ST_R13.2:For SCDC both the SC and the ST data need to be in the format of an Expression set with the count matrices as `AssayData`. We also subset the matrices for the genes we selected in the previous step.
+
+#ST_R13.3:### Deconvolve
+#ST_R13.3:We then run the deconvolution defining the celltype of interest as "subclass" column in the single cell data.
+
+#ST_R13.4:Now we have a matrix with predicted proportions of each celltypes for each visium spot in `prop.est.mvw`:
+
+#ST_R13.5:Now we take the deconvolution output and add it to the Seurat object as a new assay.
+
+#ST_R13.6:Based on these prediction scores, we can also predict cell types whose location is spatially restricted. We use the same methods based on marked point processes to define spatially variable features, but use the cell type prediction scores as the "marks" rather than gene expression.
+
+#STR_R13.7:We can also visualize the scores per cluster in ST data.
+
+
+#ST_ALL14:Keep in mind that the deconvolution results are just predictions, depending on how well your scRNAseq data covers the celltypes that are present in the ST data and on how parameters, gene selection etc. are tuned you may get different results.
+
 
 #ST_ALL11:<style>
 #ST_ALL11:div.blue { background-color:#e6f0ff; border-radius: 5px; padding: 10px;}

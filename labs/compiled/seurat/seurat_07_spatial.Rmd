@@ -72,9 +72,9 @@ dir.create(outdir, showWarnings = F)
 # to list available datasets in SeuratData you can run AvailableData()
 
 # first we dowload the dataset
-InstallData("stxBrain")
-
-## Check again that it works, did not work at first...
+if (!("stxBrain.SeuratData" %in% rownames(InstalledData()))){
+  InstallData("stxBrain")
+}
 
 
 # now we can list what datasets we have downloaded
@@ -97,7 +97,7 @@ brain
 As you can see, now we do not have the assay "RNA", but instead an assay called "Spatial". 
 
 
-##Quality control
+# Quality control
 ***
 
 Similar to scRNAseq we use statistics on number of counts, number of features and percent mitochondria for quality control. 
@@ -172,7 +172,7 @@ brain <- brain[!grepl("^Hb.*-", rownames(brain)), ]
 dim(brain)
 ```
 
-## Analysis
+# Analysis
 ***
 
 For ST data, the Seurat team recommends to use SCTranform for normalization, so we will do that. `SCTransform` will select variable genes and normalize in one step.
@@ -228,7 +228,7 @@ SpatialDimPlot(brain, cells.highlight = CellsByIdentities(brain), facet.highligh
 
 ```
 
-## Integration
+### Integration
 
 Quite often there are strong batch effects between different ST sections, so it may be a good idea to integrate the data across sections.
 
@@ -282,7 +282,7 @@ SpatialDimPlot(brain.integrated)
 Do you see any differences between the integrated and non-integrated clusering? Judge for yourself, which of the clusterings do you think looks best? 
 As a reference, you can compare to brain regions in the [Allen brain atlas](https://mouse.brain-map.org/experiment/thumbnails/100042147?image_type=atlas). 
 
-## Identification of Spatially Variable Features
+### Identification of Spatially Variable Features
 
  There are two main workflows to identify molecular features that correlate with spatial location within a tissue. The first is to perform differential expression based on spatially distinct clusters, the other is to find features that are have spatial patterning without taking clusters or spatial annotation into account. 
 
@@ -318,9 +318,11 @@ In `FindSpatiallyVariables` the default method in Seurat (method = 'markvariogra
 
 
 
-## Single cell data
+# Single cell data
 
-We can also perform data integration between one scRNA-seq dataset and one spatial transcriptomics dataset. Such task is particularly useful because it allows us to transfer cell type labels to the Visium dataset, which were dentified from the scRNA-seq dataset. 
+We can use a scRNA-seq dataset as a referenced to predict the proportion of different celltypes in the Visium spots. 
+
+Keep in mind that it is important to have a reference that contains all the celltypes you expect to find in your spots. Ideally it should be a scRNAseq reference from the exact same tissue. 
 
 We will use a reference scRNA-seq dataset of ~14,000 adult mouse cortical cell taxonomy from the Allen Institute, generated with the SMART-Seq2 protocol.
 
@@ -369,7 +371,7 @@ allen_reference <- SCTransform(allen_reference, ncells = 3000, verbose = FALSE, 
 DimPlot(allen_reference, label = TRUE)
 ```
 
-### Subset ST for cortex
+# Subset ST for cortex
 Since the scRNAseq dataset was generated from the mouse cortex, we will subset the visium dataset in order to select mainly the spots part of the cortex. Note that the integration can also be performed on the whole brain slice, but it would give rise to false positive cell type assignments and and therefore it should be interpreted with more care.
 
 ```{r}
@@ -385,56 +387,140 @@ cortex <- subset(cortex, anterior1_imagerow > 275 & anterior1_imagecol > 370, in
 cortex <- subset(cortex, anterior1_imagerow > 250 & anterior1_imagecol > 440, invert = TRUE)
 
 # also subset for FC clusters
-cortex <- subset(cortex, idents = c(0,1,6,7,12))
+cortex <- subset(cortex, idents = c(1,2,3,4,5))
 
 p1 <- SpatialDimPlot(cortex, crop = TRUE, label = TRUE)
 p2 <- SpatialDimPlot(cortex, crop = FALSE, label = TRUE, pt.size.factor = 1, label.size = 3)
 p1 + p2
 
-# After subsetting, we renormalize cortex
-cortex <- SCTransform(cortex, assay = "Spatial", verbose = FALSE, method = "poisson") %>% RunPCA(verbose = FALSE)
+```
+
+
+
+# Deconvolution
+Deconvolution is a method to estimate the abundance (or proportion) of different celltypes in a bulkRNAseq dataset using a single cell reference. As the Visium data can be seen as a small bulk, we can both use methods for traditional bulkRNAseq as well as methods especially developed for Visium data.
+ Some methods for deconvolution are DWLS, cell2location, Tangram, Stereoscope, RCTD, SCDC and many more. 
+
+Here we will use SCDC for deconvolution of celltypes in the Visium spots. For more information on the tool please check their website: https://meichendong.github.io/SCDC/articles/SCDC.html
+First, make sure the packages you need are installed. All dependencies should be in the conda environment.
+
+
+```{r}
+inst = installed.packages()
+
+if (!("xbioc" %in% rownames(inst))){
+  remotes::install_github("renozao/xbioc", dependencies = FALSE)
+}
+if (!("SCDC" %in% rownames(inst))){
+  remotes::install_github("meichendong/SCDC", dependencies = FALSE)
+}
+
+suppressPackageStartupMessages(require(SCDC))
+suppressPackageStartupMessages(require(Biobase))
 
 ```
 
 
-### Integrate with scRNAseq
+### Select genes for deconvolution
+Most deconvolution methods does a prior gene selection and there are different options that are used:
 
-Instead of the functions `FindIntegrationAnchors` and `IntegrateData` in Seurat, we will instead use `FindTransferAnchors` and `TransferData` which will create a new assay that contains the predictions scores (e.g. closeness of each spot to each celltype in the aligned spaces).
+* Use variable genes in the SC data.
+* Use variable genes in both SC and ST data
+* DE genes between clusters in the SC data.
+
+In this case we will use top DEG genes per cluster, so first we have to run DEG detection on the scRNAseq data.
+
+For SCDC we want to find a we unique markers per cluster, so we select top 20 DEGs per cluster.
+Ideally you should run with a larger set of genes, perhaps 100 genes per cluster to get better results. However, for the sake of speed, we are now selecting only top20 genes and it still takes about 10 minutes to run.
 
 ```{r}
-anchors <- FindTransferAnchors(reference = allen_reference, query = cortex, normalization.method = "SCT")
-predictions.assay <- TransferData(anchorset = anchors, refdata = allen_reference$subclass, prediction.assay = TRUE, 
-    weight.reduction = cortex[["pca"]])
-cortex[["predictions"]] <- predictions.assay
+allen_reference@active.assay = "RNA"
+
+markers_sc <- FindAllMarkers(allen_reference,
+                            only.pos = TRUE,
+                            logfc.threshold = 0.1,
+                            test.use = "wilcox",
+                            min.pct = 0.05,
+                            min.diff.pct = 0.1,
+                            max.cells.per.ident = 200,
+                            return.thresh = 0.05,
+                            assay = "RNA")
+
+# Filter for genes that are also present in the ST data
+markers_sc <- markers_sc[markers_sc$gene %in% rownames(cortex),]
+
+
+# Select top 20 genes per cluster, select top by first p-value, then absolute diff in pct, then quota of pct.
+markers_sc$pct.diff <- markers_sc$pct.1 - markers_sc$pct.2
+markers_sc$log.pct.diff <- log2( (markers_sc$pct.1*99+1) / (markers_sc$pct.2*99+1) )
+markers_sc %>% group_by(cluster)  %>% top_n(-100, p_val) %>% top_n(50, pct.diff) %>% top_n(20, log.pct.diff)-> top20
+m_feats <- unique(as.character(top20$gene))
+
 ```
 
+### Create Expression Sets
+
+For SCDC both the SC and the ST data need to be in the format of an Expression set with the count matrices as `AssayData`. We also subset the matrices for the genes we selected in the previous step.
+
 ```{r}
-DefaultAssay(cortex) <- "predictions"
+eset_SC <- ExpressionSet(assayData=as.matrix(allen_reference@assays$RNA@counts[m_feats,]),
+                         phenoData =  AnnotatedDataFrame(allen_reference@meta.data))
+eset_ST <- ExpressionSet(assayData=as.matrix(cortex@assays$Spatial@counts[m_feats,]),phenoData = AnnotatedDataFrame(cortex@meta.data))
+```
+
+### Deconvolve
+We then run the deconvolution defining the celltype of interest as "subclass" column in the single cell data.
+
+```{r}
+deconvolution_crc <- SCDC::SCDC_prop(bulk.eset = eset_ST,
+                       sc.eset = eset_SC,
+                       ct.varname = "subclass",
+                       ct.sub = as.character(unique(eset_SC$subclass)) )
+```
+
+Now we have a matrix with predicted proportions of each celltypes for each visium spot in `prop.est.mvw`:
+
+```{r}
+head(deconvolution_crc$prop.est.mvw)
+```
+
+Now we take the deconvolution output and add it to the Seurat object as a new assay.
+
+```{r}
+cortex@assays[["SCDC"]] <- CreateAssayObject(data = t(deconvolution_crc$prop.est.mvw))
+
+# Seems to be a bug in SeuratData package that the key is not set and any plotting function etc. will throw an error.
+if (length(cortex@assays$SCDC@key) == 0 ){
+  cortex@assays$SCDC@key = "scdc_"
+}
+                                                       
+```
+
+
+```{r}
+DefaultAssay(cortex) <- "SCDC"
 SpatialFeaturePlot(cortex, features = c("L2/3 IT", "L4"), pt.size.factor = 1.6, ncol = 2, crop = TRUE)
 ```
+
 
 Based on these prediction scores, we can also predict cell types whose location is spatially restricted. We use the same methods based on marked point processes to define spatially variable features, but use the cell type prediction scores as the "marks" rather than gene expression.
 
 ```{r}
-cortex <- FindSpatiallyVariableFeatures(cortex, assay = "predictions", selection.method = "markvariogram", 
+cortex <- FindSpatiallyVariableFeatures(cortex, assay = "SCDC", selection.method = "markvariogram", 
     features = rownames(cortex), r.metric = 5, slot = "data")
 top.clusters <- head(SpatiallyVariableFeatures(cortex), 4)
 SpatialPlot(object = cortex, features = top.clusters, ncol = 2)
 
 ```
 
-
-We can also visualize the scores per cluster in ST data
+#ST_R13.7:
 
 ```{r, fig.width=12}
 VlnPlot(cortex, group.by = "seurat_clusters", features = top.clusters, pt.size = 0, ncol=2)
 
 ```
 
-
-Keep in mind, that the scores are "just" prediction scores, and do not correspond to proportion of cells that are of a certain celltype or similar. It mainly tells you that gene expression in a certain spot is hihgly similar/dissimilar to gene expression of a celltype.
-
-If we look at the scores, we see that some spots got really clear predictions by celltype, while others did not have high scores for any of the celltypes.
+Keep in mind that the deconvolution results are just predictions, depending on how well your scRNAseq data covers the celltypes that are present in the ST data and on how parameters, gene selection etc. are tuned you may get different results.
 
 <style>
 div.blue { background-color:#e6f0ff; border-radius: 5px; padding: 10px;}
@@ -457,20 +543,11 @@ subregion <- subset(brain.integrated, orig.ident == "posterior1")
 subregion@images$anterior1 = NULL
 
 # subset for a specific region
-subregion <- subset(subregion,  posterior1_imagecol > 330, invert = FALSE)
-
-#SpatialDimPlot(subregion ,cells.highlight = WhichCells(subregion, expression = posterior1_imagecol > 50))
-  
-
-# also subset for FC clusters
-subregion <- subset(subregion, idents = c(0,2,3,5))
+subregion <- subset(subregion,  posterior1_imagecol > 400, invert = FALSE)
 
 p1 <- SpatialDimPlot(subregion, crop = TRUE, label = TRUE)
 p2 <- SpatialDimPlot(subregion, crop = FALSE, label = TRUE, pt.size.factor = 1, label.size = 3)
 p1 + p2
-
-# After subsetting, we renormalize cortex
-subregion <- SCTransform(subregion, assay = "Spatial", verbose = FALSE, method = "poisson") %>% RunPCA(verbose = FALSE)
 
 ```
 

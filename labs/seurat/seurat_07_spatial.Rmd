@@ -38,9 +38,9 @@ dir.create(outdir, showWarnings = F)
 # to list available datasets in SeuratData you can run AvailableData()
 
 # first we dowload the dataset
-InstallData("stxBrain")
-
-## Check again that it works, did not work at first...
+if (!("stxBrain.SeuratData" %in% rownames(InstalledData()))){
+  InstallData("stxBrain")
+}
 
 
 # now we can list what datasets we have downloaded
@@ -338,54 +338,126 @@ cortex <- subset(cortex, anterior1_imagerow > 275 & anterior1_imagecol > 370, in
 cortex <- subset(cortex, anterior1_imagerow > 250 & anterior1_imagecol > 440, invert = TRUE)
 
 # also subset for FC clusters
-cortex <- subset(cortex, idents = c(0,1,6,7,12))
+cortex <- subset(cortex, idents = c(1,2,3,4,5))
 
 p1 <- SpatialDimPlot(cortex, crop = TRUE, label = TRUE)
 p2 <- SpatialDimPlot(cortex, crop = FALSE, label = TRUE, pt.size.factor = 1, label.size = 3)
 p1 + p2
 
-# After subsetting, we renormalize cortex
-cortex <- SCTransform(cortex, assay = "Spatial", verbose = FALSE, method = "poisson") %>% RunPCA(verbose = FALSE)
+```
+
+
+
+#ST_ALL12:
+
+#ST_R12.1:
+
+
+```{r}
+inst = installed.packages()
+
+if (!("xbioc" %in% rownames(inst))){
+  remotes::install_github("renozao/xbioc", dependencies = FALSE)
+}
+if (!("SCDC" %in% rownames(inst))){
+  remotes::install_github("meichendong/SCDC", dependencies = FALSE)
+}
+
+suppressPackageStartupMessages(require(SCDC))
+suppressPackageStartupMessages(require(Biobase))
 
 ```
 
 
-#ST_ALL10.2:
+#ST_ALL13:
 
-Instead of the functions `FindIntegrationAnchors` and `IntegrateData` in Seurat, we will instead use `FindTransferAnchors` and `TransferData` which will create a new assay that contains the predictions scores (e.g. closeness of each spot to each celltype in the aligned spaces).
+#ST_R13.1:
 
 ```{r}
-anchors <- FindTransferAnchors(reference = allen_reference, query = cortex, normalization.method = "SCT")
-predictions.assay <- TransferData(anchorset = anchors, refdata = allen_reference$subclass, prediction.assay = TRUE, 
-    weight.reduction = cortex[["pca"]])
-cortex[["predictions"]] <- predictions.assay
+allen_reference@active.assay = "RNA"
+
+markers_sc <- FindAllMarkers(allen_reference,
+                            only.pos = TRUE,
+                            logfc.threshold = 0.1,
+                            test.use = "wilcox",
+                            min.pct = 0.05,
+                            min.diff.pct = 0.1,
+                            max.cells.per.ident = 200,
+                            return.thresh = 0.05,
+                            assay = "RNA")
+
+# Filter for genes that are also present in the ST data
+markers_sc <- markers_sc[markers_sc$gene %in% rownames(cortex),]
+
+
+# Select top 20 genes per cluster, select top by first p-value, then absolute diff in pct, then quota of pct.
+markers_sc$pct.diff <- markers_sc$pct.1 - markers_sc$pct.2
+markers_sc$log.pct.diff <- log2( (markers_sc$pct.1*99+1) / (markers_sc$pct.2*99+1) )
+markers_sc %>% group_by(cluster)  %>% top_n(-100, p_val) %>% top_n(50, pct.diff) %>% top_n(20, log.pct.diff)-> top20
+m_feats <- unique(as.character(top20$gene))
+
 ```
 
+#ST_R13.2:
+
 ```{r}
-DefaultAssay(cortex) <- "predictions"
+eset_SC <- ExpressionSet(assayData=as.matrix(allen_reference@assays$RNA@counts[m_feats,]),
+                         phenoData =  AnnotatedDataFrame(allen_reference@meta.data))
+eset_ST <- ExpressionSet(assayData=as.matrix(cortex@assays$Spatial@counts[m_feats,]),phenoData = AnnotatedDataFrame(cortex@meta.data))
+```
+
+#ST_R13.3:
+
+```{r}
+deconvolution_crc <- SCDC::SCDC_prop(bulk.eset = eset_ST,
+                       sc.eset = eset_SC,
+                       ct.varname = "subclass",
+                       ct.sub = as.character(unique(eset_SC$subclass)) )
+```
+
+#ST_R13.4:
+
+```{r}
+head(deconvolution_crc$prop.est.mvw)
+```
+
+#ST_R13.5:
+
+```{r}
+cortex@assays[["SCDC"]] <- CreateAssayObject(data = t(deconvolution_crc$prop.est.mvw))
+
+# Seems to be a bug in SeuratData package that the key is not set and any plotting function etc. will throw an error.
+if (length(cortex@assays$SCDC@key) == 0 ){
+  cortex@assays$SCDC@key = "scdc_"
+}
+                                                       
+```
+
+
+```{r}
+DefaultAssay(cortex) <- "SCDC"
 SpatialFeaturePlot(cortex, features = c("L2/3 IT", "L4"), pt.size.factor = 1.6, ncol = 2, crop = TRUE)
 ```
 
-Based on these prediction scores, we can also predict cell types whose location is spatially restricted. We use the same methods based on marked point processes to define spatially variable features, but use the cell type prediction scores as the "marks" rather than gene expression.
+
+#ST_R13.6:
 
 ```{r}
-cortex <- FindSpatiallyVariableFeatures(cortex, assay = "predictions", selection.method = "markvariogram", 
+cortex <- FindSpatiallyVariableFeatures(cortex, assay = "SCDC", selection.method = "markvariogram", 
     features = rownames(cortex), r.metric = 5, slot = "data")
 top.clusters <- head(SpatiallyVariableFeatures(cortex), 4)
 SpatialPlot(object = cortex, features = top.clusters, ncol = 2)
 
 ```
 
-
-#ST_ALL10.3:
+#ST_R13.7:
 
 ```{r, fig.width=12}
 VlnPlot(cortex, group.by = "seurat_clusters", features = top.clusters, pt.size = 0, ncol=2)
 
 ```
 
-
-#ST_ALL10.4:
+#ST_ALL14:
 
 #ST_ALL11:
 
@@ -398,20 +470,11 @@ subregion <- subset(brain.integrated, orig.ident == "posterior1")
 subregion@images$anterior1 = NULL
 
 # subset for a specific region
-subregion <- subset(subregion,  posterior1_imagecol > 330, invert = FALSE)
-
-#SpatialDimPlot(subregion ,cells.highlight = WhichCells(subregion, expression = posterior1_imagecol > 50))
-  
-
-# also subset for FC clusters
-subregion <- subset(subregion, idents = c(0,2,3,5))
+subregion <- subset(subregion,  posterior1_imagecol > 400, invert = FALSE)
 
 p1 <- SpatialDimPlot(subregion, crop = TRUE, label = TRUE)
 p2 <- SpatialDimPlot(subregion, crop = FALSE, label = TRUE, pt.size.factor = 1, label.size = 3)
 p1 + p2
-
-# After subsetting, we renormalize cortex
-subregion <- SCTransform(subregion, assay = "Spatial", verbose = FALSE, method = "poisson") %>% RunPCA(verbose = FALSE)
 
 ```
 
