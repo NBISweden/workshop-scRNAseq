@@ -31,7 +31,7 @@ Below you can find some common error and problems you might face either during i
 
 
 <details>
-  <summary markdown="span">`Error - umap-learn not found`</summary>
+  <summary markdown="span">`Error - umap-learn not found, or other python packagees`</summary>
 
   If your R does not find the correct python version, it will complain that `umap-learn` is not installed and ask you to install it. Here are some tips on how to find the correct python version that was installed in the conda environment.
 
@@ -132,6 +132,21 @@ Below you can find some common error and problems you might face either during i
   If none of those work, you can click on the wheel engine symbol and check `Chunk output in console` 
 
 </details>
+
+
+<details>
+  <summary markdown="span">`R crashes due to memory issues`</summary>
+
+  If R crashes due to memory issues, it may be a good idea to increase the vector size `R_MAX_VSIZE`. Put in the file `.Renviron` either in your home directory or the folder you are launching Rstudio from:
+
+  ```
+  R_MAX_VSIZE=70Gb
+  ```
+  Or to whatever value matches your computer, the default size is 16Gb.
+
+
+</details>
+
 
 
 ***
