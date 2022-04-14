@@ -18,7 +18,7 @@ All scripts (Rmarkdown or ipython notebooks) can be found at our github repo in 
 
 During this workshop, you will use conda environments to run the exercises. This is because conda environments allow all users to have the same computing environment, i.e. package versions. This enforces reproducibility for you to run this material without the need to re-install or change your local versions. Please me sure you have completed the [<img border="0" src="https://www.svgrepo.com/show/19652/maths-class-materials-cross-of-a-pencil-and-a-ruler.svg" width="20" height="20">**Precourse material**](precourse.md). The environment for this course (2021) is this:
 
-* [environment_scRNAseq2021.yml](https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/master/labs/environment_scRNAseq2021.yml)
+* [environment_scRNAseq2021.yml](https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/master/labs/environment_scRNAseq2022.yml)
 
 <br/>
 
