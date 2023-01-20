@@ -45,6 +45,7 @@ suppressPackageStartupMessages({
   library(Matrix)
   library(sparseMatrixStats)
   library(slingshot)
+  library(tradeSeq)
 })
 
 #Define some color palette
@@ -72,9 +73,7 @@ You can download the files we prepared with these commands:
 
 ```{r}
 webpath <- "https://github.com/NBISweden/workshop-scRNAseq/blob/master/labs/data/bone_marrow/"
-file_list <- c("trajectory_seurat_filtered.rds"
-               # ,"trajectory_scran_filtered.rds"
-               )
+file_list <- c( "trajectory_seurat_filtered.rds" )
 for(i in file_list){  download.file( url = paste0(webpath,i,"?raw=true") , destfile = paste0(i))}
 ```
 
@@ -92,8 +91,6 @@ We already have pre-computed and subseted the dataset (with 6688 cells and 3585 
 
 ```{r }
 obj <- readRDS("trajectory_seurat_filtered.rds")
-
-
 
 # Calculate cluster centroids (for plotting the labels later)
 mm <- sparse.model.matrix( ~ 0 + factor( obj$clusters_use) ) ; colnames(mm) <- levels( factor( obj$clusters_use) )
@@ -181,9 +178,9 @@ lineages <- as.SlingshotDataSet(getLineages(
 
 
 # Change the reduction to our "fixed" UMAP2d (FOR VISUALISATION ONLY)
-lineages@reducedDim <- filt_new_UMAP2
+lineages@reducedDim <- obj@reductions$umap@cell.embeddings
 
-mypar() ; plot(filt_new_UMAP2, col = pal[merged_filt_clustering],  cex=.5,pch = 16)
+mypar() ; plot(obj@reductions$umap@cell.embeddings, col = pal[obj$clusters_use],  cex=.5,pch = 16)
 lines(lineages, lwd = 1, col = 'black', cex=2 )
 text(centroids2d, labels = rownames(centroids2d),cex=0.8,font=2,col = "white")
 ```
@@ -213,7 +210,7 @@ curves <- as.SlingshotDataSet(getCurves(
 curves
 
 # Plots
-plot(filt_new_UMAP2, col = pal[merged_filt_clustering], pch = 16)
+plot(obj@reductions$umap@cell.embeddings, col = pal[obj$clusters_use], pch = 16)
 lines(curves, lwd = 2, col = 'black')
 text(centroids2d,  labels = rownames(centroids2d),cex=1,font=2)
 ```
@@ -226,7 +223,7 @@ cellWeights <- slingCurveWeights(curves)
 
 x <- rowMeans( pseudotime ); x <- x / max(x) ; o <- order(x)
 mypar()
-plot(filt_new_UMAP2[o,],main=paste0("pseudotime"),pch=16,cex=0.4,axes=F,xlab="",ylab="",
+plot(obj@reductions$umap@cell.embeddings[o,],main=paste0("pseudotime"),pch=16,cex=0.4,axes=F,xlab="",ylab="",
        col=colorRampPalette(c("grey70","orange3","firebrick","purple4"))(99)[x[o]*98+1])
 points(centroids2d,cex=2.5,pch=16,col="#FFFFFF99")
 text(centroids2d, labels = rownames(centroids2d),cex=1,font=2)
@@ -261,7 +258,7 @@ IMPORTANT: In an ideal experiment, you would use all the genes, or at least thos
 sel_cells <- split( colnames(obj@assays$RNA@data) , obj$clusters_use)
 sel_cells <- unlist( lapply( sel_cells,function(x){set.seed(1); return(sample(x,20))} ) )
 
-gv <- as.data.frame( na.omit( modelGeneVar(obj@assays$RNA@data[,sel_cells])))
+gv <- as.data.frame( na.omit( scran::modelGeneVar(obj@assays$RNA@data[,sel_cells])))
 gv <- gv[order(gv$bio,decreasing = T),]
 sel_genes <- sort( rownames(gv)[1:500] )
 ```
@@ -286,7 +283,7 @@ lc <- sapply(lineages@lineages,function(x){rev(x)[1]})
 names(lc) <- gsub("Lineage","L",names(lc))
 
 mypar()
-plot(filt_new_UMAP2, col = pal[ obj$clusters_use ], pch = 16)
+plot(obj@reductions$umap@cell.embeddings, col = pal[ obj$clusters_use ], pch = 16)
 lines(curves, lwd = 2, col = 'black')
 points(centroids2d[lc,], col = "black", pch = 16,cex=4)
 text(centroids2d[lc,], labels = names(lc) , cex=1,font=2,col="white")
@@ -310,16 +307,17 @@ We can plot their expression:
 ```{r}
 mypar(4,4,mar=c(.1,.1,2,1))
 
-plot(filt_new_UMAP2, col = pal[merged_filt_clustering], cex=.5, pch = 16,axes=F,xlab="",ylab="")
+plot(obj@reductions$umap@cell.embeddings, col = pal[obj$clusters_use], cex=.5, pch = 16,axes=F,xlab="",ylab="")
 lines(curves, lwd = 2, col = 'black')
 points(centroids2d[lc,], col = "black", pch = 15,cex=3,xpd=T)
 text(centroids2d[lc,], labels = names(lc) , cex=1,font=2,col="white",xpd=T)
 
 vars <- rownames(res[1:15,])
+vars <- na.omit(vars[vars != "NA"])
 
 for(i in vars){
-x <- CORRECTED_NORMCOUNTS[i, ] ; x <- (x - min(x))/ ( max(x)-min(x) ) ; o <- order(x)
-plot( filt_new_UMAP2[o,], main=paste0(i), pch=16,cex=0.5,axes=F,xlab="",ylab="",
+x <- drop0( obj@assays$RNA@data )[i,] ; x <- (x - min(x))/ ( max(x)-min(x) ) ; o <- order(x)
+plot( obj@reductions$umap@cell.embeddings[o,], main=paste0(i), pch=16,cex=0.5,axes=F,xlab="",ylab="",
      col=colorRampPalette(c("lightgray","grey60","navy"))(99)[x[o]*98+1])  }
 ```
 
@@ -342,17 +340,18 @@ You can see now that there are several more columns, one for each lineage. This 
 # Get the top UP and Down regulated in lineage 1
 res_lin1 <- sort(setNames(res$logFClineage1,rownames(res)) )
 vars <- names( c( rev(res_lin1)[1:7] ,  res_lin1 [1:8] ) )
+vars <- na.omit(vars[vars != "NA"])
 
 mypar(4,4,mar=c(.1,.1,2,1))
 
-plot(filt_new_UMAP2, col = pal[merged_filt_clustering], cex=.5, pch = 16,axes=F,xlab="",ylab="")
+plot(obj@reductions$umap@cell.embeddings, col = pal[obj$clusters_use], cex=.5, pch = 16,axes=F,xlab="",ylab="")
 lines(curves, lwd = 2, col = 'black')
 points(centroids2d[lc,], col = "black", pch = 15,cex=3,xpd=T)
 text(centroids2d[lc,], labels = names(lc) , cex=1,font=2,col="white",xpd=T)
 
 for(i in vars){
-x <- CORRECTED_NORMCOUNTS[i, ] ; x <- (x - min(x))/ ( max(x)-min(x) ) ; o <- order(x)
-plot( filt_new_UMAP2[o,], main=paste0(i), pch=16,cex=0.5,axes=F,xlab="",ylab="",
+x <- drop0( obj@assays$RNA@data )[i, ] ; x <- (x - min(x))/ ( max(x)-min(x) ) ; o <- order(x)
+plot( obj@reductions$umap@cell.embeddings[o,], main=paste0(i), pch=16,cex=0.5,axes=F,xlab="",ylab="",
      col=colorRampPalette(c("lightgray","grey60","navy"))(99)[x[o]*98+1])  }
 ```
 
@@ -372,7 +371,7 @@ res <- na.omit( diffEndTest(sceGAM) )
 res  <- res[ res$pvalue < 1e-3 , ]
 res  <- res[ res$waldStat > mean(res$waldStat) , ]
 res  <- res[ order(res$waldStat,decreasing = T), ]
-res[1:10,1:6]
+res[1:10,]
 ```
 
 
@@ -382,24 +381,22 @@ You can see now that there are even more columns, one for the pair-wise comparis
 # Get the top UP and Down regulated in lineage 1 vs 2
 res_lin1_2 <- sort(setNames(res$logFC1_2,rownames(res)) )
 vars <- names( c( rev(res_lin1_2)[1:7] ,  res_lin1_2 [1:8] ) )
+vars <- na.omit(vars[vars != "NA"])
 
 mypar(4,4,mar=c(.1,.1,2,1))
 
-plot(filt_new_UMAP2, col = pal[merged_filt_clustering], cex=.5, pch = 16,axes=F,xlab="",ylab="")
+plot(obj@reductions$umap@cell.embeddings, col = pal[obj$clusters_use], cex=.5, pch = 16,axes=F,xlab="",ylab="")
 lines(curves, lwd = 2, col = 'black')
 points(centroids2d[lc,], col = "black", pch = 15,cex=3,xpd=T)
 text(centroids2d[lc,], labels = names(lc) , cex=1,font=2,col="white",xpd=T)
 
 for(i in vars){
-x <- CORRECTED_NORMCOUNTS[i, ] ; x <- (x - min(x))/ ( max(x)-min(x) ) ; o <- order(x)
-plot( filt_new_UMAP2[o,], main=paste0(i), pch=16,cex=0.5,axes=F,xlab="",ylab="",
+x <- drop0( obj@assays$RNA@data )[i, ] ; x <- (x - min(x))/ ( max(x)-min(x) ) ; o <- order(x)
+plot( obj@reductions$umap@cell.embeddings[o,], main=paste0(i), pch=16,cex=0.5,axes=F,xlab="",ylab="",
      col=colorRampPalette(c("lightgray","grey60","navy"))(99)[x[o]*98+1])  }
 ```
 
 Check out this [vignette](https://statomics.github.io/tradeSeq/articles/tradeSeq.html) for a more in-depth overview of tradeSeq and many other differential expression tests.
-
-
-
 
 
 ### References
@@ -411,6 +408,8 @@ Saelens, Wouter, Robrecht Cannoodt, Helena Todorov, and Yvan Saeys. 2019. “A C
 
 
 
+# END
+
 
 ## AVANCED USAGE:
 
@@ -420,7 +419,7 @@ Saelens, Wouter, Robrecht Cannoodt, Helena Todorov, and Yvan Saeys. 2019. “A C
 
 Before computing differential gene expression, sometimes it is a good idea to make sure our dataset is somewhat homogeneous (without very strong batch effects). In this dataset, we actually used data from 4 different technologies (Drop-seq, SmartSeq2 and 10X) and therefore massive differences in read counts can be observed:
 
-```{r, fig.width=6, fig.height=6}
+```{r, eval=F, fig.width=6, fig.height=6}
 # SEURAT
 VlnPlot(obj, features = "nUMI", group.by = "batches")
 
@@ -430,7 +429,7 @@ plotColData(sce,y = "nUMI",x = "batches",colour_by = "batches")
 
 Since we are not interested in the effects of the batches in this example, but only the differentiation paths for each cell type. We can use the integrated space of harmony embedding (where we removed batch effects). Since the harmony (same applies to MNN, SCANORAMA, LIGER ) is a corrected version of PCA, we can multiply the harmony embedding with PCA loadings to generate batch-corrected "pseudo counts". Note that we can only reconstruct data from the highly variable genes that were used to compute PCA and HARMONY.
 
-```{r, fig.width=6, fig.height=6}
+```{r, eval=F, fig.width=6, fig.height=6}
 # Get the gene means and standard deviation
 library(sparseMatrixStats)
 genes <- rownames( PCA_loadings )
@@ -449,11 +448,11 @@ CORRECTED_COUNTS <- round( ( expm1( CORRECTED_NORMCOUNTS ) ) * 1000 )
 
 Let's compare how the normalized data compares to the batch-corrected one.
 
-```{r}
+```{r, eval=F}
 mypar(3,3)
 
-plot( filt_new_UMAP2 , type="n") ; draw_graph( layout = filt_new_UMAP2 , graph = filt_KNN )
-points( filt_new_UMAP2 , col = pal[ filt_clustering ], pch=16 )
+plot( obj@reductions$umap@cell.embeddings , type="n") ; draw_graph( layout = obj@reductions$umap@cell.embeddings , graph = filt_KNN )
+points( obj@reductions$umap@cell.embeddings , col = pal[ filt_clustering ], pch=16 )
 text(centroids2d [,1],centroids2d[,2],
      labels = rownames(centroids2d),cex=0.8,font=2)
 
@@ -470,19 +469,19 @@ IMPORTANT: Please note in the graphs above that there is a significant amount of
 
 Let's also take a closer inspection on the UMAPs:
 
-```{r}
+```{r, eval=F}
 mypar(4,5,mar=c(.1,.1,2,1))
 
 vars <- c("Cd34","Ms4a1","Cd3e","Ltf","Cst3","Mcpt8","Alas2","Siglech","C1qc");
 
 for(j in c("filt_NORM_COUNTS","CORRECTED_NORMCOUNTS")){
-  plot( filt_new_UMAP2 , type="n", axes=F,xlab="",ylab="",main=j)
-  draw_graph( layout = filt_new_UMAP2 , graph = filt_KNN )
-  points( filt_new_UMAP2, col = pal[merged_filt_clustering], pch = 16 )
+  plot( obj@reductions$umap@cell.embeddings , type="n", axes=F,xlab="",ylab="",main=j)
+  draw_graph( layout = obj@reductions$umap@cell.embeddings , graph = filt_KNN )
+  points( obj@reductions$umap@cell.embeddings, col = pal[obj$clusters_use], pch = 16 )
   text(centroids2d, labels = rownames(centroids2d),cex=0.8,font=2)
   for(i in vars){
   x <- get(j)[i, ] ; x <- x - min(x)/ (max(x)-min(x)) ; o <- order(x)
-  plot(filt_new_UMAP2[o,],main=paste0(i),pch=16,cex=0.4,axes=F,xlab="",ylab="",
+  plot(obj@reductions$umap@cell.embeddings[o,],main=paste0(i),pch=16,cex=0.4,axes=F,xlab="",ylab="",
        col=colorRampPalette(c("lightgray","blue"))(99)[x[o]*98+1])  }}
 ```
 
