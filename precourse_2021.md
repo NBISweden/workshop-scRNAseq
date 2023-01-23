@@ -26,7 +26,6 @@ Please follow the instructions below for installations prior to the workshop:
 
 <br/>
 
-
 ##### <img border="0" src="https://toppng.com/uploads/preview/knowledge-icon-icon-knowledge-icon-11553482729yd4gxvibcr.png" width="20" height="20"> Knowledge Requirements
 ***
 
@@ -102,7 +101,7 @@ Start by installing Conda. We suggest installing **Miniconda3** and NOT Anaconda
 
 
 <details>
-  <summary markdown="span">**On Mac OS X** (click here)</summary>
+  <summary markdown="span">**On Mac OS X**</summary>
   <img border="0" src="https://logos-download.com/wp-content/uploads/2020/06/Apple_Mac_OS_Logo-700x670.png" width="30" height="30">
 
   First, make sure you have Xcode and CommandLineTools installed and updated to latest version (in AppStore). If you have not already installed CommadLineTools, go to a terminal window and run:
@@ -129,7 +128,7 @@ Start by installing Conda. We suggest installing **Miniconda3** and NOT Anaconda
 
 
 <details>
-  <summary markdown="span">**On Ubuntu** (click here)</summary>
+  <summary markdown="span">**On Ubuntu**</summary>
   <img border="0" src="https://encrypted-tbn0.gstatic.com/images?q=tbn%3AANd9GcR2rSSpKVBohI4AXgBaUjFVYqO73ou2l9AOXw&usqp=CAU" width="30" height="30">
 
   First download the latest version of Miniconda3 and run it to install.
@@ -150,7 +149,7 @@ Start by installing Conda. We suggest installing **Miniconda3** and NOT Anaconda
 
 
 <details>
-  <summary markdown="span">**On Windows 10** (click here)</summary>
+  <summary markdown="span">**On Windows 10**</summary>
   <img border="0" src="https://seeklogo.com/images/W/windows-10-icon-logo-5BC5C69712-seeklogo.com.png" width="30" height="30">
 
   Unfortunately, not all packages available on conda are compatible with windows machines. The good news is that Windows 10 offers native linux support via the Windows Subsystem for Linux (WSL2). This allows you to run linux/bash commands from within windows without the need of a virtual machine nor a dual-boot setup (i.e. having 2 operating systems). However, WSL does not offer a complete support for graphical interfaces (such as RStudio in our case), so we need additional steps to make that happen.
@@ -198,7 +197,7 @@ It is recommended that you INSTALL the program and not use the portable version.
 
 
 <details>
-  <summary markdown="span">**On VirtualBox** (click here)</summary>
+  <summary markdown="span">**On VirtualBox**</summary>
   <img border="0" src="https://upload.wikimedia.org/wikipedia/commons/d/d5/Virtualbox_logo.png" width="30" height="30">
 
   If by any means you see that the installations are not working as it should on your computer, you can try to create a virtual machine to run UBUNTU and install everything there. But please keep this alternative as the last temporary resourse, as we recommend troubleshooting the installation o the up-mentioned methods.
