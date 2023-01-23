@@ -245,14 +245,14 @@ It is recommended that you INSTALL the program and not use the portable version.
   ```
   mkdir ~/Desktop/course
   cd ~/Desktop/course
-  wget https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/master/labs/environment_scRNAseq2021.yml
-  conda env create -f environment_scRNAseq2021.yml
+  wget https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/master/labs/environment_scRNAseq2023.yml
+  conda env create -f environment_scRNAseq2023.yml
   ```
 
   11. You can then follow the instructions above to activate/deactivate the environment.
 
   ```
-  conda activate scRNAseq2021
+  conda activate scRNAseq2023
   rstudio &
   ```
 
@@ -264,16 +264,16 @@ It is recommended that you INSTALL the program and not use the portable version.
 
 **2. Create a conda environment from file**
 
-To download the `environment_scRNAseq2021.yml` file using the command on Terminal:
+To download the `environment_scRNAseq2023.yml` file using the command on Terminal:
 
 ```
-curl -o environment_scRNAseq2021.yml https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/master/labs/environment_scRNAseq2021.yml
+curl -o environment_scRNAseq2023.yml https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/master/labs/environment_scRNAseq2023.yml
 ```
 
-After this, you should have a file named `environment_scRNAseq2021.yml` in your directory (it does not matter where). Next, type:
+After this, you should have a file named `environment_scRNAseq2023.yml` in your directory (it does not matter where). Next, type:
 
 ```
-mamba env create -n scRNAseq2021 -f environment_scRNAseq2021.yml
+mamba env create -n scRNAseq2023 -f environment_scRNAseq2023.yml
 ```
 
 Several messages will show up on your screen and will tell you about the installation process. This may take a few minutes depending on how many packages are to be installed.
@@ -300,7 +300,7 @@ Several messages will show up on your screen and will tell you about the install
 Once the environment is created, we need to activate it in order to use the softwares and packages inside it. To activate an environment type:
 
 ```
-conda activate scRNAseq2021
+conda activate scRNAseq2023
 ```
 
 From this point on you can run any of the contents from the workshop. For instance, you can directly launch RStudio by typing `rstudio`. Here it is important to add the `&` symbol in the end to be able to use the command line at the same time if needed. You can open other files from Rstudio later as well.
