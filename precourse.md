@@ -26,6 +26,7 @@ Please follow the instructions below for installations prior to the workshop:
 
 <br/>
 
+
 ##### <img border="0" src="https://toppng.com/uploads/preview/knowledge-icon-icon-knowledge-icon-11553482729yd4gxvibcr.png" width="20" height="20"> Knowledge Requirements
 ***
 
@@ -101,7 +102,7 @@ Start by installing Conda. We suggest installing **Miniconda3** and NOT Anaconda
 
 
 <details>
-  <summary markdown="span">**On Mac OS X**</summary>
+  <summary markdown="span">**On Mac OS X** (click here)</summary>
   <img border="0" src="https://logos-download.com/wp-content/uploads/2020/06/Apple_Mac_OS_Logo-700x670.png" width="30" height="30">
 
   First, make sure you have Xcode and CommandLineTools installed and updated to latest version (in AppStore). If you have not already installed CommadLineTools, go to a terminal window and run:
@@ -128,7 +129,7 @@ Start by installing Conda. We suggest installing **Miniconda3** and NOT Anaconda
 
 
 <details>
-  <summary markdown="span">**On Ubuntu**</summary>
+  <summary markdown="span">**On Ubuntu** (click here)</summary>
   <img border="0" src="https://encrypted-tbn0.gstatic.com/images?q=tbn%3AANd9GcR2rSSpKVBohI4AXgBaUjFVYqO73ou2l9AOXw&usqp=CAU" width="30" height="30">
 
   First download the latest version of Miniconda3 and run it to install.
@@ -149,7 +150,7 @@ Start by installing Conda. We suggest installing **Miniconda3** and NOT Anaconda
 
 
 <details>
-  <summary markdown="span">**On Windows 10**</summary>
+  <summary markdown="span">**On Windows 10** (click here)</summary>
   <img border="0" src="https://seeklogo.com/images/W/windows-10-icon-logo-5BC5C69712-seeklogo.com.png" width="30" height="30">
 
   Unfortunately, not all packages available on conda are compatible with windows machines. The good news is that Windows 10 offers native linux support via the Windows Subsystem for Linux (WSL2). This allows you to run linux/bash commands from within windows without the need of a virtual machine nor a dual-boot setup (i.e. having 2 operating systems). However, WSL does not offer a complete support for graphical interfaces (such as RStudio in our case), so we need additional steps to make that happen.
@@ -197,7 +198,7 @@ It is recommended that you INSTALL the program and not use the portable version.
 
 
 <details>
-  <summary markdown="span">**On VirtualBox**</summary>
+  <summary markdown="span">**On VirtualBox** (click here)</summary>
   <img border="0" src="https://upload.wikimedia.org/wikipedia/commons/d/d5/Virtualbox_logo.png" width="30" height="30">
 
   If by any means you see that the installations are not working as it should on your computer, you can try to create a virtual machine to run UBUNTU and install everything there. But please keep this alternative as the last temporary resourse, as we recommend troubleshooting the installation o the up-mentioned methods.
@@ -245,14 +246,14 @@ It is recommended that you INSTALL the program and not use the portable version.
   ```
   mkdir ~/Desktop/course
   cd ~/Desktop/course
-  wget https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/master/labs/environment_scRNAseq2021.yml
-  conda env create -f environment_scRNAseq2021.yml
+  wget https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/master/labs/environment_scRNAseq2023.yml
+  conda env create -f environment_scRNAseq2023.yml
   ```
 
   11. You can then follow the instructions above to activate/deactivate the environment.
 
   ```
-  conda activate scRNAseq2021
+  conda activate scRNAseq2023
   rstudio &
   ```
 
@@ -264,16 +265,16 @@ It is recommended that you INSTALL the program and not use the portable version.
 
 **2. Create a conda environment from file**
 
-To download the `environment_scRNAseq2021.yml` file using the command on Terminal:
+To download the `environment_scRNAseq2023.yml` file using the command on Terminal:
 
 ```
-curl -o environment_scRNAseq2021.yml https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/master/labs/environment_scRNAseq2021.yml
+curl -o environment_scRNAseq2023.yml https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/master/labs/environment_scRNAseq2023.yml
 ```
 
-After this, you should have a file named `environment_scRNAseq2021.yml` in your directory (it does not matter where). Next, type:
+After this, you should have a file named `environment_scRNAseq2023.yml` in your directory (it does not matter where). Next, type:
 
 ```
-mamba env create -n scRNAseq2021 -f environment_scRNAseq2021.yml
+mamba env create -n scRNAseq2023 -f environment_scRNAseq2023.yml
 ```
 
 Several messages will show up on your screen and will tell you about the installation process. This may take a few minutes depending on how many packages are to be installed.
@@ -300,7 +301,7 @@ Several messages will show up on your screen and will tell you about the install
 Once the environment is created, we need to activate it in order to use the softwares and packages inside it. To activate an environment type:
 
 ```
-conda activate scRNAseq2021
+conda activate scRNAseq2023
 ```
 
 From this point on you can run any of the contents from the workshop. For instance, you can directly launch RStudio by typing `rstudio`. Here it is important to add the `&` symbol in the end to be able to use the command line at the same time if needed. You can open other files from Rstudio later as well.
