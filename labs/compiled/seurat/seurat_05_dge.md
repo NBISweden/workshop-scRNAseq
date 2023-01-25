@@ -1,6 +1,6 @@
 ---
 author: "Åsa Björklund  &  Paulo Czarnewski"
-date: 'January 14, 2022'
+date: 'January 25, 2023'
 output:
   html_document:
     self_contained: true
@@ -48,6 +48,9 @@ suppressPackageStartupMessages({
     library(pheatmap)
     library(enrichR)
     library(rafalib)
+    library(Matrix)
+    library(edgeR)
+    library(MAST)
 })
 
 alldata <- readRDS("data/results/covid_qc_dr_int_cl.rds")
@@ -215,6 +218,407 @@ VlnPlot(alldata, features = as.character(unique(top5_cell_selection$gene)), ncol
 
 ![](seurat_05_dge_files/figure-html/unnamed-chunk-11-1.png)<!-- -->
 
+### Remove sex chromosome genes
+
+To remove some of the bias due to inbalanced sex in the subjects we can remove the sex chromosome related genes.
+
+
+
+```r
+gene.info = read.csv("data/results/genes.table.csv")  #was created in the QC exercise
+
+auto.genes = gene.info$external_gene_name[!(gene.info$chromosome_name %in% c("X",
+    "Y"))]
+
+cell_selection@active.assay = "RNA"
+keep.genes = intersect(rownames(cell_selection), auto.genes)
+cell_selection = cell_selection[keep.genes, ]
+
+# then renormalize the data
+cell_selection = NormalizeData(cell_selection)
+```
+
+Rerun differential expression:
+
+
+```r
+# Compute differentiall expression
+DGE_cell_selection <- FindMarkers(cell_selection, ident.1 = "Covid", ident.2 = "Ctrl",
+    logfc.threshold = 0.2, test.use = "wilcox", min.pct = 0.1, min.diff.pct = 0.2,
+    assay = "RNA")
+
+# Define as Covid or Ctrl in the df and add a gene column
+DGE_cell_selection$direction = ifelse(DGE_cell_selection$avg_log2FC > 0, "Covid",
+    "Ctrl")
+DGE_cell_selection$gene = rownames(DGE_cell_selection)
+
+
+DGE_cell_selection %>%
+    group_by(direction) %>%
+    top_n(-5, p_val) %>%
+    arrange(direction) -> top5_cell_selection
+
+VlnPlot(cell_selection, features = as.character(unique(top5_cell_selection$gene)),
+    ncol = 5, group.by = "type", assay = "RNA", pt.size = 0.1)
+```
+
+![](seurat_05_dge_files/figure-html/unnamed-chunk-13-1.png)<!-- -->
+
+We can also plot these genes across all clusters, but split by "type", to check if the genes are also up/downregulated in other celltypes/clusters.
+
+
+```r
+VlnPlot(alldata, features = as.character(unique(top5_cell_selection$gene)), ncol = 5,
+    split.by = "type", assay = "RNA", pt.size = 0)
+```
+
+![](seurat_05_dge_files/figure-html/unnamed-chunk-14-1.png)<!-- -->
+
+
+
+
+## Patient Batch effects
+
+When we are testing for Covid vs Control we are running a DGE test for 3 vs 3 individuals. That will be very sensitive to sample differences unless we find a way to control for it. So first, lets check how the top DGEs are expressed across the individuals:
+
+
+```r
+VlnPlot(cell_selection, group.by = "orig.ident", features = as.character(unique(top5_cell_selection$gene)),
+    ncol = 5, assay = "RNA", pt.size = 0)
+```
+
+![](seurat_05_dge_files/figure-html/unnamed-chunk-15-1.png)<!-- -->
+
+As you can see, many of the genes detected as DGE in Covid are unique to one or 2 patients.
+
+We can examine more genes with a DotPlot:
+
+
+```r
+DGE_cell_selection %>%
+    group_by(direction) %>%
+    top_n(-20, p_val) -> top20_cell_selection
+DotPlot(cell_selection, features = rev(as.character(unique(top20_cell_selection$gene))),
+    group.by = "orig.ident", assay = "RNA") + coord_flip()
+```
+
+![](seurat_05_dge_files/figure-html/unnamed-chunk-16-1.png)<!-- -->
+
+As you can see, most of the DGEs are driven by the `covid_17` patient.
+
+But it is also the sample with the highest number of cells:
+
+
+```r
+table(cell_selection$orig.ident)
+```
+
+```
+## 
+##  covid_1 covid_15 covid_17  ctrl_13  ctrl_14   ctrl_5 
+##       91       38      173       67       63      141
+```
+
+## Subsample
+
+So one obvious thing to consider is an equal amount of cells per individual so that the DGE results are not dominated by a single sample.
+
+So we will use the `downsample` option in the Seurat function `WhichCells` to select 30 cells per cluster:
+
+
+```r
+cell_selection <- SetIdent(cell_selection, value = "orig.ident")
+sub_data <- subset(cell_selection, cells = WhichCells(cell_selection, downsample = 30))
+
+table(sub_data$orig.ident)
+```
+
+```
+## 
+##  covid_1 covid_15 covid_17  ctrl_13  ctrl_14   ctrl_5 
+##       30       30       30       30       30       30
+```
+
+And now we run DGE analysis again:
+
+
+```r
+sub_data <- SetIdent(sub_data, value = "type")
+
+# Compute differentiall expression
+DGE_sub <- FindMarkers(sub_data, ident.1 = "Covid", ident.2 = "Ctrl", logfc.threshold = 0.2,
+    test.use = "wilcox", min.pct = 0.1, min.diff.pct = 0.2, assay = "RNA")
+
+# Define as Covid or Ctrl in the df and add a gene column
+DGE_sub$direction = ifelse(DGE_sub$avg_log2FC > 0, "Covid", "Ctrl")
+DGE_sub$gene = rownames(DGE_sub)
+
+
+DGE_sub %>%
+    group_by(direction) %>%
+    top_n(-5, p_val) %>%
+    arrange(direction) -> top5_sub
+
+VlnPlot(sub_data, features = as.character(unique(top5_sub$gene)), ncol = 5, group.by = "type",
+    assay = "RNA", pt.size = 0.1)
+```
+
+![](seurat_05_dge_files/figure-html/unnamed-chunk-19-1.png)<!-- -->
+
+Plot as dotplot, but in the full dataset:
+
+
+```r
+DGE_sub %>%
+    group_by(direction) %>%
+    top_n(-20, p_val) -> top20_sub
+DotPlot(cell_selection, features = rev(as.character(unique(top20_sub$gene))), group.by = "orig.ident",
+    assay = "RNA") + coord_flip()
+```
+
+![](seurat_05_dge_files/figure-html/unnamed-chunk-20-1.png)<!-- -->
+
+It looks much better now. But if we look per patient you can see that we still have some genes that are dominated by a single patient.
+
+
+Why do you think this is?
+
+## Pseudobulk
+
+One option is to treat the samples as pseudobulks and do differential expression for the 3 patients vs 3 controls. You do lose some information about cell variability within each patient, but instead you gain the advantage of mainly looking for effects that are seen in multiple patients.
+
+However, having only 3 patients is probably too low, with many more patients it will work better to run pseudobulk analysis.
+
+For a fair comparison we should have equal number of cells per sample when we create the pseudobulk, so we will use the subsampled object.
+
+
+```r
+# get the count matrix for all cells
+DGE_DATA <- sub_data@assays$RNA@counts
+
+# Compute pseudobulk
+mm <- Matrix::sparse.model.matrix(~0 + sub_data$orig.ident)
+pseudobulk <- DGE_DATA %*% mm
+```
+
+Then run edgeR:
+
+
+```r
+# define the groups
+bulk.labels = c("Covid", "Covid", "Covid", "Ctrl", "Ctrl", "Ctrl")
+
+dge.list <- DGEList(counts = pseudobulk, group = factor(bulk.labels))
+keep <- filterByExpr(dge.list)
+dge.list <- dge.list[keep, , keep.lib.sizes = FALSE]
+
+dge.list <- calcNormFactors(dge.list)
+design = model.matrix(~bulk.labels)
+
+dge.list <- estimateDisp(dge.list, design)
+
+fit <- glmQLFit(dge.list, design)
+qlf <- glmQLFTest(fit, coef = 2)
+topTags(qlf)
+```
+
+```
+## Coefficient:  bulk.labelsCtrl 
+##            logFC    logCPM        F       PValue          FDR
+## S100A9 -3.933901  8.028860 95.32177 3.084725e-08 5.179253e-05
+## S100A8 -4.451499  7.477650 60.81560 6.590074e-07 5.532367e-04
+## IGHA1  -3.477088  6.421735 22.63779 2.009392e-04 1.124590e-01
+## CD69   -2.142911 10.825342 18.68613 4.992765e-04 2.095713e-01
+## CCND3  -1.188752  7.869797 15.17994 1.234315e-03 4.144830e-01
+## AREG   -1.870247  6.533761 13.97595 1.727960e-03 4.835407e-01
+## RELB    1.490767  6.982100 11.81355 3.287908e-03 6.020757e-01
+## AHNAK   1.089398  7.977803 11.79535 3.306522e-03 6.020757e-01
+## KDM6B  -1.567158  7.677377 11.51378 3.610379e-03 6.020757e-01
+## NFKBIA -1.223306 10.575741 11.10059 4.115171e-03 6.020757e-01
+```
+
+As you can see, we have very few significant genes, actually only 2 with FDR < 0.1. Since we only have 3 vs 3 samples, we should not expect too many genes with this method.
+
+Again as dotplot including all genes with FDR < 1:
+
+
+```r
+res.edgeR <- topTags(qlf, 100)$table
+res.edgeR$dir = ifelse(res.edgeR$logFC > 0, "Covid", "Ctrl")
+res.edgeR$gene = rownames(res.edgeR)
+
+res.edgeR %>%
+    group_by(dir) %>%
+    top_n(-10, PValue) %>%
+    arrange(dir) -> top.edgeR
+
+
+
+DotPlot(cell_selection, features = as.character(unique(top.edgeR$gene)), group.by = "orig.ident",
+    assay = "RNA") + coord_flip() + ggtitle("EdgeR pseudobulk") + RotatedAxis()
+```
+
+![](seurat_05_dge_files/figure-html/unnamed-chunk-23-1.png)<!-- -->
+
+As you can see, even if we get few genes detected the seem to make sense across all the patients.
+
+## MAST random effect
+
+MAST has the option to add a random effect for the patient when running DGE analysis. It is quite slow, even with this small dataset, so it may not be practical for a larger dataset unless you have access to a compute cluster.
+
+We will run MAST with and without patient info as random effect and compare the results
+
+First, filter genes in part to speed up the process but also to avoid too many warnings in the model fitting step of MAST. We will keep genes that are expressed with at least 2 reads in 2 covid patients or 2 controls.
+
+
+
+```r
+# select genes that are expressed in at least 2 patients or 2 ctrls with > 2
+# reads.
+nPatient = sapply(unique(cell_selection$orig.ident), function(x) rowSums(cell_selection@assays$RNA@counts[,
+    cell_selection$orig.ident == x] > 2))
+nCovid = rowSums(nPatient[, 1:3] > 2)
+nCtrl = rowSums(nPatient[, 4:6] > 2)
+
+sel = nCovid >= 2 | nCtrl >= 2
+cell_selection_sub = cell_selection[sel, ]
+```
+
+Set up the MAST object.
+
+
+```r
+# create the feature data
+fData <- data.frame(primerid = rownames(cell_selection_sub))
+m = cell_selection_sub@meta.data
+m$wellKey = rownames(m)
+
+# make sure type and orig.ident are factors
+m$orig.ident = factor(m$orig.ident)
+m$type = factor(m$type)
+
+sca <- MAST::FromMatrix(exprsArray = as.matrix(x = cell_selection_sub@assays$RNA@data),
+    check_sanity = FALSE, cData = m, fData = fData)
+```
+
+First, run the regular MAST analysis without random effects
+
+
+```r
+# takes a while to run, so save a file to tmpdir in case you have to rerun the
+# code
+tmpdir = "tmp_dge"
+dir.create(tmpdir, showWarnings = F)
+
+tmpfile1 = file.path(tmpdir, "mast_bayesglm_cl1.Rds")
+if (file.exists(tmpfile1)) {
+    fcHurdle1 = readRDS(tmpfile1)
+} else {
+    zlmCond <- suppressMessages(MAST::zlm(~type, sca, method = "bayesglm", ebayes = T))
+    summaryCond <- suppressMessages(MAST::summary(zlmCond, doLRT = "typeCtrl"))
+    summaryDt <- summaryCond$datatable
+    fcHurdle <- merge(summaryDt[summaryDt$contrast == "typeCtrl" & summaryDt$component ==
+        "logFC", c(1, 7, 5, 6, 8)], summaryDt[summaryDt$contrast == "typeCtrl" &
+        summaryDt$component == "H", c(1, 4)], by = "primerid")
+    fcHurdle1 <- stats::na.omit(as.data.frame(fcHurdle))
+    saveRDS(fcHurdle1, tmpfile1)
+}
+```
+
+Then run MAST with glmer and random effect.
+
+
+```r
+library(lme4)
+
+tmpfile2 = file.path(tmpdir, "mast_glme_cl1.Rds")
+if (file.exists(tmpfile2)) {
+    fcHurdle2 = readRDS(tmpfile2)
+} else {
+    zlmCond <- suppressMessages(MAST::zlm(~type + (1 | orig.ident), sca, method = "glmer",
+        ebayes = F, strictConvergence = FALSE))
+
+    summaryCond <- suppressMessages(MAST::summary(zlmCond, doLRT = "typeCtrl"))
+    summaryDt <- summaryCond$datatable
+    fcHurdle <- merge(summaryDt[summaryDt$contrast == "typeCtrl" & summaryDt$component ==
+        "logFC", c(1, 7, 5, 6, 8)], summaryDt[summaryDt$contrast == "typeCtrl" &
+        summaryDt$component == "H", c(1, 4)], by = "primerid")
+    fcHurdle2 <- stats::na.omit(as.data.frame(fcHurdle))
+    saveRDS(fcHurdle2, tmpfile2)
+}
+```
+
+Top genes with normal MAST:
+
+
+```r
+top1 = head(fcHurdle1[order(fcHurdle1$`Pr(>Chisq)`), ], 10)
+top1
+```
+
+<div data-pagedtable="false">
+  <script data-pagedtable-source type="application/json">
+{"columns":[{"label":[""],"name":["_rn_"],"type":[""],"align":["left"]},{"label":["primerid"],"name":[1],"type":["chr"],"align":["left"]},{"label":["coef"],"name":[2],"type":["dbl"],"align":["right"]},{"label":["ci.hi"],"name":[3],"type":["dbl"],"align":["right"]},{"label":["ci.lo"],"name":[4],"type":["dbl"],"align":["right"]},{"label":["z"],"name":[5],"type":["dbl"],"align":["right"]},{"label":["Pr(>Chisq)"],"name":[6],"type":["dbl"],"align":["right"]}],"data":[{"1":"HLA-DRB5","2":"-0.7404644","3":"-0.5648164","4":"-0.9161124","5":"-8.262453","6":"8.208167e-50","_rn_":"362"},{"1":"RPS26","2":"1.2170354","3":"1.3749446","4":"1.0591262","5":"15.105805","6":"9.707574e-48","_rn_":"728"},{"1":"CD74","2":"0.4991497","3":"0.5605379","4":"0.4377615","5":"15.936531","6":"2.385815e-45","_rn_":"145"},{"1":"CD69","2":"-1.2992695","3":"-1.1123603","4":"-1.4861788","5":"-13.624374","6":"5.872770e-42","_rn_":"143"},{"1":"ISG20","2":"-0.8202045","3":"-0.6723129","4":"-0.9680962","5":"-10.869928","6":"2.888473e-30","_rn_":"415"},{"1":"NFKBIA","2":"-0.7205167","3":"-0.5725089","4":"-0.8685245","5":"-9.541301","6":"3.122769e-29","_rn_":"512"},{"1":"LY6E","2":"-0.7199797","3":"-0.5834347","4":"-0.8565246","5":"-10.334575","6":"1.428674e-26","_rn_":"454"},{"1":"EEF1A1","2":"0.4437284","3":"0.5194865","4":"0.3679702","5":"11.479844","6":"7.609188e-26","_rn_":"246"},{"1":"RPL4","2":"0.6255466","3":"0.7427171","4":"0.5083761","5":"10.463802","6":"2.163788e-25","_rn_":"700"},{"1":"S100A9","2":"-0.5905734","3":"-0.4786486","4":"-0.7024981","5":"-10.341793","6":"3.689851e-23","_rn_":"751"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
+  </script>
+</div>
+
+```r
+fcHurdle1$pval = fcHurdle1$`Pr(>Chisq)`
+fcHurdle1$dir = ifelse(fcHurdle1$z > 0, "up", "down")
+fcHurdle1 %>%
+    group_by(dir) %>%
+    top_n(-10, pval) %>%
+    arrange(z) -> mastN
+
+mastN = mastN$primerid
+```
+
+Top genes with random effect:
+
+
+```r
+top2 = head(fcHurdle2[order(fcHurdle2$`Pr(>Chisq)`), ], 10)
+top2
+```
+
+<div data-pagedtable="false">
+  <script data-pagedtable-source type="application/json">
+{"columns":[{"label":[""],"name":["_rn_"],"type":[""],"align":["left"]},{"label":["primerid"],"name":[1],"type":["chr"],"align":["left"]},{"label":["coef"],"name":[2],"type":["dbl"],"align":["right"]},{"label":["ci.hi"],"name":[3],"type":["dbl"],"align":["right"]},{"label":["ci.lo"],"name":[4],"type":["dbl"],"align":["right"]},{"label":["z"],"name":[5],"type":["dbl"],"align":["right"]},{"label":["Pr(>Chisq)"],"name":[6],"type":["dbl"],"align":["right"]}],"data":[{"1":"HLA-DRA","2":"0.3684288","3":"0.4639804","4":"0.2728771","5":"7.557244","6":"6.067723e-05","_rn_":"360"},{"1":"S100A9","2":"-0.5936154","3":"-0.4807224","4":"-0.7065084","5":"-10.305905","6":"6.583353e-05","_rn_":"751"},{"1":"HLA-DPB1","2":"0.3614619","3":"0.4667714","4":"0.2561524","5":"6.727336","6":"8.568929e-05","_rn_":"357"},{"1":"S100A8","2":"-0.5187687","3":"-0.3497358","4":"-0.6878015","5":"-6.015209","6":"1.003802e-04","_rn_":"750"},{"1":"SF1","2":"0.5228481","3":"0.7760301","4":"0.2696660","5":"4.047536","6":"1.757736e-04","_rn_":"768"},{"1":"PHACTR1","2":"-0.4871676","3":"-0.3518684","4":"-0.6224668","5":"-7.057183","6":"1.763375e-04","_rn_":"561"},{"1":"PCBP2","2":"0.2890742","3":"0.4130207","4":"0.1651276","5":"4.571123","6":"2.553222e-04","_rn_":"548"},{"1":"JCHAIN","2":"0.2787417","3":"0.3950091","4":"0.1624743","5":"4.698855","6":"4.164025e-04","_rn_":"421"},{"1":"ZFAS1","2":"0.2795446","3":"0.4116192","4":"0.1474699","5":"4.148390","6":"8.384734e-04","_rn_":"964"},{"1":"HLA-DPA1","2":"0.2913176","3":"0.4160733","4":"0.1665618","5":"4.576719","6":"9.761835e-04","_rn_":"356"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
+  </script>
+</div>
+
+```r
+fcHurdle2$pval = fcHurdle2$`Pr(>Chisq)`
+fcHurdle2$dir = ifelse(fcHurdle2$z > 0, "up", "down")
+fcHurdle2 %>%
+    group_by(dir) %>%
+    top_n(-10, pval) %>%
+    arrange(z) -> mastR
+
+mastR = mastR$primerid
+```
+
+As you can see, we have lower significance for the genes with the random effect added.
+
+Dotplot for top10 genes in each direction:
+
+
+```r
+p1 = DotPlot(cell_selection, features = mastN, group.by = "orig.ident", assay = "RNA") +
+    coord_flip() + RotatedAxis() + ggtitle("Regular MAST")
+
+p2 = DotPlot(cell_selection, features = mastR, group.by = "orig.ident", assay = "RNA") +
+    coord_flip() + RotatedAxis() + ggtitle("With random effect")
+
+
+p1 + p2
+```
+
+![](seurat_05_dge_files/figure-html/unnamed-chunk-30-1.png)<!-- -->
+
+
+
+
 ## Gene Set Analysis
 ***
 
@@ -233,14 +637,14 @@ enrichR::listEnrichrDbs()
 
 <div data-pagedtable="false">
   <script data-pagedtable-source type="application/json">
-{"columns":[{"label":["geneCoverage"],"name":[1],"type":["dbl"],"align":["right"]},{"label":["genesPerTerm"],"name":[2],"type":["dbl"],"align":["right"]},{"label":["libraryName"],"name":[3],"type":["chr"],"align":["left"]},{"label":["link"],"name":[4],"type":["chr"],"align":["left"]},{"label":["numTerms"],"name":[5],"type":["dbl"],"align":["right"]},{"label":["appyter"],"name":[6],"type":["chr"],"align":["left"]},{"label":["categoryId"],"name":[7],"type":["dbl"],"align":["right"]}],"data":[{"1":"13362","2":"275","3":"Genome_Browser_PWMs","4":"http://hgdownload.cse.ucsc.edu/goldenPath/hg18/database/","5":"615","6":"ea115789fcbf12797fd692cec6df0ab4dbc79c6a","7":"1"},{"1":"27884","2":"1284","3":"TRANSFAC_and_JASPAR_PWMs","4":"http://jaspar.genereg.net/html/DOWNLOAD/","5":"326","6":"7d42eb43a64a4e3b20d721fc7148f685b53b6b30","7":"1"},{"1":"6002","2":"77","3":"Transcription_Factor_PPIs","4":"","5":"290","6":"849f222220618e2599d925b6b51868cf1dab3763","7":"1"},{"1":"47172","2":"1370","3":"ChEA_2013","4":"http://amp.pharm.mssm.edu/lib/cheadownload.jsp","5":"353","6":"7ebe772afb55b63b41b79dd8d06ea0fdd9fa2630","7":"7"},{"1":"47107","2":"509","3":"Drug_Perturbations_from_GEO_2014","4":"http://www.ncbi.nlm.nih.gov/geo/","5":"701","6":"ad270a6876534b7cb063e004289dcd4d3164f342","7":"7"},{"1":"21493","2":"3713","3":"ENCODE_TF_ChIP-seq_2014","4":"http://genome.ucsc.edu/ENCODE/downloads.html","5":"498","6":"497787ebc418d308045efb63b8586f10c526af51","7":"7"},{"1":"1295","2":"18","3":"BioCarta_2013","4":"https://cgap.nci.nih.gov/Pathways/BioCarta_Pathways","5":"249","6":"4a293326037a5229aedb1ad7b2867283573d8bcd","7":"7"},{"1":"3185","2":"73","3":"Reactome_2013","4":"http://www.reactome.org/download/index.html","5":"78","6":"b343994a1b68483b0122b08650201c9b313d5c66","7":"7"},{"1":"2854","2":"34","3":"WikiPathways_2013","4":"http://www.wikipathways.org/index.php/Download_Pathways","5":"199","6":"5c307674c8b97e098f8399c92f451c0ff21cbf68","7":"7"},{"1":"15057","2":"300","3":"Disease_Signatures_from_GEO_up_2014","4":"http://www.ncbi.nlm.nih.gov/geo/","5":"142","6":"248c4ed8ea28352795190214713c86a39fd7afab","7":"7"},{"1":"4128","2":"48","3":"KEGG_2013","4":"http://www.kegg.jp/kegg/download/","5":"200","6":"eb26f55d3904cb0ea471998b6a932a9bf65d8e50","7":"7"},{"1":"34061","2":"641","3":"TF-LOF_Expression_from_GEO","4":"http://www.ncbi.nlm.nih.gov/geo/","5":"269","6":"","7":"1"},{"1":"7504","2":"155","3":"TargetScan_microRNA","4":"http://www.targetscan.org/cgi-bin/targetscan/data_download.cgi?db=vert_61","5":"222","6":"f4029bf6a62c91ab29401348e51df23b8c44c90f","7":"7"},{"1":"16399","2":"247","3":"PPI_Hub_Proteins","4":"http://amp.pharm.mssm.edu/X2K","5":"385","6":"69c0cfe07d86f230a7ef01b365abcc7f6e52f138","7":"2"},{"1":"12753","2":"57","3":"GO_Molecular_Function_2015","4":"http://www.geneontology.org/GO.downloads.annotations.shtml","5":"1136","6":"f531ac2b6acdf7587a54b79b465a5f4aab8f00f9","7":"7"},{"1":"23726","2":"127","3":"GeneSigDB","4":"https://pubmed.ncbi.nlm.nih.gov/22110038/","5":"2139","6":"6d655e0aa3408a7accb3311fbda9b108681a8486","7":"4"},{"1":"32740","2":"85","3":"Chromosome_Location","4":"http://software.broadinstitute.org/gsea/msigdb/index.jsp","5":"386","6":"8dab0f96078977223646ff63eb6187e0813f1433","7":"7"},{"1":"13373","2":"258","3":"Human_Gene_Atlas","4":"http://biogps.org/downloads/","5":"84","6":"0741451470203d7c40a06274442f25f74b345c9c","7":"5"},{"1":"19270","2":"388","3":"Mouse_Gene_Atlas","4":"http://biogps.org/downloads/","5":"96","6":"31191bfadded5f96983f93b2a113cf2110ff5ddb","7":"5"},{"1":"13236","2":"82","3":"GO_Cellular_Component_2015","4":"http://www.geneontology.org/GO.downloads.annotations.shtml","5":"641","6":"e1d004d5797cbd2363ef54b1c3b361adb68795c6","7":"7"},{"1":"14264","2":"58","3":"GO_Biological_Process_2015","4":"http://www.geneontology.org/GO.downloads.annotations.shtml","5":"5192","6":"bf120b6e11242b1a64c80910d8e89f87e618e235","7":"7"},{"1":"3096","2":"31","3":"Human_Phenotype_Ontology","4":"http://www.human-phenotype-ontology.org/","5":"1779","6":"17a138b0b70aa0e143fe63c14f82afb70bc3ed0a","7":"3"},{"1":"22288","2":"4368","3":"Epigenomics_Roadmap_HM_ChIP-seq","4":"http://www.roadmapepigenomics.org/","5":"383","6":"e1bc8a398e9b21f9675fb11bef18087eda21b1bf","7":"1"},{"1":"4533","2":"37","3":"KEA_2013","4":"http://amp.pharm.mssm.edu/lib/keacommandline.jsp","5":"474","6":"462045609440fa1e628a75716b81a1baa5bd9145","7":"7"},{"1":"10231","2":"158","3":"NURSA_Human_Endogenous_Complexome","4":"https://www.nursa.org/nursa/index.jsf","5":"1796","6":"7d3566b12ebc23dd23d9ca9bb97650f826377b16","7":"2"},{"1":"2741","2":"5","3":"CORUM","4":"http://mips.helmholtz-muenchen.de/genre/proj/corum/","5":"1658","6":"d047f6ead7831b00566d5da7a3b027ed9196e104","7":"2"},{"1":"5655","2":"342","3":"SILAC_Phosphoproteomics","4":"http://amp.pharm.mssm.edu/lib/keacommandline.jsp","5":"84","6":"54dcd9438b33301deb219866e162b0f9da7e63a0","7":"2"},{"1":"10406","2":"715","3":"MGI_Mammalian_Phenotype_Level_3","4":"http://www.informatics.jax.org/","5":"71","6":"c3bfc90796cfca8f60cba830642a728e23a53565","7":"7"},{"1":"10493","2":"200","3":"MGI_Mammalian_Phenotype_Level_4","4":"http://www.informatics.jax.org/","5":"476","6":"0b09a9a1aa0af4fc7ea22d34a9ae644d45864bd6","7":"7"},{"1":"11251","2":"100","3":"Old_CMAP_up","4":"http://www.broadinstitute.org/cmap/","5":"6100","6":"9041f90cccbc18479138330228b336265e09021c","7":"4"},{"1":"8695","2":"100","3":"Old_CMAP_down","4":"http://www.broadinstitute.org/cmap/","5":"6100","6":"ebc0d905b3b3142f936d400c5f2a4ff926c81c37","7":"4"},{"1":"1759","2":"25","3":"OMIM_Disease","4":"http://www.omim.org/downloads","5":"90","6":"cb2b92578a91e023d0498a334923ee84add34eca","7":"4"},{"1":"2178","2":"89","3":"OMIM_Expanded","4":"http://www.omim.org/downloads","5":"187","6":"27eca242904d8e12a38cf8881395bc50d57a03e1","7":"4"},{"1":"851","2":"15","3":"VirusMINT","4":"http://mint.bio.uniroma2.it/download.html","5":"85","6":"5abad1fc36216222b0420cadcd9be805a0dda63e","7":"4"},{"1":"10061","2":"106","3":"MSigDB_Computational","4":"http://www.broadinstitute.org/gsea/msigdb/collections.jsp","5":"858","6":"e4cdcc7e259788fdf9b25586cce3403255637064","7":"4"},{"1":"11250","2":"166","3":"MSigDB_Oncogenic_Signatures","4":"http://www.broadinstitute.org/gsea/msigdb/collections.jsp","5":"189","6":"c76f5319c33c4833c71db86a30d7e33cd63ff8cf","7":"4"},{"1":"15406","2":"300","3":"Disease_Signatures_from_GEO_down_2014","4":"http://www.ncbi.nlm.nih.gov/geo/","5":"142","6":"aabdf7017ae55ae75a004270924bcd336653b986","7":"7"},{"1":"17711","2":"300","3":"Virus_Perturbations_from_GEO_up","4":"http://www.ncbi.nlm.nih.gov/geo/","5":"323","6":"45268b7fc680d05dd9a29743c2f2b2840a7620bf","7":"4"},{"1":"17576","2":"300","3":"Virus_Perturbations_from_GEO_down","4":"http://www.ncbi.nlm.nih.gov/geo/","5":"323","6":"5f531580ccd168ee4acc18b02c6bdf8200e19d08","7":"4"},{"1":"15797","2":"176","3":"Cancer_Cell_Line_Encyclopedia","4":"https://portals.broadinstitute.org/ccle/home\\n","5":"967","6":"eb38dbc3fb20adafa9d6f9f0b0e36f378e75284f","7":"5"},{"1":"12232","2":"343","3":"NCI-60_Cancer_Cell_Lines","4":"http://biogps.org/downloads/","5":"93","6":"75c81676d8d6d99d262c9660edc024b78cfb07c9","7":"5"},{"1":"13572","2":"301","3":"Tissue_Protein_Expression_from_ProteomicsDB","4":"https://www.proteomicsdb.org/","5":"207","6":"","7":"7"},{"1":"6454","2":"301","3":"Tissue_Protein_Expression_from_Human_Proteome_Map","4":"http://www.humanproteomemap.org/index.php","5":"30","6":"49351dc989f9e6ca97c55f8aca7778aa3bfb84b9","7":"5"},{"1":"3723","2":"47","3":"HMDB_Metabolites","4":"http://www.hmdb.ca/downloads","5":"3906","6":"1905132115d22e4119bce543bdacaab074edb363","7":"6"},{"1":"7588","2":"35","3":"Pfam_InterPro_Domains","4":"ftp://ftp.ebi.ac.uk/pub/databases/interpro/","5":"311","6":"e2b4912cfb799b70d87977808c54501544e4cdc9","7":"6"},{"1":"7682","2":"78","3":"GO_Biological_Process_2013","4":"http://www.geneontology.org/GO.downloads.annotations.shtml","5":"941","6":"5216d1ade194ffa5a6c00f105e2b1899f64f45fe","7":"7"},{"1":"7324","2":"172","3":"GO_Cellular_Component_2013","4":"http://www.geneontology.org/GO.downloads.annotations.shtml","5":"205","6":"fd1332a42395e0bc1dba82868b39be7983a48cc5","7":"7"},{"1":"8469","2":"122","3":"GO_Molecular_Function_2013","4":"http://www.geneontology.org/GO.downloads.annotations.shtml","5":"402","6":"7e3e99e5aae02437f80b0697b197113ce3209ab0","7":"7"},{"1":"13121","2":"305","3":"Allen_Brain_Atlas_up","4":"http://www.brain-map.org/","5":"2192","6":"3804715a63a308570e47aa1a7877f01147ca6202","7":"5"},{"1":"26382","2":"1811","3":"ENCODE_TF_ChIP-seq_2015","4":"http://genome.ucsc.edu/ENCODE/downloads.html","5":"816","6":"56b6adb4dc8a2f540357ef992d6cd93dfa2907e5","7":"1"},{"1":"29065","2":"2123","3":"ENCODE_Histone_Modifications_2015","4":"http://genome.ucsc.edu/ENCODE/downloads.html","5":"412","6":"55b56cd8cf2ff04b26a09b9f92904008b82f3a6f","7":"1"},{"1":"280","2":"9","3":"Phosphatase_Substrates_from_DEPOD","4":"http://www.koehn.embl.de/depod/","5":"59","6":"d40701e21092b999f4720d1d2b644dd0257b6259","7":"2"},{"1":"13877","2":"304","3":"Allen_Brain_Atlas_down","4":"http://www.brain-map.org/","5":"2192","6":"ea67371adec290599ddf484ced2658cfae259304","7":"5"},{"1":"15852","2":"912","3":"ENCODE_Histone_Modifications_2013","4":"http://genome.ucsc.edu/ENCODE/downloads.html","5":"109","6":"c209ae527bc8e98e4ccd27a668d36cd2c80b35b4","7":"7"},{"1":"4320","2":"129","3":"Achilles_fitness_increase","4":"http://www.broadinstitute.org/achilles","5":"216","6":"98366496a75f163164106e72439fb2bf2f77de4e","7":"4"},{"1":"4271","2":"128","3":"Achilles_fitness_decrease","4":"http://www.broadinstitute.org/achilles","5":"216","6":"83a710c1ff67fd6b8af0d80fa6148c40dbd9bc64","7":"4"},{"1":"10496","2":"201","3":"MGI_Mammalian_Phenotype_2013","4":"http://www.informatics.jax.org/","5":"476","6":"a4c6e217a81a4a58ff5a1c9fc102b70beab298e9","7":"7"},{"1":"1678","2":"21","3":"BioCarta_2015","4":"https://cgap.nci.nih.gov/Pathways/BioCarta_Pathways","5":"239","6":"70e4eb538daa7688691acfe5d9c3c19022be832b","7":"7"},{"1":"756","2":"12","3":"HumanCyc_2015","4":"http://humancyc.org/","5":"125","6":"711f0c02b23f5e02a01207174943cfeee9d3ea9c","7":"7"},{"1":"3800","2":"48","3":"KEGG_2015","4":"http://www.kegg.jp/kegg/download/","5":"179","6":"e80d25c56de53c704791ddfdc6ab5eec28ae7243","7":"7"},{"1":"2541","2":"39","3":"NCI-Nature_2015","4":"http://pid.nci.nih.gov/","5":"209","6":"47edfc012bcbb368a10b717d8dca103f7814b5a4","7":"7"},{"1":"1918","2":"39","3":"Panther_2015","4":"http://www.pantherdb.org/","5":"104","6":"ab824aeeff0712bab61f372e43aebb870d1677a9","7":"7"},{"1":"5863","2":"51","3":"WikiPathways_2015","4":"http://www.wikipathways.org/index.php/Download_Pathways","5":"404","6":"1f7eea2f339f37856522c1f1c70ec74c7b25325f","7":"7"},{"1":"6768","2":"47","3":"Reactome_2015","4":"http://www.reactome.org/download/index.html","5":"1389","6":"36e541bee015eddb8d53827579549e30fe7a3286","7":"7"},{"1":"25651","2":"807","3":"ESCAPE","4":"http://www.maayanlab.net/ESCAPE/","5":"315","6":"a7acc741440264717ff77751a7e5fed723307835","7":"5"},{"1":"19129","2":"1594","3":"HomoloGene","4":"http://www.ncbi.nlm.nih.gov/homologene","5":"12","6":"663b665b75a804ef98add689f838b68e612f0d2a","7":"6"},{"1":"23939","2":"293","3":"Disease_Perturbations_from_GEO_down","4":"http://www.ncbi.nlm.nih.gov/geo/","5":"839","6":"0f412e0802d76efa0374504c2c9f5e0624ff7f09","7":"8"},{"1":"23561","2":"307","3":"Disease_Perturbations_from_GEO_up","4":"http://www.ncbi.nlm.nih.gov/geo/","5":"839","6":"9ddc3902fb01fb9eaf1a2a7c2ff3acacbb48d37e","7":"8"},{"1":"23877","2":"302","3":"Drug_Perturbations_from_GEO_down","4":"http://www.ncbi.nlm.nih.gov/geo/","5":"906","6":"068623a05ecef3e4a5e0b4f8db64bb8faa3c897f","7":"8"},{"1":"15886","2":"9","3":"Genes_Associated_with_NIH_Grants","4":"https://grants.nih.gov/grants/oer.htm\\n","5":"32876","6":"76fc5ec6735130e287e62bae6770a3c5ee068645","7":"6"},{"1":"24350","2":"299","3":"Drug_Perturbations_from_GEO_up","4":"http://www.ncbi.nlm.nih.gov/geo/","5":"906","6":"c9c2155b5ac81ac496854fa61ba566dcae06cc80","7":"8"},{"1":"3102","2":"25","3":"KEA_2015","4":"http://amp.pharm.mssm.edu/Enrichr","5":"428","6":"18a081774e6e0aaf60b1a4be7fd20afcf9e08399","7":"2"},{"1":"31132","2":"298","3":"Gene_Perturbations_from_GEO_up","4":"http://www.ncbi.nlm.nih.gov/geo/","5":"2460","6":"53dedc29ce3100930d68e506f941ef59de05dc6b","7":"8"},{"1":"30832","2":"302","3":"Gene_Perturbations_from_GEO_down","4":"http://www.ncbi.nlm.nih.gov/geo/","5":"2460","6":"499882af09c62dd6da545c15cb51c1dc5e234f78","7":"8"},{"1":"48230","2":"1429","3":"ChEA_2015","4":"http://amp.pharm.mssm.edu/Enrichr","5":"395","6":"712eb7b6edab04658df153605ec6079fa89fb5c7","7":"7"},{"1":"5613","2":"36","3":"dbGaP","4":"http://www.ncbi.nlm.nih.gov/gap","5":"345","6":"010f1267055b1a1cb036e560ea525911c007a666","7":"4"},{"1":"9559","2":"73","3":"LINCS_L1000_Chem_Pert_up","4":"https://clue.io/","5":"33132","6":"5e678b3debe8d8ea95187d0cd35c914017af5eb3","7":"4"},{"1":"9448","2":"63","3":"LINCS_L1000_Chem_Pert_down","4":"https://clue.io/","5":"33132","6":"fedbf5e221f45ee60ebd944f92569b5eda7f2330","7":"4"},{"1":"16725","2":"1443","3":"GTEx_Tissue_Expression_Down","4":"http://www.gtexportal.org/","5":"2918","6":"74b818bd299a9c42c1750ffe43616aa9f7929f02","7":"5"},{"1":"19249","2":"1443","3":"GTEx_Tissue_Expression_Up","4":"http://www.gtexportal.org/","5":"2918","6":"103738763d89cae894bec9f145ac28167a90e611","7":"5"},{"1":"15090","2":"282","3":"Ligand_Perturbations_from_GEO_down","4":"http://www.ncbi.nlm.nih.gov/geo/","5":"261","6":"1eb3c0426140340527155fd0ef67029db2a72191","7":"8"},{"1":"16129","2":"292","3":"Aging_Perturbations_from_GEO_down","4":"http://www.ncbi.nlm.nih.gov/geo/","5":"286","6":"cd95fe1b505ba6f28cd722cfba50fdea979d3b4c","7":"8"},{"1":"15309","2":"308","3":"Aging_Perturbations_from_GEO_up","4":"http://www.ncbi.nlm.nih.gov/geo/","5":"286","6":"74c4f0a0447777005b2a5c00c9882a56dfc62d7c","7":"8"},{"1":"15103","2":"318","3":"Ligand_Perturbations_from_GEO_up","4":"http://www.ncbi.nlm.nih.gov/geo/","5":"261","6":"31baa39da2931ddd5f7aedf2d0bbba77d2ba7b46","7":"8"},{"1":"15022","2":"290","3":"MCF7_Perturbations_from_GEO_down","4":"http://www.ncbi.nlm.nih.gov/geo/","5":"401","6":"555f68aef0a29a67b614a0d7e20b6303df9069c6","7":"8"},{"1":"15676","2":"310","3":"MCF7_Perturbations_from_GEO_up","4":"http://www.ncbi.nlm.nih.gov/geo/","5":"401","6":"1bc2ba607f1ff0dda44e2a15f32a2c04767da18c","7":"8"},{"1":"15854","2":"279","3":"Microbe_Perturbations_from_GEO_down","4":"http://www.ncbi.nlm.nih.gov/geo/","5":"312","6":"9e613dba78ef7e60676b13493a9dc49ccd3c8b3f","7":"8"},{"1":"15015","2":"321","3":"Microbe_Perturbations_from_GEO_up","4":"http://www.ncbi.nlm.nih.gov/geo/","5":"312","6":"d0c3e2a68e8c611c669098df2c87b530cec3e132","7":"8"},{"1":"3788","2":"159","3":"LINCS_L1000_Ligand_Perturbations_down","4":"https://clue.io/","5":"96","6":"957846cb05ef31fc8514120516b73cc65af7980e","7":"4"},{"1":"3357","2":"153","3":"LINCS_L1000_Ligand_Perturbations_up","4":"https://clue.io/","5":"96","6":"3bd494146c98d8189898a947f5ef5710f1b7c4b2","7":"4"},{"1":"12668","2":"300","3":"L1000_Kinase_and_GPCR_Perturbations_down","4":"https://clue.io/","5":"3644","6":"1ccc5bce553e0c2279f8e3f4ddcfbabcf566623b","7":"2"},{"1":"12638","2":"300","3":"L1000_Kinase_and_GPCR_Perturbations_up","4":"https://clue.io/","5":"3644","6":"b54a0d4ba525eac4055c7314ca9d9312adcb220c","7":"2"},{"1":"8973","2":"64","3":"Reactome_2016","4":"http://www.reactome.org/download/index.html","5":"1530","6":"1f54638e8f45075fb79489f0e0ef906594cb0678","7":"2"},{"1":"7010","2":"87","3":"KEGG_2016","4":"http://www.kegg.jp/kegg/download/","5":"293","6":"43f56da7540195ba3c94eb6e34c522a699b36da9","7":"7"},{"1":"5966","2":"51","3":"WikiPathways_2016","4":"http://www.wikipathways.org/index.php/Download_Pathways","5":"437","6":"340be98b444cad50bb974df69018fd598e23e5e1","7":"7"},{"1":"15562","2":"887","3":"ENCODE_and_ChEA_Consensus_TFs_from_ChIP-X","4":"","5":"104","6":"5426f7747965c23ef32cff46fabf906e2cd76bfa","7":"1"},{"1":"17850","2":"300","3":"Kinase_Perturbations_from_GEO_down","4":"http://www.ncbi.nlm.nih.gov/geo/","5":"285","6":"bb9682d78b8fc43be842455e076166fcd02cefc3","7":"2"},{"1":"17660","2":"300","3":"Kinase_Perturbations_from_GEO_up","4":"http://www.ncbi.nlm.nih.gov/geo/","5":"285","6":"78618915009cac3a0663d6f99d359e39a31b6660","7":"2"},{"1":"1348","2":"19","3":"BioCarta_2016","4":"http://cgap.nci.nih.gov/Pathways/BioCarta_Pathways","5":"237","6":"13d9ab18921d5314a5b2b366f6142b78ab0ff6aa","7":"2"},{"1":"934","2":"13","3":"HumanCyc_2016","4":"http://humancyc.org/","5":"152","6":"d6a502ef9b4c789ed5e73ca5a8de372796e5c72a","7":"2"},{"1":"2541","2":"39","3":"NCI-Nature_2016","4":"http://pid.nci.nih.gov/","5":"209","6":"3c1e1f7d1a651d9aaa198e73704030716fc09431","7":"2"},{"1":"2041","2":"42","3":"Panther_2016","4":"http://www.pantherdb.org/pathway/","5":"112","6":"ca5f6abf7f75d9baae03396e84d07300bf1fd051","7":"2"},{"1":"5209","2":"300","3":"DrugMatrix","4":"https://ntp.niehs.nih.gov/drugmatrix/","5":"7876","6":"255c3db820d612f34310f22a6985dad50e9fe1fe","7":"4"},{"1":"49238","2":"1550","3":"ChEA_2016","4":"http://amp.pharm.mssm.edu/Enrichr","5":"645","6":"af271913344aa08e6a755af1d433ef15768d749a","7":"1"},{"1":"2243","2":"19","3":"huMAP","4":"http://proteincomplexes.org/","5":"995","6":"249247d2f686d3eb4b9e4eb976c51159fac80a89","7":"2"},{"1":"19586","2":"545","3":"Jensen_TISSUES","4":"http://tissues.jensenlab.org/","5":"1842","6":"e8879ab9534794721614d78fe2883e9e564d7759","7":"3"},{"1":"22440","2":"505","3":"RNA-Seq_Disease_Gene_and_Drug_Signatures_from_GEO","4":"http://www.ncbi.nlm.nih.gov/geo/","5":"1302","6":"f0752e4d7f5198f86446678966b260c530d19d78","7":"8"},{"1":"8184","2":"24","3":"MGI_Mammalian_Phenotype_2017","4":"http://www.informatics.jax.org/","5":"5231","6":"0705e59bff98deda6e9cbe00cfcdd871c85e7d04","7":"7"},{"1":"18329","2":"161","3":"Jensen_COMPARTMENTS","4":"http://compartments.jensenlab.org/","5":"2283","6":"56ec68c32d4e83edc2ee83bea0e9f6a3829b2279","7":"3"},{"1":"15755","2":"28","3":"Jensen_DISEASES","4":"http://diseases.jensenlab.org/","5":"1811","6":"3045dff8181367c1421627bb8e4c5a32c6d67f98","7":"3"},{"1":"10271","2":"22","3":"BioPlex_2017","4":"http://bioplex.hms.harvard.edu/","5":"3915","6":"b8620b1a9d0d271d1a2747d8cfc63589dba39991","7":"2"},{"1":"10427","2":"38","3":"GO_Cellular_Component_2017","4":"http://www.geneontology.org/","5":"636","6":"8fed21d22dfcc3015c05b31d942fdfc851cc8e04","7":"7"},{"1":"10601","2":"25","3":"GO_Molecular_Function_2017","4":"http://www.geneontology.org/","5":"972","6":"b4018906e0a8b4e81a1b1afc51e0a2e7655403eb","7":"7"},{"1":"13822","2":"21","3":"GO_Biological_Process_2017","4":"http://www.geneontology.org/","5":"3166","6":"d9da4dba4a3eb84d4a28a3835c06dfbbe5811f92","7":"7"},{"1":"8002","2":"143","3":"GO_Cellular_Component_2017b","4":"http://www.geneontology.org/","5":"816","6":"ecf39c41fa5bc7deb625a2b5761a708676e9db7c","7":"7"},{"1":"10089","2":"45","3":"GO_Molecular_Function_2017b","4":"http://www.geneontology.org/","5":"3271","6":"8d8340361dd36a458f1f0a401f1a3141de1f3200","7":"7"},{"1":"13247","2":"49","3":"GO_Biological_Process_2017b","4":"http://www.geneontology.org/","5":"10125","6":"6404c38bffc2b3732de4e3fbe417b5043009fe34","7":"7"},{"1":"21809","2":"2316","3":"ARCHS4_Tissues","4":"http://amp.pharm.mssm.edu/archs4","5":"108","6":"4126374338235650ab158ba2c61cd2e2383b70df","7":"5"},{"1":"23601","2":"2395","3":"ARCHS4_Cell-lines","4":"http://amp.pharm.mssm.edu/archs4","5":"125","6":"5496ef9c9ae9429184d0b9485c23ba468ee522a8","7":"5"},{"1":"20883","2":"299","3":"ARCHS4_IDG_Coexp","4":"http://amp.pharm.mssm.edu/archs4","5":"352","6":"ce60be284fdd5a9fc6240a355421a9e12b1ee84a","7":"4"},{"1":"19612","2":"299","3":"ARCHS4_Kinases_Coexp","4":"http://amp.pharm.mssm.edu/archs4","5":"498","6":"6721c5ed97b7772e4a19fdc3f797110df0164b75","7":"2"},{"1":"25983","2":"299","3":"ARCHS4_TFs_Coexp","4":"http://amp.pharm.mssm.edu/archs4","5":"1724","6":"8a468c3ae29fa68724f744cbef018f4f3b61c5ab","7":"1"},{"1":"19500","2":"137","3":"SysMyo_Muscle_Gene_Sets","4":"http://sys-myo.rhcloud.com/","5":"1135","6":"","7":"8"},{"1":"14893","2":"128","3":"miRTarBase_2017","4":"http://mirtarbase.mbc.nctu.edu.tw/","5":"3240","6":"6b7c7fe2a97b19aecbfba12d8644af6875ad99c4","7":"1"},{"1":"17598","2":"1208","3":"TargetScan_microRNA_2017","4":"http://www.targetscan.org/","5":"683","6":"79d13fb03d2fa6403f9be45c90eeda0f6822e269","7":"1"},{"1":"5902","2":"109","3":"Enrichr_Libraries_Most_Popular_Genes","4":"http://amp.pharm.mssm.edu/Enrichr","5":"121","6":"e9b7d8ee237d0a690bd79d970a23a9fa849901ed","7":"6"},{"1":"12486","2":"299","3":"Enrichr_Submissions_TF-Gene_Coocurrence","4":"http://amp.pharm.mssm.edu/Enrichr","5":"1722","6":"be2ca8ef5a8c8e17d7e7bd290e7cbfe0951396c0","7":"1"},{"1":"1073","2":"100","3":"Data_Acquisition_Method_Most_Popular_Genes","4":"http://amp.pharm.mssm.edu/Enrichr","5":"12","6":"17ce5192b9eba7d109b6d228772ea8ab222e01ef","7":"6"},{"1":"19513","2":"117","3":"DSigDB","4":"http://tanlab.ucdenver.edu/DSigDB/DSigDBv1.0/","5":"4026","6":"287476538ab98337dbe727b3985a436feb6d192a","7":"4"},{"1":"14433","2":"36","3":"GO_Biological_Process_2018","4":"http://www.geneontology.org/","5":"5103","6":"b5b77681c46ac58cd050e60bcd4ad5041a9ab0a9","7":"7"},{"1":"8655","2":"61","3":"GO_Cellular_Component_2018","4":"http://www.geneontology.org/","5":"446","6":"e9ebe46188efacbe1056d82987ff1c70218fa7ae","7":"7"},{"1":"11459","2":"39","3":"GO_Molecular_Function_2018","4":"http://www.geneontology.org/","5":"1151","6":"79ff80ae9a69dd00796e52569e41422466fa0bee","7":"7"},{"1":"19741","2":"270","3":"TF_Perturbations_Followed_by_Expression","4":"http://www.ncbi.nlm.nih.gov/geo/","5":"1958","6":"34d08a4878c19584aaf180377f2ea96faa6a6eb1","7":"1"},{"1":"27360","2":"802","3":"Chromosome_Location_hg19","4":"http://hgdownload.cse.ucsc.edu/downloads.html","5":"36","6":"fdab39c467ba6b0fb0288df1176d7dfddd7196d5","7":"6"},{"1":"13072","2":"26","3":"NIH_Funded_PIs_2017_Human_GeneRIF","4":"https://www.ncbi.nlm.nih.gov/pubmed/","5":"5687","6":"859b100fac3ca774ad84450b1fbb65a78fcc6b12","7":"6"},{"1":"13464","2":"45","3":"NIH_Funded_PIs_2017_Human_AutoRIF","4":"https://www.ncbi.nlm.nih.gov/pubmed/","5":"12558","6":"fc5bf033b932cf173633e783fc8c6228114211f8","7":"6"},{"1":"13787","2":"200","3":"Rare_Diseases_AutoRIF_ARCHS4_Predictions","4":"https://amp.pharm.mssm.edu/geneshot/","5":"3725","6":"375ff8cdd64275a916fa24707a67968a910329bb","7":"4"},{"1":"13929","2":"200","3":"Rare_Diseases_GeneRIF_ARCHS4_Predictions","4":"https://www.ncbi.nlm.nih.gov/gene/about-generif","5":"2244","6":"0f7fb7f347534779ecc6c87498e96b5460a8d652","7":"4"},{"1":"16964","2":"200","3":"NIH_Funded_PIs_2017_AutoRIF_ARCHS4_Predictions","4":"https://www.ncbi.nlm.nih.gov/pubmed/","5":"12558","6":"f77de51aaf0979dd6f56381cf67ba399b4640d28","7":"6"},{"1":"17258","2":"200","3":"NIH_Funded_PIs_2017_GeneRIF_ARCHS4_Predictions","4":"https://www.ncbi.nlm.nih.gov/pubmed/","5":"5684","6":"25fa899b715cd6a9137f6656499f89cd25144029","7":"6"},{"1":"10352","2":"58","3":"Rare_Diseases_GeneRIF_Gene_Lists","4":"https://www.ncbi.nlm.nih.gov/gene/about-generif","5":"2244","6":"0fb9ac92dbe52024661c088f71a1134f00567a8b","7":"4"},{"1":"10471","2":"76","3":"Rare_Diseases_AutoRIF_Gene_Lists","4":"https://amp.pharm.mssm.edu/geneshot/","5":"3725","6":"ee3adbac2da389959410260b280e7df1fd3730df","7":"4"},{"1":"12419","2":"491","3":"SubCell_BarCode","4":"http://www.subcellbarcode.org/","5":"104","6":"b50bb9480d8a77103fb75b331fd9dd927246939a","7":"2"},{"1":"19378","2":"37","3":"GWAS_Catalog_2019","4":"https://www.ebi.ac.uk/gwas","5":"1737","6":"fef3864bcb5dd9e60cee27357eff30226116c49b","7":"4"},{"1":"6201","2":"45","3":"WikiPathways_2019_Human","4":"https://www.wikipathways.org/","5":"472","6":"b0c9e9ebb9014f14561e896008087725a2db24b7","7":"7"},{"1":"4558","2":"54","3":"WikiPathways_2019_Mouse","4":"https://www.wikipathways.org/","5":"176","6":"e7750958da20f585c8b6d5bc4451a5a4305514ba","7":"7"},{"1":"3264","2":"22","3":"TRRUST_Transcription_Factors_2019","4":"https://www.grnpedia.org/trrust/","5":"571","6":"5f8cf93e193d2bcefa5a37ccdf0eefac576861b0","7":"1"},{"1":"7802","2":"92","3":"KEGG_2019_Human","4":"https://www.kegg.jp/","5":"308","6":"3477bc578c4ea5d851dcb934fe2a41e9fd789bb4","7":"7"},{"1":"8551","2":"98","3":"KEGG_2019_Mouse","4":"https://www.kegg.jp/","5":"303","6":"187eb44b2d6fa154ebf628eba1f18537f64e797c","7":"7"},{"1":"12444","2":"23","3":"InterPro_Domains_2019","4":"https://www.ebi.ac.uk/interpro/","5":"1071","6":"18dd5ec520fdf589a93d6a7911289c205e1ddf22","7":"6"},{"1":"9000","2":"20","3":"Pfam_Domains_2019","4":"https://pfam.xfam.org/","5":"608","6":"a6325ed264f9ac9e6518796076c46a1d885cca7a","7":"6"},{"1":"7744","2":"363","3":"DepMap_WG_CRISPR_Screens_Broad_CellLines_2019","4":"https://depmap.org/","5":"558","6":"0b08b32b20854ac8a738458728a9ea50c2e04800","7":"4"},{"1":"6204","2":"387","3":"DepMap_WG_CRISPR_Screens_Sanger_CellLines_2019","4":"https://depmap.org/","5":"325","6":"b7c4ead26d0eb64f1697c030d31682b581c8bb56","7":"4"},{"1":"13420","2":"32","3":"MGI_Mammalian_Phenotype_Level_4_2019","4":"http://www.informatics.jax.org/","5":"5261","6":"f1bed632e89ebc054da44236c4815cdce03ef5ee","7":"7"},{"1":"14148","2":"122","3":"UK_Biobank_GWAS_v1","4":"https://www.ukbiobank.ac.uk/tag/gwas/","5":"857","6":"958fb52e6215626673a5acf6e9289a1b84d11b4a","7":"4"},{"1":"9813","2":"49","3":"BioPlanet_2019","4":"https://tripod.nih.gov/bioplanet/","5":"1510","6":"e110851dfc763d30946f2abedcc2cd571ac357a0","7":"2"},{"1":"1397","2":"13","3":"ClinVar_2019","4":"https://www.ncbi.nlm.nih.gov/clinvar/","5":"182","6":"0a95303f8059bec08836ecfe02ce3da951150547","7":"4"},{"1":"9116","2":"22","3":"PheWeb_2019","4":"http://pheweb.sph.umich.edu/","5":"1161","6":"6a7c7321b6b72c5285b722f7902d26a2611117cb","7":"4"},{"1":"17464","2":"63","3":"DisGeNET","4":"https://www.disgenet.org","5":"9828","6":"3c261626478ce9e6bf2c7f0a8014c5e901d43dc0","7":"4"},{"1":"394","2":"73","3":"HMS_LINCS_KinomeScan","4":"http://lincs.hms.harvard.edu/kinomescan/","5":"148","6":"47ba06cdc92469ac79400fc57acd84ba343ba616","7":"2"},{"1":"11851","2":"586","3":"CCLE_Proteomics_2020","4":"https://portals.broadinstitute.org/ccle","5":"378","6":"7094b097ae2301a1d6a5bd856a193b084cca993d","7":"5"},{"1":"8189","2":"421","3":"ProteomicsDB_2020","4":"https://www.proteomicsdb.org/","5":"913","6":"8c87c8346167bac2ba68195a32458aba9b1acfd1","7":"5"},{"1":"18704","2":"100","3":"lncHUB_lncRNA_Co-Expression","4":"https://amp.pharm.mssm.edu/lnchub/","5":"3729","6":"45b597d7efa5693b7e4172b09c0ed2dda3305582","7":"1"},{"1":"5605","2":"39","3":"Virus-Host_PPI_P-HIPSTer_2020","4":"http://phipster.org/","5":"6715","6":"a592eed13e8e9496aedbab63003b965574e46a65","7":"2"},{"1":"5718","2":"31","3":"Elsevier_Pathway_Collection","4":"http://www.transgene.ru/disease-pathways/","5":"1721","6":"9196c760e3bcae9c9de1e3f87ad81f96bde24325","7":"2"},{"1":"14156","2":"40","3":"Table_Mining_of_CRISPR_Studies","4":"","5":"802","6":"ad580f3864fa8ff69eaca11f6d2e7f9b86378d08","7":"6"},{"1":"16979","2":"295","3":"COVID-19_Related_Gene_Sets","4":"https://amp.pharm.mssm.edu/covid19","5":"205","6":"72b0346849570f66a77a6856722601e711596cb4","7":"7"},{"1":"4383","2":"146","3":"MSigDB_Hallmark_2020","4":"https://www.gsea-msigdb.org/gsea/msigdb/collections.jsp","5":"50","6":"6952efda94663d4bd8db09bf6eeb4e67d21ef58c","7":"2"},{"1":"54974","2":"483","3":"Enrichr_Users_Contributed_Lists_2020","4":"https://maayanlab.cloud/Enrichr","5":"1482","6":"8dc362703b38b30ac3b68b6401a9b20a58e7d3ef","7":"6"},{"1":"12118","2":"448","3":"TG_GATES_2020","4":"https://toxico.nibiohn.go.jp/english/","5":"1190","6":"9e32560437b11b4628b00ccf3d584360f7f7daee","7":"4"},{"1":"12361","2":"124","3":"Allen_Brain_Atlas_10x_scRNA_2021","4":"https://portal.brain-map.org/","5":"766","6":"46f8235cb585829331799a71aec3f7c082170219","7":"5"},{"1":"9763","2":"139","3":"Descartes_Cell_Types_and_Tissue_2021","4":"https://descartes.brotmanbaty.org/bbi/human-gene-expression-during-development/","5":"172","6":"","7":"5"},{"1":"8078","2":"102","3":"KEGG_2021_Human","4":"https://www.kegg.jp/","5":"320","6":"","7":"2"},{"1":"7173","2":"43","3":"WikiPathway_2021_Human","4":"https://www.wikipathways.org/","5":"622","6":"","7":"2"},{"1":"5833","2":"100","3":"HuBMAP_ASCT_plus_B_augmented_w_RNAseq_Coexpression","4":"https://hubmapconsortium.github.io/ccf-asct-reporter/","5":"344","6":"","7":"5"},{"1":"14937","2":"33","3":"GO_Biological_Process_2021","4":"http://www.geneontology.org/","5":"6036","6":"","7":"3"},{"1":"11497","2":"80","3":"GO_Cellular_Component_2021","4":"http://www.geneontology.org/","5":"511","6":"","7":"3"},{"1":"11936","2":"34","3":"GO_Molecular_Function_2021","4":"http://www.geneontology.org/","5":"1274","6":"","7":"3"},{"1":"9767","2":"33","3":"MGI_Mammalian_Phenotype_Level_4_2021","4":"http://www.informatics.jax.org/","5":"4601","6":"","7":"3"},{"1":"14167","2":"80","3":"CellMarker_Augmented_2021","4":"http://biocc.hrbmu.edu.cn/CellMarker/","5":"1097","6":"","7":"5"},{"1":"17851","2":"102","3":"Orphanet_Augmented_2021","4":"http://www.orphadata.org/","5":"3774","6":"","7":"4"},{"1":"16853","2":"360","3":"COVID-19_Related_Gene_Sets_2021","4":"https://maayanlab.cloud/covid19/","5":"478","6":"","7":"4"},{"1":"6654","2":"136","3":"PanglaoDB_Augmented_2021","4":"https://panglaodb.se/","5":"178","6":"","7":"5"},{"1":"1683","2":"10","3":"Azimuth_Cell_Types_2021","4":"https://azimuth.hubmapconsortium.org/","5":"341","6":"","7":"5"},{"1":"20414","2":"112","3":"PhenGenI_Association_2021","4":"https://www.ncbi.nlm.nih.gov/gap/phegeni","5":"950","6":"","7":"4"},{"1":"26076","2":"250","3":"RNAseq_Automatic_GEO_Signatures_Human_Down","4":"https://maayanlab.cloud/archs4/","5":"4269","6":"","7":"8"},{"1":"26338","2":"250","3":"RNAseq_Automatic_GEO_Signatures_Human_Up","4":"https://maayanlab.cloud/archs4/","5":"4269","6":"","7":"8"},{"1":"25381","2":"250","3":"RNAseq_Automatic_GEO_Signatures_Mouse_Down","4":"https://maayanlab.cloud/archs4/","5":"4216","6":"","7":"8"},{"1":"25409","2":"250","3":"RNAseq_Automatic_GEO_Signatures_Mouse_Up","4":"https://maayanlab.cloud/archs4/","5":"4216","6":"","7":"8"},{"1":"11980","2":"250","3":"GTEx_Aging_Signatures_2021","4":"https://gtexportal.org/","5":"270","6":"","7":"4"},{"1":"31158","2":"805","3":"HDSigDB_Human_2021","4":"https://www.hdinhd.org/","5":"2564","6":"","7":"4"},{"1":"30006","2":"815","3":"HDSigDB_Mouse_2021","4":"https://www.hdinhd.org/","5":"2579","6":"","7":"4"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
+{"columns":[{"label":["geneCoverage"],"name":[1],"type":["dbl"],"align":["right"]},{"label":["genesPerTerm"],"name":[2],"type":["dbl"],"align":["right"]},{"label":["libraryName"],"name":[3],"type":["chr"],"align":["left"]},{"label":["link"],"name":[4],"type":["chr"],"align":["left"]},{"label":["numTerms"],"name":[5],"type":["dbl"],"align":["right"]},{"label":["appyter"],"name":[6],"type":["chr"],"align":["left"]},{"label":["categoryId"],"name":[7],"type":["dbl"],"align":["right"]}],"data":[{"1":"13362","2":"275","3":"Genome_Browser_PWMs","4":"http://hgdownload.cse.ucsc.edu/goldenPath/hg18/database/","5":"615","6":"ea115789fcbf12797fd692cec6df0ab4dbc79c6a","7":"1"},{"1":"27884","2":"1284","3":"TRANSFAC_and_JASPAR_PWMs","4":"http://jaspar.genereg.net/html/DOWNLOAD/","5":"326","6":"7d42eb43a64a4e3b20d721fc7148f685b53b6b30","7":"1"},{"1":"6002","2":"77","3":"Transcription_Factor_PPIs","4":"","5":"290","6":"849f222220618e2599d925b6b51868cf1dab3763","7":"1"},{"1":"47172","2":"1370","3":"ChEA_2013","4":"http://amp.pharm.mssm.edu/lib/cheadownload.jsp","5":"353","6":"7ebe772afb55b63b41b79dd8d06ea0fdd9fa2630","7":"7"},{"1":"47107","2":"509","3":"Drug_Perturbations_from_GEO_2014","4":"http://www.ncbi.nlm.nih.gov/geo/","5":"701","6":"ad270a6876534b7cb063e004289dcd4d3164f342","7":"7"},{"1":"21493","2":"3713","3":"ENCODE_TF_ChIP-seq_2014","4":"http://genome.ucsc.edu/ENCODE/downloads.html","5":"498","6":"497787ebc418d308045efb63b8586f10c526af51","7":"7"},{"1":"1295","2":"18","3":"BioCarta_2013","4":"https://cgap.nci.nih.gov/Pathways/BioCarta_Pathways","5":"249","6":"4a293326037a5229aedb1ad7b2867283573d8bcd","7":"7"},{"1":"3185","2":"73","3":"Reactome_2013","4":"http://www.reactome.org/download/index.html","5":"78","6":"b343994a1b68483b0122b08650201c9b313d5c66","7":"7"},{"1":"2854","2":"34","3":"WikiPathways_2013","4":"http://www.wikipathways.org/index.php/Download_Pathways","5":"199","6":"5c307674c8b97e098f8399c92f451c0ff21cbf68","7":"7"},{"1":"15057","2":"300","3":"Disease_Signatures_from_GEO_up_2014","4":"http://www.ncbi.nlm.nih.gov/geo/","5":"142","6":"248c4ed8ea28352795190214713c86a39fd7afab","7":"7"},{"1":"4128","2":"48","3":"KEGG_2013","4":"http://www.kegg.jp/kegg/download/","5":"200","6":"eb26f55d3904cb0ea471998b6a932a9bf65d8e50","7":"7"},{"1":"34061","2":"641","3":"TF-LOF_Expression_from_GEO","4":"http://www.ncbi.nlm.nih.gov/geo/","5":"269","6":"","7":"1"},{"1":"7504","2":"155","3":"TargetScan_microRNA","4":"http://www.targetscan.org/cgi-bin/targetscan/data_download.cgi?db=vert_61","5":"222","6":"f4029bf6a62c91ab29401348e51df23b8c44c90f","7":"7"},{"1":"16399","2":"247","3":"PPI_Hub_Proteins","4":"http://amp.pharm.mssm.edu/X2K","5":"385","6":"69c0cfe07d86f230a7ef01b365abcc7f6e52f138","7":"2"},{"1":"12753","2":"57","3":"GO_Molecular_Function_2015","4":"http://www.geneontology.org/GO.downloads.annotations.shtml","5":"1136","6":"f531ac2b6acdf7587a54b79b465a5f4aab8f00f9","7":"7"},{"1":"23726","2":"127","3":"GeneSigDB","4":"https://pubmed.ncbi.nlm.nih.gov/22110038/","5":"2139","6":"6d655e0aa3408a7accb3311fbda9b108681a8486","7":"4"},{"1":"32740","2":"85","3":"Chromosome_Location","4":"http://software.broadinstitute.org/gsea/msigdb/index.jsp","5":"386","6":"8dab0f96078977223646ff63eb6187e0813f1433","7":"7"},{"1":"13373","2":"258","3":"Human_Gene_Atlas","4":"http://biogps.org/downloads/","5":"84","6":"0741451470203d7c40a06274442f25f74b345c9c","7":"5"},{"1":"19270","2":"388","3":"Mouse_Gene_Atlas","4":"http://biogps.org/downloads/","5":"96","6":"31191bfadded5f96983f93b2a113cf2110ff5ddb","7":"5"},{"1":"13236","2":"82","3":"GO_Cellular_Component_2015","4":"http://www.geneontology.org/GO.downloads.annotations.shtml","5":"641","6":"e1d004d5797cbd2363ef54b1c3b361adb68795c6","7":"7"},{"1":"14264","2":"58","3":"GO_Biological_Process_2015","4":"http://www.geneontology.org/GO.downloads.annotations.shtml","5":"5192","6":"bf120b6e11242b1a64c80910d8e89f87e618e235","7":"7"},{"1":"3096","2":"31","3":"Human_Phenotype_Ontology","4":"http://www.human-phenotype-ontology.org/","5":"1779","6":"17a138b0b70aa0e143fe63c14f82afb70bc3ed0a","7":"3"},{"1":"22288","2":"4368","3":"Epigenomics_Roadmap_HM_ChIP-seq","4":"http://www.roadmapepigenomics.org/","5":"383","6":"e1bc8a398e9b21f9675fb11bef18087eda21b1bf","7":"1"},{"1":"4533","2":"37","3":"KEA_2013","4":"http://amp.pharm.mssm.edu/lib/keacommandline.jsp","5":"474","6":"462045609440fa1e628a75716b81a1baa5bd9145","7":"7"},{"1":"10231","2":"158","3":"NURSA_Human_Endogenous_Complexome","4":"https://www.nursa.org/nursa/index.jsf","5":"1796","6":"7d3566b12ebc23dd23d9ca9bb97650f826377b16","7":"2"},{"1":"2741","2":"5","3":"CORUM","4":"http://mips.helmholtz-muenchen.de/genre/proj/corum/","5":"1658","6":"d047f6ead7831b00566d5da7a3b027ed9196e104","7":"2"},{"1":"5655","2":"342","3":"SILAC_Phosphoproteomics","4":"http://amp.pharm.mssm.edu/lib/keacommandline.jsp","5":"84","6":"54dcd9438b33301deb219866e162b0f9da7e63a0","7":"2"},{"1":"10406","2":"715","3":"MGI_Mammalian_Phenotype_Level_3","4":"http://www.informatics.jax.org/","5":"71","6":"c3bfc90796cfca8f60cba830642a728e23a53565","7":"7"},{"1":"10493","2":"200","3":"MGI_Mammalian_Phenotype_Level_4","4":"http://www.informatics.jax.org/","5":"476","6":"0b09a9a1aa0af4fc7ea22d34a9ae644d45864bd6","7":"7"},{"1":"11251","2":"100","3":"Old_CMAP_up","4":"http://www.broadinstitute.org/cmap/","5":"6100","6":"9041f90cccbc18479138330228b336265e09021c","7":"7"},{"1":"8695","2":"100","3":"Old_CMAP_down","4":"http://www.broadinstitute.org/cmap/","5":"6100","6":"ebc0d905b3b3142f936d400c5f2a4ff926c81c37","7":"7"},{"1":"1759","2":"25","3":"OMIM_Disease","4":"http://www.omim.org/downloads","5":"90","6":"cb2b92578a91e023d0498a334923ee84add34eca","7":"4"},{"1":"2178","2":"89","3":"OMIM_Expanded","4":"http://www.omim.org/downloads","5":"187","6":"27eca242904d8e12a38cf8881395bc50d57a03e1","7":"4"},{"1":"851","2":"15","3":"VirusMINT","4":"http://mint.bio.uniroma2.it/download.html","5":"85","6":"5abad1fc36216222b0420cadcd9be805a0dda63e","7":"4"},{"1":"10061","2":"106","3":"MSigDB_Computational","4":"http://www.broadinstitute.org/gsea/msigdb/collections.jsp","5":"858","6":"e4cdcc7e259788fdf9b25586cce3403255637064","7":"4"},{"1":"11250","2":"166","3":"MSigDB_Oncogenic_Signatures","4":"http://www.broadinstitute.org/gsea/msigdb/collections.jsp","5":"189","6":"c76f5319c33c4833c71db86a30d7e33cd63ff8cf","7":"4"},{"1":"15406","2":"300","3":"Disease_Signatures_from_GEO_down_2014","4":"http://www.ncbi.nlm.nih.gov/geo/","5":"142","6":"aabdf7017ae55ae75a004270924bcd336653b986","7":"7"},{"1":"17711","2":"300","3":"Virus_Perturbations_from_GEO_up","4":"http://www.ncbi.nlm.nih.gov/geo/","5":"323","6":"45268b7fc680d05dd9a29743c2f2b2840a7620bf","7":"4"},{"1":"17576","2":"300","3":"Virus_Perturbations_from_GEO_down","4":"http://www.ncbi.nlm.nih.gov/geo/","5":"323","6":"5f531580ccd168ee4acc18b02c6bdf8200e19d08","7":"4"},{"1":"15797","2":"176","3":"Cancer_Cell_Line_Encyclopedia","4":"https://portals.broadinstitute.org/ccle/home\\n","5":"967","6":"eb38dbc3fb20adafa9d6f9f0b0e36f378e75284f","7":"5"},{"1":"12232","2":"343","3":"NCI-60_Cancer_Cell_Lines","4":"http://biogps.org/downloads/","5":"93","6":"75c81676d8d6d99d262c9660edc024b78cfb07c9","7":"5"},{"1":"13572","2":"301","3":"Tissue_Protein_Expression_from_ProteomicsDB","4":"https://www.proteomicsdb.org/","5":"207","6":"","7":"7"},{"1":"6454","2":"301","3":"Tissue_Protein_Expression_from_Human_Proteome_Map","4":"http://www.humanproteomemap.org/index.php","5":"30","6":"49351dc989f9e6ca97c55f8aca7778aa3bfb84b9","7":"5"},{"1":"3723","2":"47","3":"HMDB_Metabolites","4":"http://www.hmdb.ca/downloads","5":"3906","6":"1905132115d22e4119bce543bdacaab074edb363","7":"6"},{"1":"7588","2":"35","3":"Pfam_InterPro_Domains","4":"ftp://ftp.ebi.ac.uk/pub/databases/interpro/","5":"311","6":"e2b4912cfb799b70d87977808c54501544e4cdc9","7":"6"},{"1":"7682","2":"78","3":"GO_Biological_Process_2013","4":"http://www.geneontology.org/GO.downloads.annotations.shtml","5":"941","6":"5216d1ade194ffa5a6c00f105e2b1899f64f45fe","7":"7"},{"1":"7324","2":"172","3":"GO_Cellular_Component_2013","4":"http://www.geneontology.org/GO.downloads.annotations.shtml","5":"205","6":"fd1332a42395e0bc1dba82868b39be7983a48cc5","7":"7"},{"1":"8469","2":"122","3":"GO_Molecular_Function_2013","4":"http://www.geneontology.org/GO.downloads.annotations.shtml","5":"402","6":"7e3e99e5aae02437f80b0697b197113ce3209ab0","7":"7"},{"1":"13121","2":"305","3":"Allen_Brain_Atlas_up","4":"http://www.brain-map.org/","5":"2192","6":"3804715a63a308570e47aa1a7877f01147ca6202","7":"5"},{"1":"26382","2":"1811","3":"ENCODE_TF_ChIP-seq_2015","4":"http://genome.ucsc.edu/ENCODE/downloads.html","5":"816","6":"56b6adb4dc8a2f540357ef992d6cd93dfa2907e5","7":"1"},{"1":"29065","2":"2123","3":"ENCODE_Histone_Modifications_2015","4":"http://genome.ucsc.edu/ENCODE/downloads.html","5":"412","6":"55b56cd8cf2ff04b26a09b9f92904008b82f3a6f","7":"1"},{"1":"280","2":"9","3":"Phosphatase_Substrates_from_DEPOD","4":"http://www.koehn.embl.de/depod/","5":"59","6":"d40701e21092b999f4720d1d2b644dd0257b6259","7":"2"},{"1":"13877","2":"304","3":"Allen_Brain_Atlas_down","4":"http://www.brain-map.org/","5":"2192","6":"ea67371adec290599ddf484ced2658cfae259304","7":"5"},{"1":"15852","2":"912","3":"ENCODE_Histone_Modifications_2013","4":"http://genome.ucsc.edu/ENCODE/downloads.html","5":"109","6":"c209ae527bc8e98e4ccd27a668d36cd2c80b35b4","7":"7"},{"1":"4320","2":"129","3":"Achilles_fitness_increase","4":"http://www.broadinstitute.org/achilles","5":"216","6":"98366496a75f163164106e72439fb2bf2f77de4e","7":"4"},{"1":"4271","2":"128","3":"Achilles_fitness_decrease","4":"http://www.broadinstitute.org/achilles","5":"216","6":"83a710c1ff67fd6b8af0d80fa6148c40dbd9bc64","7":"4"},{"1":"10496","2":"201","3":"MGI_Mammalian_Phenotype_2013","4":"http://www.informatics.jax.org/","5":"476","6":"a4c6e217a81a4a58ff5a1c9fc102b70beab298e9","7":"7"},{"1":"1678","2":"21","3":"BioCarta_2015","4":"https://cgap.nci.nih.gov/Pathways/BioCarta_Pathways","5":"239","6":"70e4eb538daa7688691acfe5d9c3c19022be832b","7":"7"},{"1":"756","2":"12","3":"HumanCyc_2015","4":"http://humancyc.org/","5":"125","6":"711f0c02b23f5e02a01207174943cfeee9d3ea9c","7":"7"},{"1":"3800","2":"48","3":"KEGG_2015","4":"http://www.kegg.jp/kegg/download/","5":"179","6":"e80d25c56de53c704791ddfdc6ab5eec28ae7243","7":"7"},{"1":"2541","2":"39","3":"NCI-Nature_2015","4":"http://pid.nci.nih.gov/","5":"209","6":"47edfc012bcbb368a10b717d8dca103f7814b5a4","7":"7"},{"1":"1918","2":"39","3":"Panther_2015","4":"http://www.pantherdb.org/","5":"104","6":"ab824aeeff0712bab61f372e43aebb870d1677a9","7":"7"},{"1":"5863","2":"51","3":"WikiPathways_2015","4":"http://www.wikipathways.org/index.php/Download_Pathways","5":"404","6":"1f7eea2f339f37856522c1f1c70ec74c7b25325f","7":"7"},{"1":"6768","2":"47","3":"Reactome_2015","4":"http://www.reactome.org/download/index.html","5":"1389","6":"36e541bee015eddb8d53827579549e30fe7a3286","7":"7"},{"1":"25651","2":"807","3":"ESCAPE","4":"http://www.maayanlab.net/ESCAPE/","5":"315","6":"a7acc741440264717ff77751a7e5fed723307835","7":"5"},{"1":"19129","2":"1594","3":"HomoloGene","4":"http://www.ncbi.nlm.nih.gov/homologene","5":"12","6":"663b665b75a804ef98add689f838b68e612f0d2a","7":"6"},{"1":"23939","2":"293","3":"Disease_Perturbations_from_GEO_down","4":"http://www.ncbi.nlm.nih.gov/geo/","5":"839","6":"0f412e0802d76efa0374504c2c9f5e0624ff7f09","7":"8"},{"1":"23561","2":"307","3":"Disease_Perturbations_from_GEO_up","4":"http://www.ncbi.nlm.nih.gov/geo/","5":"839","6":"9ddc3902fb01fb9eaf1a2a7c2ff3acacbb48d37e","7":"8"},{"1":"23877","2":"302","3":"Drug_Perturbations_from_GEO_down","4":"http://www.ncbi.nlm.nih.gov/geo/","5":"906","6":"068623a05ecef3e4a5e0b4f8db64bb8faa3c897f","7":"8"},{"1":"15886","2":"9","3":"Genes_Associated_with_NIH_Grants","4":"https://grants.nih.gov/grants/oer.htm\\n","5":"32876","6":"76fc5ec6735130e287e62bae6770a3c5ee068645","7":"6"},{"1":"24350","2":"299","3":"Drug_Perturbations_from_GEO_up","4":"http://www.ncbi.nlm.nih.gov/geo/","5":"906","6":"c9c2155b5ac81ac496854fa61ba566dcae06cc80","7":"8"},{"1":"3102","2":"25","3":"KEA_2015","4":"http://amp.pharm.mssm.edu/Enrichr","5":"428","6":"18a081774e6e0aaf60b1a4be7fd20afcf9e08399","7":"2"},{"1":"31132","2":"298","3":"Gene_Perturbations_from_GEO_up","4":"http://www.ncbi.nlm.nih.gov/geo/","5":"2460","6":"53dedc29ce3100930d68e506f941ef59de05dc6b","7":"8"},{"1":"30832","2":"302","3":"Gene_Perturbations_from_GEO_down","4":"http://www.ncbi.nlm.nih.gov/geo/","5":"2460","6":"499882af09c62dd6da545c15cb51c1dc5e234f78","7":"8"},{"1":"48230","2":"1429","3":"ChEA_2015","4":"http://amp.pharm.mssm.edu/Enrichr","5":"395","6":"712eb7b6edab04658df153605ec6079fa89fb5c7","7":"7"},{"1":"5613","2":"36","3":"dbGaP","4":"http://www.ncbi.nlm.nih.gov/gap","5":"345","6":"010f1267055b1a1cb036e560ea525911c007a666","7":"4"},{"1":"9559","2":"73","3":"LINCS_L1000_Chem_Pert_up","4":"https://clue.io/","5":"33132","6":"5e678b3debe8d8ea95187d0cd35c914017af5eb3","7":"7"},{"1":"9448","2":"63","3":"LINCS_L1000_Chem_Pert_down","4":"https://clue.io/","5":"33132","6":"fedbf5e221f45ee60ebd944f92569b5eda7f2330","7":"7"},{"1":"16725","2":"1443","3":"GTEx_Tissue_Expression_Down","4":"http://www.gtexportal.org/","5":"2918","6":"74b818bd299a9c42c1750ffe43616aa9f7929f02","7":"5"},{"1":"19249","2":"1443","3":"GTEx_Tissue_Expression_Up","4":"http://www.gtexportal.org/","5":"2918","6":"103738763d89cae894bec9f145ac28167a90e611","7":"5"},{"1":"15090","2":"282","3":"Ligand_Perturbations_from_GEO_down","4":"http://www.ncbi.nlm.nih.gov/geo/","5":"261","6":"1eb3c0426140340527155fd0ef67029db2a72191","7":"8"},{"1":"16129","2":"292","3":"Aging_Perturbations_from_GEO_down","4":"http://www.ncbi.nlm.nih.gov/geo/","5":"286","6":"cd95fe1b505ba6f28cd722cfba50fdea979d3b4c","7":"8"},{"1":"15309","2":"308","3":"Aging_Perturbations_from_GEO_up","4":"http://www.ncbi.nlm.nih.gov/geo/","5":"286","6":"74c4f0a0447777005b2a5c00c9882a56dfc62d7c","7":"8"},{"1":"15103","2":"318","3":"Ligand_Perturbations_from_GEO_up","4":"http://www.ncbi.nlm.nih.gov/geo/","5":"261","6":"31baa39da2931ddd5f7aedf2d0bbba77d2ba7b46","7":"8"},{"1":"15022","2":"290","3":"MCF7_Perturbations_from_GEO_down","4":"http://www.ncbi.nlm.nih.gov/geo/","5":"401","6":"555f68aef0a29a67b614a0d7e20b6303df9069c6","7":"8"},{"1":"15676","2":"310","3":"MCF7_Perturbations_from_GEO_up","4":"http://www.ncbi.nlm.nih.gov/geo/","5":"401","6":"1bc2ba607f1ff0dda44e2a15f32a2c04767da18c","7":"8"},{"1":"15854","2":"279","3":"Microbe_Perturbations_from_GEO_down","4":"http://www.ncbi.nlm.nih.gov/geo/","5":"312","6":"9e613dba78ef7e60676b13493a9dc49ccd3c8b3f","7":"8"},{"1":"15015","2":"321","3":"Microbe_Perturbations_from_GEO_up","4":"http://www.ncbi.nlm.nih.gov/geo/","5":"312","6":"d0c3e2a68e8c611c669098df2c87b530cec3e132","7":"8"},{"1":"3788","2":"159","3":"LINCS_L1000_Ligand_Perturbations_down","4":"https://clue.io/","5":"96","6":"957846cb05ef31fc8514120516b73cc65af7980e","7":"7"},{"1":"3357","2":"153","3":"LINCS_L1000_Ligand_Perturbations_up","4":"https://clue.io/","5":"96","6":"3bd494146c98d8189898a947f5ef5710f1b7c4b2","7":"7"},{"1":"12668","2":"300","3":"L1000_Kinase_and_GPCR_Perturbations_down","4":"https://clue.io/","5":"3644","6":"1ccc5bce553e0c2279f8e3f4ddcfbabcf566623b","7":"7"},{"1":"12638","2":"300","3":"L1000_Kinase_and_GPCR_Perturbations_up","4":"https://clue.io/","5":"3644","6":"b54a0d4ba525eac4055c7314ca9d9312adcb220c","7":"7"},{"1":"8973","2":"64","3":"Reactome_2016","4":"http://www.reactome.org/download/index.html","5":"1530","6":"1f54638e8f45075fb79489f0e0ef906594cb0678","7":"7"},{"1":"7010","2":"87","3":"KEGG_2016","4":"http://www.kegg.jp/kegg/download/","5":"293","6":"43f56da7540195ba3c94eb6e34c522a699b36da9","7":"7"},{"1":"5966","2":"51","3":"WikiPathways_2016","4":"http://www.wikipathways.org/index.php/Download_Pathways","5":"437","6":"340be98b444cad50bb974df69018fd598e23e5e1","7":"7"},{"1":"15562","2":"887","3":"ENCODE_and_ChEA_Consensus_TFs_from_ChIP-X","4":"","5":"104","6":"5426f7747965c23ef32cff46fabf906e2cd76bfa","7":"1"},{"1":"17850","2":"300","3":"Kinase_Perturbations_from_GEO_down","4":"http://www.ncbi.nlm.nih.gov/geo/","5":"285","6":"bb9682d78b8fc43be842455e076166fcd02cefc3","7":"2"},{"1":"17660","2":"300","3":"Kinase_Perturbations_from_GEO_up","4":"http://www.ncbi.nlm.nih.gov/geo/","5":"285","6":"78618915009cac3a0663d6f99d359e39a31b6660","7":"2"},{"1":"1348","2":"19","3":"BioCarta_2016","4":"http://cgap.nci.nih.gov/Pathways/BioCarta_Pathways","5":"237","6":"13d9ab18921d5314a5b2b366f6142b78ab0ff6aa","7":"2"},{"1":"934","2":"13","3":"HumanCyc_2016","4":"http://humancyc.org/","5":"152","6":"d6a502ef9b4c789ed5e73ca5a8de372796e5c72a","7":"2"},{"1":"2541","2":"39","3":"NCI-Nature_2016","4":"http://pid.nci.nih.gov/","5":"209","6":"3c1e1f7d1a651d9aaa198e73704030716fc09431","7":"2"},{"1":"2041","2":"42","3":"Panther_2016","4":"http://www.pantherdb.org/pathway/","5":"112","6":"ca5f6abf7f75d9baae03396e84d07300bf1fd051","7":"2"},{"1":"5209","2":"300","3":"DrugMatrix","4":"https://ntp.niehs.nih.gov/drugmatrix/","5":"7876","6":"255c3db820d612f34310f22a6985dad50e9fe1fe","7":"4"},{"1":"49238","2":"1550","3":"ChEA_2016","4":"http://amp.pharm.mssm.edu/Enrichr","5":"645","6":"af271913344aa08e6a755af1d433ef15768d749a","7":"7"},{"1":"2243","2":"19","3":"huMAP","4":"http://proteincomplexes.org/","5":"995","6":"249247d2f686d3eb4b9e4eb976c51159fac80a89","7":"2"},{"1":"19586","2":"545","3":"Jensen_TISSUES","4":"http://tissues.jensenlab.org/","5":"1842","6":"e8879ab9534794721614d78fe2883e9e564d7759","7":"3"},{"1":"22440","2":"505","3":"RNA-Seq_Disease_Gene_and_Drug_Signatures_from_GEO","4":"http://www.ncbi.nlm.nih.gov/geo/","5":"1302","6":"f0752e4d7f5198f86446678966b260c530d19d78","7":"8"},{"1":"8184","2":"24","3":"MGI_Mammalian_Phenotype_2017","4":"http://www.informatics.jax.org/","5":"5231","6":"0705e59bff98deda6e9cbe00cfcdd871c85e7d04","7":"7"},{"1":"18329","2":"161","3":"Jensen_COMPARTMENTS","4":"http://compartments.jensenlab.org/","5":"2283","6":"56ec68c32d4e83edc2ee83bea0e9f6a3829b2279","7":"3"},{"1":"15755","2":"28","3":"Jensen_DISEASES","4":"http://diseases.jensenlab.org/","5":"1811","6":"3045dff8181367c1421627bb8e4c5a32c6d67f98","7":"3"},{"1":"10271","2":"22","3":"BioPlex_2017","4":"http://bioplex.hms.harvard.edu/","5":"3915","6":"b8620b1a9d0d271d1a2747d8cfc63589dba39991","7":"2"},{"1":"10427","2":"38","3":"GO_Cellular_Component_2017","4":"http://www.geneontology.org/","5":"636","6":"8fed21d22dfcc3015c05b31d942fdfc851cc8e04","7":"7"},{"1":"10601","2":"25","3":"GO_Molecular_Function_2017","4":"http://www.geneontology.org/","5":"972","6":"b4018906e0a8b4e81a1b1afc51e0a2e7655403eb","7":"7"},{"1":"13822","2":"21","3":"GO_Biological_Process_2017","4":"http://www.geneontology.org/","5":"3166","6":"d9da4dba4a3eb84d4a28a3835c06dfbbe5811f92","7":"7"},{"1":"8002","2":"143","3":"GO_Cellular_Component_2017b","4":"http://www.geneontology.org/","5":"816","6":"ecf39c41fa5bc7deb625a2b5761a708676e9db7c","7":"7"},{"1":"10089","2":"45","3":"GO_Molecular_Function_2017b","4":"http://www.geneontology.org/","5":"3271","6":"8d8340361dd36a458f1f0a401f1a3141de1f3200","7":"7"},{"1":"13247","2":"49","3":"GO_Biological_Process_2017b","4":"http://www.geneontology.org/","5":"10125","6":"6404c38bffc2b3732de4e3fbe417b5043009fe34","7":"7"},{"1":"21809","2":"2316","3":"ARCHS4_Tissues","4":"http://amp.pharm.mssm.edu/archs4","5":"108","6":"4126374338235650ab158ba2c61cd2e2383b70df","7":"5"},{"1":"23601","2":"2395","3":"ARCHS4_Cell-lines","4":"http://amp.pharm.mssm.edu/archs4","5":"125","6":"5496ef9c9ae9429184d0b9485c23ba468ee522a8","7":"5"},{"1":"20883","2":"299","3":"ARCHS4_IDG_Coexp","4":"http://amp.pharm.mssm.edu/archs4","5":"352","6":"ce60be284fdd5a9fc6240a355421a9e12b1ee84a","7":"4"},{"1":"19612","2":"299","3":"ARCHS4_Kinases_Coexp","4":"http://amp.pharm.mssm.edu/archs4","5":"498","6":"6721c5ed97b7772e4a19fdc3f797110df0164b75","7":"2"},{"1":"25983","2":"299","3":"ARCHS4_TFs_Coexp","4":"http://amp.pharm.mssm.edu/archs4","5":"1724","6":"8a468c3ae29fa68724f744cbef018f4f3b61c5ab","7":"1"},{"1":"19500","2":"137","3":"SysMyo_Muscle_Gene_Sets","4":"http://sys-myo.rhcloud.com/","5":"1135","6":"","7":"8"},{"1":"14893","2":"128","3":"miRTarBase_2017","4":"http://mirtarbase.mbc.nctu.edu.tw/","5":"3240","6":"6b7c7fe2a97b19aecbfba12d8644af6875ad99c4","7":"1"},{"1":"17598","2":"1208","3":"TargetScan_microRNA_2017","4":"http://www.targetscan.org/","5":"683","6":"79d13fb03d2fa6403f9be45c90eeda0f6822e269","7":"1"},{"1":"5902","2":"109","3":"Enrichr_Libraries_Most_Popular_Genes","4":"http://amp.pharm.mssm.edu/Enrichr","5":"121","6":"e9b7d8ee237d0a690bd79d970a23a9fa849901ed","7":"6"},{"1":"12486","2":"299","3":"Enrichr_Submissions_TF-Gene_Coocurrence","4":"http://amp.pharm.mssm.edu/Enrichr","5":"1722","6":"be2ca8ef5a8c8e17d7e7bd290e7cbfe0951396c0","7":"1"},{"1":"1073","2":"100","3":"Data_Acquisition_Method_Most_Popular_Genes","4":"http://amp.pharm.mssm.edu/Enrichr","5":"12","6":"17ce5192b9eba7d109b6d228772ea8ab222e01ef","7":"6"},{"1":"19513","2":"117","3":"DSigDB","4":"http://tanlab.ucdenver.edu/DSigDB/DSigDBv1.0/","5":"4026","6":"287476538ab98337dbe727b3985a436feb6d192a","7":"4"},{"1":"14433","2":"36","3":"GO_Biological_Process_2018","4":"http://www.geneontology.org/","5":"5103","6":"b5b77681c46ac58cd050e60bcd4ad5041a9ab0a9","7":"7"},{"1":"8655","2":"61","3":"GO_Cellular_Component_2018","4":"http://www.geneontology.org/","5":"446","6":"e9ebe46188efacbe1056d82987ff1c70218fa7ae","7":"7"},{"1":"11459","2":"39","3":"GO_Molecular_Function_2018","4":"http://www.geneontology.org/","5":"1151","6":"79ff80ae9a69dd00796e52569e41422466fa0bee","7":"7"},{"1":"19741","2":"270","3":"TF_Perturbations_Followed_by_Expression","4":"http://www.ncbi.nlm.nih.gov/geo/","5":"1958","6":"34d08a4878c19584aaf180377f2ea96faa6a6eb1","7":"1"},{"1":"27360","2":"802","3":"Chromosome_Location_hg19","4":"http://hgdownload.cse.ucsc.edu/downloads.html","5":"36","6":"fdab39c467ba6b0fb0288df1176d7dfddd7196d5","7":"6"},{"1":"13072","2":"26","3":"NIH_Funded_PIs_2017_Human_GeneRIF","4":"https://www.ncbi.nlm.nih.gov/pubmed/","5":"5687","6":"859b100fac3ca774ad84450b1fbb65a78fcc6b12","7":"6"},{"1":"13464","2":"45","3":"NIH_Funded_PIs_2017_Human_AutoRIF","4":"https://www.ncbi.nlm.nih.gov/pubmed/","5":"12558","6":"fc5bf033b932cf173633e783fc8c6228114211f8","7":"6"},{"1":"13787","2":"200","3":"Rare_Diseases_AutoRIF_ARCHS4_Predictions","4":"https://amp.pharm.mssm.edu/geneshot/","5":"3725","6":"375ff8cdd64275a916fa24707a67968a910329bb","7":"4"},{"1":"13929","2":"200","3":"Rare_Diseases_GeneRIF_ARCHS4_Predictions","4":"https://www.ncbi.nlm.nih.gov/gene/about-generif","5":"2244","6":"0f7fb7f347534779ecc6c87498e96b5460a8d652","7":"4"},{"1":"16964","2":"200","3":"NIH_Funded_PIs_2017_AutoRIF_ARCHS4_Predictions","4":"https://www.ncbi.nlm.nih.gov/pubmed/","5":"12558","6":"f77de51aaf0979dd6f56381cf67ba399b4640d28","7":"6"},{"1":"17258","2":"200","3":"NIH_Funded_PIs_2017_GeneRIF_ARCHS4_Predictions","4":"https://www.ncbi.nlm.nih.gov/pubmed/","5":"5684","6":"25fa899b715cd6a9137f6656499f89cd25144029","7":"6"},{"1":"10352","2":"58","3":"Rare_Diseases_GeneRIF_Gene_Lists","4":"https://www.ncbi.nlm.nih.gov/gene/about-generif","5":"2244","6":"0fb9ac92dbe52024661c088f71a1134f00567a8b","7":"4"},{"1":"10471","2":"76","3":"Rare_Diseases_AutoRIF_Gene_Lists","4":"https://amp.pharm.mssm.edu/geneshot/","5":"3725","6":"ee3adbac2da389959410260b280e7df1fd3730df","7":"4"},{"1":"12419","2":"491","3":"SubCell_BarCode","4":"http://www.subcellbarcode.org/","5":"104","6":"b50bb9480d8a77103fb75b331fd9dd927246939a","7":"2"},{"1":"19378","2":"37","3":"GWAS_Catalog_2019","4":"https://www.ebi.ac.uk/gwas","5":"1737","6":"fef3864bcb5dd9e60cee27357eff30226116c49b","7":"4"},{"1":"6201","2":"45","3":"WikiPathways_2019_Human","4":"https://www.wikipathways.org/","5":"472","6":"b0c9e9ebb9014f14561e896008087725a2db24b7","7":"7"},{"1":"4558","2":"54","3":"WikiPathways_2019_Mouse","4":"https://www.wikipathways.org/","5":"176","6":"e7750958da20f585c8b6d5bc4451a5a4305514ba","7":"7"},{"1":"3264","2":"22","3":"TRRUST_Transcription_Factors_2019","4":"https://www.grnpedia.org/trrust/","5":"571","6":"5f8cf93e193d2bcefa5a37ccdf0eefac576861b0","7":"1"},{"1":"7802","2":"92","3":"KEGG_2019_Human","4":"https://www.kegg.jp/","5":"308","6":"3477bc578c4ea5d851dcb934fe2a41e9fd789bb4","7":"7"},{"1":"8551","2":"98","3":"KEGG_2019_Mouse","4":"https://www.kegg.jp/","5":"303","6":"187eb44b2d6fa154ebf628eba1f18537f64e797c","7":"7"},{"1":"12444","2":"23","3":"InterPro_Domains_2019","4":"https://www.ebi.ac.uk/interpro/","5":"1071","6":"18dd5ec520fdf589a93d6a7911289c205e1ddf22","7":"6"},{"1":"9000","2":"20","3":"Pfam_Domains_2019","4":"https://pfam.xfam.org/","5":"608","6":"a6325ed264f9ac9e6518796076c46a1d885cca7a","7":"6"},{"1":"7744","2":"363","3":"DepMap_WG_CRISPR_Screens_Broad_CellLines_2019","4":"https://depmap.org/","5":"558","6":"0b08b32b20854ac8a738458728a9ea50c2e04800","7":"4"},{"1":"6204","2":"387","3":"DepMap_WG_CRISPR_Screens_Sanger_CellLines_2019","4":"https://depmap.org/","5":"325","6":"b7c4ead26d0eb64f1697c030d31682b581c8bb56","7":"4"},{"1":"13420","2":"32","3":"MGI_Mammalian_Phenotype_Level_4_2019","4":"http://www.informatics.jax.org/","5":"5261","6":"f1bed632e89ebc054da44236c4815cdce03ef5ee","7":"7"},{"1":"14148","2":"122","3":"UK_Biobank_GWAS_v1","4":"https://www.ukbiobank.ac.uk/tag/gwas/","5":"857","6":"958fb52e6215626673a5acf6e9289a1b84d11b4a","7":"4"},{"1":"9813","2":"49","3":"BioPlanet_2019","4":"https://tripod.nih.gov/bioplanet/","5":"1510","6":"e110851dfc763d30946f2abedcc2cd571ac357a0","7":"2"},{"1":"1397","2":"13","3":"ClinVar_2019","4":"https://www.ncbi.nlm.nih.gov/clinvar/","5":"182","6":"0a95303f8059bec08836ecfe02ce3da951150547","7":"4"},{"1":"9116","2":"22","3":"PheWeb_2019","4":"http://pheweb.sph.umich.edu/","5":"1161","6":"6a7c7321b6b72c5285b722f7902d26a2611117cb","7":"4"},{"1":"17464","2":"63","3":"DisGeNET","4":"https://www.disgenet.org","5":"9828","6":"3c261626478ce9e6bf2c7f0a8014c5e901d43dc0","7":"4"},{"1":"394","2":"73","3":"HMS_LINCS_KinomeScan","4":"http://lincs.hms.harvard.edu/kinomescan/","5":"148","6":"47ba06cdc92469ac79400fc57acd84ba343ba616","7":"2"},{"1":"11851","2":"586","3":"CCLE_Proteomics_2020","4":"https://portals.broadinstitute.org/ccle","5":"378","6":"7094b097ae2301a1d6a5bd856a193b084cca993d","7":"5"},{"1":"8189","2":"421","3":"ProteomicsDB_2020","4":"https://www.proteomicsdb.org/","5":"913","6":"8c87c8346167bac2ba68195a32458aba9b1acfd1","7":"5"},{"1":"18704","2":"100","3":"lncHUB_lncRNA_Co-Expression","4":"https://amp.pharm.mssm.edu/lnchub/","5":"3729","6":"45b597d7efa5693b7e4172b09c0ed2dda3305582","7":"1"},{"1":"5605","2":"39","3":"Virus-Host_PPI_P-HIPSTer_2020","4":"http://phipster.org/","5":"6715","6":"a592eed13e8e9496aedbab63003b965574e46a65","7":"2"},{"1":"5718","2":"31","3":"Elsevier_Pathway_Collection","4":"http://www.transgene.ru/disease-pathways/","5":"1721","6":"9196c760e3bcae9c9de1e3f87ad81f96bde24325","7":"2"},{"1":"14156","2":"40","3":"Table_Mining_of_CRISPR_Studies","4":"","5":"802","6":"ad580f3864fa8ff69eaca11f6d2e7f9b86378d08","7":"6"},{"1":"16979","2":"295","3":"COVID-19_Related_Gene_Sets","4":"https://amp.pharm.mssm.edu/covid19","5":"205","6":"72b0346849570f66a77a6856722601e711596cb4","7":"7"},{"1":"4383","2":"146","3":"MSigDB_Hallmark_2020","4":"https://www.gsea-msigdb.org/gsea/msigdb/collections.jsp","5":"50","6":"6952efda94663d4bd8db09bf6eeb4e67d21ef58c","7":"2"},{"1":"54974","2":"483","3":"Enrichr_Users_Contributed_Lists_2020","4":"https://maayanlab.cloud/Enrichr","5":"1482","6":"8dc362703b38b30ac3b68b6401a9b20a58e7d3ef","7":"6"},{"1":"12118","2":"448","3":"TG_GATES_2020","4":"https://toxico.nibiohn.go.jp/english/","5":"1190","6":"9e32560437b11b4628b00ccf3d584360f7f7daee","7":"4"},{"1":"12361","2":"124","3":"Allen_Brain_Atlas_10x_scRNA_2021","4":"https://portal.brain-map.org/","5":"766","6":"46f8235cb585829331799a71aec3f7c082170219","7":"5"},{"1":"9763","2":"139","3":"Descartes_Cell_Types_and_Tissue_2021","4":"https://descartes.brotmanbaty.org/bbi/human-gene-expression-during-development/","5":"172","6":"","7":"5"},{"1":"8078","2":"102","3":"KEGG_2021_Human","4":"https://www.kegg.jp/","5":"320","6":"","7":"2"},{"1":"7173","2":"43","3":"WikiPathway_2021_Human","4":"https://www.wikipathways.org/","5":"622","6":"","7":"2"},{"1":"5833","2":"100","3":"HuBMAP_ASCT_plus_B_augmented_w_RNAseq_Coexpression","4":"https://hubmapconsortium.github.io/ccf-asct-reporter/","5":"344","6":"","7":"5"},{"1":"14937","2":"33","3":"GO_Biological_Process_2021","4":"http://www.geneontology.org/","5":"6036","6":"","7":"3"},{"1":"11497","2":"80","3":"GO_Cellular_Component_2021","4":"http://www.geneontology.org/","5":"511","6":"","7":"3"},{"1":"11936","2":"34","3":"GO_Molecular_Function_2021","4":"http://www.geneontology.org/","5":"1274","6":"","7":"3"},{"1":"9767","2":"33","3":"MGI_Mammalian_Phenotype_Level_4_2021","4":"http://www.informatics.jax.org/","5":"4601","6":"","7":"3"},{"1":"14167","2":"80","3":"CellMarker_Augmented_2021","4":"http://biocc.hrbmu.edu.cn/CellMarker/","5":"1097","6":"","7":"5"},{"1":"17851","2":"102","3":"Orphanet_Augmented_2021","4":"http://www.orphadata.org/","5":"3774","6":"","7":"4"},{"1":"16853","2":"360","3":"COVID-19_Related_Gene_Sets_2021","4":"https://maayanlab.cloud/covid19/","5":"478","6":"","7":"4"},{"1":"6654","2":"136","3":"PanglaoDB_Augmented_2021","4":"https://panglaodb.se/","5":"178","6":"","7":"5"},{"1":"1683","2":"10","3":"Azimuth_Cell_Types_2021","4":"https://azimuth.hubmapconsortium.org/","5":"341","6":"","7":"5"},{"1":"20414","2":"112","3":"PhenGenI_Association_2021","4":"https://www.ncbi.nlm.nih.gov/gap/phegeni","5":"950","6":"","7":"4"},{"1":"26076","2":"250","3":"RNAseq_Automatic_GEO_Signatures_Human_Down","4":"https://maayanlab.cloud/archs4/","5":"4269","6":"","7":"8"},{"1":"26338","2":"250","3":"RNAseq_Automatic_GEO_Signatures_Human_Up","4":"https://maayanlab.cloud/archs4/","5":"4269","6":"","7":"8"},{"1":"25381","2":"250","3":"RNAseq_Automatic_GEO_Signatures_Mouse_Down","4":"https://maayanlab.cloud/archs4/","5":"4216","6":"","7":"8"},{"1":"25409","2":"250","3":"RNAseq_Automatic_GEO_Signatures_Mouse_Up","4":"https://maayanlab.cloud/archs4/","5":"4216","6":"","7":"8"},{"1":"11980","2":"250","3":"GTEx_Aging_Signatures_2021","4":"https://gtexportal.org/","5":"270","6":"","7":"4"},{"1":"31158","2":"805","3":"HDSigDB_Human_2021","4":"https://www.hdinhd.org/","5":"2564","6":"","7":"4"},{"1":"30006","2":"815","3":"HDSigDB_Mouse_2021","4":"https://www.hdinhd.org/","5":"2579","6":"","7":"4"},{"1":"13370","2":"103","3":"HuBMAP_ASCTplusB_augmented_2022","4":"https://hubmapconsortium.github.io/ccf-asct-reporter/","5":"777","6":"","7":"5"},{"1":"13697","2":"343","3":"FANTOM6_lncRNA_KD_DEGs","4":"https://fantom.gsc.riken.jp/6/","5":"350","6":"","7":"1"},{"1":"2183","2":"18","3":"MAGMA_Drugs_and_Diseases","4":"https://github.com/nybell/drugsets/tree/main/DATA/GENESETS","5":"1395","6":"","7":"4"},{"1":"12765","2":"13","3":"PFOCR_Pathways","4":"https://www.wikipathways.org/index.php/Portal:PFOCR","5":"17326","6":"","7":"2"},{"1":"1509","2":"100","3":"Tabula_Sapiens","4":"https://tabula-sapiens-portal.ds.czbiohub.org/","5":"469","6":"","7":"5"},{"1":"18365","2":"1214","3":"ChEA_2022","4":"https://maayanlab.cloud/chea3/","5":"757","6":"","7":"1"},{"1":"13525","2":"175","3":"Diabetes_Perturbations_GEO_2022","4":"https://appyters.maayanlab.cloud/#/Gene_Expression_T2D_Signatures","5":"601","6":"","7":"4"},{"1":"9525","2":"245","3":"LINCS_L1000_Chem_Pert_Consensus_Sigs","4":"https://maayanlab.cloud/sigcom-lincs/#/Download","5":"10850","6":"","7":"4"},{"1":"9440","2":"245","3":"LINCS_L1000_CRISPR_KO_Consensus_Sigs","4":"https://maayanlab.cloud/sigcom-lincs/#/Download","5":"10424","6":"","7":"4"},{"1":"3857","2":"80","3":"Tabula_Muris","4":"https://tabula-muris.ds.czbiohub.org/","5":"106","6":"","7":"5"},{"1":"10489","2":"61","3":"Reactome_2022","4":"https://reactome.org/download-data","5":"1818","6":"","7":"2"},{"1":"1198","2":"23","3":"SynGO_2022","4":"https://www.syngoportal.org/","5":"118","6":"","7":"3"},{"1":"1882","2":"47","3":"GlyGen_Glycosylated_Proteins_2022","4":"https://www.glygen.org/","5":"338","6":"","7":"2"},{"1":"1552","2":"16","3":"IDG_Drug_Targets_2022","4":"https://drugcentral.org/","5":"888","6":"","7":"4"},{"1":"6713","2":"68","3":"KOMP2_Mouse_Phenotypes_2022","4":"https://www.mousephenotype.org/","5":"529","6":"","7":"3"},{"1":"936","2":"15","3":"Metabolomics_Workbench_Metabolites_2022","4":"https://www.metabolomicsworkbench.org/","5":"233","6":"","7":"2"},{"1":"8220","2":"146","3":"Proteomics_Drug_Atlas_2023","4":"https://www.nature.com/articles/s41587-022-01539-0","5":"1748","6":"","7":"4"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
   </script>
 </div>
 
 ```r
 # Perform enrichment
-enrich_results <- enrichr(genes = DGE_cell_selection$gene[DGE_cell_selection$cluster ==
-    "Covid"], databases = "GO_Biological_Process_2017b")[[1]]
+enrich_results <- enrichr(genes = DGE_cell_selection$gene[DGE_cell_selection$avg_log2FC >
+    0], databases = "GO_Biological_Process_2017b")[[1]]
 ```
 
 ```
@@ -269,7 +673,7 @@ abline(v = c(-log10(0.05)), lty = 2)
 abline(v = 0, lty = 1)
 ```
 
-![](seurat_05_dge_files/figure-html/unnamed-chunk-13-1.png)<!-- -->
+![](seurat_05_dge_files/figure-html/unnamed-chunk-32-1.png)<!-- -->
 
 ## Gene Set Enrichment Analysis (GSEA)
 
@@ -277,12 +681,14 @@ Besides the enrichment using hypergeometric test, we can also perform gene set e
 
 
 ```r
-DGE_cell_selection <- FindMarkers(cell_selection, ident.1 = "Covid", log2FC.threshold = -Inf,
+cell_selection = SetIdent(cell_selection, value = "type")
+
+DGE_cell_selection2 <- FindMarkers(cell_selection, ident.1 = "Covid", log2FC.threshold = -Inf,
     test.use = "wilcox", min.pct = 0.1, min.diff.pct = 0, only.pos = FALSE, max.cells.per.ident = 50,
     assay = "RNA")
 
 # Create a gene rank based on the gene expression fold change
-gene_rank <- setNames(DGE_cell_selection$avg_log2FC, casefold(rownames(DGE_cell_selection),
+gene_rank <- setNames(DGE_cell_selection2$avg_log2FC, casefold(rownames(DGE_cell_selection2),
     upper = T))
 ```
 
@@ -290,7 +696,6 @@ gene_rank <- setNames(DGE_cell_selection$avg_log2FC, casefold(rownames(DGE_cell_
 
 
 ```r
-# install.packages('msigdbr')
 library(msigdbr)
 
 # Download gene sets
@@ -326,7 +731,7 @@ library(fgsea)
 
 # Perform enrichemnt analysis
 fgseaRes <- fgsea(pathways = gmt, stats = gene_rank, minSize = 15, maxSize = 500)
-fgseaRes <- fgseaRes[order(fgseaRes$RES, decreasing = T), ]
+fgseaRes <- fgseaRes[order(fgseaRes$pval, decreasing = T), ]
 
 # Filter the results table to show only the top 10 UP or DOWN regulated
 # processes (optional)
@@ -353,2509 +758,8 @@ Finally, lets save the integrated data for further analysis.
 
 ```r
 saveRDS(alldata, "data/3pbmc_qc_dr_int_cl_dge.rds")
-write.csv(markers_genes)
-```
-
-```
-## "","p_val","avg_log2FC","pct.1","pct.2","p_val_adj","cluster","gene"
-## "S100A12",4.03053830887258e-19,3.62246895165616,0.945,0.055,7.30373846950801e-15,"0","S100A12"
-## "PLBD1",8.25037266621062e-19,2.35175635121539,0.862,0.053,1.49505003084403e-14,"0","PLBD1"
-## "S100A9",3.79693808628598e-18,4.25811859752585,0.999,0.333,6.88043150615883e-14,"0","S100A9"
-## "S100A8",6.06518998251796e-18,4.59843408115301,0.994,0.247,1.09907307673208e-13,"0","S100A8"
-## "GRN",7.84705388936308e-18,2.42860036181762,0.971,0.162,1.42196463529148e-13,"0","GRN"
-## "MNDA",1.38691966780762e-17,2.71594020476108,0.967,0.099,2.51323713003419e-13,"0","MNDA"
-## "VCAN",2.58275899354072e-17,3.34053018388959,0.971,0.057,4.68021757219514e-13,"0","VCAN"
-## "AC020656.1",1.18088338838284e-16,3.14904667445281,0.987,0.109,2.13987878808854e-12,"0","AC020656.1"
-## "TALDO1",1.21382783641661e-16,1.74412956213955,0.959,0.344,2.19957742237054e-12,"0","TALDO1"
-## "CSTA",2.02023404320938e-16,2.28278504179076,0.954,0.069,3.66086610969972e-12,"0","CSTA"
-## "MPEG1",3.52484681084334e-16,1.85623000577238,0.884,0.086,6.38737490592922e-12,"0","MPEG1"
-## "CEBPD",1.9221369671524e-15,2.03567812997028,0.93,0.163,3.48310439817687e-11,"0","CEBPD"
-## "TSPO",2.0570748668489e-15,1.762872014812,0.987,0.557,3.72762536621689e-11,"0","TSPO"
-## "CD14",2.17318385486303e-15,2.83384068150781,0.944,0.044,3.93802646339729e-11,"0","CD14"
-## "CYBB",2.17318385486303e-15,2.11501040918652,0.954,0.148,3.93802646339729e-11,"0","CYBB"
-## "APLP2",2.36153977863863e-15,2.12774256536049,0.975,0.326,4.27934623287106e-11,"0","APLP2"
-## "FCN1",2.52687688402758e-15,3.04862763001707,0.995,0.122,4.57895360154637e-11,"0","FCN1"
-## "LYZ",2.59025800532525e-15,3.81504188093435,1,0.25,4.69380653144988e-11,"0","LYZ"
-## "CD36",2.59577387881956e-15,1.81052658055537,0.826,0.032,4.70380184580893e-11,"0","CD36"
-## "FCER1G",3.00107119790572e-15,1.68068810925474,0.993,0.292,5.43824111772496e-11,"0","FCER1G"
-## "MS4A6A",3.62966423649409e-15,2.32964823276467,0.936,0.049,6.57731456295093e-11,"0","MS4A6A"
-## "TNFSF13B",1.01445891114503e-14,1.8965991794715,0.889,0.073,1.83830099288591e-10,"0","TNFSF13B"
-## "CTSS",1.75549394555392e-14,2.50468540112684,0.999,0.564,3.18113057873825e-10,"0","CTSS"
-## "NCF2",2.04664331631187e-14,1.9143996995379,0.916,0.085,3.70872235348874e-10,"0","NCF2"
-## "MAFB",2.22108810740967e-14,2.45965813654641,0.867,0.079,4.02483375943706e-10,"0","MAFB"
-## "TKT",4.315515828517e-14,1.960899482826,0.979,0.412,7.82014623285566e-10,"0","TKT"
-## "CD68",6.54590417737959e-14,1.71948564414698,0.932,0.111,1.18618329598296e-09,"0","CD68"
-## "CKAP4",8.24334278462321e-14,1.50138508812045,0.714,0.051,1.49377614600157e-09,"0","CKAP4"
-## "S100A11",1.41475569594311e-13,2.18484049058856,0.992,0.453,2.56367879661851e-09,"0","S100A11"
-## "AIF1",1.51811358452935e-13,2.15045469593557,0.994,0.168,2.75097362652563e-09,"0","AIF1"
-## "RBP7",1.56501828691561e-13,1.52598742242557,0.641,0.034,2.83596963771977e-09,"0","RBP7"
-## "CST3",1.98480238604221e-13,2.21989160078989,0.995,0.198,3.59666040374709e-09,"0","CST3"
-## "SERPINA1",2.30106030769136e-13,2.00463748894467,0.973,0.102,4.16975138356751e-09,"0","SERPINA1"
-## "NAMPT",2.36305957387516e-13,2.51257944948971,0.945,0.232,4.28210025381917e-09,"0","NAMPT"
-## "LST1",2.87111054539646e-13,1.45964995461815,0.986,0.193,5.20273941931293e-09,"0","LST1"
-## "CTSD",3.11728649143383e-13,1.67396488919133,0.965,0.496,5.64883485112724e-09,"0","CTSD"
-## "CFD",3.11744535492338e-13,1.61634085280102,0.859,0.09,5.64912272765665e-09,"0","CFD"
-## "PSAP",3.31703660381919e-13,1.93689130617084,0.989,0.49,6.01080202978076e-09,"0","PSAP"
-## "FGR",3.37758832983362e-13,1.4249798090383,0.899,0.215,6.12052781249151e-09,"0","FGR"
-## "PYCARD",4.06312518375816e-13,1.64093232272942,0.936,0.265,7.36278914548817e-09,"0","PYCARD"
-## "CSF3R",4.15678847178814e-13,2.06390509213747,0.93,0.075,7.53251638972730e-09,"0","CSF3R"
-## "SLC11A1",4.39128120505568e-13,2.00432653520985,0.872,0.078,7.95744067168139e-09,"0","SLC11A1"
-## "TYMP",4.62362104958497e-13,2.36809483352839,0.983,0.286,8.37846370395292e-09,"0","TYMP"
-## "CDA",6.20451263376891e-13,1.38237013964947,0.712,0.049,1.12431973436526e-08,"0","CDA"
-## "FPR1",6.73982036243611e-13,1.9687474879414,0.855,0.044,1.22132284787705e-08,"0","FPR1"
-## "SPI1",1.17984116991385e-12,1.7867511632966,0.94,0.176,2.13799018400089e-08,"0","SPI1"
-## "BST1",1.4596356695917e-12,1.3344307939947,0.693,0.03,2.64500579686711e-08,"0","BST1"
-## "LY96",1.56754120225815e-12,1.1920982663529,0.634,0.066,2.84054141261199e-08,"0","LY96"
-## "BRI3",1.68184105101005e-12,1.93833063360559,0.989,0.445,3.04766416853532e-08,"0","BRI3"
-## "VSIR",3.3703307756531e-12,1.43495066058061,0.956,0.356,6.10737639856099e-08,"0","VSIR"
-## "PLAUR",4.78981380046669e-12,1.8827226484577,0.81,0.066,8.67962158782569e-08,"0","PLAUR"
-## "TYROBP",6.19609060979052e-12,1.82899716787616,0.998,0.364,1.12279357940014e-07,"0","TYROBP"
-## "NCF1",6.28303039806044e-12,1.60801109768895,0.931,0.302,1.13854793843253e-07,"0","NCF1"
-## "ARPC1B",7.12220506506947e-12,1.04486616353623,0.978,0.605,1.29061477984124e-07,"0","ARPC1B"
-## "ASAH1",7.9600984580332e-12,1.29271503212398,0.94,0.335,1.4424494415802e-07,"0","ASAH1"
-## "C5AR1",8.81039417826243e-12,1.47011092670675,0.714,0.06,1.59653152904294e-07,"0","C5AR1"
-## "LGALS3",9.15367163878935e-12,1.82119157562705,0.935,0.209,1.65873683766502e-07,"0","LGALS3"
-## "DUSP6",9.5814648019754e-12,2.4105661029286,0.828,0.093,1.73625723676596e-07,"0","DUSP6"
-## "TRIB1",1.06708172026467e-11,1.02472817849088,0.507,0.024,1.93365878529162e-07,"0","TRIB1"
-## "IFNGR2",1.08779814989036e-11,1.54645335360034,0.866,0.181,1.97119902741632e-07,"0","IFNGR2"
-## "GRINA",1.0974633461135e-11,1.30209088478217,0.812,0.134,1.98871332949228e-07,"0","GRINA"
-## "CFP",1.09805982189431e-11,1.60602641306631,0.855,0.078,1.98979420325469e-07,"0","CFP"
-## "CTSB",1.36583870967459e-11,1.70459400899574,0.895,0.18,2.47503632580133e-07,"0","CTSB"
-## "IFI30",1.60104638549086e-11,1.54763978531425,0.779,0.085,2.90125615514799e-07,"0","IFI30"
-## "RAB32",2.26523033406953e-11,0.933022925014531,0.773,0.073,4.10482388836739e-07,"0","RAB32"
-## "AP1S2",2.67599532436627e-11,1.44391682370767,0.866,0.223,4.84917112728412e-07,"0","AP1S2"
-## "TIMP2",2.67791942524969e-11,1.48564427670778,0.824,0.068,4.85265779049497e-07,"0","TIMP2"
-## "MGST1",2.80553343944982e-11,1.25335288599097,0.617,0.012,5.08390714562703e-07,"0","MGST1"
-## "FGL2",3.02476283522409e-11,1.9753125740579,0.916,0.127,5.48117273370957e-07,"0","FGL2"
-## "RNF130",3.38979397879134e-11,1.54713642696085,0.894,0.148,6.14264566896778e-07,"0","RNF130"
-## "JAML",4.28069864067211e-11,1.47440132712887,0.812,0.08,7.75705400676192e-07,"0","JAML"
-## "MEGF9",5.08777078198082e-11,1.12301363067974,0.629,0.07,9.21954943402745e-07,"0","MEGF9"
-## "NPC2",5.41365796095197e-11,1.2962140257914,0.918,0.339,9.81008959104106e-07,"0","NPC2"
-## "GLRX",6.06353153333138e-11,1.1507184518161,0.86,0.281,1.09877254915498e-06,"0","GLRX"
-## "IER3",6.08429267955844e-11,1.71217369763986,0.69,0.079,1.10253467646279e-06,"0","IER3"
-## "GAS7",7.05276600413244e-11,1.17052160303359,0.717,0.088,1.27803172760884e-06,"0","GAS7"
-## "GCA",7.38403271535754e-11,1.44076813515237,0.732,0.088,1.33806056834994e-06,"0","GCA"
-## "BLVRB",8.70296644334171e-11,1.70741575447825,0.861,0.109,1.57706454919795e-06,"0","BLVRB"
-## "CAPG",1.01491112881163e-10,1.48412043202562,0.838,0.14,1.83912045651956e-06,"0","CAPG"
-## "PILRA",1.06745151455351e-10,1.13663810210652,0.744,0.07,1.93432888952241e-06,"0","PILRA"
-## "CLEC12A",1.08592740701504e-10,1.58285050318657,0.808,0.069,1.96780905425195e-06,"0","CLEC12A"
-## "SOD2",1.08880917746434e-10,1.63609220176726,0.839,0.213,1.97303111048313e-06,"0","SOD2"
-## "CREG1",1.22712177735577e-10,1.01268962139225,0.654,0.059,2.22366737274639e-06,"0","CREG1"
-## "TGFBI",1.34687674132466e-10,1.40500823645494,0.692,0.048,2.44067534295441e-06,"0","TGFBI"
-## "FCGRT",1.41844295808993e-10,1.62779070732069,0.863,0.156,2.57036048435476e-06,"0","FCGRT"
-## "CTSZ",1.69311656456833e-10,1.29773891259588,0.896,0.271,3.06809652665427e-06,"0","CTSZ"
-## "LGALS1",1.79231267722668e-10,1.53873834830553,0.987,0.593,3.24784980240246e-06,"0","LGALS1"
-## "SRGN",1.92118279426553e-10,1.34241614881147,1,0.746,3.48137534148856e-06,"0","SRGN"
-## "PPIF",1.98215622665736e-10,1.21584956397726,0.67,0.129,3.5918652983258e-06,"0","PPIF"
-## "CLEC7A",2.15093433402538e-10,1.59945622997021,0.828,0.067,3.8977081066874e-06,"0","CLEC7A"
-## "LILRB2",2.15093433402538e-10,1.32659762007509,0.805,0.074,3.8977081066874e-06,"0","LILRB2"
-## "LILRA5",2.26034890912484e-10,1.4410624431522,0.767,0.065,4.09597825822512e-06,"0","LILRA5"
-## "PTAFR",2.36589817245199e-10,1.23199783576341,0.613,0.026,4.28724407830025e-06,"0","PTAFR"
-## "KLF4",2.64965863837341e-10,1.49389116837693,0.695,0.062,4.80144641859645e-06,"0","KLF4"
-## "CD33",2.92715030972572e-10,0.989188386032659,0.609,0.034,5.30428907625398e-06,"0","CD33"
-## "ALDH2",3.13683856804162e-10,1.5384888412159,0.748,0.05,5.68426516914822e-06,"0","ALDH2"
-## "H2AFY",3.97972998277445e-10,1.33180009379753,0.914,0.336,7.21166870178558e-06,"0","H2AFY"
-## "ANXA2",4.01635547635371e-10,1.3995461301111,0.925,0.398,7.27803775870056e-06,"0","ANXA2"
-## "SAT1",4.04338321293255e-10,1.71097203775032,0.995,0.701,7.32701472015508e-06,"0","SAT1"
-## "SERPINB1",4.23250331164827e-10,1.50553925927874,0.959,0.43,7.66971925103783e-06,"0","SERPINB1"
-## "LILRB3",4.48444930159372e-10,1.45375202354787,0.788,0.057,8.12627057941797e-06,"0","LILRB3"
-## "RBM47",4.99278436329549e-10,1.01692611529423,0.605,0.037,9.04742454472776e-06,"0","RBM47"
-## "UBE2D1",5.0456797099367e-10,1.28997633144569,0.793,0.138,9.1432762023763e-06,"0","UBE2D1"
-## "STXBP2",5.20272312808288e-10,1.28531986792488,0.893,0.292,9.427854580399e-06,"0","STXBP2"
-## "C1orf162",5.24107028486003e-10,1.21372983952074,0.909,0.307,9.49734346319485e-06,"0","C1orf162"
-## "GNG5",5.81016858888849e-10,0.972959419332323,0.942,0.548,1.05286064999248e-05,"0","GNG5"
-## "RAB31",6.32365927124698e-10,1.50949005869696,0.824,0.081,1.14591029654267e-05,"0","RAB31"
-## "RETN",7.56832171752639e-10,2.53721382939493,0.531,0.03,1.37145557843296e-05,"0","RETN"
-## "HRH2",7.77929169069567e-10,1.15730598716182,0.66,0.05,1.40968544727096e-05,"0","HRH2"
-## "KCTD12",7.96821262436894e-10,1.3935444650123,0.75,0.043,1.4439198096619e-05,"0","KCTD12"
-## "SYK",8.59805838541136e-10,0.993789983343553,0.701,0.125,1.55805416002039e-05,"0","SYK"
-## "CD302",9.2955503720324e-10,1.31286809321899,0.712,0.045,1.68444668291599e-05,"0","CD302"
-## "NLRP3",9.78355784800581e-10,1.21387698448312,0.622,0.032,1.77287851763713e-05,"0","NLRP3"
-## "RTN4",1.05865653194958e-09,0.73623611583452,0.851,0.393,1.91839150154583e-05,"0","RTN4"
-## "AP2S1",1.07564173321164e-09,1.09204841672815,0.914,0.369,1.94917038475282e-05,"0","AP2S1"
-## "FCGR1A",1.12215689168097e-09,1.18497222885571,0.597,0.023,2.03346050341508e-05,"0","FCGR1A"
-## "IRAK3",1.15995042886678e-09,1.29708647554275,0.718,0.057,2.10194617214949e-05,"0","IRAK3"
-## "G0S2",1.36863486110136e-09,2.58159167013657,0.519,0.064,2.48010323180177e-05,"0","G0S2"
-## "LRRC25",1.414308160799e-09,0.912726721439183,0.706,0.075,2.56286781818387e-05,"0","LRRC25"
-## "ASGR1",1.47613485667201e-09,1.14808034668736,0.648,0.034,2.67490397377534e-05,"0","ASGR1"
-## "MSRB1",1.631616404807e-09,1.02020875840281,0.581,0.062,2.95665208715077e-05,"0","MSRB1"
-## "CPVL",1.84335443834495e-09,1.82434779157538,0.816,0.066,3.34034257772489e-05,"0","CPVL"
-## "DMXL2",1.85691452633399e-09,1.19376890714445,0.668,0.047,3.36491481316982e-05,"0","DMXL2"
-## "IGSF6",1.86888356388707e-09,1.68627393534678,0.781,0.061,3.38660390611976e-05,"0","IGSF6"
-## "MCL1",1.91051455172897e-09,1.35451239260417,0.975,0.556,3.46204341918806e-05,"0","MCL1"
-## "C19orf38",2.05163806233733e-09,1.22348305026225,0.748,0.073,3.71777333276147e-05,"0","C19orf38"
-## "PGD",2.05443422803117e-09,1.52213725496796,0.813,0.097,3.72284026461529e-05,"0","PGD"
-## "PLEK",2.11265711414427e-09,1.41729785499989,0.917,0.381,3.82834595654083e-05,"0","PLEK"
-## "CTSH",2.19775087036752e-09,1.23013240504108,0.799,0.164,3.98254435219298e-05,"0","CTSH"
-## "PTPRE",2.26557687510696e-09,1.34875095562478,0.867,0.263,4.10545185538133e-05,"0","PTPRE"
-## "GSTO1",2.45856028088687e-09,1.12315316719359,0.885,0.289,4.4551570849951e-05,"0","GSTO1"
-## "TNFAIP2",2.51203093146155e-09,1.86046490804294,0.814,0.068,4.55205125090148e-05,"0","TNFAIP2"
-## "CLIC1",2.60138870597644e-09,0.860143282875253,0.971,0.726,4.71397647409991e-05,"0","CLIC1"
-## "HCK",2.64756030880724e-09,1.35083026655843,0.785,0.092,4.79764403558959e-05,"0","HCK"
-## "ACSL1",2.70435774249524e-09,1.3168634435732,0.631,0.04,4.90056666517563e-05,"0","ACSL1"
-## "PLXDC2",3.21541998653666e-09,1.10385262058688,0.676,0.04,5.82666255760308e-05,"0","PLXDC2"
-## "RAC1",3.22069818668571e-09,1.27373254627181,0.976,0.577,5.83622718409318e-05,"0","RAC1"
-## "SULT1A1",3.22131404895703e-09,1.07213318750116,0.638,0.075,5.83734318811503e-05,"0","SULT1A1"
-## "TIMP1",3.9005725102135e-09,1.00575270641999,0.899,0.299,7.06822744575788e-05,"0","TIMP1"
-## "COTL1",4.02237670373559e-09,1.34354660254734,0.987,0.533,7.28894882483926e-05,"0","COTL1"
-## "BCL6",4.04999110650403e-09,1.16831113009407,0.647,0.069,7.33898888409595e-05,"0","BCL6"
-## "SQOR",4.18614485640411e-09,0.890962768692307,0.682,0.151,7.58571309428989e-05,"0","SQOR"
-## "STX11",4.18783297266494e-09,1.14107858933641,0.772,0.138,7.58877212976613e-05,"0","STX11"
-## "SELL",4.33038641356124e-09,1.16123563133431,0.835,0.299,7.84709322001433e-05,"0","SELL"
-## "SGK1",4.40206089650672e-09,1.57454578813567,0.626,0.066,7.97697455055982e-05,"0","SGK1"
-## "C4orf48",4.63711767502909e-09,1.00335282242484,0.82,0.243,8.40292093892021e-05,"0","C4orf48"
-## "ANXA5",5.07525373564749e-09,1.20416321761475,0.897,0.312,9.19686729436681e-05,"0","ANXA5"
-## "CD93",5.20413182501794e-09,1.39334852346107,0.685,0.021,9.430407280115e-05,"0","CD93"
-## "FES",5.20413182501794e-09,0.791574052691456,0.554,0.066,9.430407280115e-05,"0","FES"
-## "ANPEP",5.68376120633302e-09,1.14505795062436,0.585,0.027,0.000102995436819961,"0","ANPEP"
-## "IL17RA",6.04280047078496e-09,1.22461183790753,0.748,0.098,0.000109501587331094,"0","IL17RA"
-## "ADA2",6.18653384678045e-09,1.19086914153828,0.74,0.125,0.000112106179837509,"0","ADA2"
-## "RTN3",6.25812138178103e-09,0.93450715266486,0.755,0.162,0.000113403417559254,"0","RTN3"
-## "LILRA2",6.32707205902687e-09,0.863805482030323,0.575,0.05,0.000114652872781626,"0","LILRA2"
-## "CREB5",6.41203769400972e-09,0.881149674933192,0.497,0.01,0.00011619253505315,"0","CREB5"
-## "FOS",6.75634690989071e-09,1.22653194795837,0.902,0.371,0.00012243176235413,"0","FOS"
-## "NINJ1",7.23348412839628e-09,1.09864981232196,0.792,0.224,0.000131077965890669,"0","NINJ1"
-## "SLC25A37",7.39531049755897e-09,1.26905977344574,0.802,0.169,0.000134010421526266,"0","SLC25A37"
-## "CLU",8.12710593657889e-09,0.85922834252762,0.548,0.079,0.000147271286676746,"0","CLU"
-## "GNS",8.4645424937266e-09,0.921591348674904,0.641,0.084,0.00015338597452882,"0","GNS"
-## "EMILIN2",8.98117793299661e-09,1.06395773953299,0.67,0.054,0.000162747925323832,"0","EMILIN2"
-## "CEBPB",1.02483980231301e-08,1.54243638461889,0.948,0.437,0.00018571122057714,"0","CEBPB"
-## "LRRK2",1.14364112115114e-08,0.986973311591547,0.591,0.067,0.000207239207563799,"0","LRRK2"
-## "CLEC4E",1.20163640783977e-08,1.1541942169921,0.554,0.013,0.000217748533464645,"0","CLEC4E"
-## "NAIP",1.23963276035749e-08,0.889056447815605,0.615,0.091,0.00022463385250438,"0","NAIP"
-## "AL034397.3",1.26378265012523e-08,0.536134841166786,0.432,0.032,0.000229010054029194,"0","AL034397.3"
-## "APOBEC3A",1.32597237815439e-08,1.90816599399002,0.53,0.044,0.000240279454645356,"0","APOBEC3A"
-## "TET2",1.3790371395352e-08,0.625346691545201,0.592,0.159,0.000249895320055174,"0","TET2"
-## "LMO2",1.48069334041545e-08,0.952943878537386,0.692,0.079,0.000268316440216684,"0","LMO2"
-## "RNASE2",1.49626681636315e-08,1.25131193877383,0.465,0.008,0.000271138509793166,"0","RNASE2"
-## "IL6R",1.49626681636315e-08,0.707802618330563,0.499,0.044,0.000271138509793166,"0","IL6R"
-## "ATP5MPL",1.49689353261181e-08,0.748694317068701,0.948,0.63,0.000271252077044587,"0","ATP5MPL"
-## "IL1B",1.59282455516733e-08,2.72682687591673,0.539,0.029,0.000288635737641873,"0","IL1B"
-## "ATOX1",1.73901833739552e-08,0.677144272827634,0.699,0.208,0.000315127512919442,"0","ATOX1"
-## "OSCAR",2.00520195720023e-08,1.04682207621156,0.651,0.043,0.000363362646664254,"0","OSCAR"
-## "BACH1",2.0693348994407e-08,1.06551513338739,0.785,0.215,0.00037498417712765,"0","BACH1"
-## "QSOX1",2.31005252884965e-08,0.805317339168029,0.517,0.058,0.000418604618752844,"0","QSOX1"
-## "ARPC5",2.31054121386455e-08,0.924350473004386,0.924,0.474,0.000418693173364395,"0","ARPC5"
-## "RASSF2",2.37283620099957e-08,0.980521624915945,0.668,0.097,0.000429981647983132,"0","RASSF2"
-## "S100A4",2.48614579579628e-08,1.16993485821824,1,0.798,0.000450514479656244,"0","S100A4"
-## "ATP6V1B2",2.60042786050705e-08,0.904116929133664,0.627,0.099,0.000471223532602483,"0","ATP6V1B2"
-## "LGALS2",2.97470518020945e-08,1.7626700891321,0.592,0.025,0.000539046325705755,"0","LGALS2"
-## "MXD1",3.07470599265097e-08,1.12471687596478,0.639,0.107,0.000557167472928283,"0","MXD1"
-## "TLR2",3.43765866262904e-08,1.03893767825735,0.579,0.031,0.000622938126255008,"0","TLR2"
-## "NFAM1",3.43765866262904e-08,0.77912929001251,0.479,0.023,0.000622938126255008,"0","NFAM1"
-## "RNASE6",3.43765866262904e-08,0.767967921634893,0.54,0.056,0.000622938126255008,"0","RNASE6"
-## "NOP10",3.50458644156916e-08,1.12576485626979,0.891,0.391,0.000635066109076748,"0","NOP10"
-## "MARCKS",3.57169879031575e-08,1.91987387909306,0.798,0.183,0.000647227537793117,"0","MARCKS"
-## "TXNDC17",4.26429875748876e-08,0.517317878160876,0.631,0.211,0.000772733577844538,"0","TXNDC17"
-## "EAF1",5.23119500728066e-08,0.765341633312251,0.541,0.106,0.000947944847269328,"0","EAF1"
-## "SAMHD1",5.31574743725392e-08,1.10413912913654,0.915,0.374,0.000963266593104783,"0","SAMHD1"
-## "RILPL2",6.07775974854819e-08,1.04804162689677,0.83,0.234,0.00110135084403442,"0","RILPL2"
-## "PGLS",6.11635059479937e-08,0.864454175084482,0.866,0.379,0.00110834389128359,"0","PGLS"
-## "TREM1",6.37781471872415e-08,0.951678932215186,0.533,0.02,0.00115572380518,"0","TREM1"
-## "CXCL8",6.7242121892152e-08,2.46889372616527,0.43,0.05,0.00121849449080769,"0","CXCL8"
-## "HIF1A",7.54818308783709e-08,1.10591951491862,0.824,0.28,0.00136780625734696,"0","HIF1A"
-## "AC245128.3",7.77888271636172e-08,0.904181547684184,0.493,0.019,0.00140961133703191,"0","AC245128.3"
-## "PRAM1",7.86907029838467e-08,1.06485644937612,0.631,0.048,0.00142595422877029,"0","PRAM1"
-## "LYN",8.25716104131864e-08,0.962663612137047,0.891,0.307,0.00149628015229735,"0","LYN"
-## "LAMTOR1",8.4280264570249e-08,0.624416709510835,0.881,0.507,0.00152724267427748,"0","LAMTOR1"
-## "LTA4H",8.6644108304789e-08,1.19990273538209,0.732,0.192,0.00157007788659108,"0","LTA4H"
-## "RNF149",8.82400203243723e-08,0.875698530040161,0.784,0.27,0.00159899740829795,"0","RNF149"
-## "GSN",9.84485730750937e-08,0.563534032814704,0.506,0.089,0.00178398659269377,"0","GSN"
-## "GLIPR2",1.00514069817314e-07,0.911547504027075,0.809,0.29,0.00182141545915955,"0","GLIPR2"
-## "TLE3",1.03681286031345e-07,0.95092082837398,0.665,0.121,0.001878808584174,"0","TLE3"
-## "RNF24",1.04634720304339e-07,0.519143488360444,0.37,0.042,0.00189608576663492,"0","RNF24"
-## "GPCPD1",1.0752789358463e-07,1.00028855898947,0.755,0.203,0.00194851295964708,"0","GPCPD1"
-## "SLC7A7",1.1226091419506e-07,1.29039393316945,0.769,0.079,0.00203428002612868,"0","SLC7A7"
-## "NUDT16",1.13218632470745e-07,0.563201183260564,0.46,0.073,0.00205163483900238,"0","NUDT16"
-## "ACTN1",1.22392439074333e-07,0.659578580530399,0.564,0.066,0.00221787338846599,"0","ACTN1"
-## "RNF144B",1.24645157069075e-07,0.933726708098444,0.514,0.046,0.0022586948912487,"0","RNF144B"
-## "CCR1",1.27272415241029e-07,1.49607461901341,0.63,0.028,0.00230630343658268,"0","CCR1"
-## "PTPN12",1.31713135175829e-07,0.477964648023978,0.619,0.186,0.0023867737225212,"0","PTPN12"
-## "CD300E",1.35161561163305e-07,1.45307453074411,0.664,0.053,0.00244926264984025,"0","CD300E"
-## "SERP1",1.47713985437175e-07,0.732139305289876,0.962,0.684,0.00267672513010704,"0","SERP1"
-## "CPPED1",1.52645456265879e-07,1.0182874266701,0.712,0.088,0.00276608831299399,"0","CPPED1"
-## "ATP6V0B",1.53320978495027e-07,1.22103483764341,0.96,0.441,0.00277832945130839,"0","ATP6V0B"
-## "ALOX5",1.6694182033231e-07,0.809772006271022,0.632,0.105,0.00302515272624179,"0","ALOX5"
-## "HNMT",1.72467080644433e-07,0.843556433793991,0.511,0.026,0.00312527596835777,"0","HNMT"
-## "CYP1B1",1.73433623114878e-07,1.15365178235535,0.468,0.011,0.00314279068446471,"0","CYP1B1"
-## "AQP9",1.73433623114878e-07,1.07375224928317,0.464,0.016,0.00314279068446471,"0","AQP9"
-## "MEFV",1.73433623114878e-07,0.724331984189746,0.428,0.019,0.00314279068446471,"0","MEFV"
-## "GNAQ",1.74716263613298e-07,0.898454089434113,0.643,0.102,0.00316603341293658,"0","GNAQ"
-## "IFITM3",1.8688991850118e-07,1.82913037680315,0.832,0.251,0.00338663221315988,"0","IFITM3"
-## "ZFAND5",1.915457367806e-07,0.843553314124584,0.771,0.278,0.00347100029620125,"0","ZFAND5"
-## "CD63",1.95976797762728e-07,0.785185315265284,0.93,0.557,0.00355129555225839,"0","CD63"
-## "METTL9",2.01402212121751e-07,1.03363307680471,0.844,0.376,0.00364960948585826,"0","METTL9"
-## "AGTRAP",2.04514377267951e-07,1.18064719931909,0.852,0.234,0.00370600503047254,"0","AGTRAP"
-## "LY86",2.05709982703968e-07,0.972602524892236,0.716,0.14,0.0037276705965786,"0","LY86"
-## "C15orf39",2.17978420802675e-07,0.845441191063942,0.591,0.071,0.00394998696336527,"0","C15orf39"
-## "SNX10",2.2334955533585e-07,1.0065920716061,0.764,0.169,0.00404731729224093,"0","SNX10"
-## "IMPA2",2.31102106745407e-07,0.702057796506395,0.481,0.036,0.00418780127633352,"0","IMPA2"
-## "AGFG1",2.38614312151361e-07,1.03253940119296,0.684,0.146,0.00432392995049482,"0","AGFG1"
-## "DOK3",2.66026735083999e-07,0.803659481150983,0.521,0.045,0.00482067046645715,"0","DOK3"
-## "IQGAP1",2.67281904418155e-07,0.70425566039701,0.923,0.587,0.00484341538996138,"0","IQGAP1"
-## "FRAT2",2.67804333904276e-07,0.386859710571106,0.417,0.12,0.00485288233467938,"0","FRAT2"
-## "MBOAT7",2.78814678348214e-07,0.872470823586389,0.586,0.064,0.00505240078634799,"0","MBOAT7"
-## "GM2A",2.8044244094775e-07,0.812883856129662,0.512,0.036,0.00508189747241417,"0","GM2A"
-## "NUP214",2.84327470223942e-07,1.28886372302356,0.822,0.161,0.00515229808792805,"0","NUP214"
-## "PLSCR1",3.00847852517965e-07,1.09132770627651,0.711,0.138,0.00545166393547804,"0","PLSCR1"
-## "NAPRT",3.052736656929e-07,0.68570349925399,0.581,0.099,0.00553186409602103,"0","NAPRT"
-## "MIR22HG",3.34495259674561e-07,0.772247706627328,0.567,0.089,0.00606138860056272,"0","MIR22HG"
-## "TLR4",3.39883629019362e-07,0.908903224497497,0.496,0.023,0.00615903124145986,"0","TLR4"
-## "SMCO4",3.68952657790867e-07,0.740988402115474,0.487,0.035,0.0066857911118283,"0","SMCO4"
-## "ADAP2",3.68952657790867e-07,0.724478204518054,0.507,0.044,0.0066857911118283,"0","ADAP2"
-## "MCEMP1",3.81130019167374e-07,1.04433758469336,0.461,0.009,0.00690645707733199,"0","MCEMP1"
-## "CD163",3.81130019167374e-07,0.858291160312375,0.517,0.011,0.00690645707733199,"0","CD163"
-## "TBXAS1",4.03001560443318e-07,0.798321077911111,0.654,0.106,0.00730279127679337,"0","TBXAS1"
-## "LAMP2",4.30950602867596e-07,0.81956843546318,0.687,0.147,0.00780925587456371,"0","LAMP2"
-## "DSE",4.37512759379556e-07,0.951005702178107,0.517,0.037,0.00792816871271694,"0","DSE"
-## "ZYX",4.58735104427701e-07,0.874631275648957,0.777,0.224,0.00831273882733436,"0","ZYX"
-## "GNB2",4.71438842539647e-07,0.921341734133076,0.893,0.413,0.00854294326566094,"0","GNB2"
-## "MPP1",4.7273135905544e-07,0.531632407873976,0.552,0.075,0.00856636495744362,"0","MPP1"
-## "SAT2",5.65323226869544e-07,0.652171981280738,0.721,0.284,0.010244222194103,"0","SAT2"
-## "CHMP2A",5.93135550862785e-07,0.626863483252528,0.794,0.357,0.0107482093171845,"0","CHMP2A"
-## "BLOC1S1",6.4146185088182e-07,0.749932951034178,0.871,0.479,0.0116239301998295,"0","BLOC1S1"
-## "CNPY3",6.41797994043736e-07,0.885576425960171,0.836,0.322,0.0116300214500665,"0","CNPY3"
-## "HSBP1",6.6782505000123e-07,0.907200829958316,0.767,0.21,0.0121016577310723,"0","HSBP1"
-## "PPT1",6.74042204401264e-07,1.0979954583799,0.779,0.161,0.0122143187859553,"0","PPT1"
-## "WARS",6.76947972414986e-07,1.13950432651375,0.743,0.136,0.012266974208132,"0","WARS"
-## "TNFRSF1A",7.09495217632266e-07,0.68438726891613,0.559,0.088,0.0128567628387143,"0","TNFRSF1A"
-## "LCP1",7.26974242433406e-07,1.08436907933713,0.984,0.655,0.0131735002471357,"0","LCP1"
-## "PGAM1",7.45503419000965e-07,0.67321712586449,0.857,0.456,0.0135092674557165,"0","PGAM1"
-## "ATP6AP1",8.00983771989389e-07,0.588171199556803,0.635,0.184,0.0145146269322197,"0","ATP6AP1"
-## "GNB4",8.23750481769072e-07,0.514756187069257,0.441,0.068,0.0149271824801374,"0","GNB4"
-## "EGR1",8.25849688076695e-07,1.16121805555409,0.353,0.037,0.0149652221976378,"0","EGR1"
-## "ASGR2",8.25849688076695e-07,0.738337966989025,0.397,0.007,0.0149652221976378,"0","ASGR2"
-## "ULK1",8.25849688076695e-07,0.426526613897498,0.401,0.097,0.0149652221976378,"0","ULK1"
-## "C20orf27",9.60356168919057e-07,0.781270162800575,0.653,0.158,0.0174026141369822,"0","C20orf27"
-## "EVI2B",9.91105101087161e-07,1.19602633310133,0.948,0.464,0.0179598155368004,"0","EVI2B"
-## "MARCH1",9.98433105691992e-07,0.806524271146438,0.68,0.158,0.0180926063082446,"0","MARCH1"
-## "CR1",1.09580009772848e-06,0.853161902535452,0.463,0.043,0.0198569935709378,"0","CR1"
-## "CHP1",1.16148101560929e-06,0.746643531902557,0.644,0.156,0.021047197483856,"0","CHP1"
-## "NCF4",1.17509859296876e-06,0.811761593706018,0.57,0.094,0.021293961603187,"0","NCF4"
-## "PYGL",1.18490182263939e-06,0.964295872047256,0.55,0.028,0.0214716059280484,"0","PYGL"
-## "CCDC88A",1.27334192937942e-06,1.03193767016046,0.657,0.099,0.0230742291022844,"0","CCDC88A"
-## "PRELID1",1.36312353413508e-06,0.913878094478741,0.929,0.534,0.0247011615620618,"0","PRELID1"
-## "TMEM170B",1.4241750360226e-06,0.8025975011974,0.503,0.025,0.0258074758277655,"0","TMEM170B"
-## "BCL2A1",1.45409039713081e-06,1.43943474358969,0.69,0.164,0.0263495720864074,"0","BCL2A1"
-## "GNAI2",1.46783086636261e-06,0.786964346621356,0.969,0.737,0.0265985631293569,"0","GNAI2"
-## "NADK",1.61778050634046e-06,0.599857877451018,0.55,0.13,0.0293158005553954,"0","NADK"
-## "RNF19B",1.67449657027628e-06,0.754461011606673,0.538,0.085,0.0303435523499764,"0","RNF19B"
-## "HK3",1.67449657027628e-06,0.624893575561254,0.402,0.033,0.0303435523499764,"0","HK3"
-## "GRB2",1.75049453759202e-06,0.845025722673032,0.899,0.466,0.031720711515705,"0","GRB2"
-## "IL1RN",1.76515934465433e-06,0.764620640540269,0.371,0.012,0.0319864524844811,"0","IL1RN"
-## "DYSF",1.76515934465433e-06,0.737626484849808,0.408,0.015,0.0319864524844811,"0","DYSF"
-## "CRISPLD2",1.76515934465433e-06,0.678271713184217,0.386,0.008,0.0319864524844811,"0","CRISPLD2"
-## "MGST2",1.76515934465433e-06,0.597480651679132,0.439,0.033,0.0319864524844811,"0","MGST2"
-## "MARC1",1.76515934465433e-06,0.585289623655143,0.313,0.003,0.0319864524844811,"0","MARC1"
-## "DENND5A",1.76515934465433e-06,0.562402182973307,0.424,0.057,0.0319864524844811,"0","DENND5A"
-## "CARD16",1.79007770568453e-06,1.02130382423456,0.855,0.363,0.0324379981047094,"0","CARD16"
-## "AOAH",1.7938364327324e-06,0.653260691559489,0.663,0.173,0.0325061099975438,"0","AOAH"
-## "AHR",1.80488058765101e-06,1.2093429710085,0.636,0.062,0.032706241128824,"0","AHR"
-## "HEXB",1.88185207914201e-06,0.725537255320854,0.557,0.109,0.0341010415261324,"0","HEXB"
-## "FCGR2A",1.89541715786325e-06,1.24545937770479,0.757,0.083,0.03434685431764,"0","FCGR2A"
-## "CDKN1A",1.9977774850409e-06,0.807089500351816,0.519,0.075,0.0362017258064262,"0","CDKN1A"
-## "RFLNB",2.00770514435941e-06,0.943682733879187,0.57,0.118,0.0363816249209369,"0","RFLNB"
-## "RHOA",2.11062554586131e-06,0.577958266472923,0.964,0.744,0.0382466455165529,"0","RHOA"
-## "FERMT3",2.30912958389076e-06,0.600842598317144,0.808,0.328,0.0418437371896845,"0","FERMT3"
-## "LIMS1",2.34423777964755e-06,0.588545567848066,0.704,0.214,0.0424799328049932,"0","LIMS1"
-## "ADGRE2",2.54976573541325e-06,0.86370373808026,0.548,0.05,0.0462043048914235,"0","ADGRE2"
-## "CD86",2.80362249445074e-06,0.654266923595216,0.5,0.056,0.0508044432219418,"0","CD86"
-## "HMOX1",2.88799016049647e-06,0.765102426358636,0.555,0.065,0.0523332696983565,"0","HMOX1"
-## "FAM45A",3.15009980122946e-06,0.425906766682869,0.517,0.162,0.0570829584980791,"0","FAM45A"
-## "KDM6B",3.22756478656429e-06,0.542636065966894,0.619,0.221,0.0584867014973314,"0","KDM6B"
-## "CTSA",3.26889065178883e-06,0.889859267650044,0.805,0.207,0.0592355675010653,"0","CTSA"
-## "LGALS9",3.28037561695518e-06,0.78630803145074,0.692,0.181,0.0594436865548448,"0","LGALS9"
-## "DPYD",3.28078544287647e-06,0.685958842302238,0.534,0.087,0.0594511130103644,"0","DPYD"
-## "SLC2A3",3.28796218506932e-06,0.984607370085275,0.753,0.316,0.0595811627556412,"0","SLC2A3"
-## "QPCT",3.31274901910886e-06,0.803960498577,0.477,0.012,0.0600303249752716,"0","QPCT"
-## "PFKFB3",3.38817753165515e-06,0.907015655505984,0.517,0.059,0.0613971650511229,"0","PFKFB3"
-## "BASP1",3.42801279885826e-06,0.688536260852698,0.532,0.124,0.0621190199281106,"0","BASP1"
-## "SLC15A3",3.6134603137198e-06,0.830191255354195,0.552,0.042,0.0654795143449164,"0","SLC15A3"
-## "SIRPA",3.72299836291281e-06,0.909452078877034,0.552,0.015,0.0674644533343431,"0","SIRPA"
-## "CSF2RA",3.72299836291281e-06,0.764588092488124,0.479,0.025,0.0674644533343431,"0","CSF2RA"
-## "PADI4",3.72299836291281e-06,0.62491718430396,0.296,0.016,0.0674644533343431,"0","PADI4"
-## "CAMKK2",3.7331082736218e-06,0.676359438735911,0.498,0.068,0.0676476550263007,"0","CAMKK2"
-## "NCOA4",3.82189651318871e-06,0.636683662225412,0.721,0.208,0.0692565867154927,"0","NCOA4"
-## "RGS2",3.89532760372928e-06,1.23141639165248,0.755,0.226,0.0705872315071783,"0","RGS2"
-## "ATP6V0E1",3.91294312786564e-06,0.591314118977092,0.897,0.575,0.0709064424200533,"0","ATP6V0E1"
-## "PAK1",4.24002957369227e-06,0.702251607714667,0.505,0.06,0.0768335759048776,"0","PAK1"
-## "GMIP",4.28230899672495e-06,0.381296252828662,0.411,0.108,0.0775997213296529,"0","GMIP"
-## "MFSD1",4.33879378467728e-06,0.667351831908689,0.546,0.094,0.0786232821721371,"0","MFSD1"
-## "BLVRA",4.4395014954912e-06,0.912189240328823,0.666,0.132,0.080448206599796,"0","BLVRA"
-## "SERTAD2",4.52863327119203e-06,0.604490563465349,0.518,0.106,0.0820633635072708,"0","SERTAD2"
-## "AC096667.1",4.55351368837085e-06,0.662394610006451,0.431,0.024,0.0825142215469683,"0","AC096667.1"
-## "BICD2",4.67693589845159e-06,0.326486339670254,0.359,0.085,0.0847507554158412,"0","BICD2"
-## "EVI2A",4.95789816341763e-06,0.91260634293972,0.656,0.128,0.0898420726192908,"0","EVI2A"
-## "EIF4EBP1",5.05461608202914e-06,0.571395759618926,0.513,0.109,0.0915946980224501,"0","EIF4EBP1"
-## "THEMIS2",5.13598252673662e-06,1.11195571866922,0.856,0.226,0.0930691393669942,"0","THEMIS2"
-## "MCTP1",5.23041329354211e-06,0.344935507262392,0.271,0.024,0.0947803192922766,"0","MCTP1"
-## "PLIN3",5.29066347333811e-06,0.800783971604184,0.644,0.117,0.0958721128003598,"0","PLIN3"
-## "RARA",5.75752712391317e-06,0.59794220622002,0.569,0.154,0.104332149012431,"0","RARA"
-## "SDCBP",6.11359249713393e-06,1.08013252051776,0.909,0.383,0.110784409640564,"0","SDCBP"
-## "SIRPB1",6.28405911187239e-06,0.712144821176385,0.435,0.029,0.11387343516624,"0","SIRPB1"
-## "PTP4A2",6.63778717017869e-06,0.50239404434296,0.954,0.704,0.120283341310808,"0","PTP4A2"
-## "VMA21",6.72040301217851e-06,0.433157951889467,0.571,0.175,0.121780422983687,"0","VMA21"
-## "RASGRP4",6.79881391700215e-06,0.503990823228883,0.369,0.027,0.123201306989996,"0","RASGRP4"
-## "IRF2BP2",6.81981180400775e-06,1.04403217199611,0.84,0.358,0.123581809700424,"0","IRF2BP2"
-## "ICAM1",6.92010459694652e-06,1.20257769171582,0.612,0.07,0.125399215401268,"0","ICAM1"
-## "MAPK14",7.00869168762329e-06,0.463552513175667,0.429,0.114,0.127004502071422,"0","MAPK14"
-## "VAMP5",7.23454834488761e-06,0.84481016809398,0.743,0.327,0.131097250557708,"0","VAMP5"
-## "PTTG1IP",7.49055593206548e-06,0.50674346431597,0.536,0.131,0.135736364044958,"0","PTTG1IP"
-## "ID1",7.75182569435383e-06,1.08418690328291,0.402,0.012,0.140470833407386,"0","ID1"
-## "TFEC",7.75182569435383e-06,0.594073095876545,0.389,0.017,0.140470833407386,"0","TFEC"
-## "F13A1",7.75182569435383e-06,0.511448141360135,0.41,0.034,0.140470833407386,"0","F13A1"
-## "DUSP1",7.77507843733488e-06,0.911189747981107,0.95,0.639,0.140892196362945,"0","DUSP1"
-## "GSTP1",7.82676286277816e-06,0.860454178354825,0.941,0.65,0.141828769836403,"0","GSTP1"
-## "KIAA0930",8.41084505400691e-06,0.802974176323018,0.607,0.101,0.152412923223659,"0","KIAA0930"
-## "FAM200B",9.08899327828661e-06,0.602531419073481,0.577,0.162,0.164701647195832,"0","FAM200B"
-## "ACTR2",9.40514033860891e-06,0.707177056450376,0.934,0.591,0.170430548075932,"0","ACTR2"
-## "SCIMP",9.52314873813433e-06,0.430488145676675,0.359,0.066,0.172568978283732,"0","SCIMP"
-## "GLT1D1",9.82696926263813e-06,0.566291296737083,0.384,0.01,0.178074510008265,"0","GLT1D1"
-## "F5",9.82696926263813e-06,0.55429119760652,0.304,0.012,0.178074510008265,"0","F5"
-## "LRP1",9.9781925650313e-06,1.18068029134382,0.692,0.039,0.180814827470932,"0","LRP1"
-## "CDC42EP3",1.0351226840317e-05,1.25132094315968,0.735,0.181,0.187574581573385,"0","CDC42EP3"
-## "GDI2",1.06126278423764e-05,0.627822014497385,0.82,0.376,0.192311429131703,"0","GDI2"
-## "CSTB",1.10313380055626e-05,0.882958405520518,0.881,0.416,0.199898875998799,"0","CSTB"
-## "ELL",1.11956935068764e-05,0.417768210085104,0.389,0.091,0.202877162038107,"0","ELL"
-## "PTGS2",1.12653423341089e-05,1.03351656872589,0.294,0.009,0.204139268436387,"0","PTGS2"
-## "ATP2B1-AS1",1.14033563917843e-05,0.929092067535883,0.556,0.168,0.206640221175522,"0","ATP2B1-AS1"
-## "IMPDH1",1.1658736119343e-05,0.606358438424912,0.586,0.157,0.211267957218614,"0","IMPDH1"
-## "SEMA4A",1.17879462506708e-05,0.609636458172574,0.421,0.032,0.213609374008406,"0","SEMA4A"
-## "GAA",1.19020520891363e-05,0.712374562264552,0.542,0.073,0.215677085907238,"0","GAA"
-## "TMEM176B",1.23684247983585e-05,1.32534642520126,0.548,0.063,0.224128225771055,"0","TMEM176B"
-## "VNN2",1.24663569345881e-05,0.99965781824523,0.527,0.062,0.225902854011671,"0","VNN2"
-## "EPSTI1",1.27015331146623e-05,0.520556509200931,0.464,0.192,0.230164481570796,"0","EPSTI1"
-## "TNFSF10",1.27390206030372e-05,1.20674337622909,0.655,0.144,0.230843792347637,"0","TNFSF10"
-## "EHBP1L1",1.28015640456574e-05,0.800545579973506,0.724,0.208,0.231977142071358,"0","EHBP1L1"
-## "JDP2",1.28848387564447e-05,0.79410639780427,0.528,0.046,0.233486163105534,"0","JDP2"
-## "RRP12",1.29033929075923e-05,0.570628896897635,0.374,0.055,0.233822382878479,"0","RRP12"
-## "WAS",1.29743450549453e-05,0.479660484407236,0.763,0.369,0.235108106740664,"0","WAS"
-## "AGPAT3",1.31154686665766e-05,0.340891583592089,0.428,0.117,0.237665407707035,"0","AGPAT3"
-## "KLF10",1.31895360376374e-05,1.26549684539832,0.724,0.116,0.239007582538027,"0","KLF10"
-## "PCBP1",1.33004345421171e-05,0.831295327771993,0.931,0.587,0.241017174337704,"0","PCBP1"
-## "FKBP1A",1.33188594701865e-05,0.76738342535878,0.881,0.42,0.24135105245925,"0","FKBP1A"
-## "MIDN",1.34456832551399e-05,1.00856739210664,0.861,0.346,0.24364922626639,"0","MIDN"
-## "SHKBP1",1.37103557241869e-05,0.621814042312391,0.718,0.27,0.248445356077991,"0","SHKBP1"
-## "HPSE",1.41191134735996e-05,0.376738200912114,0.312,0.023,0.255852455255098,"0","HPSE"
-## "FAR1",1.44654684424636e-05,0.452809321466022,0.521,0.149,0.262128753645882,"0","FAR1"
-## "CASP1",1.46480400181259e-05,0.84449052258063,0.798,0.268,0.26543713316846,"0","CASP1"
-## "TCIRG1",1.47934935532329e-05,0.652906221979296,0.77,0.283,0.268072896678133,"0","TCIRG1"
-## "GRK3",1.49635336217033e-05,0.444631941703754,0.424,0.087,0.271154192758885,"0","GRK3"
-## "PLEKHO2",1.51636785650233e-05,0.806510928659958,0.522,0.06,0.274781019276786,"0","PLEKHO2"
-## "PIM3",1.56936960054966e-05,0.864768326282979,0.834,0.348,0.284385465315605,"0","PIM3"
-## "FCGR1B",1.59404479567909e-05,0.706664864995734,0.357,0.012,0.288856857425008,"0","FCGR1B"
-## "FOLR3",1.59404479567909e-05,0.697163835724904,0.298,0.004,0.288856857425008,"0","FOLR3"
-## "STAB1",1.59404479567909e-05,0.614124978389259,0.42,0.011,0.288856857425008,"0","STAB1"
-## "SIGLEC1",1.59404479567909e-05,0.588125710333813,0.264,0.008,0.288856857425008,"0","SIGLEC1"
-## "CLEC4D",1.59404479567909e-05,0.509656204940053,0.262,0.003,0.288856857425008,"0","CLEC4D"
-## "ROGDI",1.59404479567909e-05,0.421343240496553,0.342,0.051,0.288856857425008,"0","ROGDI"
-## "ATP6V0D1",1.60616470625406e-05,0.95582257920846,0.841,0.305,0.291053106420298,"0","ATP6V0D1"
-## "SLC16A3",1.74999462046763e-05,0.702120222339418,0.543,0.096,0.317116525174939,"0","SLC16A3"
-## "MSRB2",1.75653391733101e-05,0.654807267093451,0.432,0.058,0.318301511159553,"0","MSRB2"
-## "VMP1",1.76419208336715e-05,1.23225149200147,0.806,0.243,0.319689247426961,"0","VMP1"
-## "NUMB",1.86445678668204e-05,0.683876626313574,0.646,0.172,0.337858214314652,"0","NUMB"
-## "HIPK3",1.88641337581477e-05,0.425909285508768,0.456,0.118,0.341836967831395,"0","HIPK3"
-## "RXRA",1.88816984992642e-05,1.13096886521553,0.702,0.087,0.342155258505167,"0","RXRA"
-## "LTBR",1.99675045586415e-05,0.565541212610183,0.406,0.027,0.361831150107142,"0","LTBR"
-## "ZNF385A",2.01889085986947e-05,0.99177995001396,0.61,0.058,0.365843212716947,"0","ZNF385A"
-## "ETS2",2.03112770023662e-05,1.13944837045345,0.619,0.063,0.368060650559878,"0","ETS2"
-## "NRIP1",2.07472951064435e-05,0.801608018037832,0.566,0.105,0.375961734623863,"0","NRIP1"
-## "DDT",2.0855667261324e-05,0.372956869594216,0.787,0.444,0.377925546442452,"0","DDT"
-## "CSGALNACT2",2.09231692707969e-05,0.673545772218978,0.657,0.191,0.379148750356111,"0","CSGALNACT2"
-## "ATP11A",2.11479254870651e-05,0.528257232318366,0.475,0.089,0.383221557751106,"0","ATP11A"
-## "SLC43A2",2.13994736114821e-05,1.03765467649824,0.642,0.085,0.387779861313667,"0","SLC43A2"
-## "HADHB",2.16802596804071e-05,0.474579452169068,0.582,0.207,0.392867985668656,"0","HADHB"
-## "PNP",2.17766729654717e-05,0.419168877107449,0.41,0.09,0.394615090807312,"0","PNP"
-## "PLEC",2.20864339454734e-05,0.672571757120894,0.613,0.165,0.400228269525923,"0","PLEC"
-## "S100A10",2.22756150781012e-05,1.21094134301771,0.977,0.748,0.403656420830273,"0","S100A10"
-## "ITGAM",2.23108420869923e-05,0.977263162882015,0.731,0.162,0.404294769458387,"0","ITGAM"
-## "PDXK",2.25629223288927e-05,0.67991563192033,0.635,0.161,0.408862715521864,"0","PDXK"
-## "ZNF467",2.34217867762028e-05,0.798908428757215,0.506,0.025,0.424426198171571,"0","ZNF467"
-## "CCNY",2.41918918374583e-05,0.511076652857641,0.66,0.265,0.438381271986582,"0","CCNY"
-## "RBPJ",2.44912348796915e-05,0.818148191106247,0.699,0.199,0.44380566725489,"0","RBPJ"
-## "SKIL",2.45554207624423e-05,0.361981532153706,0.495,0.178,0.444968779636217,"0","SKIL"
-## "FLII",2.4628066966182e-05,0.460910005973847,0.542,0.159,0.446285201494185,"0","FLII"
-## "SMARCD3",2.57420279947894e-05,0.598797039080729,0.407,0.019,0.466471289293579,"0","SMARCD3"
-## "AL445524.1",2.59036019672382e-05,0.414555879107918,0.253,0.019,0.469399171248324,"0","AL445524.1"
-## "ETF1",2.72439561826931e-05,0.297332953847988,0.603,0.281,0.493687729986581,"0","ETF1"
-## "CD1D",2.85887365404861e-05,0.770534358104022,0.476,0.022,0.518056494850148,"0","CD1D"
-## "ASAP1",2.86659389022532e-05,0.582768120892729,0.527,0.123,0.51945547884773,"0","ASAP1"
-## "CLEC4A",2.97861676752332e-05,0.857343100598456,0.53,0.042,0.539755144442901,"0","CLEC4A"
-## "CLTA",3.0636836177658e-05,0.559728426104709,0.754,0.344,0.55517010837534,"0","CLTA"
-## "PRDX3",3.06714103269025e-05,0.625645534252054,0.544,0.097,0.555796626533801,"0","PRDX3"
-## "LILRB4",3.06907516744193e-05,0.699993217777469,0.453,0.024,0.556147111092152,"0","LILRB4"
-## "NFIL3",3.08484401774528e-05,0.70336832809604,0.519,0.11,0.559004584455622,"0","NFIL3"
-## "PKM",3.14583951648032e-05,1.01521827670318,0.896,0.463,0.570057578781399,"0","PKM"
-## "ALDH3B1",3.21063716511888e-05,0.637109506754795,0.418,0.034,0.581799560691192,"0","ALDH3B1"
-## "TMED5",3.23430018744892e-05,0.462139634499835,0.588,0.201,0.586087536967618,"0","TMED5"
-## "HP",3.23872985920377e-05,1.08263804958841,0.282,0.005,0.586890237786315,"0","HP"
-## "PHLDA2",3.23872985920377e-05,0.526783726008434,0.249,0.009,0.586890237786315,"0","PHLDA2"
-## "HOMER3",3.23872985920377e-05,0.505579780895181,0.316,0.016,0.586890237786315,"0","HOMER3"
-## "ARHGEF40",3.23872985920377e-05,0.476450445581177,0.294,0.013,0.586890237786315,"0","ARHGEF40"
-## "TLR8",3.23872985920377e-05,0.413150561379144,0.253,0.009,0.586890237786315,"0","TLR8"
-## "IFNGR1",3.33488515536174e-05,0.345714563861099,0.65,0.279,0.604314539003102,"0","IFNGR1"
-## "ARHGEF2",3.3554516004431e-05,0.46988650254584,0.528,0.163,0.608041384516294,"0","ARHGEF2"
-## "VSTM1",3.51258385934709e-05,0.520992720943144,0.255,0.015,0.636515321152286,"0","VSTM1"
-## "MAP3K1",3.66260255354407e-05,0.587376095311378,0.649,0.234,0.663700208727722,"0","MAP3K1"
-## "POU2F2",3.69514533112906e-05,0.608904101083505,0.741,0.294,0.669597285453897,"0","POU2F2"
-## "JOSD2",4.04389595040858e-05,0.251935517011721,0.395,0.129,0.73279438517354,"0","JOSD2"
-## "LACTB",4.08606380777686e-05,0.952955496802661,0.691,0.11,0.740435622607245,"0","LACTB"
-## "YBX3",4.12062256358485e-05,0.251298864917421,0.691,0.282,0.74669801474721,"0","YBX3"
-## "ITGB2",4.1319945710798e-05,0.698719485635086,0.986,0.727,0.748758736225371,"0","ITGB2"
-## "SCPEP1",4.14017978008005e-05,1.09658686374496,0.775,0.168,0.750241977948306,"0","SCPEP1"
-## "GLIPR1",4.25020194036463e-05,1.10267408745264,0.828,0.277,0.770179093613475,"0","GLIPR1"
-## "PHACTR1",4.29847996363288e-05,0.600722013746466,0.481,0.113,0.778927554209915,"0","PHACTR1"
-## "ZNF516",4.38981416373353e-05,0.304620863899345,0.26,0.034,0.795478224610153,"0","ZNF516"
-## "PLXNC1",4.45889942704051e-05,0.663330212159927,0.48,0.063,0.807997165174011,"0","PLXNC1"
-## "MAP3K3",4.75662306210983e-05,0.51525599975047,0.547,0.17,0.861947665084922,"0","MAP3K3"
-## "LAT2",4.75964651488319e-05,0.420669269476285,0.561,0.176,0.862495544961983,"0","LAT2"
-## "IL13RA1",4.79585868053176e-05,0.670000050925664,0.422,0.028,0.86905755149916,"0","IL13RA1"
-## "HLX",4.79585868053176e-05,0.558986468067076,0.301,0.01,0.86905755149916,"0","HLX"
-## "DUSP3",4.79585868053176e-05,0.491268223307803,0.359,0.024,0.86905755149916,"0","DUSP3"
-## "ITGAX",4.90403750154474e-05,0.712494724309177,0.617,0.128,0.888660635654922,"0","ITGAX"
-## "TWF2",5.07553733765145e-05,0.465271022039073,0.666,0.244,0.91973812095582,"0","TWF2"
-## "PDLIM7",5.23734259533759e-05,0.482800038247658,0.351,0.032,0.949058851701124,"0","PDLIM7"
-## "ARAP1",5.23833805344168e-05,0.491469136377448,0.531,0.133,0.949239238664166,"0","ARAP1"
-## "ZNF106",5.2594719220403e-05,0.890737497856142,0.765,0.242,0.953068906992922,"0","ZNF106"
-## "OAS1",5.2954943269143e-05,0.494943579619244,0.444,0.119,0.95959652698014,"0","OAS1"
-## "TMEM167A",5.37790220732167e-05,0.909589241579046,0.745,0.233,0.97452965898876,"0","TMEM167A"
-## "CSF2RB",5.71715570907921e-05,0.656597878932958,0.405,0.025,1,"0","CSF2RB"
-## "CYFIP1",5.71715570907921e-05,0.513485794647628,0.371,0.02,1,"0","CYFIP1"
-## "PIK3AP1",5.76627409076552e-05,0.470068768764534,0.514,0.127,1,"0","PIK3AP1"
-## "CKLF",5.8371383977113e-05,0.598815005158287,0.728,0.297,1,"0","CKLF"
-## "ZDHHC20",5.91239994263589e-05,0.528074503591233,0.519,0.147,1,"0","ZDHHC20"
-## "CAT",5.96958227753073e-05,0.58208691254066,0.568,0.157,1,"0","CAT"
-## "H2AFJ",6.05936776592651e-05,0.638573140676853,0.725,0.245,1,"0","H2AFJ"
-## "UNC93B1",6.10161864191562e-05,0.594065079610214,0.566,0.129,1,"0","UNC93B1"
-## "GLUL",6.19027963237054e-05,1.14981570084133,0.767,0.176,1,"0","GLUL"
-## "TTYH3",6.24228667008066e-05,0.561895110456556,0.443,0.048,1,"0","TTYH3"
-## "BCKDK",6.33325273495094e-05,0.5556175306287,0.439,0.056,1,"0","BCKDK"
-## "MGAT1",6.38875155695729e-05,0.801577768726022,0.737,0.242,1,"0","MGAT1"
-## "SHTN1",6.39149727507505e-05,0.768630558892415,0.457,0.015,1,"0","SHTN1"
-## "TTC7A",6.50288330351791e-05,0.347957879169723,0.346,0.077,1,"0","TTC7A"
-## "NLRP12",6.5047562222275e-05,0.476837728248033,0.296,0.007,1,"0","NLRP12"
-## "ELF4",6.5047562222275e-05,0.371356288775788,0.353,0.058,1,"0","ELF4"
-## "SMIM3",6.5047562222275e-05,0.333846279821582,0.323,0.038,1,"0","SMIM3"
-## "NECTIN2",6.5047562222275e-05,0.333281994643613,0.23,0.008,1,"0","NECTIN2"
-## "TSEN34",6.58715454381768e-05,0.451879115988585,0.445,0.108,1,"0","TSEN34"
-## "SH3BP2",7.09335890220649e-05,0.94616482119504,0.734,0.183,1,"0","SH3BP2"
-## "CD300LF",7.2016133871549e-05,0.59411208260251,0.415,0.042,1,"0","CD300LF"
-## "MTMR11",7.30072244403095e-05,0.414566939305664,0.291,0.024,1,"0","MTMR11"
-## "DPYSL2",7.48952767192494e-05,0.825853834857665,0.567,0.065,1,"0","DPYSL2"
-## "CMIP",7.50188318394794e-05,0.39450616180312,0.596,0.221,1,"0","CMIP"
-## "QKI",7.8306215842925e-05,0.936447841886524,0.804,0.265,1,"0","QKI"
-## "VASP",7.83711318614668e-05,0.872070651248549,0.882,0.369,1,"0","VASP"
-## "CCDC69",7.84758693330621e-05,0.504388357552581,0.706,0.309,1,"0","CCDC69"
-## "CAPNS1",8.03899259502423e-05,0.47830100859302,0.816,0.458,1,"0","CAPNS1"
-## "LAIR1",8.09832425628824e-05,0.350425202148854,0.44,0.144,1,"0","LAIR1"
-## "SULF2",8.29592462526603e-05,0.655471913708341,0.46,0.068,1,"0","SULF2"
-## "CAP1",8.40387300469794e-05,0.619925629217126,0.934,0.582,1,"0","CAP1"
-## "ELOB",8.64642117168543e-05,0.593697583699079,0.966,0.736,1,"0","ELOB"
-## "ORAI3",8.70443665851044e-05,0.325392179495257,0.344,0.082,1,"0","ORAI3"
-## "POLE4",8.80401904656266e-05,0.560319052952375,0.692,0.288,1,"0","POLE4"
-## "NQO2",9.17165112768606e-05,0.609925876197642,0.505,0.098,1,"0","NQO2"
-## "FBXL5",9.44317152693772e-05,0.789681202252638,0.684,0.197,1,"0","FBXL5"
-## "MVP",9.94637195740435e-05,0.324258243715061,0.574,0.23,1,"0","MVP"
-## "TIMM8B",0.000109044468393188,0.446225281175147,0.567,0.192,1,"0","TIMM8B"
-## "CRTAP",0.000112038272784611,0.82371397444262,0.623,0.119,1,"0","CRTAP"
-## "TMEM154",0.00011464078593774,0.36492029861632,0.444,0.154,1,"0","TMEM154"
-## "YWHAG",0.00011464078593774,0.322826273477021,0.329,0.077,1,"0","YWHAG"
-## "ATP6V1F",0.000115745437229407,0.615404128474673,0.851,0.495,1,"0","ATP6V1F"
-## "ENO1",0.000118915556021574,0.734304051597847,0.913,0.621,1,"0","ENO1"
-## "CXCL16",0.000119046947868477,0.483431242585172,0.367,0.056,1,"0","CXCL16"
-## "MTMR3",0.000119105030773629,0.346491982502911,0.34,0.075,1,"0","MTMR3"
-## "LAP3",0.000119398927219787,1.14879057371466,0.725,0.197,1,"0","LAP3"
-## "RHOU",0.000129208146895081,0.761855272822906,0.442,0.029,1,"0","RHOU"
-## "FFAR2",0.000129208146895081,0.623851927621753,0.264,0.013,1,"0","FFAR2"
-## "AP5B1",0.000129208146895081,0.461622132098316,0.332,0.04,1,"0","AP5B1"
-## "FPR2",0.000129208146895081,0.455921397707279,0.262,0.009,1,"0","FPR2"
-## "IL18",0.000129208146895081,0.413375193372356,0.297,0.024,1,"0","IL18"
-## "HK2",0.000129208146895081,0.392140275867596,0.255,0.011,1,"0","HK2"
-## "NOD2",0.000129208146895081,0.385760882964273,0.265,0.017,1,"0","NOD2"
-## "CORO1C",0.000136997632214131,0.732335365485461,0.517,0.062,1,"0","CORO1C"
-## "LAMTOR4",0.000139199415607626,0.770223535401209,0.951,0.605,1,"0","LAMTOR4"
-## "ODF3B",0.000139515728087425,0.864549613350424,0.588,0.1,1,"0","ODF3B"
-## "TPP1",0.000144667918243776,0.965198417274355,0.788,0.208,1,"0","TPP1"
-## "STAT6",0.000144699199245467,0.29783051472339,0.548,0.203,1,"0","STAT6"
-## "PSTPIP2",0.000146737131875399,0.569749510972019,0.469,0.084,1,"0","PSTPIP2"
-## "STAT2",0.000149393363403402,0.571132602450124,0.548,0.159,1,"0","STAT2"
-## "TM9SF2",0.000150998567303496,0.569737615645208,0.615,0.2,1,"0","TM9SF2"
-## "ENTPD1",0.000155827792786955,0.703494812904453,0.495,0.054,1,"0","ENTPD1"
-## "MS4A7",0.000160277414088235,0.523501181182466,0.458,0.077,1,"0","MS4A7"
-## "NOTCH2",0.000161197701747903,0.608314406252102,0.511,0.114,1,"0","NOTCH2"
-## "C9orf72",0.000163990920556623,0.655898320727436,0.536,0.111,1,"0","C9orf72"
-## "SSFA2",0.000167349795147741,0.406881987170137,0.383,0.068,1,"0","SSFA2"
-## "DOCK8",0.000169338344337998,0.262708381810728,0.704,0.379,1,"0","DOCK8"
-## "LSM10",0.000170179012500978,0.280467174980798,0.521,0.218,1,"0","LSM10"
-## "ZFHX3",0.000170602145278839,0.445199068238995,0.308,0.032,1,"0","ZFHX3"
-## "HLA-DMB",0.000172710379135883,0.488306299973401,0.606,0.253,1,"0","HLA-DMB"
-## "UBL5",0.000172981393051851,0.436925951321818,0.916,0.65,1,"0","UBL5"
-## "UPP1",0.000177341995336979,0.746819187576591,0.771,0.289,1,"0","UPP1"
-## "SH2B3",0.000178993069158902,0.63649177209601,0.544,0.12,1,"0","SH2B3"
-## "TMEM205",0.000179239930467207,0.613332320120168,0.558,0.127,1,"0","TMEM205"
-## "CSF1R",0.000180322439338617,0.350278102188512,0.365,0.055,1,"0","CSF1R"
-## "PTPN6",0.000180999738081846,0.438246211328155,0.76,0.326,1,"0","PTPN6"
-## "B4GALT5",0.000184089100076324,0.593371766203676,0.476,0.103,1,"0","B4GALT5"
-## "SOAT1",0.000190842749463919,0.375880146547861,0.354,0.066,1,"0","SOAT1"
-## "DDAH2",0.000193054021773036,0.254707483094886,0.338,0.112,1,"0","DDAH2"
-## "ABHD5",0.00019795830413763,0.456422678103164,0.401,0.088,1,"0","ABHD5"
-## "SLC31A2",0.000208148140283302,0.756490017612181,0.536,0.068,1,"0","SLC31A2"
-## "OAF",0.000211407938857634,0.453385124417461,0.29,0.013,1,"0","OAF"
-## "AGTPBP1",0.000213030581871117,0.539105171157185,0.551,0.146,1,"0","AGTPBP1"
-## "PLK3",0.000217664302022845,0.786615135009612,0.603,0.158,1,"0","PLK3"
-## "NDUFB1",0.000219834416175493,0.614652979155042,0.763,0.331,1,"0","NDUFB1"
-## "SYNGR2",0.000219838942194384,0.371810464683282,0.627,0.258,1,"0","SYNGR2"
-## "MSN",0.000224216792559734,0.43142738349316,0.922,0.599,1,"0","MSN"
-## "RASSF4",0.000224345478811373,0.623664810384211,0.476,0.053,1,"0","RASSF4"
-## "KIF13A",0.000227776169808253,0.557291105159984,0.385,0.023,1,"0","KIF13A"
-## "ZFP36L1",0.000231422927860948,1.172623344439,0.788,0.394,1,"0","ZFP36L1"
-## "HACD4",0.000235797666783666,0.539239663068842,0.622,0.185,1,"0","HACD4"
-## "ZBTB7B",0.000241720384486976,0.342768998686694,0.342,0.07,1,"0","ZBTB7B"
-## "MAFG",0.000246457751371826,0.585433644697232,0.458,0.081,1,"0","MAFG"
-## "TET3",0.000251484468743059,0.476057164310978,0.377,0.056,1,"0","TET3"
-## "P2RY13",0.000253976368838716,0.64457376702044,0.405,0.031,1,"0","P2RY13"
-## "ADM",0.000253976368838716,0.587101678633038,0.274,0.008,1,"0","ADM"
-## "NRG1",0.000253976368838716,0.456778751751361,0.254,0.004,1,"0","NRG1"
-## "GPAT3",0.000253976368838716,0.429254161694088,0.245,0.011,1,"0","GPAT3"
-## "CD300LB",0.000253976368838716,0.354208639712473,0.214,0.008,1,"0","CD300LB"
-## "PELI2",0.000253976368838716,0.298825109855425,0.273,0.045,1,"0","PELI2"
-## "LTB4R",0.000260351726784523,0.550224237349351,0.421,0.074,1,"0","LTB4R"
-## "KDM7A",0.000261554439077425,0.268736723668431,0.404,0.12,1,"0","KDM7A"
-## "CDV3",0.000263823011485496,0.346817502689251,0.834,0.52,1,"0","CDV3"
-## "SH2B2",0.000266858413007555,0.270113862996251,0.256,0.047,1,"0","SH2B2"
-## "COMT",0.000267049684027226,0.737982175462237,0.704,0.204,1,"0","COMT"
-## "PSMB3",0.00027034767701242,0.714379504284048,0.889,0.483,1,"0","PSMB3"
-## "RAB20",0.000272001521243886,0.648315724182828,0.412,0.024,1,"0","RAB20"
-## "STX3",0.000272001521243886,0.445830392420553,0.345,0.037,1,"0","STX3"
-## "SECTM1",0.000272621272620541,0.731078825480262,0.483,0.049,1,"0","SECTM1"
-## "RAB3D",0.000274508646313533,0.677031709501102,0.452,0.028,1,"0","RAB3D"
-## "BST2",0.000276663257161875,0.603254453702588,0.812,0.413,1,"0","BST2"
-## "LILRA6",0.000290847220957842,0.48403253920242,0.3,0.012,1,"0","LILRA6"
-## "ITPRIP",0.00029228633955849,0.258538896640805,0.363,0.108,1,"0","ITPRIP"
-## "PRDX5",0.000301180780202978,0.341307664600492,0.802,0.485,1,"0","PRDX5"
-## "RPS6KA4",0.000302239257575024,0.408365833989234,0.403,0.078,1,"0","RPS6KA4"
-## "NPL",0.000309324961729674,0.544684205658759,0.377,0.04,1,"0","NPL"
-## "RHOQ",0.00031135201016089,0.577642404446539,0.615,0.181,1,"0","RHOQ"
-## "FAM49A",0.000314956970087347,0.614558173757392,0.521,0.115,1,"0","FAM49A"
-## "SORT1",0.000321820921292121,0.476783637103385,0.35,0.029,1,"0","SORT1"
-## "NAGA",0.0003221307248819,0.558054472947328,0.437,0.054,1,"0","NAGA"
-## "ZDHHC7",0.000325817983998101,0.548439885559072,0.495,0.1,1,"0","ZDHHC7"
-## "UBE2J1",0.000326943941643125,0.796579260661538,0.774,0.27,1,"0","UBE2J1"
-## "IRS2",0.000330363757774257,0.723756984281121,0.511,0.129,1,"0","IRS2"
-## "MANBA",0.000346001488606101,0.401866948280103,0.469,0.141,1,"0","MANBA"
-## "RREB1",0.00034859963595653,0.294167216907977,0.386,0.116,1,"0","RREB1"
-## "RNF135",0.000359948095430303,0.331624753099987,0.34,0.078,1,"0","RNF135"
-## "METTL7A",0.000360025785708997,0.428075569489422,0.381,0.071,1,"0","METTL7A"
-## "AHCYL1",0.000360500780378125,0.283014520679867,0.389,0.11,1,"0","AHCYL1"
-## "GBP1",0.000366056134648807,0.845583098454069,0.46,0.126,1,"0","GBP1"
-## "PRKCD",0.000367033633809508,0.56799360269356,0.487,0.095,1,"0","PRKCD"
-## "ZEB2",0.00036802770572133,0.793717956694587,0.951,0.562,1,"0","ZEB2"
-## "NCSTN",0.000385580796792243,0.35540690342393,0.433,0.127,1,"0","NCSTN"
-## "MID1IP1",0.000387562976566825,0.471387493675597,0.422,0.111,1,"0","MID1IP1"
-## "PPP1R9B",0.000388197640918622,0.387908500770583,0.475,0.123,1,"0","PPP1R9B"
-## "ZBTB43",0.000390946943708671,0.893604378742194,0.682,0.22,1,"0","ZBTB43"
-## "EFHD2",0.000399575555437955,0.339488429413996,0.954,0.593,1,"0","EFHD2"
-## "SRGAP2",0.000417058719799148,0.39992112721075,0.347,0.066,1,"0","SRGAP2"
-## "FGD2",0.000417058719799148,0.332314604807562,0.403,0.101,1,"0","FGD2"
-## "UBE2R2",0.000424328426644161,0.661728479173394,0.727,0.299,1,"0","UBE2R2"
-## "PECAM1",0.000424461308436132,0.923713114101061,0.761,0.128,1,"0","PECAM1"
-## "FAM198B",0.000425981117781377,0.573998159617315,0.32,0.008,1,"0","FAM198B"
-## "SLC43A3",0.000425981117781377,0.353229953522324,0.274,0.029,1,"0","SLC43A3"
-## "PRCP",0.000432580593990983,0.458196610729555,0.434,0.104,1,"0","PRCP"
-## "SLC6A6",0.000436656031367919,0.541266040619695,0.495,0.112,1,"0","SLC6A6"
-## "ADIPOR1",0.000442303996480576,0.262168060000656,0.487,0.188,1,"0","ADIPOR1"
-## "DHRS4L2",0.000442669075665751,0.332341475965423,0.39,0.107,1,"0","DHRS4L2"
-## "SLC38A10",0.000458423123317398,0.412496491915823,0.493,0.155,1,"0","SLC38A10"
-## "CTNNB1",0.000466955625921023,0.82623128686969,0.776,0.296,1,"0","CTNNB1"
-## "OAS2",0.000472086721793189,0.429049917627154,0.383,0.097,1,"0","OAS2"
-## "MFSD14B",0.000494241153240886,0.386950621966565,0.359,0.084,1,"0","MFSD14B"
-## "PTX3",0.00049432473814738,0.772254784958341,0.245,0.006,1,"0","PTX3"
-## "ALDH1A1",0.00049432473814738,0.534906286131926,0.245,0.006,1,"0","ALDH1A1"
-## "TNNT1",0.00049432473814738,0.524100335270093,0.233,0.005,1,"0","TNNT1"
-## "CYP27A1",0.00049432473814738,0.485825534219345,0.217,0.003,1,"0","CYP27A1"
-## "LUCAT1",0.00049432473814738,0.459112785606534,0.204,0.002,1,"0","LUCAT1"
-## "PLPPR2",0.00049432473814738,0.373018679120302,0.271,0.018,1,"0","PLPPR2"
-## "PRRG4",0.00049432473814738,0.366829515572846,0.259,0.015,1,"0","PRRG4"
-## "ZSWIM6",0.00049432473814738,0.341921769157134,0.286,0.044,1,"0","ZSWIM6"
-## "CARD19",0.000504052927461561,0.581109172489528,0.611,0.157,1,"0","CARD19"
-## "ARID3A",0.000506817106436703,0.533352398335423,0.466,0.091,1,"0","ARID3A"
-## "MYD88",0.0005081811337493,0.625673679033934,0.591,0.135,1,"0","MYD88"
-## "MTRNR2L8",0.000508658756121431,0.500344693340835,0.611,0.21,1,"0","MTRNR2L8"
-## "PTP4A1",0.00051233784721319,0.254733120186939,0.499,0.213,1,"0","PTP4A1"
-## "CEACAM4",0.000518250612679873,0.462051662441788,0.288,0.013,1,"0","CEACAM4"
-## "STAT1",0.000533376952422346,0.905296209184753,0.71,0.25,1,"0","STAT1"
-## "SASH3",0.00053684877415351,0.331909978533887,0.611,0.258,1,"0","SASH3"
-## "TOM1",0.0005435063032103,0.581687244769528,0.54,0.136,1,"0","TOM1"
-## "ZFYVE16",0.000548368747360829,0.405213327489281,0.41,0.096,1,"0","ZFYVE16"
-## "PLXNB2",0.000549851192925246,0.761315906950253,0.543,0.052,1,"0","PLXNB2"
-## "BRK1",0.000552568161564496,0.343428285620692,0.844,0.548,1,"0","BRK1"
-## "TMEM91",0.00055442575569884,0.495400305463486,0.4,0.043,1,"0","TMEM91"
-## "PHC2",0.000560378222296634,0.480270025929507,0.533,0.172,1,"0","PHC2"
-## "SLC8A1",0.000560436090038399,0.565968645155275,0.381,0.034,1,"0","SLC8A1"
-## "LIMK2",0.000577621874211804,0.567994130225231,0.344,0.039,1,"0","LIMK2"
-## "COX8A",0.00057856993608663,0.525213337725507,0.936,0.66,1,"0","COX8A"
-## "KCNE3",0.000582781786277318,0.73610746180597,0.438,0.023,1,"0","KCNE3"
-## "GNB1",0.000599344627372756,0.373377491580982,0.769,0.414,1,"0","GNB1"
-## "COL4A3BP",0.000607781334771986,0.402760451427272,0.548,0.197,1,"0","COL4A3BP"
-## "FAM129B",0.000633967580260129,0.426746961232248,0.309,0.011,1,"0","FAM129B"
-## "FOSB",0.000652300455335285,0.75465984116351,0.452,0.161,1,"0","FOSB"
-## "MAP3K20",0.000654566822596341,0.493844013320572,0.36,0.041,1,"0","MAP3K20"
-## "SLC44A1",0.000661100572108685,0.27457078976879,0.259,0.043,1,"0","SLC44A1"
-## "SH3BGRL",0.000714640907423317,0.508708967912636,0.887,0.57,1,"0","SH3BGRL"
-## "UBE2E1",0.000719091333046028,0.269017971706985,0.432,0.154,1,"0","UBE2E1"
-## "GNA15",0.000732148915945724,0.622207596702551,0.449,0.04,1,"0","GNA15"
-## "FOXN2",0.000734596299286317,0.251906284785562,0.342,0.103,1,"0","FOXN2"
-## "CTNNA1",0.000738375101738956,0.550289891406476,0.509,0.091,1,"0","CTNNA1"
-## "RAB11FIP1",0.000746873695518622,0.666355459137263,0.796,0.369,1,"0","RAB11FIP1"
-## "CAMK1",0.000749115789481384,0.411750199665224,0.338,0.053,1,"0","CAMK1"
-## "DICER1",0.000758088396698821,0.406170590975358,0.576,0.223,1,"0","DICER1"
-## "SH3TC1",0.000763231617196398,0.287429515266325,0.292,0.055,1,"0","SH3TC1"
-## "SNX18",0.000765296560905541,0.594209023764687,0.5,0.1,1,"0","SNX18"
-## "ARL5B",0.000780793400146958,0.378170207802797,0.362,0.099,1,"0","ARL5B"
-## "SPTLC2",0.00079320823827236,0.571432387636537,0.517,0.11,1,"0","SPTLC2"
-## "IVNS1ABP",0.000801460719073669,0.408885560421295,0.43,0.157,1,"0","IVNS1ABP"
-## "VEGFA",0.00081371070972583,0.522356834027235,0.267,0.006,1,"0","VEGFA"
-## "PARP9",0.00084339933409489,0.335155431403165,0.447,0.154,1,"0","PARP9"
-## "MX1",0.000879626924427559,0.545566498263631,0.445,0.195,1,"0","MX1"
-## "AZI2",0.000879626924427559,0.324152125337798,0.395,0.116,1,"0","AZI2"
-## "IFI44",0.000883984880149085,0.506455937031829,0.424,0.127,1,"0","IFI44"
-## "PLEKHB2",0.000898464715566111,0.549008060735922,0.623,0.184,1,"0","PLEKHB2"
-## "PLAGL2",0.000905556314666179,0.497909357234126,0.395,0.076,1,"0","PLAGL2"
-## "LRRFIP1",0.000912818596277205,0.694453520036962,0.964,0.712,1,"0","LRRFIP1"
-## "FBP1",0.000914107753913107,0.653661460886062,0.45,0.053,1,"0","FBP1"
-## "RAB5IF",0.000916300405609341,0.601050853843776,0.784,0.345,1,"0","RAB5IF"
-## "FGD4",0.000922603874052493,0.463227984288556,0.324,0.026,1,"0","FGD4"
-## "ADAM9",0.000922603874052493,0.421936083413258,0.31,0.025,1,"0","ADAM9"
-## "SPG21",0.000933116724389187,0.548487548517934,0.605,0.196,1,"0","SPG21"
-## "MT2A",0.000940362140287224,0.925290939194313,0.808,0.413,1,"0","MT2A"
-## "B3GNT5",0.000953362814751277,0.443313751651616,0.244,0.007,1,"0","B3GNT5"
-## "ST14",0.000953362814751277,0.402198260531915,0.256,0.015,1,"0","ST14"
-## "RAB13",0.000953362814751277,0.288100638840089,0.253,0.017,1,"0","RAB13"
-## "FAM120A",0.000957453771327392,0.718702320338218,0.686,0.214,1,"0","FAM120A"
-## "IRF5",0.000957968694763992,0.401107311195673,0.348,0.046,1,"0","IRF5"
-## "CPEB4",0.000960221814057126,0.485098159616091,0.503,0.139,1,"0","CPEB4"
-## "NCKAP1L",0.000963896799396946,0.55795014817384,0.755,0.331,1,"0","NCKAP1L"
-## "STX10",0.000966035764514829,0.573689071013989,0.664,0.225,1,"0","STX10"
-## "ATP6V0A1",0.000994585547668474,0.522424314232476,0.383,0.049,1,"0","ATP6V0A1"
-## "PLP2",0.00104653594002104,0.877691852102257,0.857,0.372,1,"0","PLP2"
-## "NEU1",0.00104713545248159,0.251078475415674,0.292,0.068,1,"0","NEU1"
-## "WDFY3",0.0010621397030636,0.454525490955894,0.294,0.012,1,"0","WDFY3"
-## "ARRB2",0.00106370660220369,0.916129755865858,0.879,0.347,1,"0","ARRB2"
-## "FUOM",0.00107173694943071,0.256144982920921,0.292,0.081,1,"0","FUOM"
-## "TENT5A",0.00108235662246596,0.257154691588453,0.433,0.151,1,"0","TENT5A"
-## "NABP1",0.00108809135651774,0.667681293278521,0.366,0.079,1,"0","NABP1"
-## "BTK",0.00108809135651774,0.292905061326486,0.414,0.114,1,"0","BTK"
-## "SKAP2",0.00109007622164422,0.804243352220359,0.682,0.18,1,"0","SKAP2"
-## "XRN2",0.00109268114197949,0.375084315750491,0.704,0.348,1,"0","XRN2"
-## "DRAM1",0.00110734080216058,0.383729831980468,0.288,0.043,1,"0","DRAM1"
-## "ADAP1",0.00112711811709672,0.367537893998618,0.408,0.107,1,"0","ADAP1"
-## "RFX2",0.00112711811709672,0.345432298209259,0.226,0.025,1,"0","RFX2"
-## "HHEX",0.00112794745743575,0.310120087335329,0.419,0.113,1,"0","HHEX"
-## "ATG16L2",0.00114816271866228,0.419596650852345,0.489,0.148,1,"0","ATG16L2"
-## "MARCO",0.00115431497595986,0.532904076616512,0.328,0.018,1,"0","MARCO"
-## "ADAMTSL4",0.00115431497595986,0.344632527048995,0.272,0.025,1,"0","ADAMTSL4"
-## "LMNB1",0.00119005995044986,0.270179001777823,0.339,0.107,1,"0","LMNB1"
-## "EREG",0.00120312498306871,0.972993470675341,0.249,0.01,1,"0","EREG"
-## "SERPING1",0.00120312498306871,0.486321969153571,0.227,0.007,1,"0","SERPING1"
-## "ACER3",0.00123592695552065,0.434833238191538,0.376,0.068,1,"0","ACER3"
-## "ATP5PD",0.00123812743796891,0.494544590325329,0.826,0.45,1,"0","ATP5PD"
-## "KCNQ1",0.00124371982210182,0.349995140403891,0.321,0.048,1,"0","KCNQ1"
-## "IFNAR1",0.0012543425915258,0.321760276825567,0.454,0.163,1,"0","IFNAR1"
-## "CEBPA",0.00126802875538406,0.62380341111056,0.46,0.05,1,"0","CEBPA"
-## "MAP2K3",0.00128098664511702,0.753689164492875,0.74,0.258,1,"0","MAP2K3"
-## "HM13",0.00128539066934098,0.499090746980391,0.681,0.271,1,"0","HM13"
-## "APP",0.00129255641587996,0.419699570674307,0.428,0.087,1,"0","APP"
-## "DYNLL1",0.00129899343901994,0.366227616079296,0.675,0.287,1,"0","DYNLL1"
-## "P2RX1",0.0013112664998497,0.272181672349248,0.306,0.059,1,"0","P2RX1"
-## "LPCAT2",0.00133867758928792,0.559396363037733,0.408,0.034,1,"0","LPCAT2"
-## "CD300C",0.00136145337088104,0.371060714599149,0.265,0.024,1,"0","CD300C"
-## "DEK",0.00136193628449591,0.396988149606549,0.842,0.511,1,"0","DEK"
-## "SLC31A1",0.00138631291354177,0.362711511467483,0.288,0.041,1,"0","SLC31A1"
-## "ETFB",0.00139309140066316,0.256608004392599,0.594,0.28,1,"0","ETFB"
-## "CSRNP1",0.00139385920058611,0.278714218648615,0.428,0.175,1,"0","CSRNP1"
-## "RUNX1",0.00139559546827609,0.586187128646565,0.542,0.149,1,"0","RUNX1"
-## "RALB",0.0014049011962841,0.357182806393031,0.407,0.095,1,"0","RALB"
-## "GPX4",0.00146207346720992,0.427164763721581,0.884,0.608,1,"0","GPX4"
-## "GLB1",0.00152010636121474,0.440589992208338,0.387,0.067,1,"0","GLB1"
-## "CDKN2D",0.00152442412794076,0.342937758424721,0.864,0.532,1,"0","CDKN2D"
-## "IFI27",0.00153830150694953,2.2514599749239,0.273,0.041,1,"0","IFI27"
-## "LINC00937",0.00153830150694953,0.585972986310738,0.334,0.013,1,"0","LINC00937"
-## "ATG3",0.00154115957060768,0.509551693519701,0.671,0.246,1,"0","ATG3"
-## "AMPD2",0.00154534071918929,0.392116214462707,0.36,0.075,1,"0","AMPD2"
-## "HOTAIRM1",0.00155265925249397,0.474787787041504,0.602,0.179,1,"0","HOTAIRM1"
-## "TMEM219",0.00156375865586097,0.537766162845364,0.796,0.384,1,"0","TMEM219"
-## "MT1X",0.00156901681052933,0.416178559555914,0.476,0.169,1,"0","MT1X"
-## "IFI6",0.00157546505298358,1.26240249086771,0.647,0.349,1,"0","IFI6"
-## "MYADM",0.00158264188944483,0.374484043436786,0.79,0.399,1,"0","MYADM"
-## "DNAJC5",0.00161835061646993,0.384292761848185,0.432,0.119,1,"0","DNAJC5"
-## "TPD52L2",0.00164499214744023,0.539218681584568,0.516,0.12,1,"0","TPD52L2"
-## "MTX1",0.00164880745086481,0.29436802787062,0.389,0.119,1,"0","MTX1"
-## "PLIN2",0.00167441946623578,0.57182857235454,0.575,0.219,1,"0","PLIN2"
-## "GALK1",0.00170168324476725,0.389831771650368,0.364,0.053,1,"0","GALK1"
-## "PARVG",0.00170342474271214,0.485061917835982,0.635,0.225,1,"0","PARVG"
-## "MAP4K4",0.00171835340951476,0.28958795040055,0.583,0.276,1,"0","MAP4K4"
-## "CCPG1",0.00175272724516599,0.307764302693913,0.468,0.18,1,"0","CCPG1"
-## "FNIP2",0.00176546473158743,0.413541130931538,0.324,0.059,1,"0","FNIP2"
-## "FAM214B",0.00181779967440633,0.47310850213515,0.365,0.051,1,"0","FAM214B"
-## "SLC30A1",0.00181779967440633,0.447536792324862,0.359,0.051,1,"0","SLC30A1"
-## "SPOPL",0.00181779967440633,0.285674263584271,0.371,0.108,1,"0","SPOPL"
-## "NBPF19",0.00182088152355104,0.321172302931771,0.452,0.159,1,"0","NBPF19"
-## "GPR35",0.00182346989838934,0.389119766373782,0.277,0.026,1,"0","GPR35"
-## "LRMDA",0.00182346989838934,0.385778005128379,0.257,0.01,1,"0","LRMDA"
-## "ASPH",0.00182495829616462,0.716148376329147,0.4,0.044,1,"0","ASPH"
-## "RASGEF1B",0.0018534264561289,0.616390758849315,0.424,0.108,1,"0","RASGEF1B"
-## "P2RX4",0.00186574948175608,0.453125222653188,0.431,0.107,1,"0","P2RX4"
-## "TMEM176A",0.00197693626810275,1.03378751183794,0.448,0.043,1,"0","TMEM176A"
-## "BID",0.00198297367800164,0.709064141708282,0.723,0.208,1,"0","BID"
-## "TPI1",0.00203197719991805,0.437995099953712,0.88,0.545,1,"0","TPI1"
-## "WASHC4",0.00203765534860785,0.27740142321828,0.473,0.176,1,"0","WASHC4"
-## "SERPINB6",0.00205942476362292,0.338883970772899,0.657,0.271,1,"0","SERPINB6"
-## "CARS2",0.00207611776014219,0.488459142003858,0.521,0.154,1,"0","CARS2"
-## "RNF11",0.00207611776014219,0.257087043401833,0.424,0.146,1,"0","RNF11"
-## "MLKL",0.00211210423736723,0.280890747947561,0.298,0.067,1,"0","MLKL"
-## "FKBP15",0.00216196929254341,0.461140063511944,0.396,0.069,1,"0","FKBP15"
-## "MAML3",0.00217075706630377,0.299199954330077,0.231,0.022,1,"0","MAML3"
-## "MTHFR",0.00224619290120951,0.553516719780708,0.456,0.094,1,"0","MTHFR"
-## "CYSTM1",0.00225334703326991,0.367485466336948,0.333,0.071,1,"0","CYSTM1"
-## "TPM4",0.00227037419425479,0.46283689652069,0.724,0.289,1,"0","TPM4"
-## "TXN",0.00231529281592829,0.731769427988658,0.859,0.453,1,"0","TXN"
-## "GSR",0.00232716717546707,0.416576519214351,0.393,0.094,1,"0","GSR"
-## "ATP13A3",0.00235665506632922,0.457397104373028,0.451,0.13,1,"0","ATP13A3"
-## "EIF4EBP2",0.00244830799739608,0.360647001654014,0.503,0.173,1,"0","EIF4EBP2"
-## "MYH9",0.00244899833100976,0.281222645049398,0.841,0.526,1,"0","MYH9"
-## "KDM1B",0.00247581501438055,0.439803672565917,0.367,0.051,1,"0","KDM1B"
-## "PIM1",0.00249773695666799,0.384658383917185,0.573,0.265,1,"0","PIM1"
-## "LDLR",0.0026310365642578,0.664940092639435,0.454,0.095,1,"0","LDLR"
-## "FNDC3B",0.00265229009207262,0.474725560997425,0.457,0.098,1,"0","FNDC3B"
-## "HLA-DRA",0.0026614052257872,0.536908029321189,0.937,0.554,1,"0","HLA-DRA"
-## "ARL8B",0.00268714002501798,0.364165825093043,0.467,0.148,1,"0","ARL8B"
-## "GLTP",0.00269480331782077,0.360669065656739,0.636,0.303,1,"0","GLTP"
-## "SMIM25",0.00269609105847942,0.612832727485125,0.513,0.062,1,"0","SMIM25"
-## "E2F3",0.00278280712403886,0.419740372092378,0.363,0.056,1,"0","E2F3"
-## "MOB1A",0.00281300290727008,0.494346382423046,0.828,0.449,1,"0","MOB1A"
-## "HCLS1",0.0028131835095297,0.313981904721562,0.841,0.537,1,"0","HCLS1"
-## "ATP5MF",0.00281520391331046,0.408171415000532,0.815,0.493,1,"0","ATP5MF"
-## "RAB1A",0.00283409558165166,0.451775041292245,0.682,0.285,1,"0","RAB1A"
-## "TRIOBP",0.00286409532447974,0.44322276553996,0.451,0.106,1,"0","TRIOBP"
-## "MICAL2",0.00287950515754262,0.290438560188728,0.237,0.03,1,"0","MICAL2"
-## "SOX4",0.00288562568389889,0.326508127584234,0.314,0.072,1,"0","SOX4"
-## "C16orf72",0.00293363032810137,0.473720576826325,0.678,0.283,1,"0","C16orf72"
-## "PTK2B",0.00294016777131346,0.358782748112683,0.552,0.209,1,"0","PTK2B"
-## "CPD",0.00298476690522575,0.574723093289434,0.495,0.11,1,"0","CPD"
-## "ARHGAP27",0.00300234371523119,0.478446223875415,0.465,0.12,1,"0","ARHGAP27"
-## "ARL8A",0.00308304594224158,0.314846045406245,0.576,0.249,1,"0","ARL8A"
-## "LASP1",0.00309254983575885,0.333973882093705,0.56,0.215,1,"0","LASP1"
-## "ROMO1",0.00309338601876586,0.311122068153586,0.626,0.327,1,"0","ROMO1"
-## "EP300",0.00309623849437878,0.370006270656929,0.668,0.298,1,"0","EP300"
-## "SNX27",0.00313463080725504,0.49381278699026,0.471,0.098,1,"0","SNX27"
-## "SNN",0.00332109927231274,0.59514204623079,0.55,0.129,1,"0","SNN"
-## "HAVCR2",0.00335451295544804,0.251058439081809,0.32,0.083,1,"0","HAVCR2"
-## "MAPKAPK3",0.00337028716142512,0.527995803803199,0.564,0.139,1,"0","MAPKAPK3"
-## "IL1RAP",0.00337866628389326,0.336475194498515,0.246,0.033,1,"0","IL1RAP"
-## "JARID2",0.00340046498114919,0.575512906913106,0.633,0.208,1,"0","JARID2"
-## "LARP1",0.00352088414786712,0.318695793580839,0.481,0.174,1,"0","LARP1"
-## "TRIM8",0.00352361823511203,0.430983077101643,0.629,0.24,1,"0","TRIM8"
-## "PTGER2",0.00356552861679157,0.437935573192229,0.503,0.167,1,"0","PTGER2"
-## "RIOK3",0.00357269359312493,0.500144147206263,0.761,0.35,1,"0","RIOK3"
-## "KLF7",0.00361344507501999,0.297320222096276,0.327,0.086,1,"0","KLF7"
-## "CITED4",0.0036587095942276,0.456611190666463,0.369,0.058,1,"0","CITED4"
-## "APAF1",0.00370365559955026,0.26532774606802,0.271,0.057,1,"0","APAF1"
-## "ADAM15",0.00370807355512276,0.395413687093619,0.358,0.063,1,"0","ADAM15"
-## "TOLLIP",0.00373490580755357,0.408749903313958,0.45,0.124,1,"0","TOLLIP"
-## "ATF4",0.0037674115136981,0.571654865348521,0.82,0.439,1,"0","ATF4"
-## "MYO1F",0.00378182951182565,0.768025978289789,0.928,0.508,1,"0","MYO1F"
-## "HEBP2",0.00380114308205375,0.457068490643832,0.796,0.419,1,"0","HEBP2"
-## "KLF11",0.00380182992636384,0.382532426794511,0.342,0.088,1,"0","KLF11"
-## "SBF2",0.0038311469552991,0.340478687301043,0.366,0.09,1,"0","SBF2"
-## "DIAPH2",0.003832282603799,0.388809056820821,0.395,0.103,1,"0","DIAPH2"
-## "SLA",0.00384027942717168,0.599429555001686,0.66,0.3,1,"0","SLA"
-## "LAMTOR2",0.00386533271281772,0.553088532410756,0.706,0.232,1,"0","LAMTOR2"
-## "PPM1F",0.00395443940730137,0.617869524076679,0.464,0.063,1,"0","PPM1F"
-## "SRA1",0.00396036491465478,0.45665469526086,0.556,0.19,1,"0","SRA1"
-## "FLOT2",0.00396036491465478,0.336555431859972,0.478,0.186,1,"0","FLOT2"
-## "CMTM7",0.00396080469077745,0.272048113112422,0.495,0.186,1,"0","CMTM7"
-## "SLC16A6",0.00396157185137501,0.373149816032246,0.277,0.045,1,"0","SLC16A6"
-## "AC007952.4",0.00399451838793061,0.484846492138575,0.483,0.166,1,"0","AC007952.4"
-## "NFE2",0.00404511899626479,0.452744641814321,0.312,0.016,1,"0","NFE2"
-## "PLD3",0.00405927343123196,0.511098560452195,0.525,0.141,1,"0","PLD3"
-## "GPBAR1",0.00409601609129389,0.430056967734964,0.32,0.036,1,"0","GPBAR1"
-## "ANO6",0.00409601609129389,0.314004682093233,0.344,0.064,1,"0","ANO6"
-## "KIAA0513",0.00421069668033455,0.322293565457963,0.24,0.029,1,"0","KIAA0513"
-## "DENND1A",0.00428004615426131,0.402379156632363,0.332,0.051,1,"0","DENND1A"
-## "PSTPIP1",0.00430951853871631,0.380471321326633,0.599,0.241,1,"0","PSTPIP1"
-## "BNIP3L",0.00435921283146746,0.497761808006021,0.725,0.305,1,"0","BNIP3L"
-## "CD151",0.00451069217384191,0.250549492102953,0.458,0.129,1,"0","CD151"
-## "CAPZA2",0.00453725137128891,0.50097972547216,0.782,0.349,1,"0","CAPZA2"
-## "UQCRC1",0.00454166580010449,0.493313313176557,0.642,0.224,1,"0","UQCRC1"
-## "ARHGAP26",0.00459838331475549,0.50099329004479,0.533,0.147,1,"0","ARHGAP26"
-## "ZMIZ1",0.00467381484732962,0.469745060538741,0.389,0.06,1,"0","ZMIZ1"
-## "ECE1",0.00467619244155701,0.256929745234708,0.324,0.094,1,"0","ECE1"
-## "ATP6AP2",0.00470521617199823,0.565564835263791,0.807,0.43,1,"0","ATP6AP2"
-## "RELT",0.00478335250569142,0.650759929720149,0.556,0.114,1,"0","RELT"
-## "SERPINB8",0.00483240924945561,0.347011377415833,0.312,0.058,1,"0","SERPINB8"
-## "HSPA6",0.0048514320456331,0.287844880271399,0.253,0.039,1,"0","HSPA6"
-## "CHMP4B",0.00491873551566789,0.381569864800373,0.611,0.271,1,"0","CHMP4B"
-## "AP1B1",0.00495425225267316,0.294762259899086,0.365,0.1,1,"0","AP1B1"
-## "SP1",0.00499333305047481,0.308734669665037,0.357,0.091,1,"0","SP1"
-## "LGALS8",0.00502247785417516,0.276357115574521,0.423,0.138,1,"0","LGALS8"
-## "RIT1",0.00526132161380281,0.480761627572121,0.519,0.136,1,"0","RIT1"
-## "HCFC1R1",0.00540349990754345,0.257507561916067,0.348,0.101,1,"0","HCFC1R1"
-## "SLC36A4",0.00547125344709908,0.269008948067194,0.308,0.07,1,"0","SLC36A4"
-## "RCOR1",0.00556122893803889,0.424760304350262,0.436,0.102,1,"0","RCOR1"
-## "NKIRAS2",0.00558794943537328,0.252257296275528,0.322,0.083,1,"0","NKIRAS2"
-## "YTHDF3",0.00566605117263365,0.36707623802661,0.407,0.119,1,"0","YTHDF3"
-## "ARF3",0.00577449006123932,0.330615229017378,0.499,0.146,1,"0","ARF3"
-## "AZIN1",0.00582261387738305,0.475054208555069,0.481,0.149,1,"0","AZIN1"
-## "SEM1",0.00584687504915494,0.300064497939013,0.662,0.351,1,"0","SEM1"
-## "RPN1",0.00585083911221806,0.427580117358843,0.564,0.192,1,"0","RPN1"
-## "G6PD",0.0058671832509244,0.399177453931112,0.523,0.181,1,"0","G6PD"
-## "CCL3",0.0058794334938185,1.16847694942353,0.302,0.1,1,"0","CCL3"
-## "CUX1",0.00598125352888488,0.590000675253629,0.622,0.187,1,"0","CUX1"
-## "NDUFS6",0.00598950878539946,0.310594731129547,0.766,0.418,1,"0","NDUFS6"
-## "SAMD4A",0.00609390396780811,0.379921404574317,0.235,0.029,1,"0","SAMD4A"
-## "MNT",0.00609553104250723,0.359724353967276,0.434,0.128,1,"0","MNT"
-## "DNASE1L1",0.00620498102660733,0.288940836647988,0.281,0.054,1,"0","DNASE1L1"
-## "RAB10",0.00625327402663312,0.593738228392658,0.54,0.143,1,"0","RAB10"
-## "RUFY3",0.00634531414312513,0.278875581971207,0.33,0.092,1,"0","RUFY3"
-## "HSD17B11",0.0064310283915084,0.490009527064793,0.672,0.292,1,"0","HSD17B11"
-## "CES1",0.00648831044327321,0.468865513939483,0.285,0.055,1,"0","CES1"
-## "AC005280.2",0.00653556966225464,0.405939416677302,0.231,0.006,1,"0","AC005280.2"
-## "DAPK1",0.00653556966225464,0.323049240332493,0.26,0.024,1,"0","DAPK1"
-## "CAPZA1",0.00654683539327502,0.311867212822008,0.698,0.366,1,"0","CAPZA1"
-## "ABCA1",0.00664974145240545,0.403501095341942,0.253,0.042,1,"0","ABCA1"
-## "PRKAG2",0.00674227084610814,0.323758033640333,0.505,0.176,1,"0","PRKAG2"
-## "CHST15",0.00678337662066871,0.452632044921768,0.325,0.037,1,"0","CHST15"
-## "MYO9B",0.00690825367962105,0.320009295440193,0.688,0.346,1,"0","MYO9B"
-## "EPN1",0.00693604641335895,0.322339485602845,0.51,0.192,1,"0","EPN1"
-## "SH3GLB1",0.00695045869622534,0.389756378004318,0.702,0.355,1,"0","SH3GLB1"
-## "SRSF9",0.00718490812039298,0.305421470746053,0.824,0.532,1,"0","SRSF9"
-## "PRDX1",0.00728693662465146,0.480049158381616,0.751,0.343,1,"0","PRDX1"
-## "ENY2",0.00729280730745029,0.363175879308022,0.765,0.403,1,"0","ENY2"
-## "PRNP",0.00751009329503383,0.439207901160627,0.631,0.251,1,"0","PRNP"
-## "UBR4",0.00753028416747171,0.491369725545431,0.561,0.183,1,"0","UBR4"
-## "ATP6V1A",0.00764498660863678,0.529536032438868,0.452,0.074,1,"0","ATP6V1A"
-## "RHOG",0.00776283068552764,0.762868435978771,0.912,0.504,1,"0","RHOG"
-## "TNFRSF1B",0.00777134136032018,0.935724797604434,0.86,0.342,1,"0","TNFRSF1B"
-## "ANP32A",0.00782410759817246,0.405972434070619,0.751,0.39,1,"0","ANP32A"
-## "GAB2",0.00813502270205861,0.441162471096027,0.334,0.027,1,"0","GAB2"
-## "HK1",0.0081442783136426,0.369602025285112,0.477,0.152,1,"0","HK1"
-## "CANX",0.00815297897101612,0.34342455857081,0.682,0.383,1,"0","CANX"
-## "TLN1",0.00822750135457603,0.345849709684789,0.857,0.492,1,"0","TLN1"
-## "CNIH4",0.00831866846023353,0.439634425430065,0.555,0.177,1,"0","CNIH4"
-## "MAP1S",0.00845049315926511,0.291192456506139,0.309,0.062,1,"0","MAP1S"
-## "JAK2",0.00866972148526648,0.359723938645608,0.365,0.073,1,"0","JAK2"
-## "CLMN",0.00867201398735977,0.371034987860695,0.264,0.018,1,"0","CLMN"
-## "TRIM25",0.00869704268277174,0.582410727115753,0.474,0.083,1,"0","TRIM25"
-## "LRRFIP2",0.00869710380782794,0.340599219160322,0.438,0.146,1,"0","LRRFIP2"
-## "EPB41L3",0.00874245888657066,0.368506444075273,0.275,0.024,1,"0","EPB41L3"
-## "EVI5",0.00881036479165348,0.381857205173273,0.326,0.051,1,"0","EVI5"
-## "WDR26",0.0090745747171582,0.283280636748134,0.566,0.247,1,"0","WDR26"
-## "PELI1",0.00907502333740734,0.404625646145075,0.466,0.168,1,"0","PELI1"
-## "CTBS",0.00916729401456667,0.331434282774224,0.45,0.15,1,"0","CTBS"
-## "PQLC1",0.00931673935861347,0.469617107395031,0.558,0.179,1,"0","PQLC1"
-## "ARSD",0.00944589524295045,0.262811166845214,0.235,0.034,1,"0","ARSD"
-## "TRIM38",0.00965856536624437,0.331830154943417,0.689,0.35,1,"0","TRIM38"
-## "PAK2",0.00980422680552639,0.370457722417625,0.744,0.406,1,"0","PAK2"
-## "MTF1",0.00983423122614084,0.324120822441984,0.344,0.094,1,"0","MTF1"
-## "TMBIM6",0.00984664194602298,0.309394320436759,0.926,0.674,1,"0","TMBIM6"
-## "NCOR2",0.00985200559347873,0.300456662049959,0.466,0.163,1,"0","NCOR2"
-## "ID2",0.0098637845037978,0.526872293113761,0.778,0.477,1,"0","ID2"
-## "CCT5",0.0099063116459495,0.263266587751239,0.531,0.219,1,"0","CCT5"
-## "ARF5",0.00991100805845376,0.32882686626552,0.771,0.471,1,"0","ARF5"
-## "SPECC1",0.00995079640794206,0.417880333250851,0.345,0.049,1,"0","SPECC1"
-## "TUBA1C",0.00997769406177931,0.305382819057701,0.477,0.145,1,"0","TUBA1C"
-## "CD3E",3.18637199311995e-12,1.70751405523118,0.952,0.271,5.77402468873265e-08,"1","CD3E"
-## "CCL5",3.14627377800142e-11,1.97149481560966,0.991,0.387,5.70136271311638e-07,"1","CCL5"
-## "CD2",3.54174753198708e-10,1.45983098329003,0.75,0.213,6.41800070271379e-06,"1","CD2"
-## "CD3G",4.42055163609806e-10,1.91932027255936,0.856,0.162,8.0104816197733e-06,"1","CD3G"
-## "CD3D",4.68639590052503e-10,2.1164111841444,0.935,0.185,8.4922180113414e-06,"1","CD3D"
-## "IL32",7.84645629702922e-10,1.74324830599163,0.983,0.324,1.42185634558467e-05,"1","IL32"
-## "PPP2R5C",1.83021661968913e-09,1.08006515896636,0.904,0.614,3.31653553653867e-05,"1","PPP2R5C"
-## "LYAR",2.05752262971187e-09,1.62349402275727,0.782,0.241,3.72843675730088e-05,"1","LYAR"
-## "PIK3R1",3.25040986235613e-09,1.18329389085627,0.758,0.473,5.89006771157554e-05,"1","PIK3R1"
-## "TRBC2",5.48823131072629e-09,1.4661146616805,0.785,0.341,9.9452239581671e-05,"1","TRBC2"
-## "KLRG1",8.53011341620525e-09,1.57224834928453,0.63,0.073,0.000154574185215055,"1","KLRG1"
-## "GZMA",1.38327817596599e-08,1.34768451784611,0.909,0.229,0.000250663838266798,"1","GZMA"
-## "SYNE2",2.56250503972604e-08,1.20478723543336,0.821,0.315,0.000464351538248755,"1","SYNE2"
-## "GZMH",4.06598731761734e-08,1.96451850000666,0.837,0.189,0.000736797561825438,"1","GZMH"
-## "TRGC2",5.03679516918408e-08,1.71033438419096,0.585,0.056,0.000912717652607848,"1","TRGC2"
-## "GZMK",7.77888271636172e-08,2.20564283637476,0.414,0.043,0.00140961133703191,"1","GZMK"
-## "C12orf75",2.33788024225406e-07,1.1509260274077,0.749,0.243,0.00423647278698857,"1","C12orf75"
-## "CST7",3.88439325629669e-07,1.23389484452748,0.955,0.294,0.00703890901973523,"1","CST7"
-## "MATK",5.12154742747853e-07,0.834155948696091,0.553,0.158,0.00928075609333385,"1","MATK"
-## "NKG7",5.86343549063812e-07,1.35916148716637,0.983,0.393,0.0106251314525853,"1","NKG7"
-## "CD8A",7.39123720331121e-07,2.18837721295942,0.557,0.07,0.0133936609361203,"1","CD8A"
-## "CD99",9.42955193778136e-07,1.01927382540149,0.934,0.653,0.0170872910664536,"1","CD99"
-## "HCST",9.90599392436781e-07,0.996008657672954,0.951,0.694,0.0179506515903469,"1","HCST"
-## "CD8B",1.29663836415833e-06,1.81992983574448,0.466,0.039,0.023496383796913,"1","CD8B"
-## "TRAC",2.27329428571348e-06,1.5817531671365,0.731,0.169,0.0411943657514139,"1","TRAC"
-## "CD81",2.34312712240028e-06,0.773715181130163,0.868,0.599,0.0424598065850155,"1","CD81"
-## "GZMM",2.4778581641696e-06,1.35700906287978,0.894,0.256,0.0449012677929174,"1","GZMM"
-## "SYTL3",2.80219532398507e-06,1.10558640498909,0.63,0.194,0.0507785814659334,"1","SYTL3"
-## "PAXX",3.45607002135217e-06,0.770625354461243,0.678,0.424,0.0626274448569226,"1","PAXX"
-## "SH2D1A",5.38271155022275e-06,0.665159174392409,0.337,0.084,0.0975401160015864,"1","SH2D1A"
-## "IL7R",5.58879922964708e-06,1.03274354533827,0.572,0.185,0.101274630840435,"1","IL7R"
-## "LINC01871",7.0166091111552e-06,1.08766081404036,0.464,0.075,0.127147973703243,"1","LINC01871"
-## "HOPX",8.62793316512054e-06,0.832147815227196,0.694,0.23,0.156346776885149,"1","HOPX"
-## "C12orf57",9.29186958608239e-06,0.801409062024085,0.755,0.46,0.168377968769399,"1","C12orf57"
-## "ABHD17A",1.06350807905893e-05,0.609491910132088,0.793,0.543,0.192718299006269,"1","ABHD17A"
-## "RORA",1.07984699881654e-05,1.22277374517335,0.779,0.272,0.195679074655546,"1","RORA"
-## "SPOCK2",1.23720773364747e-05,1.24241099334533,0.72,0.24,0.224194413414257,"1","SPOCK2"
-## "GATA3",1.32204680273431e-05,0.502380241510656,0.347,0.132,0.239568101123485,"1","GATA3"
-## "DDIT4",1.39186932504738e-05,0.722069456515237,0.638,0.375,0.252220640391836,"1","DDIT4"
-## "ITK",2.20698644681245e-05,0.543361321177619,0.35,0.129,0.399928014026884,"1","ITK"
-## "ARL4C",3.88299825049661e-05,1.17064361109745,0.925,0.465,0.703638112972491,"1","ARL4C"
-## "SH2D2A",4.7969284860744e-05,0.576867096804019,0.358,0.109,0.869251410961542,"1","SH2D2A"
-## "CTSW",5.86491190954171e-05,0.906195828391044,0.847,0.257,1,"1","CTSW"
-## "STAT4",6.49124541647333e-05,0.80739232321883,0.573,0.2,1,"1","STAT4"
-## "SYNE1",6.71914301159633e-05,0.88382487935469,0.659,0.284,1,"1","SYNE1"
-## "ZAP70",6.77212846832511e-05,0.479052808092605,0.495,0.206,1,"1","ZAP70"
-## "ITM2A",7.26300682491374e-05,0.695640748424115,0.46,0.162,1,"1","ITM2A"
-## "SRSF7",7.81278935117757e-05,1.00989203472471,0.866,0.653,1,"1","SRSF7"
-## "RASGRP1",7.9983123551258e-05,0.900800599467196,0.481,0.164,1,"1","RASGRP1"
-## "KLRD1",0.000116267865810293,0.811314609501504,0.606,0.202,1,"1","KLRD1"
-## "AC058791.1",0.000117080799029267,0.668039043944643,0.517,0.249,1,"1","AC058791.1"
-## "A2M-AS1",0.00012576898232655,0.901439339900915,0.334,0.038,1,"1","A2M-AS1"
-## "PRKCH",0.000127162475399111,0.693510962022255,0.528,0.194,1,"1","PRKCH"
-## "DUSP2",0.000133816996718094,1.49748018071748,0.777,0.327,1,"1","DUSP2"
-## "SAMD3",0.000167728412134926,1.03449456157236,0.554,0.141,1,"1","SAMD3"
-## "PRF1",0.000179513074330696,0.269450523505278,0.73,0.217,1,"1","PRF1"
-## "TNFAIP3",0.000238190912996872,0.892811671691706,0.822,0.559,1,"1","TNFAIP3"
-## "APOBEC3G",0.000254410598218762,0.83203037988631,0.529,0.263,1,"1","APOBEC3G"
-## "GNLY",0.000264755500483719,0.545389773968945,0.687,0.276,1,"1","GNLY"
-## "TUBA4A",0.000267734841401263,0.871588903478873,0.605,0.376,1,"1","TUBA4A"
-## "RUNX3",0.000320980785335123,0.888697913502441,0.803,0.47,1,"1","RUNX3"
-## "LAT",0.000358407585802407,0.648494463558918,0.511,0.205,1,"1","LAT"
-## "FYN",0.000442098349143376,0.835733661882754,0.755,0.479,1,"1","FYN"
-## "FGFBP2",0.000453038897494344,0.765148709403214,0.658,0.196,1,"1","FGFBP2"
-## "CLEC2D",0.000492564668279941,0.746543215951134,0.653,0.319,1,"1","CLEC2D"
-## "LAG3",0.000513173040956314,0.733836584775706,0.314,0.047,1,"1","LAG3"
-## "CXCR4",0.00073977498223996,0.896339426520744,0.911,0.616,1,"1","CXCR4"
-## "ATG2A",0.000792831035451012,0.817289233454903,0.498,0.264,1,"1","ATG2A"
-## "CCL4",0.000812324364657244,1.24236784083724,0.659,0.203,1,"1","CCL4"
-## "FKBP11",0.000830964165150166,0.777079213838687,0.53,0.211,1,"1","FKBP11"
-## "AKNA",0.000863864442216819,0.977816493941195,0.755,0.472,1,"1","AKNA"
-## "TSEN54",0.000960977358577163,0.697456257506932,0.406,0.147,1,"1","TSEN54"
-## "TENT5C",0.000999557748211158,0.571514475715922,0.374,0.138,1,"1","TENT5C"
-## "PYHIN1",0.00101944575664001,0.616507402890226,0.449,0.158,1,"1","PYHIN1"
-## "PTMS",0.00119005995044986,0.912991343938002,0.391,0.115,1,"1","PTMS"
-## "RNF125",0.0012838974446025,0.938360538522677,0.62,0.256,1,"1","RNF125"
-## "S1PR5",0.00180072090410301,0.485730843337636,0.385,0.134,1,"1","S1PR5"
-## "GZMB",0.00187093421040055,0.396258033998158,0.686,0.218,1,"1","GZMB"
-## "BCL11B",0.00188077389743809,0.651609995389488,0.353,0.11,1,"1","BCL11B"
-## "TRGC1",0.00194892933127195,1.11682191072102,0.252,0.051,1,"1","TRGC1"
-## "CD6",0.00224649447372986,1.0645927820755,0.546,0.138,1,"1","CD6"
-## "RARRES3",0.0023535184297702,0.688294487468845,0.737,0.494,1,"1","RARRES3"
-## "CREM",0.00294098630650034,0.835987295458653,0.42,0.198,1,"1","CREM"
-## "DNAJB1",0.00294438840961333,0.743542576834306,0.542,0.3,1,"1","DNAJB1"
-## "FCRL6",0.00327251513845385,0.531567152840828,0.295,0.085,1,"1","FCRL6"
-## "THEMIS",0.00346244582563732,0.645979695995201,0.235,0.027,1,"1","THEMIS"
-## "ARPC5L",0.00367161405028659,0.571059836176119,0.71,0.453,1,"1","ARPC5L"
-## "CD5",0.00385189406003715,0.766558553261748,0.343,0.068,1,"1","CD5"
-## "MIAT",0.00404511899626479,0.674587832352435,0.288,0.06,1,"1","MIAT"
-## "OCIAD2",0.0045546053779352,0.465785808081773,0.447,0.222,1,"1","OCIAD2"
-## "IL2RG",0.00471974104994697,0.700660146647168,0.748,0.444,1,"1","IL2RG"
-## "EVL",0.00472328418479184,0.547768628177594,0.797,0.542,1,"1","EVL"
-## "CD7",0.00560549759834806,0.378751386310352,0.623,0.302,1,"1","CD7"
-## "GIMAP7",0.0057796751594291,0.635285288003606,0.605,0.349,1,"1","GIMAP7"
-## "TGFBR3",0.00627932385388034,0.604756920342377,0.32,0.085,1,"1","TGFBR3"
-## "CCSER2",0.00645655448777709,0.612338562142897,0.417,0.2,1,"1","CCSER2"
-## "ETS1",0.00755478019417763,0.778322672843146,0.65,0.33,1,"1","ETS1"
-## "SLC38A1",0.00870808848176934,0.668789700089952,0.546,0.262,1,"1","SLC38A1"
-## "CD96",0.00915802691287971,0.631176815469473,0.409,0.145,1,"1","CD96"
-## "CD79A",9.29132460579452e-20,3.28477036676165,0.974,0.07,1.68368093181603e-15,"2","CD79A"
-## "IGHM",9.7547271104482e-20,4.26940299663827,0.991,0.061,1.76765409968432e-15,"2","IGHM"
-## "IGHD",1.25934637105797e-19,3.54332001273608,0.951,0.026,2.28206155899415e-15,"2","IGHD"
-## "TNFRSF13C",6.46608182340782e-19,2.46011809682012,0.895,0.066,1.17171868721973e-14,"2","TNFRSF13C"
-## "MS4A1",3.53022051681411e-18,2.49369713801674,0.908,0.063,6.39711259851885e-14,"2","MS4A1"
-## "LINC00926",3.15043973884514e-16,2.57255488579663,0.885,0.059,5.70891185076128e-12,"2","LINC00926"
-## "HLA-DQB1",1.1685887290945e-15,1.99152778034829,0.974,0.527,2.11759963599215e-11,"2","HLA-DQB1"
-## "BANK1",2.25274117022224e-15,2.13617730717682,0.836,0.065,4.08219227455973e-11,"2","BANK1"
-## "TCL1A",2.32074058463766e-15,2.58355612196478,0.747,0.008,4.20541401342191e-11,"2","TCL1A"
-## "HLA-DRA1",6.21506438901153e-15,1.90369738730405,0.991,0.62,1.12623181793278e-10,"2","HLA-DRA"
-## "HLA-DPB1",7.32151830804647e-15,1.60547190308313,0.974,0.67,1.3267323326011e-10,"2","HLA-DPB1"
-## "HLA-DPA1",1.58836038671039e-13,1.26797095280907,0.97,0.686,2.87826785675789e-09,"2","HLA-DPA1"
-## "CD79B",6.88152246279434e-13,2.47096504083391,0.878,0.14,1.24700068548296e-08,"2","CD79B"
-## "CD83",9.39349863983677e-13,2.38471029482067,0.885,0.287,1.70219588852482e-08,"2","CD83"
-## "RALGPS2",9.74622397811915e-13,2.06934208369513,0.738,0.074,1.76611324707497e-08,"2","RALGPS2"
-## "FCER2",3.98409133192312e-12,1.8642610506802,0.649,0.026,7.21957190257788e-08,"2","FCER2"
-## "CXCR41",5.89228763522232e-12,1.6769172690947,0.97,0.636,1.06774144237864e-07,"2","CXCR4"
-## "HLA-DRB1",8.23262025115954e-12,1.52011522353556,0.99,0.71,1.49183311571262e-07,"2","HLA-DRB1"
-## "CD22",2.37173391668109e-11,1.73486667326579,0.651,0.049,4.29781903041781e-07,"2","CD22"
-## "PAX5",7.24347747875375e-11,1.4948194941067,0.531,0.025,1.31259055392497e-06,"2","PAX5"
-## "HLA-DQA1",1.21549066646314e-10,1.44309051943708,0.88,0.306,2.20259063669786e-06,"2","HLA-DQA1"
-## "TAGAP",4.37549684042855e-10,1.40935675104563,0.799,0.368,7.92883782454058e-06,"2","TAGAP"
-## "HLA-DOB",4.57935581005576e-10,1.08674030818704,0.428,0.031,8.29825066340205e-06,"2","HLA-DOB"
-## "AFF3",6.16989682828748e-10,1.77662493597906,0.693,0.042,1.11804700425397e-05,"2","AFF3"
-## "NCK2",1.10824827949601e-09,0.920376736504198,0.572,0.227,2.00825670727473e-05,"2","NCK2"
-## "YBX31",1.20945091735375e-09,1.85484011662029,0.834,0.342,2.19164600733673e-05,"2","YBX3"
-## "FOXP1",1.33412123219286e-09,1.50361596818239,0.887,0.491,2.41756108485667e-05,"2","FOXP1"
-## "TCF4",1.91367916748358e-09,1.58974943534128,0.627,0.103,3.46777801939699e-05,"2","TCF4"
-## "NFKBID",1.94186358178487e-09,2.08359685683695,0.759,0.213,3.51885099655236e-05,"2","NFKBID"
-## "FAM129C",2.70435774249524e-09,1.66326341616702,0.606,0.026,4.90056666517563e-05,"2","FAM129C"
-## "FCRL1",3.15790000847888e-09,1.65246166179647,0.592,0.022,5.72243060536457e-05,"2","FCRL1"
-## "P2RX5",3.15790000847888e-09,1.51194590691474,0.567,0.063,5.72243060536457e-05,"2","P2RX5"
-## "BCL11A",3.81690440523011e-09,1.5701965581522,0.609,0.118,6.91661247271749e-05,"2","BCL11A"
-## "IGKC",6.31081301353268e-09,2.72414858455722,0.766,0.259,0.000114358242618226,"2","IGKC"
-## "VPREB3",9.19012240138035e-09,1.75484101411671,0.581,0.024,0.000166534208035413,"2","VPREB3"
-## "HLA-DMA",2.26520706198771e-08,1.18502309407822,0.829,0.39,0.000410478171702793,"2","HLA-DMA"
-## "RBM38",3.51468941731788e-08,0.78627810130866,0.759,0.487,0.000636896869312174,"2","RBM38"
-## "PRDM2",6.54121122410489e-08,0.990842779347594,0.693,0.413,0.00118533288592005,"2","PRDM2"
-## "TSPAN13",7.77888271636172e-08,1.04057329731795,0.398,0.017,0.00140961133703191,"2","TSPAN13"
-## "ORAI2",7.96585543107623e-08,1.13521961076197,0.565,0.229,0.00144349266266532,"2","ORAI2"
-## "LTB",8.52367088810234e-08,1.24214093084889,0.906,0.352,0.00154457440163302,"2","LTB"
-## "HLA-DMB1",1.18439464058566e-07,1.41691152345162,0.778,0.3,0.00214624152820528,"2","HLA-DMB"
-## "SNX2",1.24541936063529e-07,1.23844735220629,0.761,0.391,0.0022568244234072,"2","SNX2"
-## "CD40",1.30639659422972e-07,1.56902258422422,0.621,0.084,0.00236732126840368,"2","CD40"
-## "TAF1D",1.44881320383561e-07,1.17704058317882,0.836,0.524,0.0026253944066705,"2","TAF1D"
-## "IRF8",1.5443861490085e-07,1.47347042378481,0.679,0.217,0.00279858214061831,"2","IRF8"
-## "PLPP5",1.61412950517934e-07,1.56796036422698,0.614,0.099,0.00292496407633549,"2","PLPP5"
-## "PDE4B",2.05471893515026e-07,0.728622422912262,0.525,0.272,0.00372335618238578,"2","PDE4B"
-## "GNG7",2.54981512685414e-07,1.27345437094038,0.524,0.053,0.00462051999137239,"2","GNG7"
-## "ZCCHC7",2.9368523312464e-07,1.27576317182134,0.576,0.164,0.0053218701094516,"2","ZCCHC7"
-## "EZR",2.94491313883658e-07,1.1709654055524,0.85,0.56,0.00533647709888577,"2","EZR"
-## "MEF2C",3.30805071793667e-07,1.61295344640344,0.686,0.197,0.00599451870597303,"2","MEF2C"
-## "PDLIM1",4.47360915265175e-07,0.583056958255292,0.592,0.151,0.00810662714552024,"2","PDLIM1"
-## "STRBP",7.07826965639806e-07,1.29304800424626,0.496,0.058,0.0128265324443589,"2","STRBP"
-## "P2RY10",9.03651508348462e-07,0.785403626002317,0.4,0.107,0.0163750689827825,"2","P2RY10"
-## "BLK",1.35779860333711e-06,1.17889732657965,0.48,0.04,0.0246046684910718,"2","BLK"
-## "RAB30",1.35779860333711e-06,0.873028122412204,0.347,0.041,0.0246046684910718,"2","RAB30"
-## "ADAM28",1.6639664029914e-06,1.31051642376712,0.452,0.061,0.0301527351886072,"2","ADAM28"
-## "MDM4",1.69217989640881e-06,0.895122395035952,0.763,0.515,0.030663991902824,"2","MDM4"
-## "FCMR",2.73202569868507e-06,1.01608337206424,0.52,0.151,0.0495070376858721,"2","FCMR"
-## "RHOH",4.30083537668804e-06,1.00118526384379,0.705,0.337,0.0779354378609639,"2","RHOH"
-## "EAF2",4.81940108854278e-06,1.40514138679856,0.508,0.116,0.0873323671254837,"2","EAF2"
-## "TPD52",5.88196663685583e-06,0.891612661295556,0.436,0.097,0.106587117426464,"2","TPD52"
-## "TCOF1",6.02653349137635e-06,1.28693195597367,0.602,0.236,0.109206813397231,"2","TCOF1"
-## "TSTD1",6.11786354809541e-06,1.02243443270197,0.616,0.3,0.110861805355037,"2","TSTD1"
-## "TMEM243",7.45017218690036e-06,1.03459436489239,0.707,0.378,0.135004570198821,"2","TMEM243"
-## "CD19",7.75182569435383e-06,0.822795483872755,0.312,0.024,0.140470833407386,"2","CD19"
-## "CXXC5",8.87844174899173e-06,1.02267280533173,0.513,0.212,0.160886242933479,"2","CXXC5"
-## "EIF1B",1.09007321097809e-05,0.808384709082513,0.805,0.568,0.19753216656134,"2","EIF1B"
-## "PPP1R15A",1.36506835557595e-05,0.912945227422741,0.757,0.546,0.247364036713917,"2","PPP1R15A"
-## "NUP88",1.38618143960548e-05,0.860782905591503,0.4,0.123,0.25118993867091,"2","NUP88"
-## "HLA-DQA2",1.59404479567909e-05,1.30818913587923,0.342,0.082,0.288856857425008,"2","HLA-DQA2"
-## "SNX9",1.62197221006432e-05,1.12645553910071,0.494,0.146,0.293917584185755,"2","SNX9"
-## "CHD7",1.68482496351483e-05,0.892698864825385,0.461,0.12,0.305307131638522,"2","CHD7"
-## "CCR7",1.7384157556071e-05,1.29999986463557,0.518,0.108,0.315018319073563,"2","CCR7"
-## "NCOA3",1.96128019490015e-05,0.78442598433112,0.499,0.268,0.355403584117856,"2","NCOA3"
-## "IKZF3",2.13491435556216e-05,0.660850214365712,0.468,0.203,0.386867830371419,"2","IKZF3"
-## "CD69",2.15474330581531e-05,2.19916624954177,0.85,0.442,0.390461034446793,"2","CD69"
-## "REL",2.28866129822005e-05,0.843549519545577,0.841,0.637,0.414728313850455,"2","REL"
-## "IL4R",2.77915131927748e-05,1.19564758347774,0.536,0.258,0.503610010566272,"2","IL4R"
-## "BIRC3",2.92157207297475e-05,1.15172793732037,0.663,0.321,0.529418075343755,"2","BIRC3"
-## "IGLC2",3.0300239257282e-05,2.18192409844449,0.464,0.095,0.549070635581207,"2","IGLC2"
-## "ICOSLG",3.23872985920377e-05,0.896928708157293,0.337,0.061,0.586890237786315,"2","ICOSLG"
-## "BACH2",3.95727089883056e-05,1.34986073189842,0.492,0.046,0.717097059577085,"2","BACH2"
-## "IGLC3",4.08597614016571e-05,2.27680499923161,0.363,0.061,0.740419736359428,"2","IGLC3"
-## "HLA-DOA",4.19923452953945e-05,0.715254403349423,0.264,0.03,0.760943289097843,"2","HLA-DOA"
-## "BCL7A",4.38981416373353e-05,1.12108714433804,0.38,0.027,0.795478224610153,"2","BCL7A"
-## "CLEC2D1",4.45522932578244e-05,0.674144066394796,0.628,0.352,0.807332106125036,"2","CLEC2D"
-## "PMAIP1",4.66375454068891e-05,0.83399019571107,0.581,0.282,0.845118960318238,"2","PMAIP1"
-## "TLE1",4.67649855190425e-05,0.916307445994783,0.391,0.087,0.847428302590569,"2","TLE1"
-## "FCRLA",5.59018099409111e-05,0.855046794802757,0.318,0.027,1,"2","FCRLA"
-## "CD55",5.81628098362665e-05,0.785173575926047,0.728,0.471,1,"2","CD55"
-## "EBF1",6.11302707577588e-05,0.79541989169099,0.281,0.019,1,"2","EBF1"
-## "COL19A1",6.5047562222275e-05,0.737563021231225,0.253,0.006,1,"2","COL19A1"
-## "PLEKHG1",6.5047562222275e-05,0.623934428006855,0.223,0.015,1,"2","PLEKHG1"
-## "FCHSD2",6.56068310601883e-05,0.778863416656435,0.37,0.114,1,"2","FCHSD2"
-## "PKIG",8.06907480600562e-05,0.908365263682994,0.415,0.037,1,"2","PKIG"
-## "CDCA7L",8.4012554979161e-05,0.974864476919409,0.387,0.031,1,"2","CDCA7L"
-## "FADS3",8.76040439028871e-05,0.81294039966099,0.298,0.043,1,"2","FADS3"
-## "POU2AF1",9.09326090308504e-05,0.793672018947959,0.323,0.034,1,"2","POU2AF1"
-## "GGA2",9.14025694531804e-05,0.66547043869639,0.424,0.219,1,"2","GGA2"
-## "SMAP2",9.54769223955335e-05,0.985804172346985,0.796,0.558,1,"2","SMAP2"
-## "CAMK2D",0.000122973518647783,0.859147378120333,0.421,0.142,1,"2","CAMK2D"
-## "TMEM156",0.000126184297123364,0.896055318461997,0.389,0.08,1,"2","TMEM156"
-## "COBLL1",0.000131411617389088,0.856584450614558,0.314,0.029,1,"2","COBLL1"
-## "LY9",0.000156340148085271,0.955832016267661,0.398,0.126,1,"2","LY9"
-## "MICAL3",0.000194093370998179,0.716942343796931,0.288,0.042,1,"2","MICAL3"
-## "SNHG7",0.000195858392435915,1.14214824444303,0.74,0.394,1,"2","SNHG7"
-## "GNB5",0.000208148140283302,0.632377801991937,0.328,0.108,1,"2","GNB5"
-## "MZB1",0.000215606883398366,0.656914836223927,0.302,0.031,1,"2","MZB1"
-## "FCGR2B",0.000234328559201143,0.614586192813712,0.272,0.058,1,"2","FCGR2B"
-## "SPIB",0.000244734061634876,1.07496990169194,0.361,0.038,1,"2","SPIB"
-## "RUBCNL",0.000253976368838716,0.781232507352665,0.318,0.031,1,"2","RUBCNL"
-## "PCDH9",0.000253976368838716,0.724086577456519,0.216,0.008,1,"2","PCDH9"
-## "FCRL5",0.000253976368838716,0.680082858483345,0.216,0.014,1,"2","FCRL5"
-## "SWAP70",0.000265835000193574,1.27045549310674,0.581,0.148,1,"2","SWAP70"
-## "CHPT1",0.00027417132181814,1.02828710554716,0.524,0.219,1,"2","CHPT1"
-## "TAPT1",0.000275199893348357,0.962064679345899,0.393,0.093,1,"2","TAPT1"
-## "ADAM19",0.000294244094057884,0.7288823330866,0.314,0.088,1,"2","ADAM19"
-## "TUT4",0.000299935660616142,0.568449311110832,0.517,0.312,1,"2","TUT4"
-## "RCSD1",0.000364456486634773,1.21297913957535,0.742,0.413,1,"2","RCSD1"
-## "MARCH11",0.000400641639552342,0.907954563768359,0.553,0.271,1,"2","MARCH1"
-## "HIP1R",0.000415520507017917,0.810515421206259,0.356,0.072,1,"2","HIP1R"
-## "TRA2A",0.000431566616861751,0.656938324419422,0.663,0.442,1,"2","TRA2A"
-## "FAM30A",0.000475573180851498,1.05029284449777,0.339,0.023,1,"2","FAM30A"
-## "CD24",0.000491748359681124,0.875974484836621,0.307,0.023,1,"2","CD24"
-## "JUN",0.000546478440925495,1.21981443904976,0.874,0.529,1,"2","JUN"
-## "FCRL2",0.000607873485615937,0.860014934148754,0.284,0.021,1,"2","FCRL2"
-## "E2F5",0.000633967580260129,0.627606432400689,0.237,0.02,1,"2","E2F5"
-## "SYPL1",0.000653538694181715,0.918039288392525,0.557,0.254,1,"2","SYPL1"
-## "FAM3C",0.000766949453657221,0.706713248402161,0.323,0.096,1,"2","FAM3C"
-## "SEL1L3",0.000861248248440501,0.777555364249348,0.386,0.123,1,"2","SEL1L3"
-## "PWP1",0.000914846392417981,0.599218017650901,0.431,0.224,1,"2","PWP1"
-## "BLNK",0.000953362814751277,0.77300412977257,0.281,0.021,1,"2","BLNK"
-## "SNX22",0.000953362814751277,0.664350828183289,0.222,0.013,1,"2","SNX22"
-## "MACROD2",0.000953362814751277,0.645223384933848,0.213,0.004,1,"2","MACROD2"
-## "ISG20",0.000969960788263779,1.23334646892144,0.796,0.455,1,"2","ISG20"
-## "GRASP",0.0010515316218055,0.811055621617436,0.424,0.176,1,"2","GRASP"
-## "TCP11L2",0.00108030167412282,0.892076913872919,0.452,0.158,1,"2","TCP11L2"
-## "CYB561A3",0.00110372171213724,0.907274253914479,0.494,0.209,1,"2","CYB561A3"
-## "TP53INP1",0.00122812246879658,0.886952127328074,0.365,0.122,1,"2","TP53INP1"
-## "MKNK2",0.00131255816547183,0.858987801166581,0.548,0.332,1,"2","MKNK2"
-## "CIITA",0.00164490749916437,0.740695647297107,0.333,0.109,1,"2","CIITA"
-## "LYN1",0.00178661715055081,0.481209862103169,0.677,0.442,1,"2","LYN"
-## "PIM2",0.00178847520372895,0.724241551096242,0.394,0.137,1,"2","PIM2"
-## "SNX29",0.00181098118172552,1.03742540229933,0.468,0.153,1,"2","SNX29"
-## "TRAF5",0.00184147537925919,0.586120274404029,0.314,0.113,1,"2","TRAF5"
-## "POU2F21",0.00219887222882006,0.732148117450091,0.656,0.388,1,"2","POU2F2"
-## "ADK",0.00222845352149395,0.910198276859882,0.415,0.153,1,"2","ADK"
-## "CD72",0.00231714312935616,1.16998040835995,0.398,0.029,1,"2","CD72"
-## "PHACTR11",0.00258193427077695,1.09911880523626,0.492,0.181,1,"2","PHACTR1"
-## "HVCN1",0.00272935138446698,1.20808575717342,0.546,0.142,1,"2","HVCN1"
-## "USP6NL",0.00273484305047881,0.682220687422901,0.288,0.068,1,"2","USP6NL"
-## "HLA-DRB5",0.0027949285952427,0.578173953467994,0.504,0.292,1,"2","HLA-DRB5"
-## "TMEM123",0.00296709362537019,0.858481727136995,0.742,0.501,1,"2","TMEM123"
-## "CCDC50",0.00326037412467002,0.676771675112915,0.342,0.14,1,"2","CCDC50"
-## "LINC02397",0.00346244582563732,0.795411794827378,0.26,0.01,1,"2","LINC02397"
-## "MYO1C",0.00358323118220009,1.00414135197852,0.26,0.045,1,"2","MYO1C"
-## "MTSS1",0.00396297223923352,0.729477855672832,0.469,0.216,1,"2","MTSS1"
-## "PPM1K",0.00398762916453507,0.875067101269602,0.494,0.203,1,"2","PPM1K"
-## "AC025164.1",0.00405474483699538,0.736790996161069,0.328,0.094,1,"2","AC025164.1"
-## "ABCG1",0.00422310885444579,0.695662752690288,0.295,0.074,1,"2","ABCG1"
-## "TSPAN3",0.00460755892116053,0.626509076086745,0.339,0.122,1,"2","TSPAN3"
-## "ATF7IP",0.00490329368715454,0.981184857487144,0.572,0.304,1,"2","ATF7IP"
-## "BASP11",0.00492347649035589,0.73517732058314,0.445,0.211,1,"2","BASP1"
-## "BCL2",0.00514061297571055,0.695489620820147,0.426,0.177,1,"2","BCL2"
-## "PAWR",0.00718436225537957,0.631941245732403,0.239,0.019,1,"2","PAWR"
-## "NEIL1",0.00760915900259814,1.24677973511859,0.318,0.061,1,"2","NEIL1"
-## "PRF11",5.81741511463186e-15,2.73614088564005,0.966,0.255,1.05417379292244e-10,"3","PRF1"
-## "CD71",1.00776423125246e-14,2.48451064552259,0.951,0.309,1.82616956345258e-10,"3","CD7"
-## "CD247",2.51869643650793e-13,2.19634249298561,0.946,0.327,4.56412981259602e-09,"3","CD247"
-## "CTSW1",9.35226522254815e-13,2.10523938309044,0.971,0.313,1.69472398097795e-08,"3","CTSW"
-## "NKG71",9.71579215628712e-13,2.10817090609794,0.998,0.459,1.76059869664079e-08,"3","NKG7"
-## "GZMB1",1.56642669084981e-12,2.6526719455325,0.962,0.247,2.83852180648894e-08,"3","GZMB"
-## "SPON2",3.58560615073538e-12,2.88773395679592,0.861,0.153,6.49747690574757e-08,"3","SPON2"
-## "ARL4C1",1.16047435408125e-11,1.640203328716,0.957,0.514,2.10289557703064e-07,"3","ARL4C"
-## "CST71",4.13979337844072e-11,1.78386019460777,0.969,0.368,7.50171958107243e-07,"3","CST7"
-## "KLRF1",4.80859774460829e-11,2.04824180930521,0.799,0.1,8.71365997300469e-07,"3","KLRF1"
-## "GNLY1",6.87412206909049e-11,2.72912483960093,0.944,0.3,1.24565966013989e-06,"3","GNLY"
-## "KLRD11",1.0234814375351e-10,1.93612594475832,0.906,0.222,1.85465071295736e-06,"3","KLRD1"
-## "KLRB1",2.43322002269826e-10,2.11845537359866,0.828,0.155,4.40923800313152e-06,"3","KLRB1"
-## "HOPX1",6.75717710655069e-10,1.73713944159404,0.848,0.269,1.22446806347805e-05,"3","HOPX"
-## "IL2RB",9.34415612755554e-10,1.96701234796455,0.711,0.109,1.69325453187434e-05,"3","IL2RB"
-## "GZMM1",9.9568535157376e-10,1.72173849086051,0.895,0.328,1.80428142558681e-05,"3","GZMM"
-## "CLIC3",1.94079466524458e-09,2.28123667496024,0.779,0.115,3.5169140128897e-05,"3","CLIC3"
-## "FGFBP21",3.65845671760859e-09,2.0644640550123,0.852,0.231,6.62948941797852e-05,"3","FGFBP2"
-## "IFITM1",5.61133494638669e-08,1.27893618808084,0.868,0.499,0.00101683000563473,"3","IFITM1"
-## "RUNX31",5.88081779558749e-08,1.19577541572898,0.843,0.504,0.00106566299273841,"3","RUNX3"
-## "IGFBP7",1.36947571509702e-07,1.64625409963065,0.635,0.177,0.00248162694332732,"3","IGFBP7"
-## "MATK1",2.09352400725448e-07,1.50095402469,0.718,0.188,0.00379367485354585,"3","MATK"
-## "S1PR51",3.18003517117398e-07,1.55175046074132,0.66,0.138,0.00576254173368437,"3","S1PR5"
-## "GZMA1",3.29893045718255e-07,1.81497915640658,0.915,0.306,0.0059779918814605,"3","GZMA"
-## "EFHD21",3.52895655526324e-07,1.12663332016755,0.946,0.669,0.00639482217379252,"3","EFHD2"
-## "ZAP701",4.12327352519179e-07,1.22006636921751,0.622,0.228,0.00747178395500005,"3","ZAP70"
-## "GNG2",6.34587900601719e-07,1.19123144024268,0.689,0.377,0.0114993673468037,"3","GNG2"
-## "TBX21",6.54676304553818e-07,0.870449722560174,0.371,0.1,0.0118633893148197,"3","TBX21"
-## "TXK",8.85490035956659e-07,1.45875481187621,0.613,0.112,0.0160459649415706,"3","TXK"
-## "PTPN4",9.3332538839743e-07,0.877564684680123,0.541,0.228,0.0169127893631498,"3","PTPN4"
-## "CHST12",9.67728260179284e-07,1.12086347288908,0.615,0.238,0.0175362038027088,"3","CHST12"
-## "LAIR2",1.02893343172447e-06,1.38372636616877,0.447,0.091,0.0186453027162791,"3","LAIR2"
-## "PTGDR",1.2037765729806e-06,0.820017311675237,0.34,0.056,0.0218136352789815,"3","PTGDR"
-## "ABHD17A1",1.63276839504756e-06,1.58240946847374,0.913,0.561,0.0295873960866569,"3","ABHD17A"
-## "ADGRG1",2.04397597934287e-06,1.38135858863375,0.523,0.105,0.0370388887216722,"3","ADGRG1"
-## "SH2D2A1",2.65669335239635e-06,1.16611765401028,0.485,0.126,0.0481419402387743,"3","SH2D2A"
-## "RORA1",2.75129833449022e-06,0.588806509568301,0.644,0.342,0.0498562771192973,"3","RORA"
-## "IL2RG1",3.05763035181491e-06,1.0705525896116,0.812,0.473,0.0554073196052379,"3","IL2RG"
-## "JAK1",3.35826710564483e-06,1.19380444802587,0.895,0.665,0.06085515822139,"3","JAK1"
-## "SYNE21",4.09359862578336e-06,1.1221381660839,0.779,0.377,0.0741801006978203,"3","SYNE2"
-## "C1orf21",5.29066347333811e-06,0.828274303108861,0.427,0.125,0.0958721128003598,"3","C1orf21"
-## "FCGR3A",5.31759924532469e-06,1.51736565132826,0.828,0.254,0.0963602159245287,"3","FCGR3A"
-## "CCL41",8.56463784193016e-06,1.5131875119025,0.662,0.254,0.155199802333616,"3","CCL4"
-## "HSH2D",8.76594688155322e-06,1.09643556021332,0.575,0.243,0.158847723440626,"3","HSH2D"
-## "B3GNT7",1.26715758310682e-05,1.06480123478629,0.298,0.018,0.229621625634786,"3","B3GNT7"
-## "APMAP",1.29608898364183e-05,1.5477076045861,0.767,0.304,0.234864284725735,"3","APMAP"
-## "RBM381",1.29743450549453e-05,0.824692734559387,0.725,0.497,0.235108106740664,"3","RBM38"
-## "MYBL1",1.33388604688131e-05,0.985459602362676,0.463,0.142,0.241713490555362,"3","MYBL1"
-## "SYTL31",1.65147583250636e-05,0.919384166447619,0.562,0.25,0.299263935608478,"3","SYTL3"
-## "PRKCH1",2.07297932184559e-05,1.12167337839217,0.62,0.224,0.375644582911639,"3","PRKCH"
-## "MAP3K8",2.30262707726116e-05,1.09080126464315,0.694,0.486,0.417259052670496,"3","MAP3K8"
-## "RARRES31",2.48534605620315e-05,0.872667371279087,0.743,0.521,0.450369558844573,"3","RARRES3"
-## "CEMIP2",2.77915131927748e-05,0.958073182471798,0.553,0.301,0.503610010566272,"3","CEMIP2"
-## "CD691",2.97290313637796e-05,0.673498787010827,0.763,0.46,0.538719777343049,"3","CD69"
-## "KLRC1",3.23872985920377e-05,1.50398034289197,0.394,0.029,0.586890237786315,"3","KLRC1"
-## "GK5",3.4340014394565e-05,1.13429304589191,0.454,0.142,0.622275400843912,"3","GK5"
-## "CMC1",4.43415114893878e-05,1.26777258640453,0.642,0.265,0.803512529699197,"3","CMC1"
-## "GNPTAB",4.66862890301473e-05,1.21705499190633,0.615,0.301,0.846002243515299,"3","GNPTAB"
-## "AKNA1",6.12010402288728e-05,0.950735655100423,0.736,0.506,1,"3","AKNA"
-## "IL18RAP",6.5047562222275e-05,0.860944764132301,0.298,0.028,1,"3","IL18RAP"
-## "CCL51",7.16040532968357e-05,1.20291474461113,0.913,0.463,1,"3","CCL5"
-## "EVL1",9.72743056289201e-05,1.02679226017397,0.881,0.564,1,"3","EVL"
-## "DOK2",0.000126074200555647,0.764726081300858,0.626,0.395,1,"3","DOK2"
-## "TRBC1",0.00012991739233932,0.407687310152237,0.512,0.259,1,"3","TRBC1"
-## "RNF1251",0.000145390975036518,1.01097249799069,0.62,0.297,1,"3","RNF125"
-## "METRNL",0.000159524309160824,1.16509529606698,0.749,0.466,1,"3","METRNL"
-## "ITGB7",0.000162005284702757,0.866001782065467,0.506,0.25,1,"3","ITGB7"
-## "HCST1",0.000171460477458699,1.02151871148849,0.933,0.724,1,"3","HCST"
-## "MVD",0.00019442918730873,0.922642237801211,0.409,0.151,1,"3","MVD"
-## "SKAP1",0.000196384191989305,0.842612857949159,0.631,0.284,1,"3","SKAP1"
-## "TMIGD2",0.000253976368838716,1.1524115211008,0.351,0.02,1,"3","TMIGD2"
-## "MYOM2",0.000284428652526239,1.95602843325797,0.501,0.066,1,"3","MYOM2"
-## "GZMH1",0.000299289559268695,0.915295160383385,0.749,0.271,1,"3","GZMH"
-## "PRSS23",0.000385580796792243,1.12823332453435,0.459,0.094,1,"3","PRSS23"
-## "PYHIN11",0.000386656035755209,1.0437189825289,0.562,0.181,1,"3","PYHIN1"
-## "AC245297.3",0.000392911854278111,0.760886357577179,0.613,0.412,1,"3","AC245297.3"
-## "XCL2",0.000417058719799148,1.10933361132348,0.353,0.068,1,"3","XCL2"
-## "PTPN7",0.000463609054979425,0.841585369089058,0.6,0.369,1,"3","PTPN7"
-## "NCAM1",0.000483853549950432,0.831112045928341,0.282,0.026,1,"3","NCAM1"
-## "SAMD31",0.000523737753401753,0.955742830275462,0.553,0.188,1,"3","SAMD3"
-## "YPEL1",0.00053273636327369,0.813194767128182,0.315,0.072,1,"3","YPEL1"
-## "CEP78",0.000604127744876018,1.27292296171424,0.555,0.148,1,"3","CEP78"
-## "ATM",0.000623610361495606,0.844646650818062,0.68,0.464,1,"3","ATM"
-## "TRDC",0.000640762783278759,1.23155331187122,0.642,0.124,1,"3","TRDC"
-## "SYNE11",0.000680278107940331,1.1730862936415,0.669,0.326,1,"3","SYNE1"
-## "NCR1",0.000861248248440501,0.639418696915945,0.23,0.026,1,"3","NCR1"
-## "YES1",0.00111867079842466,0.737628763205548,0.286,0.068,1,"3","YES1"
-## "MCTP2",0.00122812246879658,1.00174313157193,0.421,0.148,1,"3","MCTP2"
-## "TTC38",0.00124693834846599,1.23139775792749,0.523,0.119,1,"3","TTC38"
-## "STAT41",0.00124693834846599,0.942005255178388,0.588,0.241,1,"3","STAT4"
-## "TGFBR31",0.00138869804722159,0.790761947178432,0.345,0.109,1,"3","TGFBR3"
-## "TSEN541",0.00149036752944331,0.779961623655428,0.441,0.173,1,"3","TSEN54"
-## "HAVCR21",0.00161426119472784,0.915423909481613,0.36,0.129,1,"3","HAVCR2"
-## "CD226",0.0017183616938875,0.700052809294695,0.311,0.108,1,"3","CD226"
-## "CHST2",0.00183688282357142,1.32657329770794,0.443,0.091,1,"3","CHST2"
-## "AKR1C3",0.00184147537925919,0.966914673051788,0.311,0.033,1,"3","AKR1C3"
-## "ETS11",0.00220121242744549,0.748372812713176,0.649,0.367,1,"3","ETS1"
-## "SORL1",0.0022519298481301,0.893574973383241,0.649,0.426,1,"3","SORL1"
-## "CD811",0.00272287617403121,0.892391901483001,0.859,0.63,1,"3","CD81"
-## "MMP23B",0.00276674467891839,0.641236830256272,0.244,0.037,1,"3","MMP23B"
-## "PTGDS",0.00291356284426795,2.65887256214606,0.268,0.045,1,"3","PTGDS"
-## "NCR3",0.00295539372172225,1.15484264176769,0.49,0.124,1,"3","NCR3"
-## "DDIT41",0.00355671718200751,0.895095279351989,0.669,0.403,1,"3","DDIT4"
-## "AREG",0.0035594753362345,1.64212072831918,0.389,0.119,1,"3","AREG"
-## "CD38",0.0044078273010707,1.10941785727804,0.374,0.067,1,"3","CD38"
-## "AUTS2",0.00521754600185721,0.767750463459653,0.295,0.094,1,"3","AUTS2"
-## "CD300A",0.00605680462330555,0.84736793818286,0.483,0.278,1,"3","CD300A"
-## "LTB1",2.23615579740871e-11,2.04632318990624,0.972,0.362,4.05213792048432e-07,"4","LTB"
-## "IL7R1",4.02779142695955e-09,2.21344881255848,0.953,0.198,7.2987608447934e-05,"4","IL7R"
-## "LDHB",6.41856178106551e-09,1.55872451260822,0.953,0.53,0.000116310758034688,"4","LDHB"
-## "TRAC1",2.85989695942629e-08,1.55298938040943,0.902,0.22,0.000518241928017638,"4","TRAC"
-## "IL321",6.12287529356726e-08,1.0822373419941,0.986,0.4,0.00110952623194732,"4","IL32"
-## "EML4",1.52688486420079e-07,0.759035690074167,0.758,0.464,0.00276686806241826,"4","EML4"
-## "ITGB1",1.00959097569903e-06,0.582348842942496,0.737,0.487,0.0182947980706421,"4","ITGB1"
-## "SFXN1",1.07885046848612e-06,0.81159170352343,0.512,0.144,0.019549849339437,"4","SFXN1"
-## "CD3G1",1.1234976318284e-06,0.756616687408593,0.826,0.246,0.0203589005863624,"4","CD3G"
-## "TNFRSF4",1.76515934465433e-06,0.835055998356268,0.326,0.023,0.0319864524844811,"4","TNFRSF4"
-## "ANKRD12",2.56202455505064e-06,0.650772609707678,0.907,0.671,0.0464264469620727,"4","ANKRD12"
-## "ATF7IP2",2.80219532398507e-06,0.553229745091082,0.484,0.221,0.0507785814659334,"4","ATF7IP2"
-## "GSTK1",3.56090841751714e-06,0.854039115350706,0.909,0.631,0.0645272214338281,"4","GSTK1"
-## "RCAN3",4.14180256218335e-06,1.20204108289008,0.653,0.114,0.0750536042293244,"4","RCAN3"
-## "AQP3",4.28230899672495e-06,1.0154461676349,0.442,0.037,0.0775997213296529,"4","AQP3"
-## "CD3E1",5.47189800807092e-06,0.866280710468425,0.944,0.351,0.0991562638042531,"4","CD3E"
-## "BCL11B1",1.42341201820556e-05,0.530556577328891,0.449,0.13,0.257936491819029,"4","BCL11B"
-## "CRYBG1",2.32173530071286e-05,0.593343125671022,0.495,0.24,0.420721653842178,"4","CRYBG1"
-## "TNFRSF25",2.34217867762028e-05,0.782244179808268,0.426,0.067,0.424426198171571,"4","TNFRSF25"
-## "LAT1",2.38905475052445e-05,0.430816105412179,0.53,0.239,0.432920611342536,"4","LAT"
-## "TCF7",3.33483150342615e-05,0.97391068374445,0.677,0.193,0.604304816735853,"4","TCF7"
-## "PRDX2",4.14017978008005e-05,0.580756489174266,0.651,0.283,0.750241977948306,"4","PRDX2"
-## "KLF2",4.3564388479706e-05,0.970192428428559,0.972,0.77,0.789430283640752,"4","KLF2"
-## "TRBC21",5.22821606113306e-05,1.15196986573767,0.823,0.39,0.947405032437922,"4","TRBC2"
-## "RORA2",5.5164048775138e-05,0.893680302994337,0.821,0.328,0.999627727854276,"4","RORA"
-## "TESPA1",5.59018099409111e-05,0.523498184778881,0.302,0.05,1,"4","TESPA1"
-## "LEPROTL1",6.86672583995806e-05,1.25578569566714,0.881,0.466,1,"4","LEPROTL1"
-## "LINC00513",7.0907111012792e-05,0.582905886226035,0.44,0.156,1,"4","LINC00513"
-## "INPP4B",7.925926927383e-05,0.764949725155105,0.409,0.049,1,"4","INPP4B"
-## "SLC38A11",8.21636600104222e-05,0.308226681005212,0.553,0.295,1,"4","SLC38A1"
-## "ARHGAP15",9.0803784485699e-05,1.16225715719497,0.742,0.276,1,"4","ARHGAP15"
-## "RHOH1",0.000110255251509158,0.663334746092685,0.735,0.344,1,"4","RHOH"
-## "FLT3LG",0.000118684812556,0.824456020053363,0.516,0.115,1,"4","FLT3LG"
-## "GATA31",0.000146634433494401,1.29996276369448,0.595,0.136,1,"4","GATA3"
-## "SOD1",0.000148049321148823,0.419871135367801,0.814,0.569,1,"4","SOD1"
-## "CD27",0.000153710601234728,0.594783793777199,0.321,0.072,1,"4","CD27"
-## "CDKN1B",0.000163756208529181,0.555411307536137,0.57,0.286,1,"4","CDKN1B"
-## "CD51",0.000165151357499502,0.85298203956492,0.453,0.091,1,"4","CD5"
-## "EVL2",0.000168005322870814,0.618183975097232,0.921,0.562,1,"4","EVL"
-## "NOP53",0.000168010010434479,0.67347840589959,0.97,0.769,1,"4","NOP53"
-## "ARID5B",0.000197532622083227,0.791993852992142,0.602,0.256,1,"4","ARID5B"
-## "CD3D1",0.000214170219636631,0.85037262838058,0.898,0.276,1,"4","CD3D"
-## "PDE3B",0.000264335345270805,0.621148828474671,0.444,0.147,1,"4","PDE3B"
-## "CCND2",0.000336709208421342,0.329942135106444,0.365,0.142,1,"4","CCND2"
-## "SELENOK",0.000345249950459382,0.490933491911111,0.8,0.59,1,"4","SELENOK"
-## "MAL",0.000361762022506169,1.16066034330803,0.516,0.034,1,"4","MAL"
-## "SAMSN1",0.000380157786081419,0.494656161935817,0.642,0.36,1,"4","SAMSN1"
-## "CD61",0.000390946943708671,0.718247766066372,0.563,0.184,1,"4","CD6"
-## "CD21",0.000392808513528231,0.805423483332043,0.779,0.273,1,"4","CD2"
-## "LCK",0.000407097628258005,0.570179472951874,0.691,0.285,1,"4","LCK"
-## "AP3M2",0.000416341135438921,1.07141568569168,0.533,0.091,1,"4","AP3M2"
-## "CLEC2D2",0.000511257496406095,0.452512665009752,0.681,0.356,1,"4","CLEC2D"
-## "TNFAIP8",0.00052168869002594,0.376793507749042,0.547,0.34,1,"4","TNFAIP8"
-## "RSL1D1",0.000580055749826049,0.321894387044593,0.714,0.503,1,"4","RSL1D1"
-## "SLC2A4RG",0.000609289739411954,0.415045327184047,0.44,0.2,1,"4","SLC2A4RG"
-## "OCIAD21",0.000941248251757,0.618221503694227,0.614,0.234,1,"4","OCIAD2"
-## "BTG3",0.00108484953404232,0.333330948674047,0.463,0.252,1,"4","BTG3"
-## "FOXP11",0.00128862995500169,0.460137830535239,0.786,0.511,1,"4","FOXP1"
-## "TRAT1",0.00132901685386473,0.835131619225114,0.453,0.054,1,"4","TRAT1"
-## "ZNF331",0.00133647969053819,0.48923152814271,0.54,0.234,1,"4","ZNF331"
-## "TRABD2A",0.0013749287365273,0.513288160051555,0.277,0.049,1,"4","TRABD2A"
-## "PIK3IP1",0.00138832630439167,1.00834239305028,0.874,0.392,1,"4","PIK3IP1"
-## "NSMCE3",0.00142238610242757,0.589163086819138,0.609,0.293,1,"4","NSMCE3"
-## "CAMK4",0.00147605080169233,0.680810582982898,0.402,0.068,1,"4","CAMK4"
-## "CD28",0.00153875672277076,0.758250741434005,0.347,0.033,1,"4","CD28"
-## "PAG1",0.00164371665432103,0.484966184743277,0.533,0.292,1,"4","PAG1"
-## "FXYD7",0.00169482265081099,0.54624183394428,0.256,0.03,1,"4","FXYD7"
-## "PBXIP1",0.00176390918406965,0.688815039167724,0.579,0.252,1,"4","PBXIP1"
-## "OPTN",0.0020087968921969,0.378248084964647,0.565,0.275,1,"4","OPTN"
-## "PRDM1",0.00229019031381359,0.339506805040784,0.416,0.201,1,"4","PRDM1"
-## "CXCR42",0.00254209850097863,0.33454568926811,0.921,0.649,1,"4","CXCR4"
-## "P2RY101",0.00256496661432154,0.375003778454071,0.323,0.122,1,"4","P2RY10"
-## "BCL21",0.00263414808503445,0.447955066586828,0.44,0.183,1,"4","BCL2"
-## "DDX24",0.00268662971062463,0.472737911199882,0.867,0.626,1,"4","DDX24"
-## "PPP1R2",0.00274700367173954,0.454830762192845,0.733,0.506,1,"4","PPP1R2"
-## "ITM2A1",0.00295775457651805,0.781048725262446,0.558,0.189,1,"4","ITM2A"
-## "CDC14A",0.00319214714204892,0.645060216373757,0.374,0.127,1,"4","CDC14A"
-## "NAP1L4",0.00329174773909459,0.285847084885453,0.533,0.322,1,"4","NAP1L4"
-## "NOSIP",0.00337841748933227,1.1519963202809,0.716,0.329,1,"4","NOSIP"
-## "PHF1",0.00353351614706062,0.323330637629553,0.486,0.265,1,"4","PHF1"
-## "C12orf571",0.0036684768064332,0.698873191510603,0.84,0.487,1,"4","C12orf57"
-## "NCK21",0.00403785377230383,0.508148021892476,0.54,0.24,1,"4","NCK2"
-## "ITPKB",0.00411380850934977,0.580120163238461,0.351,0.122,1,"4","ITPKB"
-## "TTC39C",0.00435042463087781,0.786295863324559,0.577,0.251,1,"4","TTC39C"
-## "SH3YL1",0.00465508688204171,0.567954837441998,0.353,0.071,1,"4","SH3YL1"
-## "BCAS2",0.00534593366353857,0.47434323557853,0.595,0.32,1,"4","BCAS2"
-## "HSPA8",0.00550627307010366,0.652271037981996,0.884,0.636,1,"4","HSPA8"
-## "CDC25B",0.00581718222190226,0.437329794268826,0.344,0.143,1,"4","CDC25B"
-## "LINC02273",0.00587296939117582,0.534478457995571,0.237,0.018,1,"4","LINC02273"
-## "NELL2",0.00692515149904174,0.484630136680558,0.226,0.024,1,"4","NELL2"
-## "FAM107B",0.00713999103776956,0.520681710683483,0.76,0.519,1,"4","FAM107B"
-## "CREM1",0.00756942006247679,0.83869352743023,0.567,0.212,1,"4","CREM"
-## "SERINC5",0.0077909010528248,0.593012877160776,0.374,0.119,1,"4","SERINC5"
-## "MZT2A",0.00900575557892263,0.702749327106326,0.751,0.411,1,"4","MZT2A"
-## "CFAP36",0.00935660319312039,0.513680751550758,0.309,0.064,1,"4","CFAP36"
-## "GIMAP71",0.00946050830748628,0.652983917402051,0.723,0.369,1,"4","GIMAP7"
-## "CASK",0.00964038311564764,0.428659965336836,0.319,0.11,1,"4","CASK"
-## "ENY21",4.43752618677408e-06,0.29197099303988,0.209,0.526,0.0804124120305331,"5","ENY2"
-## "MTRNR2L81",9.11883858135277e-06,0.293801977954389,0.122,0.336,0.165242473932693,"5","MTRNR2L8"
-## "SSR4",2.86568259339832e-05,0.482700726311647,0.355,0.82,0.519290342749709,"5","SSR4"
-## "RTRAF",3.56597675701266e-05,0.295122634281408,0.214,0.618,0.646190648138264,"5","RTRAF"
-## "GUK1",6.44155254164943e-05,0.328705817876601,0.311,0.77,1,"5","GUK1"
-## "COX14",0.000131283785787123,0.267406516853619,0.188,0.499,1,"5","COX14"
-## "ARL6IP5",0.000134254367799398,0.634514225434001,0.285,0.676,1,"5","ARL6IP5"
-## "NPC21",0.000170117656844831,0.399992535658489,0.282,0.515,1,"5","NPC2"
-## "RALY",0.000199831831717187,0.304849473405589,0.165,0.475,1,"5","RALY"
-## "UBE2L3",0.00021060934249544,0.311395604772886,0.202,0.586,1,"5","UBE2L3"
-## "GDI21",0.000211748975434986,0.482547880128588,0.242,0.518,1,"5","GDI2"
-## "PHB2",0.000218262298505562,0.253303095931043,0.155,0.503,1,"5","PHB2"
-## "COPE",0.000234371978371265,0.280375522085215,0.238,0.618,1,"5","COPE"
-## "SCAMP2",0.00025388580134283,0.321845087902405,0.113,0.326,1,"5","SCAMP2"
-## "GNB11",0.000299057077969817,0.389554011168386,0.216,0.535,1,"5","GNB1"
-## "BRK11",0.000311827021569481,0.405556647782581,0.289,0.657,1,"5","BRK1"
-## "TRAM1",0.000336755452776743,0.383421044173578,0.184,0.459,1,"5","TRAM1"
-## "ATG31",0.000455468519003724,0.403771766216497,0.148,0.379,1,"5","ATG3"
-## "UFC1",0.000492211842955547,0.354979248087915,0.24,0.625,1,"5","UFC1"
-## "JARID21",0.000559940222995289,0.338146915918801,0.113,0.341,1,"5","JARID2"
-## "PSMB1",0.000567447173943303,0.309883911765649,0.271,0.721,1,"5","PSMB1"
-## "UBE2J11",0.000690486846102435,0.355176351984101,0.167,0.427,1,"5","UBE2J1"
-## "HMGA1",0.000752053613722437,0.27217306763168,0.111,0.333,1,"5","HMGA1"
-## "TANK",0.000802339367188964,0.275582262805841,0.12,0.422,1,"5","TANK"
-## "RTN41",0.000864089418050776,0.36661204131625,0.24,0.541,1,"5","RTN4"
-## "PYCARD1",0.00105695843517356,0.294794692179309,0.261,0.464,1,"5","PYCARD"
-## "SELENOW",0.00110576728593516,0.32312362688966,0.238,0.567,1,"5","SELENOW"
-## "ZFAND6",0.00121309022392156,0.28806467676988,0.134,0.384,1,"5","ZFAND6"
-## "SSR3",0.0012379379130857,0.287624348430992,0.148,0.411,1,"5","SSR3"
-## "PSME2",0.00128098664511702,0.471539686476347,0.327,0.7,1,"5","PSME2"
-## "PCNP",0.00159371384543321,0.450656805939466,0.176,0.44,1,"5","PCNP"
-## "FLNA",0.00166250304568019,0.448178340436732,0.358,0.738,1,"5","FLNA"
-## "DNAJC15",0.00166427771126418,0.74867149258167,0.184,0.438,1,"5","DNAJC15"
-## "PFDN2",0.0017262996143384,0.577872720971939,0.162,0.447,1,"5","PFDN2"
-## "GLRX1",0.00178518044063284,0.512743626293481,0.226,0.456,1,"5","GLRX"
-## "GLIPR21",0.00185209608985059,0.263133116243367,0.181,0.452,1,"5","GLIPR2"
-## "APLP21",0.00195345467486046,0.288599476549237,0.289,0.521,1,"5","APLP2"
-## "MYL12B",0.00204162670661595,0.250698032369853,0.416,0.89,1,"5","MYL12B"
-## "ATP5MC3",0.00210179806209644,0.394268774011554,0.266,0.683,1,"5","ATP5MC3"
-## "RPS27L",0.00214260345338523,1.05102020933556,0.24,0.548,1,"5","RPS27L"
-## "VDAC1",0.00218167810969739,0.289636634146927,0.125,0.375,1,"5","VDAC1"
-## "ATP5PD1",0.00231825558155753,0.506668916911121,0.245,0.578,1,"5","ATP5PD"
-## "SRSF2",0.00244540891726402,0.305829876312486,0.224,0.629,1,"5","SRSF2"
-## "PSMA4",0.00265645379208437,0.494282299485394,0.188,0.472,1,"5","PSMA4"
-## "SLC25A371",0.00275213879551852,0.395130566051683,0.139,0.359,1,"5","SLC25A37"
-## "ATP5MC1",0.00304502155754067,0.266437507578339,0.136,0.378,1,"5","ATP5MC1"
-## "ATF41",0.00332021039456955,0.279574487905294,0.226,0.569,1,"5","ATF4"
-## "TRAPPC1",0.00366227463607765,0.714143911691706,0.278,0.601,1,"5","TRAPPC1"
-## "ACADVL",0.00428004615426131,0.304437430954624,0.132,0.355,1,"5","ACADVL"
-## "CAP11",0.00431533112432028,0.393819657111584,0.336,0.706,1,"5","CAP1"
-## "EIF1B1",0.0043686162510925,1.1604328745107,0.249,0.621,1,"5","EIF1B"
-## "BCAP31",0.00442967481186368,0.481748926388226,0.212,0.504,1,"5","BCAP31"
-## "PSMB7",0.0044520495978822,0.321085269469013,0.141,0.383,1,"5","PSMB7"
-## "RNPEPL1",0.00452213018749564,0.2622761816262,0.169,0.498,1,"5","RNPEPL1"
-## "C1orf43",0.00480030068899286,0.485187502453185,0.165,0.404,1,"5","C1orf43"
-## "LY6E",0.00487364468576731,0.301446969488115,0.315,0.711,1,"5","LY6E"
-## "MMP24OS",0.00489290588070051,0.318101015859757,0.162,0.435,1,"5","MMP24OS"
-## "ZYX1",0.00502247785417516,0.483821056054396,0.172,0.392,1,"5","ZYX"
-## "LENG8",0.0051875674135261,0.307730443295833,0.202,0.517,1,"5","LENG8"
-## "SNX3",0.00537874491429058,0.485631931116639,0.289,0.654,1,"5","SNX3"
-## "RAB8A",0.00549246826633453,0.341598679608464,0.167,0.441,1,"5","RAB8A"
-## "HSBP11",0.0055355507592206,0.386799739859291,0.176,0.377,1,"5","HSBP1"
-## "PSMG2",0.00563970609292648,0.299674164056732,0.12,0.41,1,"5","PSMG2"
-## "SLC25A5",0.00611230656364151,0.284282024315261,0.287,0.696,1,"5","SLC25A5"
-## "ARPC4",0.00623675610774298,0.42968660008797,0.304,0.693,1,"5","ARPC4"
-## "NDUFV2",0.00627585078361355,0.479617567203018,0.2,0.537,1,"5","NDUFV2"
-## "CDC37",0.006285963427451,0.391418014605172,0.224,0.538,1,"5","CDC37"
-## "ATP5MF1",0.00634294514879934,0.419553317152522,0.264,0.607,1,"5","ATP5MF"
-## "ATP5MD",0.00647728926945882,0.617157173503011,0.273,0.618,1,"5","ATP5MD"
-## "GTF2A2",0.00721797647473485,0.533204900994745,0.186,0.482,1,"5","GTF2A2"
-## "SLC3A2",0.0077117453866083,0.295581874228294,0.148,0.462,1,"5","SLC3A2"
-## "POLR2G",0.00783697898237917,0.408126338793659,0.16,0.372,1,"5","POLR2G"
-## "ATP6V0E11",0.00802473176863769,0.449609534410648,0.318,0.691,1,"5","ATP6V0E1"
-## "MT2A1",0.00843174942567974,0.333859730638685,0.271,0.542,1,"5","MT2A"
-## "RHOA1",0.00852693374366764,0.56618256210638,0.501,0.829,1,"5","RHOA"
-## "CBX3",0.00869704268277174,0.51461824297587,0.205,0.519,1,"5","CBX3"
-## "PSMB2",0.00869704268277174,0.326934061453795,0.155,0.418,1,"5","PSMB2"
-## "RAN",0.00870808848176934,0.424058719734909,0.226,0.699,1,"5","RAN"
-## "COMT1",0.00891663234862235,0.355022829660244,0.155,0.356,1,"5","COMT"
-## "TCIRG11",0.00915802691287971,0.449058804112982,0.193,0.434,1,"5","TCIRG1"
-## "CNN2",0.0094025397423459,0.351909141941921,0.179,0.496,1,"5","CNN2"
-## "SNF8",0.00998813487831338,0.290422101310546,0.155,0.432,1,"5","SNF8"
-## "NKG72",3.38504685399717e-15,2.24510383748204,1,0.462,6.13404340412827e-11,"6","NKG7"
-## "CST72",4.80248941907112e-15,2.12344173725176,0.991,0.369,8.70259107629879e-11,"6","CST7"
-## "GZMB2",5.37453717260906e-15,2.08137128409037,0.986,0.248,9.73919881048488e-11,"6","GZMB"
-## "KLRD12",2.75290034078613e-14,1.85800029041294,0.92,0.224,4.98853070753854e-10,"6","KLRD1"
-## "TRDC1",2.2715584435484e-13,2.14198709591034,0.853,0.108,4.11629105555406e-09,"6","TRDC"
-## "CTSW2",3.24204139652402e-13,2.06208639295076,0.967,0.317,5.87490321464118e-09,"6","CTSW"
-## "GNLY2",5.86471770806236e-13,2.44670180001679,0.962,0.301,1.06274549587798e-08,"6","GNLY"
-## "FGFBP22",1.04373186005987e-12,2.47578498215477,0.946,0.226,1.89134650361449e-08,"6","FGFBP2"
-## "PRF12",2.67599532436627e-11,1.87134239635366,0.917,0.262,4.84917112728412e-07,"6","PRF1"
-## "CD2471",4.12404212833069e-11,1.74395446177414,0.943,0.33,7.47317674074805e-07,"6","CD247"
-## "GZMA2",9.78140516092258e-11,1.75239230254782,0.943,0.306,1.77248842921078e-06,"6","GZMA"
-## "CCL52",1.86354521319242e-10,1.93469923753299,0.995,0.458,3.37693028082598e-06,"6","CCL5"
-## "GZMH2",2.14226199408752e-10,2.05027612826767,0.976,0.254,3.88199295948599e-06,"6","GZMH"
-## "FCGR3A1",1.02289808229343e-09,1.45867560600808,0.877,0.253,1.85359361492392e-05,"6","FCGR3A"
-## "HOPX2",2.00222476972177e-09,1.64610908142161,0.872,0.27,3.62823150521282e-05,"6","HOPX"
-## "C12orf751",2.46482805366485e-09,1.33588573760785,0.801,0.298,4.46651491604607e-05,"6","C12orf75"
-## "SPON21",2.65058773052995e-09,1.37414952261073,0.652,0.173,4.80313002649332e-05,"6","SPON2"
-## "ABHD17A2",4.56152297679766e-09,1.21208906322294,0.868,0.566,8.26593578625504e-05,"6","ABHD17A"
-## "KLRF11",1.05026481220765e-08,1.93240986711293,0.759,0.107,0.000190318486620148,"6","KLRF1"
-## "S1PR52",1.61163654895257e-08,1.22706292956414,0.636,0.142,0.000292044659035694,"6","S1PR5"
-## "EFHD22",4.04738166320376e-08,1.13002783677258,0.939,0.671,0.000733426031189153,"6","EFHD2"
-## "ARL4C2",5.62803064917549e-08,1.08945437230191,0.95,0.517,0.00101985543393709,"6","ARL4C"
-## "SYNGR1",9.31327640559041e-08,1.53772452420279,0.655,0.166,0.00168765881745704,"6","SYNGR1"
-## "CD812",1.09880187199038e-07,1.18857197005957,0.922,0.626,0.00199113887223376,"6","CD81"
-## "TRBC11",1.18246775123086e-07,1.29958011851208,0.837,0.233,0.00214274981200544,"6","TRBC1"
-## "HCST2",1.59007884759583e-07,1.22801129368055,0.974,0.722,0.0028813818797284,"6","HCST"
-## "KLRC2",2.00399128288461e-07,2.05026743063536,0.539,0.023,0.0036314326037152,"6","KLRC2"
-## "GZMM2",3.11804127827705e-07,1.31456178095776,0.896,0.331,0.00565020260036584,"6","GZMM"
-## "RORA3",3.3700538417365e-07,0.911069235513974,0.754,0.334,0.00610687456661072,"6","RORA"
-## "ZAP702",4.98321309458121e-07,0.923586102336987,0.6,0.232,0.00903008044869062,"6","ZAP70"
-## "IL322",5.07490086587914e-07,1.47763922386992,0.915,0.407,0.00919622785905959,"6","IL32"
-## "PTMS1",6.21410635142301e-07,1.07295543657069,0.492,0.139,0.0112605821194136,"6","PTMS"
-## "PRKCH2",6.37727901074408e-07,1.04054187786347,0.56,0.231,0.0115562672953693,"6","PRKCH"
-## "MATK2",6.38423939092332e-07,0.996795125565419,0.608,0.2,0.0115688802002922,"6","MATK"
-## "CEP781",7.01442482211239e-07,1.28956008165048,0.617,0.145,0.0127108392201499,"6","CEP78"
-## "TXK1",7.47251691478406e-07,1.10854708533149,0.511,0.123,0.0135409479012802,"6","TXK"
-## "IFITM11",1.10854086284356e-06,0.963511325068046,0.877,0.5,0.0200878689755882,"6","IFITM1"
-## "CLIC31",1.27695422271071e-06,1.32438372502563,0.582,0.134,0.0231396874697408,"6","CLIC3"
-## "CHST121",1.29256055790659e-06,1.12061915520048,0.65,0.236,0.0234224898698252,"6","CHST12"
-## "PYHIN12",1.30300625141272e-06,1.15798014581417,0.577,0.182,0.0236117762818499,"6","PYHIN1"
-## "SYTL32",1.55473691782974e-06,0.859556127235559,0.591,0.249,0.0281733876879926,"6","SYTL3"
-## "SKAP11",2.40712978059307e-06,0.920379142588479,0.638,0.285,0.043619598754127,"6","SKAP1"
-## "AKNA2",2.965433317887e-06,0.694857475527009,0.723,0.508,0.0537366171534304,"6","AKNA"
-## "EVL3",3.01674083912096e-06,0.896526625804845,0.872,0.566,0.054666360745711,"6","EVL"
-## "TTC381",3.15220309257299e-06,1.0309432915848,0.494,0.123,0.0571210722405151,"6","TTC38"
-## "RUNX32",3.180380359509e-06,0.88763513715115,0.809,0.509,0.0576316724946626,"6","RUNX3"
-## "PRSS231",3.53820714154652e-06,1.34010152435404,0.558,0.088,0.0641158516119644,"6","PRSS23"
-## "SYNE22",5.31575124046981e-06,1.11741458963345,0.837,0.374,0.0963267282285534,"6","SYNE2"
-## "APOBEC3G1",5.57576699611921e-06,0.807157671187127,0.556,0.292,0.101038473736676,"6","APOBEC3G"
-## "ADGRG11",5.60286130944871e-06,1.09448088654874,0.515,0.108,0.10152944978852,"6","ADGRG1"
-## "CMC11",1.37103557241869e-05,1.46130024004999,0.686,0.263,0.248445356077991,"6","CMC1"
-## "CD991",1.51216233997653e-05,1.09411783259589,0.934,0.686,0.274018937627148,"6","CD99"
-## "GNPTAB1",1.6652560207355e-05,1.02587130200752,0.617,0.303,0.30176104351748,"6","GNPTAB"
-## "SYNE12",2.1511000827722e-05,1.1110035943679,0.719,0.324,0.389800845999151,"6","SYNE1"
-## "FKBP111",3.31094996942687e-05,0.685241166599384,0.482,0.253,0.599977243959844,"6","FKBP11"
-## "RARRES32",4.5164108743121e-05,1.03996870272958,0.787,0.518,0.818418814534095,"6","RARRES3"
-## "SUN2",4.75312011558034e-05,0.96410861010004,0.74,0.49,0.861312896144314,"6","SUN2"
-## "DSTN",5.59999659674162e-05,0.84257865621965,0.615,0.356,1,"6","DSTN"
-## "CD3E2",5.82592212010696e-05,1.25402823647014,0.811,0.363,1,"6","CD3E"
-## "IL2RG2",5.982427541928e-05,0.822952136226124,0.747,0.48,1,"6","IL2RG"
-## "PTPN71",7.15442156275364e-05,0.665605878095707,0.586,0.371,1,"6","PTPN7"
-## "CLEC2B",7.70587358091563e-05,0.783820209740207,0.778,0.549,1,"6","CLEC2B"
-## "AC245297.31",0.000100120757951287,0.742645383071193,0.622,0.412,1,"6","AC245297.3"
-## "PTPN41",0.000110409527261757,0.867665642546819,0.553,0.229,1,"6","PTPN4"
-## "ZEB21",0.000117496504141533,0.549460856492268,0.889,0.65,1,"6","ZEB2"
-## "CCL42",0.00012593189706928,0.929504667046165,0.683,0.255,1,"6","CCL4"
-## "PPP2R5C1",0.000152897771013677,1.02196635591383,0.891,0.65,1,"6","PPP2R5C"
-## "LITAF",0.000169100032474744,0.799527273549785,0.908,0.696,1,"6","LITAF"
-## "KIR3DL2",0.000198769411349591,1.00609220920095,0.338,0.036,1,"6","KIR3DL2"
-## "APMAP1",0.000208669439200087,1.13561295663618,0.726,0.31,1,"6","APMAP"
-## "ITGAL",0.000214708230950075,0.931153538380891,0.667,0.403,1,"6","ITGAL"
-## "F2R",0.000222800038501405,1.01663466527633,0.466,0.109,1,"6","F2R"
-## "PRDM11",0.000245490927726911,0.810742106940527,0.468,0.197,1,"6","PRDM1"
-## "ARPC5L1",0.000455588192352055,1.20398791511391,0.797,0.476,1,"6","ARPC5L"
-## "RHOC",0.000567041440049423,0.667375984256193,0.582,0.295,1,"6","RHOC"
-## "ID21",0.000578268597048328,0.493241489502339,0.745,0.544,1,"6","ID2"
-## "TFDP2",0.000792831035451012,0.971821365857672,0.525,0.177,1,"6","TFDP2"
-## "C1orf211",0.001081378372417,0.891056887439645,0.47,0.123,1,"6","C1orf21"
-## "TRG-AS1",0.00108235662246596,0.891153284933857,0.395,0.108,1,"6","TRG-AS1"
-## "PITPNC1",0.00124991069654453,0.703810578062802,0.492,0.26,1,"6","PITPNC1"
-## "KLRB11",0.00125339422459409,0.740649516041451,0.499,0.185,1,"6","KLRB1"
-## "HDDC2",0.00139338382351149,0.873474811529168,0.511,0.236,1,"6","HDDC2"
-## "MYBL11",0.00143176043631085,0.831228949185734,0.433,0.146,1,"6","MYBL1"
-## "TGFBR32",0.0017138778689187,0.64070660287584,0.319,0.113,1,"6","TGFBR3"
-## "LCK1",0.00171835340951476,0.879323298284618,0.643,0.289,1,"6","LCK"
-## "ETS12",0.00178877840590492,0.611017390796348,0.603,0.372,1,"6","ETS1"
-## "KIR3DX1",0.00184147537925919,0.710802543414786,0.239,0.026,1,"6","KIR3DX1"
-## "PCSK7",0.00189121655078552,0.835108450136493,0.79,0.564,1,"6","PCSK7"
-## "CD631",0.0022897598096705,0.623175488667073,0.882,0.64,1,"6","CD63"
-## "PTGDR1",0.00240999634728988,0.748319589639738,0.326,0.058,1,"6","PTGDR"
-## "GIMAP72",0.00264000054551979,0.885508369291277,0.702,0.371,1,"6","GIMAP7"
-## "CYFIP2",0.0027993636501165,0.737051935840528,0.525,0.322,1,"6","CYFIP2"
-## "PAXX1",0.00356694607975495,0.811166662156221,0.7,0.452,1,"6","PAXX"
-## "LYAR1",0.00379834227669915,0.64417751504819,0.565,0.322,1,"6","LYAR"
-## "PLA2G16",0.00454166580010449,0.774063864480982,0.461,0.23,1,"6","PLA2G16"
-## "PLEKHF1",0.00476850747370477,0.968613661052342,0.392,0.092,1,"6","PLEKHF1"
-## "SAMD32",0.00479061054140506,0.857124255314388,0.544,0.191,1,"6","SAMD3"
-## "KIR2DL3",0.0048137381940997,0.804889862933457,0.251,0.029,1,"6","KIR2DL3"
-## "MYOM21",0.00503816999218902,1.30628513886566,0.414,0.075,1,"6","MYOM2"
-## "SH2D2A2",0.00515801159405592,0.606014619531337,0.364,0.138,1,"6","SH2D2A"
-## "OPTN1",0.00535426161740324,0.55116090852317,0.489,0.282,1,"6","OPTN"
-## "FCRL61",0.00552916307306333,1.01435970850861,0.449,0.097,1,"6","FCRL6"
-## "LAG31",0.00609086600581674,0.803715576077,0.34,0.076,1,"6","LAG3"
-## "PRMT2",0.00661640217945718,0.670529967906456,0.617,0.413,1,"6","PRMT2"
-## "SLC9A3R1",0.00775841365984725,0.72914103942278,0.532,0.32,1,"6","SLC9A3R1"
-## "GK51",0.00925709978116938,0.813056488643946,0.385,0.149,1,"6","GK5"
-## "CCR71",1.9154950123628e-15,2.00181995476896,0.793,0.121,3.47106851190263e-11,"7","CCR7"
-## "LDHB1",3.11890184080625e-14,1.42630671983422,0.85,0.55,5.65176202572501e-10,"7","LDHB"
-## "LTB2",2.24038560519751e-13,1.64766420522196,0.943,0.385,4.05980275517841e-09,"7","LTB"
-## "IL7R2",2.72215903919822e-13,1.89462763129836,0.951,0.224,4.9328243949311e-09,"7","IL7R"
-## "LEPROTL11",4.47971678427741e-13,1.33542674130136,0.854,0.482,8.11769478478909e-09,"7","LEPROTL1"
-## "PIK3IP11",1.27083346756755e-11,1.673127613339,0.915,0.407,2.30287732657916e-07,"7","PIK3IP1"
-## "TCF71",5.8331269493928e-11,1.78698175348959,0.768,0.205,1.05702093449947e-06,"7","TCF7"
-## "LEF1",1.83719818514527e-10,1.59411128429922,0.553,0.056,3.32918683130174e-06,"7","LEF1"
-## "MAL1",4.57935581005576e-10,1.3735322028652,0.516,0.051,8.29825066340205e-06,"7","MAL"
-## "RCAN31",4.69511112395239e-10,1.38317834704566,0.561,0.137,8.50801086771412e-06,"7","RCAN3"
-## "GIMAP73",1.26603282996589e-09,1.38237755867915,0.801,0.377,2.29417809118119e-05,"7","GIMAP7"
-## "CAMK41",3.06900665770389e-09,1.2668890162324,0.472,0.076,5.56134696442522e-05,"7","CAMK4"
-## "TRAC2",3.33612982185873e-09,1.04346940053419,0.703,0.253,6.04540085019021e-05,"7","TRAC"
-## "OXNAD1",7.77985788913876e-09,0.79272637801599,0.341,0.083,0.000140978804809084,"7","OXNAD1"
-## "FOXP12",9.5062780682861e-09,1.04531868164342,0.793,0.52,0.000172263264875412,"7","FOXP1"
-## "TRABD2A1",1.05952493590568e-08,1.44572485695536,0.512,0.046,0.000191996513635468,"7","TRABD2A"
-## "TSHZ2",3.43708172264423e-08,1.72181953318849,0.463,0.018,0.000622833578960361,"7","TSHZ2"
-## "PDE3B1",7.88641639955581e-08,1.2711995885775,0.549,0.152,0.00142909751576351,"7","PDE3B"
-## "SEPT6",1.84188437263369e-07,0.758058130690912,0.675,0.457,0.0033376786716495,"7","SEPT6"
-## "CD271",3.08784964378214e-07,0.881786052795459,0.431,0.075,0.00559549233949762,"7","CD27"
-## "BCL11B2",3.19779082977127e-07,1.13844437795886,0.488,0.14,0.00579471676262851,"7","BCL11B"
-## "NCK22",3.41955010842992e-07,0.776900816473799,0.52,0.251,0.00619656675148586,"7","NCK2"
-## "GCC2",5.17019880811648e-07,0.956480172203623,0.724,0.51,0.00936891726018787,"7","GCC2"
-## "RIC3",8.25849688076695e-07,0.777420317999956,0.321,0.089,0.0149652221976378,"7","RIC3"
-## "SERINC51",1.17509859296876e-06,1.23466681771635,0.52,0.121,0.021293961603187,"7","SERINC5"
-## "TXK2",3.67540837848642e-06,1.09205847568086,0.553,0.134,0.0666020752265525,"7","TXK"
-## "NOSIP1",4.91059863598447e-06,1.27985190432337,0.707,0.343,0.0889849578826745,"7","NOSIP"
-## "PSIP1",1.17081468758851e-05,0.681407265616311,0.598,0.369,0.212163329537915,"7","PSIP1"
-## "CD3E3",1.81249351123586e-05,0.858208110202525,0.911,0.374,0.328441949171051,"7","CD3E"
-## "DGKA",1.98783247088335e-05,1.10993685986658,0.451,0.14,0.360215122048772,"7","DGKA"
-## "SATB1",2.65166171412959e-05,1.25153249699327,0.569,0.212,0.480507619217423,"7","SATB1"
-## "IKZF1",3.21044941993246e-05,1.21198187672186,0.837,0.581,0.581765539385961,"7","IKZF1"
-## "SPOCK21",3.56319718005785e-05,0.53825218029453,0.581,0.317,0.645686960998284,"7","SPOCK2"
-## "LINC00861",4.00309815039034e-05,0.973831877695302,0.476,0.137,0.725401415832233,"7","LINC00861"
-## "ITK1",4.12384586528279e-05,1.19806805252504,0.492,0.155,0.747282109247894,"7","ITK"
-## "C6orf48",6.58704066834503e-05,0.819189761520964,0.598,0.391,1,"7","C6orf48"
-## "STMN3",7.43010146721295e-05,0.814646217874955,0.321,0.091,1,"7","STMN3"
-## "ETS13",7.57384018425996e-05,0.758501304608195,0.654,0.377,1,"7","ETS1"
-## "CD3D2",9.30801716331101e-05,0.577225072860869,0.76,0.304,1,"7","CD3D"
-## "AP3M21",9.49677051248926e-05,0.794099591156743,0.382,0.114,1,"7","AP3M2"
-## "BCL22",0.000108593510711736,1.26083775781626,0.5,0.189,1,"7","BCL2"
-## "SFXN11",0.000117301546764794,0.840705563686948,0.423,0.161,1,"7","SFXN1"
-## "CD3G2",0.000119594945916829,0.741073880978691,0.703,0.272,1,"7","CD3G"
-## "CHRM3-AS2",0.000129208146895081,0.759500540952198,0.28,0.019,1,"7","CHRM3-AS2"
-## "RHOH2",0.000139704923621434,0.641523978806936,0.638,0.362,1,"7","RHOH"
-## "TRBC22",0.000171829908241174,0.952602060412688,0.736,0.409,1,"7","TRBC2"
-## "SH3YL11",0.000253976368838716,0.794772639527316,0.321,0.082,1,"7","SH3YL1"
-## "BIRC31",0.00025598213959552,0.841697520664964,0.553,0.348,1,"7","BIRC3"
-## "CD281",0.000303585508863233,0.939177771813302,0.313,0.045,1,"7","CD28"
-## "LINC01089",0.000315452728353286,0.825078607894571,0.39,0.128,1,"7","LINC01089"
-## "MGAT4A",0.000335965584393862,0.941031831093886,0.703,0.396,1,"7","MGAT4A"
-## "ZNF101",0.000349622992206984,1.02400785524919,0.447,0.131,1,"7","ZNF101"
-## "PRKCA",0.000569992674149767,1.30669505539646,0.504,0.112,1,"7","PRKCA"
-## "FLT3LG1",0.000616477050606564,0.881933548797797,0.407,0.134,1,"7","FLT3LG"
-## "BEX2",0.000728134206677951,0.628049368726786,0.309,0.085,1,"7","BEX2"
-## "SESN3",0.00074047493014424,1.17193911313302,0.37,0.125,1,"7","SESN3"
-## "EVL4",0.00075194856695388,0.548667027113334,0.793,0.58,1,"7","EVL"
-## "CD62",0.000793662868692644,0.744105772692032,0.451,0.203,1,"7","CD6"
-## "ATM1",0.000850030496252606,1.18564615973172,0.752,0.469,1,"7","ATM"
-## "AQP31",0.00100503186594413,0.794169069906284,0.285,0.058,1,"7","AQP3"
-## "INPP4B1",0.00101865080481125,0.9095530619176,0.309,0.066,1,"7","INPP4B"
-## "LCK2",0.00124765363337973,0.542316050507862,0.585,0.304,1,"7","LCK"
-## "FAM102A",0.00127561057962522,1.07248419812235,0.362,0.086,1,"7","FAM102A"
-## "MYC",0.00152010636121474,0.715534064355294,0.333,0.112,1,"7","MYC"
-## "C12orf572",0.00160937984656668,1.015635217872,0.776,0.502,1,"7","C12orf57"
-## "AAK1",0.0020908220897746,1.22140263696632,0.809,0.519,1,"7","AAK1"
-## "GABPB1-AS1",0.00244631674721996,0.977180801366906,0.451,0.25,1,"7","GABPB1-AS1"
-## "MLLT3",0.00257208132633077,0.837917100109575,0.317,0.074,1,"7","MLLT3"
-## "IL6ST",0.0027494799475641,1.06646546201836,0.415,0.189,1,"7","IL6ST"
-## "ARMH1",0.00327355817555597,0.799525391487924,0.321,0.121,1,"7","ARMH1"
-## "APBA2",0.00415563329089364,0.70758016284657,0.35,0.099,1,"7","APBA2"
-## "LDLRAP1",0.0042028321907663,0.768034795610062,0.297,0.083,1,"7","LDLRAP1"
-## "PDK1",0.00452456177637817,0.965194535999083,0.297,0.084,1,"7","PDK1"
-## "CLEC2D3",0.0048834147748789,0.911788462194706,0.659,0.368,1,"7","CLEC2D"
-## "CD79A1",8.252986376166e-12,2.63286021714161,0.996,0.126,1.49552366122504e-07,"8","CD79A"
-## "MS4A11",6.43694955396701e-11,2.42526053054524,0.932,0.116,1.16643962867436e-06,"8","MS4A1"
-## "BANK11",6.43694955396701e-11,2.16789138066013,0.949,0.109,1.16643962867436e-06,"8","BANK1"
-## "TNFRSF13B",5.00138130027986e-10,1.27998103433724,0.595,0.008,9.06300305423713e-06,"8","TNFRSF13B"
-## "IGHG3",8.83077205384053e-10,1.45582649422011,0.591,0.042,1.60022420387644e-05,"8","IGHG3"
-## "CCDC501",1.05008842481479e-09,1.15203572566667,0.62,0.14,1.90286523460688e-05,"8","CCDC50"
-## "HLA-DQA11",3.46224529403003e-09,1.7854300069706,0.958,0.339,6.27393469731182e-05,"8","HLA-DQA1"
-## "SWAP701",3.46375871974818e-09,1.08596282352001,0.679,0.171,6.27667717605567e-05,"8","SWAP70"
-## "TNFRSF13C1",5.66203346575209e-09,1.88424642015951,0.916,0.117,0.000102601708432894,"8","TNFRSF13C"
-## "SPIB1",1.92885893758831e-08,1.4027634890414,0.658,0.045,0.000349528528080378,"8","SPIB"
-## "CD79B1",3.81546104412579e-08,1.4287424059151,0.84,0.188,0.000691399695806034,"8","CD79B"
-## "LTB3",4.79233935268865e-08,1.54502818890662,0.882,0.388,0.00086841981410071,"8","LTB"
-## "POU2AF11",5.2862400271212e-08,1.16208957030828,0.565,0.041,0.000957919555314632,"8","POU2AF1"
-## "GNG71",8.63289468405323e-08,1.03244770974265,0.578,0.081,0.00156436684569729,"8","GNG7"
-## "BLK1",8.67042251258444e-08,1.46408061635929,0.722,0.057,0.00157116726350543,"8","BLK"
-## "IGHG1",1.80259900368567e-07,1.55453371028909,0.523,0.026,0.00326648965457881,"8","IGHG1"
-## "PDLIM11",3.25961989967049e-07,0.663484101913821,0.73,0.172,0.00590675722019289,"8","PDLIM1"
-## "LINC009261",3.64697429315769e-07,1.37655099134004,0.831,0.114,0.00660868211663105,"8","LINC00926"
-## "COBLL11",4.43130246873377e-07,1.259601216549,0.506,0.038,0.00802996320359247,"8","COBLL1"
-## "EZR1",7.74768878466306e-07,1.37611795117058,0.937,0.574,0.0140395868466879,"8","EZR"
-## "CD241",1.46467079443746e-06,1.00011355839996,0.456,0.035,0.0265412994660013,"8","CD24"
-## "FCRL21",1.50086811474598e-06,0.810895633354068,0.38,0.033,0.0271972311073119,"8","FCRL2"
-## "CD272",1.57895429906345e-06,0.480777718643362,0.338,0.08,0.0286122308533287,"8","CD27"
-## "HLA-DPB11",1.739730532274e-06,1.58132802370797,0.987,0.689,0.0315256569753371,"8","HLA-DPB1"
-## "ADAM281",1.98437408240523e-06,0.925305788232395,0.515,0.083,0.0359588427472652,"8","ADAM28"
-## "SEL1L31",2.59438599996176e-06,1.12515431333212,0.65,0.128,0.047012868705307,"8","SEL1L3"
-## "IGHA1",3.06030269961159e-06,2.9823508381865,0.599,0.101,0.0554557452196616,"8","IGHA1"
-## "DENND5B",3.72299836291281e-06,0.602149055670172,0.3,0.018,0.0674644533343431,"8","DENND5B"
-## "IKZF31",4.50787603840461e-06,0.552404451583541,0.595,0.214,0.08168722169193,"8","IKZF3"
-## "LINC01781",4.55351368837085e-06,1.33493662520694,0.304,0.007,0.0825142215469683,"8","LINC01781"
-## "FCRLA1",4.88708649457441e-06,0.987101364333251,0.527,0.036,0.0885588943681828,"8","FCRLA"
-## "GPR183",5.07081365346783e-06,1.3189621543527,0.7,0.195,0.0918882142144905,"8","GPR183"
-## "HLA-DRA2",5.80373365595539e-06,1.67601117263756,0.992,0.643,0.105169457579568,"8","HLA-DRA"
-## "HLA-DPA11",5.84323448916808e-06,1.36911523460802,0.996,0.703,0.105885252178215,"8","HLA-DPA1"
-## "HLA-DQB11",7.74272344350129e-06,1.55123312194409,0.983,0.555,0.140305891519687,"8","HLA-DQB1"
-## "IGHA2",7.75182569435383e-06,1.27843192114222,0.266,0.007,0.140470833407386,"8","IGHA2"
-## "NFKBID1",9.12691235992293e-06,1.44150866572014,0.713,0.25,0.165388778874163,"8","NFKBID"
-## "IGHG2",9.38779217476205e-06,0.910057978764784,0.405,0.013,0.170116181998863,"8","IGHG2"
-## "CXCR5",1.12653423341089e-05,0.686180647073055,0.321,0.027,0.204139268436387,"8","CXCR5"
-## "CD221",1.19863283602539e-05,0.893446212889323,0.549,0.091,0.217204256216161,"8","CD22"
-## "RALGPS21",1.21416293934986e-05,1.53181750539134,0.835,0.112,0.220018466239589,"8","RALGPS2"
-## "EBF11",1.34982030103985e-05,0.606143468626975,0.35,0.032,0.244600936751431,"8","EBF1"
-## "TCF41",1.36593581521092e-05,1.22859088725048,0.633,0.136,0.247521229074371,"8","TCF4"
-## "P2RX51",1.37597283852091e-05,1.4151484658121,0.667,0.09,0.249340038068373,"8","P2RX5"
-## "CLECL1",1.45436800734619e-05,0.943881056732057,0.439,0.025,0.263546026611203,"8","CLECL1"
-## "IGHG4",1.65277795836686e-05,0.95247213454919,0.397,0.036,0.299499893835659,"8","IGHG4"
-## "ITSN2",2.60633752541167e-05,0.391201325257637,0.637,0.405,0.472294422979848,"8","ITSN2"
-## "ZFAS1",2.86353246867832e-05,0.701929129364171,0.941,0.733,0.518900718649199,"8","ZFAS1"
-## "TCEA1",2.94490233376997e-05,0.525276495978166,0.764,0.484,0.533645751902455,"8","TCEA1"
-## "TRAF4",3.5898347007365e-05,0.799191667753255,0.439,0.078,0.650513946120461,"8","TRAF4"
-## "SMARCB1",3.6173701838757e-05,0.894261047945763,0.641,0.259,0.655503651020115,"8","SMARCB1"
-## "AIM2",4.19923452953945e-05,0.744246503781707,0.354,0.039,0.760943289097843,"8","AIM2"
-## "TOR3A",4.36814302485524e-05,0.732878523310691,0.502,0.179,0.791551197534018,"8","TOR3A"
-## "IRF81",4.43415114893878e-05,0.975984255014094,0.692,0.246,0.803512529699197,"8","IRF8"
-## "OSBPL10",4.97491941520104e-05,0.905593191144305,0.443,0.034,0.90150514722858,"8","OSBPL10"
-## "JCHAIN",5.04205479917576e-05,1.59243437732918,0.464,0.061,0.91367075015864,"8","JCHAIN"
-## "CPNE5",5.68227158230417e-05,0.768359913173395,0.359,0.023,1,"8","CPNE5"
-## "IGLC21",5.84620203845916e-05,2.26803048746567,0.494,0.117,1,"8","IGLC2"
-## "ACP5",6.07121680769862e-05,0.689486722746275,0.418,0.087,1,"8","ACP5"
-## "MKNK21",6.61974686357799e-05,0.837969773361434,0.696,0.339,1,"8","MKNK2"
-## "CNR2",7.30072244403095e-05,0.397249366503552,0.228,0.022,1,"8","CNR2"
-## "TAGAP1",8.1456943889742e-05,0.717234267131381,0.738,0.398,1,"8","TAGAP"
-## "HLA-DMB2",8.15865826230906e-05,0.884996340663182,0.814,0.329,1,"8","HLA-DMB"
-## "ARHGAP25",8.98725442807906e-05,0.744872485264214,0.544,0.196,1,"8","ARHGAP25"
-## "PARP15",9.12567929369569e-05,0.385549825852316,0.312,0.11,1,"8","PARP15"
-## "PKIG1",9.20477339407897e-05,0.553242218806701,0.414,0.061,1,"8","PKIG"
-## "GGA21",0.000112325105449207,0.570381455361522,0.494,0.229,1,"8","GGA2"
-## "SP110",0.000112350081053521,0.607348416277253,0.819,0.49,1,"8","SP110"
-## "USP6NL1",0.000117301546764794,0.46586797192705,0.321,0.08,1,"8","USP6NL"
-## "TLR10",0.000120355289701006,0.462165796170325,0.236,0.01,1,"8","TLR10"
-## "HLA-DRB11",0.000132289646869146,1.17858425275358,0.987,0.728,1,"8","HLA-DRB1"
-## "NCOA31",0.000133755169358764,0.822954159656418,0.679,0.275,1,"8","NCOA3"
-## "CD82",0.000149164839384773,0.900142138210965,0.586,0.2,1,"8","CD82"
-## "GRASP1",0.000151764833575084,0.81540397999721,0.565,0.185,1,"8","GRASP"
-## "LY91",0.000151937104506827,0.856780771131625,0.494,0.139,1,"8","LY9"
-## "ARHGAP24",0.000158611656496873,0.879715394936849,0.502,0.082,1,"8","ARHGAP24"
-## "HSP90AB1",0.000178150234747351,0.803688505795689,0.979,0.772,1,"8","HSP90AB1"
-## "SYPL11",0.000184634824254909,0.899845288447903,0.684,0.267,1,"8","SYPL1"
-## "IGKC1",0.000189296484755882,2.9262493617066,0.726,0.293,1,"8","IGKC"
-## "PNOC",0.000200467654904828,0.626045403143999,0.384,0.032,1,"8","PNOC"
-## "CHCHD10",0.000309549431834465,0.718621602918428,0.734,0.408,1,"8","CHCHD10"
-## "LINC01857",0.000316844797004193,1.02623708257636,0.333,0.019,1,"8","LINC01857"
-## "MYO1C1",0.000375494213348172,0.629443826135159,0.304,0.056,1,"8","MYO1C"
-## "MEF2C1",0.000387455076244163,0.937238529867178,0.7,0.227,1,"8","MEF2C"
-## "PARP1",0.000440070883944096,0.564466028711305,0.544,0.236,1,"8","PARP1"
-## "PTPN1",0.000457858639877094,0.597810562776799,0.717,0.399,1,"8","PTPN1"
-## "ORAI21",0.000466385442567739,0.752908620319972,0.624,0.248,1,"8","ORAI2"
-## "CD401",0.000467757208709345,0.946496370394151,0.549,0.121,1,"8","CD40"
-## "ITM2C",0.000479040105815411,0.591841509861968,0.342,0.062,1,"8","ITM2C"
-## "PPP1R14A",0.000535465262829824,0.597937978664179,0.287,0.033,1,"8","PPP1R14A"
-## "BASP12",0.000554501339336511,0.965282319746085,0.646,0.216,1,"8","BASP1"
-## "SYNGR21",0.000568480382353705,0.605172175209129,0.696,0.344,1,"8","SYNGR2"
-## "RPL22L1",0.000584276830075784,0.44003512846124,0.734,0.524,1,"8","RPL22L1"
-## "FCRL11",0.000714851295833712,0.388231242090086,0.359,0.069,1,"8","FCRL1"
-## "HLA-DMA1",0.000903382400017447,0.859510956412517,0.831,0.418,1,"8","HLA-DMA"
-## "AP1S3",0.00093657526188298,0.441500257210166,0.241,0.027,1,"8","AP1S3"
-## "VPREB31",0.000938382538195496,1.05328008005801,0.468,0.065,1,"8","VPREB3"
-## "BACE2",0.000953362814751277,0.414877452600609,0.224,0.009,1,"8","BACE2"
-## "KAT2A",0.000978342169732801,0.359323975636835,0.249,0.049,1,"8","KAT2A"
-## "SMIM14",0.0010278988502849,0.550397069915503,0.392,0.174,1,"8","SMIM14"
-## "HERPUD1",0.00104118225659765,1.28123631536085,0.907,0.614,1,"8","HERPUD1"
-## "PRDM4",0.00105210493636325,0.310627434402687,0.304,0.094,1,"8","PRDM4"
-## "FNBP1",0.00106370660220369,0.476581411413444,0.759,0.555,1,"8","FNBP1"
-## "HLA-DOB1",0.001081378372417,0.657736469243597,0.384,0.058,1,"8","HLA-DOB"
-## "FCGR2B1",0.0011587515456121,0.827399363504526,0.464,0.063,1,"8","FCGR2B"
-## "SEMA4B",0.00116108001028874,0.533626338554948,0.329,0.054,1,"8","SEMA4B"
-## "RIC31",0.00118032346932992,0.699970139579582,0.46,0.083,1,"8","RIC3"
-## "CD191",0.00123448157133977,0.756721892177007,0.422,0.037,1,"8","CD19"
-## "ZNF430",0.00136041568347172,0.264355101381589,0.506,0.3,1,"8","ZNF430"
-## "TAF1D1",0.00153154108728324,0.628183500007863,0.827,0.544,1,"8","TAF1D"
-## "GEN1",0.00165447534315976,0.590703929476402,0.228,0.024,1,"8","GEN1"
-## "KDM4B",0.00167492655251898,0.439550114577335,0.367,0.155,1,"8","KDM4B"
-## "HSH2D1",0.00167845349499272,0.411161862384505,0.565,0.256,1,"8","HSH2D"
-## "FCRL51",0.00182346989838934,0.862818218231785,0.262,0.025,1,"8","FCRL5"
-## "OFD1",0.00184423103915226,0.287870581774049,0.443,0.235,1,"8","OFD1"
-## "SNX31",0.00187996672181455,0.686866358549926,0.873,0.615,1,"8","SNX3"
-## "SNHG8",0.00189996092448701,0.550201029068689,0.802,0.528,1,"8","SNHG8"
-## "PIM21",0.00191017752343185,0.776601741786553,0.498,0.148,1,"8","PIM2"
-## "PPM1K1",0.0019804346623817,0.540888591420433,0.54,0.219,1,"8","PPM1K"
-## "EAF21",0.00210650496722806,1.07322021939511,0.523,0.14,1,"8","EAF2"
-## "SMDT1",0.00210782796740287,0.391901452389702,0.852,0.645,1,"8","SMDT1"
-## "PMAIP11",0.00216635074760433,0.880261681901686,0.629,0.299,1,"8","PMAIP1"
-## "CXXC51",0.00229126395707204,0.926106149775219,0.646,0.225,1,"8","CXXC5"
-## "BOD1L1",0.00231481463577673,0.318459431707633,0.751,0.544,1,"8","BOD1L1"
-## "CBFA2T3",0.00233195677176225,0.427180212817805,0.283,0.067,1,"8","CBFA2T3"
-## "RAB301",0.00256211586776742,0.32358620250506,0.27,0.064,1,"8","RAB30"
-## "BCAS4",0.00264512841890863,0.725762648907095,0.502,0.097,1,"8","BCAS4"
-## "SHISA8",0.00265803135569758,0.549718552795331,0.232,0.002,1,"8","SHISA8"
-## "TPD521",0.0027180113657442,0.65291222675522,0.506,0.116,1,"8","TPD52"
-## "IGLC31",0.00281369090537723,2.62081433953786,0.367,0.08,1,"8","IGLC3"
-## "TSPAN31",0.00291551658727802,0.662386568974384,0.447,0.131,1,"8","TSPAN3"
-## "PAX51",0.00298519175107774,0.682430877491302,0.422,0.062,1,"8","PAX5"
-## "LY861",0.00311712738012413,0.648831447817663,0.624,0.283,1,"8","LY86"
-## "SINHCAF",0.00317481115198725,0.595066321495382,0.477,0.202,1,"8","SINHCAF"
-## "TMEM1561",0.00329285999227526,0.741233107329254,0.447,0.097,1,"8","TMEM156"
-## "ANAPC16",0.00356963315687203,0.321564151226632,0.819,0.612,1,"8","ANAPC16"
-## "ARID5B1",0.00357387860759517,0.811155534254647,0.586,0.27,1,"8","ARID5B"
-## "PRDM21",0.00412662670874623,0.896447360660336,0.806,0.426,1,"8","PRDM2"
-## "FCMR1",0.00427013837115031,0.63993029577306,0.544,0.173,1,"8","FCMR"
-## "DDX21",0.00434459064580919,0.665998804340091,0.831,0.61,1,"8","DDX21"
-## "CD831",0.00440257238987074,1.39554078817977,0.806,0.328,1,"8","CD83"
-## "DAPP1",0.00476843210504381,0.74050289650449,0.515,0.187,1,"8","DAPP1"
-## "SP140",0.00484012771860319,0.629764438809373,0.519,0.19,1,"8","SP140"
-## "RHOH3",0.00492894972878071,0.57443893055238,0.734,0.359,1,"8","RHOH"
-## "PIP4P1",0.00528740858724804,0.417383402493153,0.439,0.215,1,"8","PIP4P1"
-## "RNASEH2B",0.00529366787132038,0.455448749548929,0.532,0.295,1,"8","RNASEH2B"
-## "NT5C",0.00564403105627192,0.4996444455892,0.595,0.288,1,"8","NT5C"
-## "FAM129C1",0.00567715802825703,0.649518157064227,0.414,0.072,1,"8","FAM129C"
-## "FAM30A1",0.00570205261067304,0.878591829450423,0.346,0.042,1,"8","FAM30A"
-## "ACADM",0.00653494959740539,0.415433121427761,0.321,0.095,1,"8","ACADM"
-## "ZBTB32",0.00653556966225464,0.582987304082807,0.215,0.007,1,"8","ZBTB32"
-## "TSTD11",0.00662265103548701,0.438506086539466,0.637,0.319,1,"8","TSTD1"
-## "CAMK1D",0.006760744888946,0.476549937274244,0.409,0.146,1,"8","CAMK1D"
-## "DRAM2",0.0067949971784982,0.480871141534331,0.502,0.253,1,"8","DRAM2"
-## "MTERF4",0.00758922349137024,0.295419949860654,0.506,0.298,1,"8","MTERF4"
-## "CTSH1",0.00771884492938793,0.34310006186487,0.595,0.325,1,"8","CTSH"
-## "STRBP1",0.00844324168006848,0.63170137666976,0.435,0.089,1,"8","STRBP"
-## "ISCU",0.00865721556582885,0.530416450013339,0.814,0.539,1,"8","ISCU"
-## "PPP3CC",0.00885869641044087,0.299149683671776,0.477,0.232,1,"8","PPP3CC"
-## "LST11",2.56156096512699e-17,3.04105940127395,1,0.385,4.64180462490662e-13,"9","LST1"
-## "LRRC251",8.65950947572148e-16,1.99951768025796,0.945,0.218,1.56918971209549e-11,"9","LRRC25"
-## "COTL11",1.58928342450635e-15,2.35578710242365,1,0.643,2.87994049354795e-11,"9","COTL1"
-## "RRAS",2.7508922871735e-15,1.71386449288911,0.908,0.181,4.9848919135871e-11,"9","RRAS"
-## "MS4A71",3.09755594076816e-15,2.23628677580993,0.908,0.151,5.61308112026597e-11,"9","MS4A7"
-## "SMIM251",4.71613367508113e-15,2.1474430013135,0.949,0.154,8.54610583261452e-11,"9","SMIM25"
-## "FCGR3A2",5.93845205921384e-15,2.56928113076622,0.982,0.273,1.07610689765014e-10,"9","FCGR3A"
-## "CDKN1C",1.25632721145319e-14,3.22061376766387,0.899,0.037,2.27659053987432e-10,"9","CDKN1C"
-## "SERPINA11",1.27290592440275e-14,2.18814928237049,0.986,0.313,2.30663282561022e-10,"9","SERPINA1"
-## "PSAP1",1.90031063926064e-14,1.96011608251274,1,0.611,3.44355290940421e-10,"9","PSAP"
-## "CSF1R1",3.62370192113846e-14,1.91647571828683,0.885,0.109,6.566510251295e-10,"9","CSF1R"
-## "PILRA1",4.18601397134761e-14,1.60713763782341,0.935,0.226,7.585475917479e-10,"9","PILRA"
-## "CST31",5.76629789256339e-14,1.9513617938374,1,0.391,1.04491084111141e-09,"9","CST3"
-## "PECAM11",1.25017992519535e-13,1.78464888430855,0.922,0.275,2.26545104244649e-09,"9","PECAM1"
-## "TNFRSF1B1",2.0176844131674e-13,1.49237173243711,0.972,0.463,3.65624592510065e-09,"9","TNFRSF1B"
-## "TCF7L2",2.36641059218904e-13,1.61428548712062,0.853,0.105,4.28817263410575e-09,"9","TCF7L2"
-## "TBXAS11",2.40051795750746e-13,1.08004732058694,0.862,0.231,4.34997859079926e-09,"9","TBXAS1"
-## "CAMK11",3.2450086346006e-13,1.15581800175817,0.737,0.106,5.88028014675974e-09,"9","CAMK1"
-## "HMOX11",4.15746694002371e-13,1.56705181092137,0.857,0.171,7.53374584201697e-09,"9","HMOX1"
-## "SPI11",7.42923585906231e-13,1.93195178394075,0.982,0.36,1.34625183002068e-08,"9","SPI1"
-## "LILRB21",1.18449910939653e-12,1.67739600832727,0.972,0.245,2.14643083613746e-08,"9","LILRB2"
-## "CD681",1.78960155541307e-12,1.70921657361395,0.963,0.309,3.24293697856403e-08,"9","CD68"
-## "LMO21",1.80209517682917e-12,1.49884014917564,0.903,0.219,3.26557666993214e-08,"9","LMO2"
-## "NPC22",3.5272852294153e-12,1.68122061055438,0.986,0.477,6.39179356422347e-08,"9","NPC2"
-## "VSIR1",3.5975832496421e-12,1.69913556360089,0.982,0.5,6.51918060667645e-08,"9","VSIR"
-## "PLXNB21",5.12601110502518e-12,1.00375701876773,0.747,0.163,9.28884472341612e-08,"9","PLXNB2"
-## "RNASET2",7.47982284445889e-12,1.41819966828497,0.972,0.59,1.3554186976444e-07,"9","RNASET2"
-## "FCER1G1",8.28162336704127e-12,2.02038060765358,1,0.462,1.50071297034155e-07,"9","FCER1G"
-## "HLA-DPA12",1.12523656257031e-11,1.28450026042441,0.991,0.704,2.03904117503367e-07,"9","HLA-DPA1"
-## "C20orf271",1.36429195860293e-11,1.1712669361547,0.843,0.27,2.47223345818436e-07,"9","C20orf27"
-## "WARS1",1.49080526627008e-11,1.81614329526981,0.935,0.275,2.70148822300801e-07,"9","WARS"
-## "CLEC7A1",1.53800254762294e-11,1.07800010506378,0.894,0.249,2.78701441654753e-07,"9","CLEC7A"
-## "LFNG",1.5986671366629e-11,1.04401663606556,0.77,0.163,2.89694471834684e-07,"9","LFNG"
-## "IFI301",1.99831542359402e-11,1.42693579127135,0.917,0.248,3.62114737909473e-07,"9","IFI30"
-## "TMEM176B1",2.44722542034222e-11,1.46896841036923,0.848,0.168,4.43461718420213e-07,"9","TMEM176B"
-## "SECTM11",3.83559574009936e-11,1.04792668940118,0.756,0.143,6.95048304063406e-07,"9","SECTM1"
-## "FKBP1A1",4.06366523784968e-11,1.17014389876768,0.968,0.528,7.36376777750741e-07,"9","FKBP1A"
-## "AIF11",4.12654766520727e-11,2.39867639464902,1,0.369,7.4777170241221e-07,"9","AIF1"
-## "LYN2",4.21617300825984e-11,1.44465198710578,0.954,0.446,7.64012710826765e-07,"9","LYN"
-## "ASAH11",4.22523014741403e-11,1.42182652171906,0.968,0.481,7.65653955012896e-07,"9","ASAH1"
-## "CFP1",4.58300575533787e-11,1.31275293726657,0.917,0.264,8.30486472924776e-07,"9","CFP"
-## "SLC31A21",8.51306450977921e-11,1.41813054677765,0.811,0.17,1.54265241981709e-06,"9","SLC31A2"
-## "CXCL161",8.9323162741429e-11,1.13719372744143,0.724,0.117,1.61862503203743e-06,"9","CXCL16"
-## "TUBA1A",9.15180474474732e-11,1.05826771447243,0.94,0.627,1.65839853779566e-06,"9","TUBA1A"
-## "CTSS1",1.65573169835462e-10,1.58419463896854,1,0.67,3.00035141058841e-06,"9","CTSS"
-## "ADGRE1",1.83719818514527e-10,1.01737157140416,0.636,0.054,3.32918683130174e-06,"9","ADGRE1"
-## "LYST",2.51436516040793e-10,0.929073820570319,0.903,0.441,4.5562811071752e-06,"9","LYST"
-## "RHOG1",2.54775553456802e-10,1.01248651199206,0.968,0.601,4.61678780419071e-06,"9","RHOG"
-## "VASP1",3.28533507299359e-10,1.26808110299779,0.949,0.491,5.95335568577168e-06,"9","VASP"
-## "CFD1",4.00842458114683e-10,1.93049480077409,0.982,0.272,7.26366618349618e-06,"9","CFD"
-## "HOTAIRM11",4.30643021832083e-10,1.19739132919349,0.825,0.273,7.80368219861917e-06,"9","HOTAIRM1"
-## "NAP1L1",4.33913457634046e-10,1.36002851114306,0.959,0.712,7.86294576578655e-06,"9","NAP1L1"
-## "DRAP1",4.6540493208451e-10,1.11616718292201,0.954,0.624,8.43360277430341e-06,"9","DRAP1"
-## "SH3BP21",4.77751325001006e-10,1.06185902606001,0.866,0.311,8.65733176034324e-06,"9","SH3BP2"
-## "CMTM6",4.77751325001006e-10,0.858378611427446,0.899,0.472,8.65733176034324e-06,"9","CMTM6"
-## "SLC7A71",5.01881916387225e-10,1.25372496957703,0.899,0.241,9.09460220685291e-06,"9","SLC7A7"
-## "CTSL",5.43369861988511e-10,1.17501350720362,0.673,0.094,9.84640526909381e-06,"9","CTSL"
-## "ITGAX1",7.10005919321381e-10,1.18529466117811,0.848,0.238,1.28660172640228e-05,"9","ITGAX"
-## "MAPKAPK31",7.51598565402375e-10,1.28445831248407,0.857,0.23,1.36197176036564e-05,"9","MAPKAPK3"
-## "SPN",1.01780731179274e-09,1.18494212733414,0.843,0.285,1.84436862969962e-05,"9","SPN"
-## "LILRB1",1.10112075320292e-09,1.01297348060507,0.737,0.21,1.99534091687902e-05,"9","LILRB1"
-## "YPEL2",1.27745528816542e-09,0.868564729942257,0.719,0.201,2.31487672768456e-05,"9","YPEL2"
-## "GSTP11",1.32618831234015e-09,1.01157857341617,0.968,0.72,2.40318584079159e-05,"9","GSTP1"
-## "HES4",1.3874367563089e-09,1.57947360156748,0.742,0.066,2.51417414610736e-05,"9","HES4"
-## "MBD2",1.53506861143006e-09,1.25804749926902,0.935,0.483,2.78169783077242e-05,"9","MBD2"
-## "RHOC1",1.85994995444945e-09,2.00115048189145,0.903,0.293,3.37041531245785e-05,"9","RHOC"
-## "RNH1",1.88900685465788e-09,1.01677101504479,0.894,0.491,3.42306932132554e-05,"9","RNH1"
-## "C19orf381",1.90909982593286e-09,1.20555508520696,0.912,0.23,3.45947979457293e-05,"9","C19orf38"
-## "TYMP1",1.98784177911726e-09,1.31320259920459,0.991,0.455,3.60216808793839e-05,"9","TYMP"
-## "RXRA1",2.07300708219252e-09,0.982881213235005,0.811,0.232,3.75649613364106e-05,"9","RXRA"
-## "SLC25A51",2.42602241298562e-09,0.914477667320853,0.959,0.653,4.39619521457124e-05,"9","SLC25A5"
-## "CPVL1",2.56830447923576e-09,0.962006915486746,0.816,0.248,4.65402454682312e-05,"9","CPVL"
-## "CTSC",2.79978730114147e-09,1.4015726833271,0.94,0.465,5.07349456839845e-05,"9","CTSC"
-## "CEBPB1",2.97950032409096e-09,1.68603063485703,0.977,0.56,5.39915253728523e-05,"9","CEBPB"
-## "MTSS11",3.27772990682415e-09,1.0705016147871,0.848,0.218,5.93957436415604e-05,"9","MTSS1"
-## "PTP4A21",3.46348415192683e-09,0.993723677264331,0.972,0.763,6.2761796317066e-05,"9","PTP4A2"
-## "TCIRG12",3.7373875386523e-09,1.04945609426954,0.931,0.395,6.77251995879183e-05,"9","TCIRG1"
-## "UNC119",4.07851554029774e-09,1.34226572247592,0.793,0.217,7.39067801057353e-05,"9","UNC119"
-## "IFITM31",4.4602200011183e-09,1.78620856962913,0.995,0.386,8.08236466402646e-05,"9","IFITM3"
-## "SAT11",4.94824107566301e-09,1.58156656711627,1,0.773,8.96670765320895e-05,"9","SAT1"
-## "NAAA",5.09263817265364e-09,1.26842263380089,0.834,0.256,9.22836963266565e-05,"9","NAAA"
-## "P2RX11",8.08602594197174e-09,0.846236412958283,0.636,0.105,0.00014652687609447,"9","P2RX1"
-## "SIGLEC10",8.50278478617893e-09,1.15215280834098,0.733,0.084,0.000154078963110348,"9","SIGLEC10"
-## "C1orf1621",1.04492114526701e-08,0.781998676220169,0.903,0.453,0.000189350160733834,"9","C1orf162"
-## "PTPN18",1.10791823281675e-08,0.480494568452048,0.774,0.345,0.000200765862968723,"9","PTPN18"
-## "CDH23",1.13677012931005e-08,0.929834172541492,0.594,0.055,0.000205994115132275,"9","CDH23"
-## "FAM110A",1.18216701720608e-08,1.23460117783032,0.71,0.128,0.000214220485187914,"9","FAM110A"
-## "CUX11",1.18704046382475e-08,0.821601710101077,0.77,0.287,0.000215103602449684,"9","CUX1"
-## "CPPED11",1.24981213462615e-08,0.945694741335071,0.793,0.237,0.000226478456915604,"9","CPPED1"
-## "CDKN2D1",1.27320354322535e-08,0.814812779984834,0.935,0.609,0.000230717214067866,"9","CDKN2D"
-## "TMEM176A1",1.28786858886243e-08,0.628914957067916,0.622,0.135,0.00023337466698776,"9","TMEM176A"
-## "H2AFY1",1.37478743126826e-08,0.673077979301477,0.917,0.477,0.000249125230420121,"9","H2AFY"
-## "GPBAR11",1.48324005406012e-08,0.8300677140958,0.553,0.095,0.000268777930196234,"9","GPBAR1"
-## "PAG11",1.93273979465803e-08,0.672732546788695,0.774,0.292,0.000350231778189982,"9","PAG1"
-## "BID1",1.9669943608191e-08,1.3542036817496,0.894,0.326,0.00035643904812403,"9","BID"
-## "BRI31",1.98467027265114e-08,1.11991910196355,0.986,0.577,0.000359642100107113,"9","BRI3"
-## "RNF1301",2.00516204771068e-08,0.899352678527339,0.945,0.327,0.000363355414665653,"9","RNF130"
-## "GRK31",2.3218565863032e-08,0.676995142109394,0.608,0.161,0.000420743632004003,"9","GRK3"
-## "SLC2A6",2.50930710643992e-08,1.44295486155856,0.797,0.153,0.000454711540757977,"9","SLC2A6"
-## "LILRA51",4.36713254983613e-08,1.22899079065892,0.908,0.23,0.000791368089355806,"9","LILRA5"
-## "CSTB1",5.30669339011002e-08,1.25641311105477,0.959,0.526,0.000961625909221836,"9","CSTB"
-## "CD4",6.13201365973964e-08,0.794159287511428,0.737,0.204,0.00111118219528142,"9","CD4"
-## "CLEC12A1",6.20355928768141e-08,1.15100165762989,0.848,0.247,0.00112414697852075,"9","CLEC12A"
-## "LPCAT21",6.28341315574186e-08,0.603151469558859,0.525,0.12,0.00113861729795198,"9","LPCAT2"
-## "KIAA09301",6.53009047493285e-08,0.745627078426397,0.747,0.218,0.00118331769496258,"9","KIAA0930"
-## "ST3GAL5",7.15401646060398e-08,0.78204240186012,0.696,0.198,0.00129637932282605,"9","ST3GAL5"
-## "RNF13",7.29340025230687e-08,0.584430143657746,0.696,0.284,0.00132163705972053,"9","RNF13"
-## "IL3RA",7.77888271636172e-08,0.71639000977999,0.447,0.022,0.00140961133703191,"9","IL3RA"
-## "S100A111",8.43254385799095e-08,1.50042554674306,0.995,0.583,0.00152806127250654,"9","S100A11"
-## "PHF19",9.48297350069292e-08,0.633843900306357,0.558,0.112,0.00171840962806056,"9","PHF19"
-## "PRELID11",1.26003931555485e-07,1.17542647393025,0.968,0.628,0.00228331724371694,"9","PRELID1"
-## "FGL21",1.30964041882127e-07,0.983595867544093,0.926,0.319,0.00237319940294603,"9","FGL2"
-## "PKN1",1.33061350109404e-07,0.937750136521254,0.871,0.473,0.00241120472533251,"9","PKN1"
-## "BATF3",1.34846470399359e-07,0.908212774642663,0.507,0.027,0.00244355289010678,"9","BATF3"
-## "AP2A1",1.44703104590042e-07,1.01744237855987,0.825,0.232,0.00262216495827615,"9","AP2A1"
-## "CD861",1.55082924457647e-07,0.941244645246799,0.677,0.157,0.00281025767409703,"9","CD86"
-## "ANXA51",1.59539026013835e-07,1.05717029701885,0.94,0.452,0.0028910066903967,"9","ANXA5"
-## "CD300LF1",1.59794165174182e-07,0.934487748688151,0.664,0.122,0.00289563006712135,"9","CD300LF"
-## "TYROBP1",1.63936013889796e-07,1.31411837072432,1,0.518,0.00297068450769699,"9","TYROBP"
-## "DOCK5",1.74634736216477e-07,0.566729339270909,0.59,0.151,0.00316455605497878,"9","DOCK5"
-## "ADGRE5",1.76914081687025e-07,0.757364754757338,0.908,0.584,0.00320586007425057,"9","ADGRE5"
-## "FGR1",1.80163276133865e-07,1.07404876654556,0.908,0.381,0.00326473872682177,"9","FGR"
-## "P2RY131",1.85352004961486e-07,0.680570102521049,0.498,0.118,0.00335876368190709,"9","P2RY13"
-## "RGS19",1.9548872737834e-07,1.02928111233401,0.908,0.382,0.0035424512288229,"9","RGS19"
-## "CAP12",2.1387268002847e-07,0.659770697223355,0.945,0.667,0.0038755868347959,"9","CAP1"
-## "HLA-DRB12",2.22515454624539e-07,0.621010991973866,0.991,0.729,0.00403220255325127,"9","HLA-DRB1"
-## "LGALS91",2.34367438190476e-07,1.07253228274878,0.862,0.298,0.00424697234744962,"9","LGALS9"
-## "LGALS31",2.394261693235e-07,1.01020305672954,0.931,0.385,0.00433864161431114,"9","LGALS3"
-## "ACAP2",2.52892989784293e-07,0.278400579491356,0.783,0.416,0.00458267386788117,"9","ACAP2"
-## "CEBPA1",2.62777136108153e-07,0.723651343337487,0.594,0.144,0.00476178448341583,"9","CEBPA"
-## "NFKBIZ",2.81638638999727e-07,0.804180476614243,0.885,0.393,0.00510357377731405,"9","NFKBIZ"
-## "AP1S21",3.18463881196282e-07,0.644826855591784,0.903,0.378,0.00577088399115782,"9","AP1S2"
-## "ADGRE21",3.54731122222888e-07,0.846168867655364,0.719,0.164,0.00642808266580095,"9","ADGRE2"
-## "LRRFIP11",3.6058871612331e-07,0.597297002798673,0.982,0.773,0.00653422812487051,"9","LRRFIP1"
-## "CKB",3.81130019167374e-07,1.21057286397925,0.507,0.011,0.00690645707733199,"9","CKB"
-## "HLA-DPB12",3.85558345638828e-07,0.654918016912377,0.972,0.69,0.00698670278132121,"9","HLA-DPB1"
-## "CHCHD101",4.14180514165321e-07,0.988294871998393,0.894,0.403,0.00750536509718979,"9","CHCHD10"
-## "FCGRT1",4.38059249181972e-07,1.08711727670654,0.931,0.325,0.00793807165442652,"9","FCGRT"
-## "TNFAIP21",4.47910410212663e-07,0.68294585496534,0.728,0.252,0.00811658454346366,"9","TNFAIP2"
-## "SNX181",4.76256445265872e-07,0.771885580336798,0.691,0.189,0.00863024304466286,"9","SNX18"
-## "LYL1",5.12154742747853e-07,0.60642904077232,0.673,0.185,0.00928075609333385,"9","LYL1"
-## "MT2A2",5.12981454113711e-07,1.29317976576523,0.931,0.504,0.00929573692999455,"9","MT2A"
-## "GRK2",5.16905775951958e-07,0.709059466864979,0.862,0.533,0.00936684956602543,"9","GRK2"
-## "CYBB1",5.36448936167248e-07,0.944683322494253,0.94,0.344,0.00972099117228671,"9","CYBB"
-## "RIN3",5.67371795804523e-07,0.621764319147716,0.747,0.306,0.0102813443117738,"9","RIN3"
-## "MAP3K12",5.72569001089007e-07,0.781479152849833,0.793,0.329,0.0103755228687339,"9","MAP3K1"
-## "IER5",6.20814185983219e-07,1.03093946804924,0.922,0.443,0.0112497738642019,"9","IER5"
-## "CALHM6",6.77809029986726e-07,0.664183849904676,0.571,0.118,0.0122825774323895,"9","CALHM6"
-## "CCDC88A1",6.88992967187681e-07,0.413370120553227,0.627,0.236,0.012485241558408,"9","CCDC88A"
-## "PPM1F1",7.12295665337272e-07,0.714703316298593,0.627,0.154,0.0129075097515767,"9","PPM1F"
-## "DUSP61",7.64003801121394e-07,0.568906524578943,0.77,0.274,0.0138445128801208,"9","DUSP6"
-## "TESC",7.74540508976808e-07,0.921167184527677,0.71,0.219,0.0140354485631687,"9","TESC"
-## "NEURL1",8.25849688076695e-07,0.709670473414907,0.47,0.014,0.0149652221976378,"9","NEURL1"
-## "PDK4",8.25849688076695e-07,0.555401705309271,0.392,0.058,0.0149652221976378,"9","PDK4"
-## "DPEP2",8.44994178588129e-07,0.636936769576611,0.553,0.141,0.0153121395101955,"9","DPEP2"
-## "STX111",9.2061598392996e-07,1.02857976977081,0.843,0.289,0.0166824822447948,"9","STX11"
-## "FGD21",9.47067964479975e-07,0.559682543409543,0.558,0.168,0.0171618185843416,"9","FGD2"
-## "EHBP1L11",1.06726787294344e-06,0.782608463122992,0.802,0.33,0.019339961125608,"9","EHBP1L1"
-## "HCK1",1.07497654718406e-06,1.15163429085475,0.894,0.256,0.0194796500115224,"9","HCK"
-## "ADAP21",1.08594163064677e-06,0.725964437173445,0.553,0.154,0.0196783482889502,"9","ADAP2"
-## "C5AR11",1.10323368277109e-06,0.999758553008982,0.839,0.214,0.0199916975654949,"9","C5AR1"
-## "HIGD2A",1.17213861895962e-06,0.720368752142935,0.959,0.662,0.0212403239141673,"9","HIGD2A"
-## "DUSP7",1.23385911525949e-06,0.390846620715355,0.327,0.058,0.0223587610276172,"9","DUSP7"
-## "KDM1B1",1.2356080056037e-06,0.632652148408296,0.553,0.12,0.0223904526695446,"9","KDM1B"
-## "ANXA21",1.27777126645932e-06,0.804646944670049,0.959,0.525,0.0231544931195093,"9","ANXA2"
-## "ARRB1",1.34480402605921e-06,0.689757360053745,0.599,0.111,0.0243691937562189,"9","ARRB1"
-## "TUBB",1.45218888727859e-06,0.81238444796905,0.839,0.411,0.0263151148263753,"9","TUBB"
-## "TIMP11",1.52044715666505e-06,1.51159134200864,0.959,0.442,0.0275520229259274,"9","TIMP1"
-## "C5AR2",1.76515934465433e-06,0.596881531362174,0.382,0.046,0.0319864524844811,"9","C5AR2"
-## "VPS35",1.81895504204908e-06,0.534250243034598,0.622,0.263,0.0329612843169713,"9","VPS35"
-## "KLF3",1.96739118021058e-06,0.70757262040633,0.876,0.533,0.0356510955765959,"9","KLF3"
-## "PFKL",2.08128078248018e-06,0.706260025281858,0.682,0.232,0.0377148890593233,"9","PFKL"
-## "SFT2D2",2.10848210442757e-06,0.442086311809195,0.7,0.31,0.038207804214332,"9","SFT2D2"
-## "MARCKSL1",2.31315534737917e-06,0.95568751409878,0.673,0.243,0.0419166880498578,"9","MARCKSL1"
-## "ZDHHC18",2.31646568239403e-06,0.51159307728228,0.535,0.141,0.0419766746306622,"9","ZDHHC18"
-## "CORO1B",2.39992140786471e-06,0.70404433101648,0.673,0.251,0.0434889758319165,"9","CORO1B"
-## "IFNGR21",2.40717299604795e-06,0.539458624761137,0.88,0.347,0.0436203818613849,"9","IFNGR2"
-## "NAGA1",2.45987791148383e-06,0.614410966906246,0.553,0.142,0.0445754476339986,"9","NAGA"
-## "TKT1",2.48396850639191e-06,1.10506585217976,0.982,0.55,0.0450119933043277,"9","TKT"
-## "CTBP2",2.49922690856896e-06,0.399809578747058,0.53,0.17,0.0452884908101782,"9","CTBP2"
-## "CASP11",2.67376651514632e-06,0.917309685071347,0.853,0.394,0.0484513230209664,"9","CASP1"
-## "STXBP21",2.6849633667853e-06,1.16826403762265,0.922,0.437,0.0486542211695164,"9","STXBP2"
-## "TRIM81",3.0590471483246e-06,0.906677565090576,0.866,0.325,0.05543299337479,"9","TRIM8"
-## "NRROS",3.11216325966147e-06,0.309850900523638,0.429,0.155,0.0563955104283255,"9","NRROS"
-## "ATG32",3.17565511693833e-06,0.773318809857041,0.825,0.343,0.0575460463740395,"9","ATG3"
-## "MCRIP2",3.19075991055359e-06,0.53418950763713,0.535,0.138,0.0578197603391415,"9","MCRIP2"
-## "CTSZ1",3.47450434795315e-06,1.11843477423974,0.931,0.422,0.0629614932892591,"9","CTSZ"
-## "UQCRC2",3.54342002616282e-06,0.30520252267271,0.728,0.405,0.0642103142940965,"9","UQCRC2"
-## "APH1B",3.6745763418617e-06,0.491953395327592,0.507,0.106,0.0665869978908759,"9","APH1B"
-## "TSPAN14",3.82878906713841e-06,0.725700402231871,0.774,0.311,0.0693814866856151,"9","TSPAN14"
-## "MKRN1",4.03900858446319e-06,0.636800787049703,0.853,0.395,0.0731908745590574,"9","MKRN1"
-## "MRPS35",4.17393698438966e-06,0.600157530287287,0.641,0.2,0.075635912094125,"9","MRPS35"
-## "HSBP12",4.45779865907337e-06,1.09170835396916,0.88,0.34,0.0807797695010686,"9","HSBP1"
-## "MFSD12",4.51789787992384e-06,0.724896672281696,0.622,0.16,0.0818688274820999,"9","MFSD12"
-## "FAM214B1",4.53345100000902e-06,0.388846487245306,0.465,0.124,0.0821506655711635,"9","FAM214B"
-## "RMND5A",4.61393896994651e-06,0.31732130513094,0.41,0.147,0.0836091880744008,"9","RMND5A"
-## "PDLIM5",5.13099497219729e-06,0.644558291787013,0.613,0.165,0.092978759891187,"9","PDLIM5"
-## "ZNF703",5.33483588117092e-06,0.77484105835486,0.502,0.039,0.0966725610026983,"9","ZNF703"
-## "RAB321",5.35702265305091e-06,0.44243077769835,0.793,0.242,0.0970746074959355,"9","RAB32"
-## "SPOPL1",5.80371761933627e-06,0.388646300119312,0.47,0.168,0.105169166979993,"9","SPOPL"
-## "GPR137B",6.00306326836443e-06,0.354106180428242,0.336,0.058,0.108781509486032,"9","GPR137B"
-## "PTPN61",6.04972905988861e-06,1.08018013231914,0.917,0.425,0.109627140294241,"9","PTPN6"
-## "WASF2",6.20894290983971e-06,0.938886323153426,0.963,0.579,0.112512254469205,"9","WASF2"
-## "LILRB31",6.36438714574309e-06,0.581236491095905,0.719,0.237,0.115329059468011,"9","LILRB3"
-## "QARS",6.40517532059991e-06,0.286992344602641,0.507,0.221,0.116068181984591,"9","QARS"
-## "ICAM2",6.40897687851673e-06,0.448892293380253,0.594,0.194,0.116137070015602,"9","ICAM2"
-## "SNX101",6.48520387247502e-06,0.717467918377283,0.77,0.313,0.11751837937312,"9","SNX10"
-## "RNPEP",6.49712856802043e-06,0.545302179681824,0.677,0.223,0.117734466781098,"9","RNPEP"
-## "PGK1",6.63778717017869e-06,0.917948970722245,0.945,0.636,0.120283341310808,"9","PGK1"
-## "MGAT11",6.93445445321975e-06,0.66960976324535,0.857,0.357,0.125659249146795,"9","MGAT1"
-## "M6PR",6.95707584523285e-06,0.613081671041738,0.802,0.388,0.126069171391464,"9","M6PR"
-## "CACUL1",6.97764030274508e-06,0.644361658596247,0.645,0.248,0.126441819926044,"9","CACUL1"
-## "TIAM1",7.00869168762329e-06,0.28718863778882,0.332,0.08,0.127004502071422,"9","TIAM1"
-## "SNN1",7.09008323490469e-06,0.754111473939076,0.724,0.224,0.128479398299708,"9","SNN"
-## "TAGLN",7.33140492662466e-06,0.63899078570666,0.442,0.04,0.132852388675365,"9","TAGLN"
-## "MYO1G",7.49647358802453e-06,0.786715317936441,0.912,0.548,0.135843597888592,"9","MYO1G"
-## "CSK",7.5297204933368e-06,0.920011851259127,0.945,0.457,0.136446065059756,"9","CSK"
-## "SAMHD11",7.60885750039684e-06,0.651292269604877,0.935,0.505,0.137880106764691,"9","SAMHD1"
-## "CNPY31",7.60885750039684e-06,0.548111439952462,0.862,0.446,0.137880106764691,"9","CNPY3"
-## "GSTO11",7.6383216603684e-06,0.546102097720677,0.876,0.434,0.138414026807536,"9","GSTO1"
-## "TMC6",7.73527465692182e-06,0.695174954972163,0.82,0.392,0.14017091205808,"9","TMC6"
-## "ZDHHC1",7.75182569435383e-06,0.581575164749085,0.41,0.041,0.140470833407386,"9","ZDHHC1"
-## "MAFB1",7.87148730246791e-06,0.693709437145907,0.899,0.269,0.142639221408021,"9","MAFB"
-## "QDPR",8.35887901728832e-06,0.327806932506369,0.341,0.09,0.151471246672282,"9","QDPR"
-## "FCN11",8.54538596521757e-06,0.951915451703877,0.949,0.336,0.154850939075708,"9","FCN1"
-## "SERTAD21",8.71372742395433e-06,0.288931285708906,0.479,0.208,0.157901454649476,"9","SERTAD2"
-## "PPP1CA",8.90383934638599e-06,0.685266183507746,0.94,0.644,0.161346472795861,"9","PPP1CA"
-## "IL10RA",8.96254228922244e-06,0.622723000222492,0.88,0.466,0.162410228823,"9","IL10RA"
-## "COL4A3BP1",9.17606418694952e-06,0.483801793050899,0.659,0.277,0.166279459131712,"9","COL4A3BP"
-## "RELT1",9.88713205705568e-06,0.879349157656998,0.714,0.215,0.179164720005906,"9","RELT"
-## "HLA-DRA3",9.9793728671521e-06,0.678147369944407,0.977,0.645,0.180836215725663,"9","HLA-DRA"
-## "PLEKHO21",1.02115537274701e-05,0.502489087777497,0.571,0.17,0.185043565095485,"9","PLEKHO2"
-## "CD44",1.05486888277313e-05,0.32928406627757,0.972,0.733,0.191152790247319,"9","CD44"
-## "NRIP11",1.11534612402549e-05,0.527478566714048,0.594,0.216,0.202111871134658,"9","NRIP1"
-## "TENT5A1",1.11729171059371e-05,0.924823895376524,0.742,0.207,0.202464430876687,"9","TENT5A"
-## "RAB311",1.11729171059371e-05,0.569501880959202,0.76,0.264,0.202464430876687,"9","RAB31"
-## "CAPZB",1.13024310623234e-05,0.808714048044281,0.949,0.68,0.204811353280362,"9","CAPZB"
-## "ITGA4",1.17508557021844e-05,0.415752710133846,0.756,0.395,0.212937256179284,"9","ITGA4"
-## "GAA1",1.17685954488599e-05,0.454249516614488,0.558,0.187,0.213258718128791,"9","GAA"
-## "SH3BGRL1",1.18609996784838e-05,0.669355379435757,0.88,0.647,0.214933175173806,"9","SH3BGRL"
-## "UBE2R21",1.22043844555083e-05,0.664759097157012,0.839,0.399,0.221155650718265,"9","UBE2R2"
-## "MCOLN1",1.26105899299858e-05,0.646109826883971,0.567,0.128,0.228516500121273,"9","MCOLN1"
-## "PRADC1",1.29033929075923e-05,0.349557414406337,0.346,0.067,0.233822382878479,"9","PRADC1"
-## "OGFRL1",1.34439441734295e-05,0.387121546563318,0.65,0.267,0.243617712366717,"9","OGFRL1"
-## "ATP6AP11",1.56671591034438e-05,0.282005596428493,0.599,0.295,0.283904590113505,"9","ATP6AP1"
-## "VAMP8",1.57661608783479e-05,0.475555687689396,0.903,0.647,0.285698601276542,"9","VAMP8"
-## "GBP2",1.60553071798385e-05,0.838563334493202,0.816,0.347,0.290938221405853,"9","GBP2"
-## "PYCARD2",1.63435104294404e-05,1.03161745291219,0.954,0.428,0.29616075249189,"9","PYCARD"
-## "ATP1B3",1.68594211172767e-05,0.854909114100061,0.843,0.353,0.305509570066171,"9","ATP1B3"
-## "RHOQ1",1.69441589657225e-05,0.680006325772463,0.751,0.281,0.307045104617857,"9","RHOQ"
-## "PRKACA",1.70323580794237e-05,0.629260514058168,0.645,0.201,0.308643360757237,"9","PRKACA"
-## "PLD4",1.72290359526565e-05,0.691218672978406,0.392,0.051,0.312207360498089,"9","PLD4"
-## "PSMA41",1.7341846121696e-05,0.406542690550046,0.825,0.435,0.314251593571253,"9","PSMA4"
-## "GUSB",1.76792651938914e-05,0.485339664554103,0.645,0.24,0.320365964578505,"9","GUSB"
-## "ODF3B1",1.84604971714069e-05,0.394523866313424,0.604,0.218,0.334522669243064,"9","ODF3B"
-## "COX8A1",1.86101779099464e-05,0.424597053333919,0.949,0.727,0.337235033906139,"9","COX8A"
-## "CHST151",1.88760976412763e-05,0.526660702707314,0.452,0.102,0.342053765357569,"9","CHST15"
-## "TGFBI1",1.88816984992642e-05,0.434839261345409,0.654,0.206,0.342155258505167,"9","TGFBI"
-## "ZFAND51",1.90405999701616e-05,0.671774806924164,0.825,0.396,0.345034712059298,"9","ZFAND5"
-## "LILRA21",2.03112770023662e-05,0.899212647780655,0.724,0.171,0.368060650559878,"9","LILRA2"
-## "CKS1B",2.13716591798607e-05,0.35273058407499,0.355,0.065,0.387275835998255,"9","CKS1B"
-## "ATP5F1B",2.19312877438049e-05,0.701758892321127,0.903,0.535,0.397416865205488,"9","ATP5F1B"
-## "GRK6",2.23884287990423e-05,0.460773356713469,0.742,0.385,0.405700718267446,"9","GRK6"
-## "NBEAL2",2.24633819550633e-05,0.257700847707763,0.548,0.24,0.407058944407703,"9","NBEAL2"
-## "CALM2",2.25742471853233e-05,0.965712449476452,0.991,0.706,0.409067933245244,"9","CALM2"
-## "PLEC1",2.29712605621659e-05,0.370264976564755,0.645,0.272,0.416262212647009,"9","PLEC"
-## "SLC8A11",2.36244226327854e-05,0.599424936809705,0.53,0.112,0.428098162528704,"9","SLC8A1"
-## "SMS",2.41817455862705e-05,0.389359489615216,0.654,0.268,0.438197411768808,"9","SMS"
-## "SLC24A4",2.4680289869829e-05,0.53393735058038,0.452,0.109,0.447231532731171,"9","SLC24A4"
-## "FMNL1",2.51263601010432e-05,0.569201670124021,0.954,0.705,0.455314771391004,"9","FMNL1"
-## "GSTK11",2.54887834093576e-05,0.546570931065331,0.931,0.641,0.461882244160969,"9","GSTK1"
-## "PLCB2",2.63292910518508e-05,0.338090656836847,0.502,0.191,0.477113083150588,"9","PLCB2"
-## "SEPT9",2.64468672002843e-05,0.722683009343346,0.917,0.556,0.479243680536352,"9","SEPT9"
-## "TPI11",2.65331185719048e-05,0.71895369556716,0.945,0.624,0.480806641641486,"9","TPI1"
-## "HIC1",2.67912177548304e-05,0.326577718313917,0.286,0.057,0.485483656935281,"9","HIC1"
-## "TTYH31",2.70177306015571e-05,0.61573314531958,0.548,0.14,0.489588296230817,"9","TTYH3"
-## "FAM89B",2.70583122574732e-05,0.599263823690177,0.76,0.348,0.490323676417672,"9","FAM89B"
-## "SLC30A11",2.74117645627114e-05,0.546370584963017,0.479,0.121,0.496728585640893,"9","SLC30A1"
-## "MSN1",3.08055542858385e-05,0.682891192458309,0.954,0.676,0.55822744921368,"9","MSN"
-## "NCF21",3.10079283795613e-05,0.747918936344592,0.871,0.289,0.56189467016603,"9","NCF2"
-## "NINJ11",3.10503140161054e-05,0.996216998013608,0.903,0.357,0.562662740285846,"9","NINJ1"
-## "WDR1",3.16101090229666e-05,0.485784564000131,0.825,0.437,0.572806785605179,"9","WDR1"
-## "PNPLA6",3.21745730762018e-05,0.484159198391984,0.585,0.185,0.583035438713853,"9","PNPLA6"
-## "RALB1",3.23430018744892e-05,0.52023559557204,0.59,0.164,0.586087536967618,"9","RALB"
-## "LYPD2",3.23872985920377e-05,2.25324468617123,0.355,0.003,0.586890237786315,"9","LYPD2"
-## "PTP4A3",3.23872985920377e-05,0.545880483106804,0.378,0.033,0.586890237786315,"9","PTP4A3"
-## "CARD9",3.23872985920377e-05,0.328732549250976,0.313,0.062,0.586890237786315,"9","CARD9"
-## "ABI3",3.305630942707e-05,0.755887753350887,0.636,0.156,0.599013383127935,"9","ABI3"
-## "CORO7",3.32272837367068e-05,0.275839599027318,0.645,0.347,0.602111608592864,"9","CORO7"
-## "SCRN1",3.35838863366976e-05,0.432159796374,0.341,0.051,0.608573604307297,"9","SCRN1"
-## "OAZ2",3.45099730158643e-05,0.689394391689343,0.7,0.239,0.625355221020476,"9","OAZ2"
-## "FCGR2A1",3.4527812983182e-05,0.75543208979519,0.788,0.246,0.62567849906824,"9","FCGR2A"
-## "MGLL",3.51258385934709e-05,0.27199087866553,0.272,0.044,0.636515321152286,"9","MGLL"
-## "DMXL21",3.5486301390894e-05,0.557576515231236,0.613,0.201,0.64304726750439,"9","DMXL2"
-## "SBF21",3.55305756827524e-05,0.401551441294927,0.447,0.154,0.643849561947156,"9","SBF2"
-## "MGRN1",3.59578203914038e-05,0.258265120023458,0.539,0.243,0.651591663312628,"9","MGRN1"
-## "GNB21",3.616202256746e-05,0.857109915401856,0.926,0.528,0.655292010944943,"9","GNB2"
-## "CDC42EP4",3.67348682356205e-05,0.311117701985098,0.281,0.039,0.665672547297679,"9","CDC42EP4"
-## "LAMTOR41",3.75159944759863e-05,0.585082070463253,0.968,0.688,0.679827335899348,"9","LAMTOR4"
-## "SYNGR22",3.85795450591175e-05,0.749419680094243,0.82,0.34,0.699099936016268,"9","SYNGR2"
-## "CAPNS11",4.08928070072552e-05,0.750963454093653,0.894,0.542,0.741018555778471,"9","CAPNS1"
-## "PGLS1",4.31842446247967e-05,0.785822833019453,0.922,0.495,0.782541696845941,"9","PGLS"
-## "HSPA61",4.41850195029437e-05,0.53329167462579,0.447,0.083,0.800676738412843,"9","HSPA6"
-## "PPM1N",4.58857901730111e-05,0.666936923395984,0.396,0.037,0.831496403725133,"9","PPM1N"
-## "ANKDD1A",4.58857901730111e-05,0.376543594062924,0.309,0.057,0.831496403725133,"9","ANKDD1A"
-## "PABPC4",4.6665424252134e-05,0.618283307457701,0.747,0.292,0.845624152872921,"9","PABPC4"
-## "LSM4",4.6665424252134e-05,0.404294784541828,0.742,0.371,0.845624152872921,"9","LSM4"
-## "ZNF385A1",4.90403750154474e-05,0.502388620247496,0.558,0.194,0.888660635654922,"9","ZNF385A"
-## "AGPAT31",5.15634739570377e-05,0.532999071230003,0.613,0.185,0.934381711575479,"9","AGPAT3"
-## "MINOS1",5.16893699768691e-05,0.394462801498871,0.765,0.44,0.936663073350844,"9","MINOS1"
-## "SIDT2",5.2497099764906e-05,0.760008481753133,0.581,0.128,0.951299944839861,"9","SIDT2"
-## "NPTN",5.27733955531568e-05,0.328999982963652,0.59,0.231,0.956306700818754,"9","NPTN"
-## "ARRB21",5.27778243205409e-05,0.817618617278079,0.903,0.475,0.956386954512522,"9","ARRB2"
-## "CLEC4A1",5.3498515581467e-05,0.310346322134668,0.475,0.163,0.969446600851763,"9","CLEC4A"
-## "MRPL11",5.45042389438063e-05,0.275659936672763,0.594,0.263,0.987671313900715,"9","MRPL11"
-## "EVI2B1",5.51891111463991e-05,0.633818654387042,0.926,0.582,1,"9","EVI2B"
-## "METTL7A1",5.7960074406638e-05,0.406885261201694,0.484,0.142,1,"9","METTL7A"
-## "MARCKS1",6.03302229388744e-05,0.710514704335704,0.82,0.331,1,"9","MARCKS"
-## "NOTCH21",6.28027633124315e-05,0.623163918284432,0.65,0.205,1,"9","NOTCH2"
-## "MS4A4A",6.33325273495094e-05,0.487375621757158,0.382,0.053,1,"9","MS4A4A"
-## "EPB41L31",6.3464496745642e-05,0.467003153689087,0.387,0.08,1,"9","EPB41L3"
-## "NR4A1",6.42036978909723e-05,0.415992761145361,0.392,0.075,1,"9","NR4A1"
-## "IER5L",6.48709727508477e-05,0.286153611147845,0.341,0.103,1,"9","IER5L"
-## "PTGES",6.5047562222275e-05,0.415058243811349,0.244,0.011,1,"9","PTGES"
-## "UBAC1",6.50795824194193e-05,0.419367748059688,0.539,0.208,1,"9","UBAC1"
-## "JAML1",6.60419812422475e-05,0.276789218603325,0.594,0.267,1,"9","JAML"
-## "AMPD21",6.72083379521401e-05,0.675587867936794,0.567,0.136,1,"9","AMPD2"
-## "PLXDC21",6.87517656731953e-05,0.31164350872166,0.521,0.201,1,"9","PLXDC2"
-## "FZD1",7.12885557059057e-05,0.43958346975856,0.323,0.041,1,"9","FZD1"
-## "NDUFB5",7.14717932053839e-05,0.50098084613639,0.76,0.334,1,"9","NDUFB5"
-## "ZBTB7A",7.34585230339738e-05,0.813932020296083,0.908,0.544,1,"9","ZBTB7A"
-## "PPT11",7.37624351642294e-05,0.431285390703887,0.733,0.313,1,"9","PPT1"
-## "SLC8B1",7.43331240355314e-05,0.379450872449876,0.387,0.106,1,"9","SLC8B1"
-## "SOX41",7.52652984970837e-05,0.72716779574055,0.507,0.123,1,"9","SOX4"
-## "NRBP1",7.58304007477716e-05,0.293229095518766,0.645,0.303,1,"9","NRBP1"
-## "MPEG11",8.1456943889742e-05,0.543461781992923,0.77,0.285,1,"9","MPEG1"
-## "PSEN1",8.21371760086348e-05,0.369872884426895,0.539,0.216,1,"9","PSEN1"
-## "TIMP21",8.56477135139265e-05,0.637189828020538,0.77,0.254,1,"9","TIMP2"
-## "PLAGL21",8.5914124730426e-05,0.570322728832494,0.53,0.148,1,"9","PLAGL2"
-## "TUBA1B",8.62743759459168e-05,0.862203281623092,0.903,0.612,1,"9","TUBA1B"
-## "INSIG1",8.87699524639233e-05,0.676414143552007,0.645,0.199,1,"9","INSIG1"
-## "REEP5",9.0696101624671e-05,0.497498859576847,0.857,0.476,1,"9","REEP5"
-## "NANS",9.14025694531804e-05,0.447730837053459,0.544,0.19,1,"9","NANS"
-## "CD300E1",9.3347065980295e-05,0.587171329532251,0.659,0.202,1,"9","CD300E"
-## "RAB11FIP11",9.44784960747573e-05,0.269431230730683,0.793,0.473,1,"9","RAB11FIP1"
-## "GNG51",9.50158539677899e-05,0.796842325239473,0.945,0.644,1,"9","GNG5"
-## "NAGK",9.8573101948757e-05,0.463494092663544,0.585,0.244,1,"9","NAGK"
-## "JDP21",9.98125512035577e-05,0.750685379339398,0.645,0.159,1,"9","JDP2"
-## "HK31",0.0001014779605793,0.538282719384277,0.53,0.117,1,"9","HK3"
-## "STK24",0.000102835160319335,0.394484073193913,0.7,0.324,1,"9","STK24"
-## "TADA3",0.000103435283382864,0.391892581055859,0.65,0.271,1,"9","TADA3"
-## "MGST3",0.000106894188287294,0.317909754096585,0.728,0.387,1,"9","MGST3"
-## "AL139246.5",0.000107632758665111,0.481499861226876,0.512,0.122,1,"9","AL139246.5"
-## "SNAP29",0.000107867555182248,0.426303624822197,0.613,0.221,1,"9","SNAP29"
-## "VAMP51",0.000108057240450563,1.040245356488,0.88,0.423,1,"9","VAMP5"
-## "NBPF191",0.000108349783629627,0.272769301308437,0.488,0.228,1,"9","NBPF19"
-## "PITPNM1",0.000110549511973305,0.437261528351667,0.461,0.131,1,"9","PITPNM1"
-## "AHCY",0.000110860239219573,0.317686118070256,0.378,0.113,1,"9","AHCY"
-## "UQCRC11",0.000110916795604555,0.510675650729558,0.751,0.321,1,"9","UQCRC1"
-## "GLUL1",0.00011158045389272,0.368990788387147,0.728,0.321,1,"9","GLUL"
-## "ARPC51",0.000111595344517166,0.667825258854027,0.954,0.582,1,"9","ARPC5"
-## "CYC1",0.000113335593660853,0.526629518897188,0.742,0.358,1,"9","CYC1"
-## "C15orf391",0.000116452261403686,0.695661227611374,0.659,0.195,1,"9","C15orf39"
-## "SH3BP1",0.000118593296397666,0.64413398455453,0.756,0.273,1,"9","SH3BP1"
-## "PHTF2",0.000126775002640484,0.573280139956169,0.576,0.16,1,"9","PHTF2"
-## "ADA21",0.000127578135464648,0.505299348117475,0.687,0.276,1,"9","ADA2"
-## "BLOC1S11",0.000127945733256363,0.680970541642865,0.908,0.573,1,"9","BLOC1S1"
-## "LILRA1",0.000128037474136517,0.631276365874077,0.512,0.104,1,"9","LILRA1"
-## "SNX30",0.000129208146895081,0.345646494724896,0.387,0.099,1,"9","SNX30"
-## "EPS8",0.000129208146895081,0.322829309534963,0.249,0.024,1,"9","EPS8"
-## "SRD5A3",0.000129208146895081,0.264914063524748,0.244,0.039,1,"9","SRD5A3"
-## "CLIP4",0.000136706231254401,0.274719785675137,0.35,0.119,1,"9","CLIP4"
-## "PPCDC",0.000136997632214131,0.424267020294981,0.387,0.08,1,"9","PPCDC"
-## "MSR1",0.000137292190595321,0.394685436347771,0.272,0.014,1,"9","MSR1"
-## "POU2F22",0.000139789323789967,1.10653536243552,0.912,0.395,1,"9","POU2F2"
-## "PIK3CG",0.000141506377205393,0.513699837504613,0.498,0.129,1,"9","PIK3CG"
-## "KYNU",0.000142730927083332,0.54903530869705,0.535,0.128,1,"9","KYNU"
-## "FUCA2",0.000142730927083332,0.304002936698034,0.378,0.126,1,"9","FUCA2"
-## "TPPP3",0.000143420020291756,0.607565556791054,0.346,0.032,1,"9","TPPP3"
-## "ZYX2",0.000146221407707067,0.544533019580315,0.774,0.358,1,"9","ZYX"
-## "ATP6AP21",0.000147956727049132,0.309096347477218,0.843,0.52,1,"9","ATP6AP2"
-## "ATP5MF2",0.000148668665221121,0.365563753219324,0.908,0.567,1,"9","ATP5MF"
-## "RAB24",0.000149641203033559,0.307003356575434,0.304,0.064,1,"9","RAB24"
-## "AP2S11",0.000149961706695837,0.537232484907843,0.917,0.502,1,"9","AP2S1"
-## "ALDOA",0.000150058929954801,0.40380897190286,0.525,0.218,1,"9","ALDOA"
-## "ARID3A1",0.000151764833575084,0.800075071695086,0.65,0.174,1,"9","ARID3A"
-## "KSR1",0.000162254532934296,0.275236379415316,0.323,0.078,1,"9","KSR1"
-## "TBC1D8",0.000163385288660981,0.424618554229143,0.323,0.03,1,"9","TBC1D8"
-## "RGS21",0.000163526630870546,0.256108193317794,0.751,0.354,1,"9","RGS2"
-## "GDI22",0.000163629133707291,0.807754862692878,0.899,0.481,1,"9","GDI2"
-## "THEMIS21",0.000169586922858883,0.646970895528782,0.825,0.38,1,"9","THEMIS2"
-## "GCH1",0.000173692542928683,0.512386788330155,0.585,0.202,1,"9","GCH1"
-## "ERP44",0.000174103551905239,0.477444315869634,0.742,0.345,1,"9","ERP44"
-## "ZEB22",0.000175487929975594,0.668962772239552,0.995,0.655,1,"9","ZEB2"
-## "PDP1",0.000177007038331757,0.310507165456348,0.364,0.109,1,"9","PDP1"
-## "ABCC3",0.000183063530700089,0.472397059605102,0.369,0.029,1,"9","ABCC3"
-## "RILPL21",0.000189557191092055,0.558985675525261,0.862,0.378,1,"9","RILPL2"
-## "LIPA",0.000192816798386301,0.368571166823827,0.516,0.202,1,"9","LIPA"
-## "ARL6IP4",0.000193192967521205,0.464879330262946,0.931,0.724,1,"9","ARL6IP4"
-## "KNDC1",0.000194093370998179,0.550497721524327,0.332,0.008,1,"9","KNDC1"
-## "TMPO",0.000196384191989305,0.548741714214408,0.687,0.284,1,"9","TMPO"
-## "TNNI2",0.000202576942481064,0.396115573030146,0.309,0.06,1,"9","TNNI2"
-## "DBP",0.000212527616719411,0.493591123637253,0.424,0.098,1,"9","DBP"
-## "ACAA1",0.000221503030241898,0.780545423102108,0.806,0.317,1,"9","ACAA1"
-## "GPX41",0.000221635628231892,0.456546438590276,0.931,0.673,1,"9","GPX4"
-## "MIS18BP1",0.00022449322887688,0.626513157516794,0.811,0.368,1,"9","MIS18BP1"
-## "CTSB1",0.000226524478235761,0.446428809457084,0.857,0.355,1,"9","CTSB"
-## "SMCO41",0.000227458026788011,0.473791476928651,0.461,0.145,1,"9","SMCO4"
-## "TIGAR",0.000229640656896032,0.289817194193607,0.359,0.104,1,"9","TIGAR"
-## "MLX",0.000232366787977248,0.424480691437746,0.654,0.239,1,"9","MLX"
-## "LYPLA1",0.000232526724983586,0.410370981854712,0.677,0.304,1,"9","LYPLA1"
-## "KLF41",0.000232526724983586,0.278379296223892,0.585,0.22,1,"9","KLF4"
-## "LAP31",0.000232830843101613,0.484859602604425,0.71,0.326,1,"9","LAP3"
-## "SULT1A11",0.000234435906386633,0.6833050761376,0.65,0.211,1,"9","SULT1A1"
-## "SEC11A",0.000239731284023047,0.806520629989727,0.922,0.576,1,"9","SEC11A"
-## "ZDHHC71",0.00024862744648294,0.41595906204763,0.535,0.195,1,"9","ZDHHC7"
-## "MSRA",0.000248959788130266,0.351999694107186,0.419,0.126,1,"9","MSRA"
-## "LCP2",0.000250861006706858,0.342310782751655,0.682,0.33,1,"9","LCP2"
-## "PLEKHO1",0.000251388647935195,0.83335880073527,0.843,0.383,1,"9","PLEKHO1"
-## "IGSF61",0.000253172696624187,0.739878967951983,0.687,0.24,1,"9","IGSF6"
-## "BACH11",0.000255236995489972,0.268300403155842,0.714,0.356,1,"9","BACH1"
-## "OAS3",0.000256588614817088,0.27902191670451,0.346,0.13,1,"9","OAS3"
-## "GBP4",0.000261124380801801,0.613149231685381,0.659,0.241,1,"9","GBP4"
-## "RASGRP41",0.000261554439077425,0.253016510839588,0.346,0.111,1,"9","RASGRP4"
-## "ACOT9",0.000264790542520045,0.357383189827503,0.442,0.16,1,"9","ACOT9"
-## "S100Z",0.000266858413007555,0.35983271923686,0.304,0.047,1,"9","S100Z"
-## "PCGF5",0.000284894916365676,0.578383785453297,0.742,0.352,1,"9","PCGF5"
-## "CAT1",0.000285847083524829,0.535315563085242,0.664,0.253,1,"9","CAT"
-## "NOP101",0.000286623471321168,0.765996858369832,0.935,0.511,1,"9","NOP10"
-## "CD300C1",0.000287994602972464,0.396653888614754,0.341,0.08,1,"9","CD300C"
-## "SIVA1",0.000290859916022698,0.391188872678481,0.816,0.429,1,"9","SIVA1"
-## "SORT11",0.000292776764298576,0.435554350182874,0.429,0.104,1,"9","SORT1"
-## "MYD881",0.000294179879486523,0.651693186509241,0.71,0.241,1,"9","MYD88"
-## "CALHM2",0.000310352115884633,0.414115134735021,0.369,0.074,1,"9","CALHM2"
-## "PLAUR1",0.00031718898870186,0.307255497779043,0.696,0.251,1,"9","PLAUR"
-## "IRAK31",0.00033408989025153,0.538515553041704,0.668,0.22,1,"9","IRAK3"
-## "SOD11",0.000334679083416839,0.363533548054196,0.853,0.578,1,"9","SOD1"
-## "ESRRA",0.000337343902449464,0.298247614204538,0.378,0.118,1,"9","ESRRA"
-## "RYBP",0.000346001488606101,0.30213063757577,0.493,0.203,1,"9","RYBP"
-## "PLEKHB21",0.000370897951901281,0.33205726704028,0.659,0.289,1,"9","PLEKHB2"
-## "LSP1",0.000374283070682665,0.627561178963264,0.926,0.719,1,"9","LSP1"
-## "LRP11",0.000377660007707492,0.357190882340793,0.539,0.203,1,"9","LRP1"
-## "MPC1",0.000378650547918776,0.543830939707804,0.673,0.268,1,"9","MPC1"
-## "LASP11",0.000380157786081419,0.39092186868512,0.654,0.295,1,"9","LASP1"
-## "HAGH",0.000386325209567236,0.431736497615982,0.576,0.21,1,"9","HAGH"
-## "C11orf21",0.000387433247295816,0.355193168953185,0.548,0.169,1,"9","C11orf21"
-## "SH2B31",0.000392808513528231,0.761449623204295,0.677,0.217,1,"9","SH2B3"
-## "SESTD1",0.000396714025764802,0.345592082227916,0.447,0.129,1,"9","SESTD1"
-## "ERGIC1",0.000397773622240974,0.527679255788419,0.691,0.271,1,"9","ERGIC1"
-## "CSNK2B",0.000403473219655159,0.311720658559723,0.825,0.499,1,"9","CSNK2B"
-## "MSRB21",0.000403962911177312,0.250445754937388,0.392,0.15,1,"9","MSRB2"
-## "ITGAL1",0.000412936756256876,0.34328410134414,0.783,0.409,1,"9","ITGAL"
-## "FAM45A1",0.000414752505403541,0.585584445824265,0.664,0.242,1,"9","FAM45A"
-## "RHOB",0.000424609551317656,0.795917179277453,0.641,0.14,1,"9","RHOB"
-## "FAM96A",0.000424609551317656,0.301333602674419,0.525,0.221,1,"9","FAM96A"
-## "CHP11",0.000427408349717623,0.306456023020486,0.608,0.276,1,"9","CHP1"
-## "CHMP4B1",0.000434994399523702,0.467334593622326,0.728,0.349,1,"9","CHMP4B"
-## "FAM49A1",0.000448248723665181,0.816526692237636,0.728,0.205,1,"9","FAM49A"
-## "RNF1351",0.000450290348934386,0.427972621772532,0.456,0.137,1,"9","RNF135"
-## "ARHGAP1",0.000451814812842605,0.281800136749693,0.424,0.152,1,"9","ARHGAP1"
-## "PRAM11",0.000463748080671238,0.636280624742917,0.645,0.189,1,"9","PRAM1"
-## "CAMKK21",0.000470794465590029,0.371664867946838,0.53,0.171,1,"9","CAMKK2"
-## "SHKBP11",0.000472961061766844,0.426007603896693,0.77,0.376,1,"9","SHKBP1"
-## "MIR22HG1",0.000481916637458255,0.451307683718808,0.59,0.204,1,"9","MIR22HG"
-## "CHST7",0.00049432473814738,0.379910044403471,0.318,0.047,1,"9","CHST7"
-## "H2AFZ",0.000504344365802213,0.601178311185495,0.935,0.603,1,"9","H2AFZ"
-## "WDR11",0.00050721656449776,0.580504585099715,0.613,0.215,1,"9","WDR11"
-## "DYNC1LI1",0.000511442654175654,0.25559956019341,0.599,0.256,1,"9","DYNC1LI1"
-## "KIAA05131",0.000513525015372183,0.380526454353023,0.336,0.076,1,"9","KIAA0513"
-## "TSPO1",0.000527457425888382,0.589428060379032,0.972,0.662,1,"9","TSPO"
-## "HCLS11",0.000542516509614041,0.60977655745841,0.926,0.607,1,"9","HCLS1"
-## "MAP2K31",0.000548263239577549,0.539156188897922,0.797,0.373,1,"9","MAP2K3"
-## "SSNA1",0.000549605921184872,0.333650878928044,0.742,0.383,1,"9","SSNA1"
-## "FLII1",0.000562636986662047,0.511475632821152,0.636,0.248,1,"9","FLII"
-## "PRKCD1",0.00058180321113899,0.286627108166963,0.47,0.191,1,"9","PRKCD"
-## "CD300A1",0.0005823465386721,0.539788508684797,0.696,0.278,1,"9","CD300A"
-## "APOBEC3A1",0.000592899257090798,0.836648830627253,0.484,0.164,1,"9","APOBEC3A"
-## "PSME21",0.000593540622477435,0.848691701782573,0.963,0.659,1,"9","PSME2"
-## "LINC02432",0.000598268830969313,0.433912405158925,0.309,0.02,1,"9","LINC02432"
-## "AC096667.11",0.000599927758496063,0.283591151921382,0.346,0.126,1,"9","AC096667.1"
-## "DOCK2",0.000615702717677287,0.449559476416232,0.756,0.376,1,"9","DOCK2"
-## "VMP11",0.000617998281903863,0.368769384042885,0.77,0.381,1,"9","VMP1"
-## "UTRN",0.000640186114740298,0.335890000755554,0.806,0.48,1,"9","UTRN"
-## "STX101",0.000640456604787746,0.426023575812743,0.687,0.331,1,"9","STX10"
-## "ALDH16A1",0.000651077554087642,0.348992159629542,0.442,0.131,1,"9","ALDH16A1"
-## "ZNF1061",0.000657485638156663,0.692342295550023,0.853,0.365,1,"9","ZNF106"
-## "HHEX1",0.000658754613301384,0.447432277704199,0.553,0.182,1,"9","HHEX"
-## "C1QA",0.000661100572108685,1.195678850181,0.235,0.009,1,"9","C1QA"
-## "ZNF706",0.000666207736935894,0.732297963002597,0.885,0.424,1,"9","ZNF706"
-## "AGO1",0.000666794934168973,0.409571920321713,0.447,0.142,1,"9","AGO1"
-## "ME2",0.000673045258946957,0.299039148495724,0.493,0.212,1,"9","ME2"
-## "CAPZA21",0.000673533677067477,0.412443632907646,0.857,0.451,1,"9","CAPZA2"
-## "NIPSNAP3A",0.00067425288661717,0.257499744234253,0.332,0.109,1,"9","NIPSNAP3A"
-## "LTA4H1",0.000681089835487544,0.858219454827565,0.806,0.32,1,"9","LTA4H"
-## "SDHB",0.000681089835487544,0.344320008029997,0.724,0.328,1,"9","SDHB"
-## "DAPK11",0.000706961578568682,0.419159750992555,0.332,0.078,1,"9","DAPK1"
-## "FLNA1",0.000708867210130529,0.423876429317433,0.968,0.698,1,"9","FLNA"
-## "ANP32B",0.000715240453040437,0.358466228199011,0.926,0.681,1,"9","ANP32B"
-## "BLVRA1",0.000747205201507543,0.668180588066987,0.71,0.26,1,"9","BLVRA"
-## "ALDH3B11",0.000753784917764092,0.606280989544704,0.516,0.123,1,"9","ALDH3B1"
-## "UBE2J12",0.00075728767951729,0.360815072196196,0.765,0.392,1,"9","UBE2J1"
-## "NCKAP1L1",0.000772964857717914,0.576340094224525,0.848,0.43,1,"9","NCKAP1L"
-## "SCIMP1",0.000793662868692644,0.665731820545487,0.53,0.13,1,"9","SCIMP"
-## "TMEM189",0.000828767815906242,0.305870511479043,0.392,0.13,1,"9","TMEM189"
-## "PSMF1",0.000831658730889975,0.313857575152449,0.608,0.311,1,"9","PSMF1"
-## "STK40",0.000862502124850523,0.27242301170782,0.332,0.12,1,"9","STK40"
-## "MIDN1",0.000868544185343052,0.510894477770292,0.82,0.473,1,"9","MIDN"
-## "REL1",0.000883661024364321,0.330059847929977,0.917,0.648,1,"9","REL"
-## "CCSAP",0.000888452065313823,0.313475073514863,0.309,0.065,1,"9","CCSAP"
-## "RNF141",0.000895391229091623,0.500862271503158,0.53,0.156,1,"9","RNF141"
-## "SLC25A3",0.000898681597665981,0.427099204591971,0.968,0.702,1,"9","SLC25A3"
-## "CDA1",0.000906890770214336,0.373997495518544,0.608,0.214,1,"9","CDA"
-## "UNC93B11",0.000930842860526071,0.718886227243863,0.71,0.229,1,"9","UNC93B1"
-## "PQLC11",0.00093639591145294,0.324319448087391,0.608,0.269,1,"9","PQLC1"
-## "AC004687.1",0.000936720740953147,0.425381702196005,0.618,0.27,1,"9","AC004687.1"
-## "GFOD1",0.000945152705109166,0.29372564855,0.346,0.083,1,"9","GFOD1"
-## "VMO1",0.000953362814751277,0.687370569399454,0.272,0.002,1,"9","VMO1"
-## "CYP4F22",0.000953362814751277,0.413222783341906,0.226,0.005,1,"9","CYP4F22"
-## "HM131",0.000961549286336191,0.504450562436235,0.77,0.367,1,"9","HM13"
-## "IMPDH11",0.000970891168634943,0.781072209868507,0.783,0.253,1,"9","IMPDH1"
-## "RBM471",0.0009725935995135,0.336429037140246,0.442,0.181,1,"9","RBM47"
-## "SYNE3",0.000981283704404482,0.260384602272635,0.378,0.149,1,"9","SYNE3"
-## "VDAC11",0.000999928953750781,0.355617532632699,0.636,0.344,1,"9","VDAC1"
-## "JPT1",0.00100138857645876,0.945824757393146,0.862,0.375,1,"9","JPT1"
-## "SVIL",0.00101722244600633,0.397614904514561,0.373,0.097,1,"9","SVIL"
-## "UBXN1",0.00102254445593028,0.303278879480837,0.922,0.677,1,"9","UBXN1"
-## "ZNF787",0.00105407141314814,0.359862433477036,0.544,0.192,1,"9","ZNF787"
-## "MOB1A1",0.00105956469651811,0.384127860947524,0.894,0.538,1,"9","MOB1A"
-## "GNS1",0.00106619425582478,0.631877659065991,0.682,0.218,1,"9","GNS"
-## "C9orf721",0.00107737612003976,0.62594960172383,0.636,0.21,1,"9","C9orf72"
-## "DCTN3",0.0010794796692323,0.279091572856916,0.76,0.456,1,"9","DCTN3"
-## "PARVG1",0.00108091301887417,0.320153317366597,0.645,0.324,1,"9","PARVG"
-## "IRF7",0.00108304022313116,0.344496976681624,0.585,0.274,1,"9","IRF7"
-## "HK11",0.00115239187736767,0.455043653625484,0.594,0.226,1,"9","HK1"
-## "TNFRSF8",0.00115431497595986,0.358607941745931,0.244,0.011,1,"9","TNFRSF8"
-## "STX12",0.00116796904961514,0.327798939235463,0.535,0.24,1,"9","STX12"
-## "SLC3A21",0.00117807111715148,0.325299437042444,0.719,0.426,1,"9","SLC3A2"
-## "FGD41",0.00120121841130143,0.350168495326658,0.309,0.099,1,"9","FGD4"
-## "BTK1",0.00121680795304351,0.605167067564852,0.641,0.178,1,"9","BTK"
-## "CDC42EP31",0.00123026962703262,0.251300120624074,0.682,0.317,1,"9","CDC42EP3"
-## "CARD161",0.00127991065859856,0.687378990210568,0.908,0.48,1,"9","CARD16"
-## "MTHFR1",0.00129326586148984,0.297811670627199,0.484,0.181,1,"9","MTHFR"
-## "RAP2B",0.00129899343901994,0.313878754223919,0.668,0.339,1,"9","RAP2B"
-## "ZMIZ11",0.00130875726816078,0.3538584410757,0.369,0.141,1,"9","ZMIZ1"
-## "MED13L",0.00133213925415497,0.350017960030284,0.691,0.342,1,"9","MED13L"
-## "HLA-DQA12",0.00135433004751464,0.550112864308917,0.728,0.351,1,"9","HLA-DQA1"
-## "VAV1",0.00136076824626602,0.310657315266971,0.419,0.157,1,"9","VAV1"
-## "ARPC41",0.00136860630461199,0.297036717497584,0.908,0.653,1,"9","ARPC4"
-## "UCP2",0.0013870241061244,0.497232976830268,0.94,0.602,1,"9","UCP2"
-## "TMEM80",0.00141968312572099,0.251376363008284,0.336,0.11,1,"9","TMEM80"
-## "SEC14L1",0.00143564055487033,0.867678898229756,0.82,0.296,1,"9","SEC14L1"
-## "BRK12",0.00144091348013351,0.406694155993059,0.908,0.617,1,"9","BRK1"
-## "KRAS",0.00145898529062507,0.337344010180108,0.682,0.342,1,"9","KRAS"
-## "RRBP1",0.00148845144416662,0.282119638435361,0.571,0.282,1,"9","RRBP1"
-## "GLIPR11",0.00148927392022004,0.319118373816051,0.793,0.412,1,"9","GLIPR1"
-## "ARPC1B1",0.00149581052987404,0.689598962199492,0.986,0.696,1,"9","ARPC1B"
-## "TNF",0.00151602176117253,0.299950343054016,0.336,0.098,1,"9","TNF"
-## "SPATA6",0.00153830150694953,0.310304989237752,0.272,0.032,1,"9","SPATA6"
-## "LY6E1",0.00154476140572656,0.823530554228523,0.963,0.669,1,"9","LY6E"
-## "CCNG2",0.00154534071918929,0.46787818086442,0.461,0.101,1,"9","CCNG2"
-## "CTSH2",0.00155030068804849,0.530175329630481,0.779,0.319,1,"9","CTSH"
-## "SOD21",0.00157042010805828,0.267568911367248,0.76,0.368,1,"9","SOD2"
-## "PQLC3",0.00160016707593108,0.491753128066652,0.613,0.21,1,"9","PQLC3"
-## "ROGDI1",0.00161665735703411,0.333149503302393,0.387,0.12,1,"9","ROGDI"
-## "HRH21",0.00163503266137746,0.64006643290225,0.677,0.197,1,"9","HRH2"
-## "SSBP4",0.00167923035156658,0.254226937432798,0.742,0.439,1,"9","SSBP4"
-## "SIRPB11",0.00173351244837575,0.400413820244566,0.438,0.128,1,"9","SIRPB1"
-## "TATDN3",0.0017551944717897,0.274285902745048,0.346,0.103,1,"9","TATDN3"
-## "MIIP",0.00176939248130941,0.322144299584046,0.447,0.172,1,"9","MIIP"
-## "ATP5MD1",0.0017885715331646,0.261619139769154,0.843,0.581,1,"9","ATP5MD"
-## "DEDD2",0.0018105729282961,0.626787393000287,0.664,0.24,1,"9","DEDD2"
-## "PPP4C",0.0018286216906142,0.362128040103633,0.783,0.437,1,"9","PPP4C"
-## "GPI",0.00182904409734983,0.256243386860407,0.562,0.25,1,"9","GPI"
-## "SDCBP1",0.00187365890417699,0.250462108500288,0.834,0.514,1,"9","SDCBP"
-## "OLIG1",0.00189966855479039,0.288700742123744,0.249,0.039,1,"9","OLIG1"
-## "KLF111",0.00191307338477813,0.547764996592549,0.581,0.14,1,"9","KLF11"
-## "LPAR6",0.00197902322983511,0.301668034400745,0.336,0.093,1,"9","LPAR6"
-## "PICALM",0.00200313622906358,0.258569559168625,0.65,0.31,1,"9","PICALM"
-## "ADI1",0.00201582477792302,0.311348194290609,0.507,0.232,1,"9","ADI1"
-## "AKR1A1",0.00202835535109671,0.30134690311116,0.585,0.296,1,"9","AKR1A1"
-## "SURF1",0.00210105818817799,0.281082251238958,0.608,0.314,1,"9","SURF1"
-## "OAS11",0.00211520562521445,0.793882318090232,0.673,0.188,1,"9","OAS1"
-## "RIOK31",0.00211521726587163,0.399968878566303,0.816,0.447,1,"9","RIOK3"
-## "TBCB",0.00211608667237651,0.497727273682367,0.788,0.434,1,"9","TBCB"
-## "NBPF14",0.00213430450668113,0.336911821868751,0.488,0.187,1,"9","NBPF14"
-## "CCM2",0.0021432500460954,0.367260072486445,0.59,0.31,1,"9","CCM2"
-## "ZNF296",0.00217075706630377,0.301493132801208,0.286,0.044,1,"9","ZNF296"
-## "TPMT",0.0021983776553526,0.371779033126918,0.461,0.155,1,"9","TPMT"
-## "DENND3",0.00224084124332725,0.436956511824155,0.668,0.3,1,"9","DENND3"
-## "GLTP1",0.00224982531037949,0.311302658938731,0.691,0.382,1,"9","GLTP"
-## "EIF4EBP11",0.0022585169366441,0.501141341917532,0.594,0.204,1,"9","EIF4EBP1"
-## "MICAL1",0.00232810260188154,0.310842855828439,0.442,0.173,1,"9","MICAL1"
-## "VAMP3",0.00238228071140162,0.356611147726014,0.567,0.242,1,"9","VAMP3"
-## "SYTL1",0.00244209573808645,0.400756499884224,0.677,0.304,1,"9","SYTL1"
-## "RP2",0.00244346661032205,0.325165169966157,0.396,0.141,1,"9","RP2"
-## "OXA1L",0.00244653732016196,0.396316126015491,0.719,0.363,1,"9","OXA1L"
-## "ASAP11",0.00245436665532354,0.336190164770779,0.484,0.223,1,"9","ASAP1"
-## "ATP6V0B1",0.00248411112738822,0.678795587058608,0.968,0.567,1,"9","ATP6V0B"
-## "RPS6KA1",0.00249773695666799,0.31904110280383,0.585,0.271,1,"9","RPS6KA1"
-## "MAP3K11",0.00250625991331669,0.351158033056887,0.512,0.212,1,"9","MAP3K11"
-## "FIBP",0.00256761503976539,0.285633426107671,0.659,0.316,1,"9","FIBP"
-## "LGALS11",0.00257085979890538,0.445936041555682,0.982,0.689,1,"9","LGALS1"
-## "AGPAT2",0.00257896195598878,0.306658451434893,0.47,0.205,1,"9","AGPAT2"
-## "ANKRD13A",0.00258660602296931,0.401350720822276,0.576,0.243,1,"9","ANKRD13A"
-## "GNA151",0.00267362602861105,0.31499470588483,0.378,0.142,1,"9","GNA15"
-## "COMMD9",0.00270811683567214,0.297639751831327,0.558,0.269,1,"9","COMMD9"
-## "HMG20B",0.00272411074809265,0.338054274565196,0.461,0.17,1,"9","HMG20B"
-## "SLC6A61",0.00272439413293465,0.599868310395795,0.641,0.199,1,"9","SLC6A6"
-## "CNBP",0.00277312701682409,0.259156036402118,0.954,0.74,1,"9","CNBP"
-## "RTN42",0.00285858041196471,0.563364215172416,0.889,0.503,1,"9","RTN4"
-## "GRINA1",0.00286228618858334,0.589551072588072,0.82,0.298,1,"9","GRINA"
-## "OSCAR1",0.00290126471553943,0.275680339230532,0.535,0.195,1,"9","OSCAR"
-## "ATP5PB",0.00291371291830211,0.381476253704067,0.866,0.52,1,"9","ATP5PB"
-## "IFNAR2",0.00295914644068916,0.441812765025089,0.562,0.195,1,"9","IFNAR2"
-## "PDPK1",0.00309514158088137,0.33017422739421,0.53,0.201,1,"9","PDPK1"
-## "ARPC1A",0.00333369683081018,0.470468406177996,0.571,0.219,1,"9","ARPC1A"
-## "STAT11",0.00333708699186848,0.308208400247041,0.705,0.362,1,"9","STAT1"
-## "SLC15A31",0.00333735892150718,0.360252705907517,0.456,0.17,1,"9","SLC15A3"
-## "PSMD8",0.00341382470874007,0.331050513138476,0.829,0.549,1,"9","PSMD8"
-## "NAPRT1",0.00342155718246692,0.468381924818115,0.539,0.217,1,"9","NAPRT"
-## "STAT21",0.00342155718246692,0.280112510270811,0.553,0.254,1,"9","STAT2"
-## "STK32C",0.00346017830677428,0.534229639668372,0.41,0.087,1,"9","STK32C"
-## "SVBP",0.00351569798561928,0.254964824678792,0.512,0.223,1,"9","SVBP"
-## "CYTH4",0.00353584988894275,0.447438364575252,0.751,0.345,1,"9","CYTH4"
-## "SRI",0.00354750057095694,0.473088417173285,0.774,0.397,1,"9","SRI"
-## "CNIH41",0.00358065054821273,0.594217685521909,0.724,0.262,1,"9","CNIH4"
-## "RARA1",0.00366227463607765,0.529476408441492,0.687,0.25,1,"9","RARA"
-## "SDHD",0.00373007326458546,0.264352669134424,0.604,0.289,1,"9","SDHD"
-## "SLC11A11",0.00373078218420288,0.568052592130055,0.829,0.273,1,"9","SLC11A1"
-## "EPN11",0.00379585351046316,0.435971566770316,0.645,0.263,1,"9","EPN1"
-## "BANF1",0.00382084730011922,0.258161351741653,0.659,0.333,1,"9","BANF1"
-## "TNFRSF14",0.00393175780847957,0.278981565017307,0.774,0.467,1,"9","TNFRSF14"
-## "MYOF",0.00402016123830358,0.52825292305568,0.355,0.065,1,"9","MYOF"
-## "BCL2A11",0.00403293200085483,0.62821145969636,0.793,0.288,1,"9","BCL2A1"
-## "PRDX11",0.00403927646771475,0.673576767335,0.843,0.439,1,"9","PRDX1"
-## "LACTB1",0.0040580769286681,0.270931177749853,0.59,0.255,1,"9","LACTB"
-## "TMEM9B",0.00406657179751963,0.358780972819224,0.673,0.331,1,"9","TMEM9B"
-## "ATP1A1",0.00408439590542852,0.364750561834466,0.779,0.431,1,"9","ATP1A1"
-## "FUCA1",0.00409601609129389,0.292557459960276,0.295,0.073,1,"9","FUCA1"
-## "MEF2C2",0.00411315383601047,0.298825982882948,0.571,0.234,1,"9","MEF2C"
-## "UPP11",0.0041251443172011,0.308640775894923,0.783,0.406,1,"9","UPP1"
-## "SEM11",0.00412674547973913,0.254503101591093,0.733,0.424,1,"9","SEM1"
-## "YIF1A",0.004293795801842,0.345140419673791,0.507,0.157,1,"9","YIF1A"
-## "NKTR",0.00432058591290106,0.263437026275248,0.829,0.559,1,"9","NKTR"
-## "MYO1F1",0.00439208588493233,0.583753625273788,0.94,0.61,1,"9","MYO1F"
-## "MT1E",0.00444104541722719,0.53314239983469,0.332,0.097,1,"9","MT1E"
-## "GNB41",0.00444303344874207,0.396084831671592,0.452,0.158,1,"9","GNB4"
-## "EIF6",0.0045298266641536,0.330543448353125,0.659,0.344,1,"9","EIF6"
-## "GMIP1",0.0045768442927569,0.254681078033595,0.401,0.182,1,"9","GMIP"
-## "PPARGC1B",0.00462648704207735,0.524900417874792,0.378,0.038,1,"9","PPARGC1B"
-## "GRB21",0.00479781474465279,0.491581241001703,0.894,0.571,1,"9","GRB2"
-## "TOR2A",0.00483892446188717,0.449520355569245,0.498,0.156,1,"9","TOR2A"
-## "SH2B21",0.0048514320456331,0.264863822669169,0.3,0.096,1,"9","SH2B2"
-## "OGFR",0.00504126594830077,0.3725927414286,0.7,0.341,1,"9","OGFR"
-## "RAC11",0.00506737082198607,0.354703336531685,0.963,0.674,1,"9","RAC1"
-## "PSMB8",0.00507121019633442,0.338132896250277,0.899,0.594,1,"9","PSMB8"
-## "PRCP1",0.00514103436859523,0.314379328563133,0.447,0.183,1,"9","PRCP"
-## "TMEM11",0.00514103436859523,0.289145378582645,0.525,0.214,1,"9","TMEM11"
-## "NUMB1",0.00515175453009522,0.266638618056989,0.636,0.288,1,"9","NUMB"
-## "DENND6B",0.00519554743172999,0.299419608378857,0.313,0.072,1,"9","DENND6B"
-## "NDUFS7",0.0052084338922507,0.425014005705407,0.788,0.421,1,"9","NDUFS7"
-## "EVI51",0.00524982111438132,0.460412682971934,0.442,0.113,1,"9","EVI5"
-## "CCDC12",0.00528956472038482,0.289819686278826,0.857,0.551,1,"9","CCDC12"
-## "ENY22",0.00533524629610424,0.374281735045439,0.839,0.487,1,"9","ENY2"
-## "ECHS1",0.00539445924752859,0.251958599679092,0.507,0.25,1,"9","ECHS1"
-## "SFMBT2",0.0055395485488241,0.387078611072298,0.392,0.086,1,"9","SFMBT2"
-## "ACAA2",0.00555844323145909,0.268365898132658,0.507,0.206,1,"9","ACAA2"
-## "SNAP23",0.00564936422935287,0.364779907214191,0.618,0.272,1,"9","SNAP23"
-## "MTMR111",0.00588053255197573,0.417246831868404,0.373,0.085,1,"9","MTMR11"
-## "MTMR14",0.00612722818872721,0.379463374729712,0.608,0.279,1,"9","MTMR14"
-## "ACTR21",0.00614174497417891,0.401335703968718,0.945,0.674,1,"9","ACTR2"
-## "BST21",0.00614365734588162,0.446445945816413,0.876,0.507,1,"9","BST2"
-## "CHST21",0.00625327402663312,0.417563896632233,0.465,0.105,1,"9","CHST2"
-## "LCP11",0.00627211802652196,0.379699679877461,0.968,0.736,1,"9","LCP1"
-## "RAB8A1",0.00628196880330763,0.39915900171336,0.788,0.405,1,"9","RAB8A"
-## "SLC44A2",0.006285963427451,0.355240071381037,0.539,0.204,1,"9","SLC44A2"
-## "MARK2",0.00633582441692724,0.272581482161227,0.488,0.198,1,"9","MARK2"
-## "SNX5",0.00640054155650726,0.338778809087592,0.641,0.265,1,"9","SNX5"
-## "ICAM4",0.00648831044327321,0.513872671877123,0.359,0.031,1,"9","ICAM4"
-## "CEACAM3",0.00653556966225464,0.337248194663094,0.244,0.013,1,"9","CEACAM3"
-## "ATP5F1A",0.00654761059059186,0.356563696012784,0.857,0.541,1,"9","ATP5F1A"
-## "SLC43A21",0.00656547305411912,0.363188584617809,0.558,0.224,1,"9","SLC43A2"
-## "PSMD4",0.00661329463974167,0.283154959798166,0.687,0.385,1,"9","PSMD4"
-## "BIN2",0.00662610771777377,0.321343391453824,0.876,0.635,1,"9","BIN2"
-## "FAM91A1",0.0067171719272783,0.256230002320771,0.562,0.258,1,"9","FAM91A1"
-## "ARHGAP4",0.00685723753497392,0.391887259281814,0.765,0.406,1,"9","ARHGAP4"
-## "NACC2",0.0069958127338378,0.383750920949627,0.47,0.168,1,"9","NACC2"
-## "STAT61",0.00771234540116106,0.258274528958819,0.613,0.284,1,"9","STAT6"
-## "PSTPIP21",0.00775322737317339,0.355049328132181,0.502,0.176,1,"9","PSTPIP2"
-## "FNIP21",0.00780533679204697,0.314027421253982,0.35,0.122,1,"9","FNIP2"
-## "CBL",0.00795055322292895,0.320343377876656,0.442,0.151,1,"9","CBL"
-## "NOL4L",0.00819830948032936,0.260489394918982,0.359,0.101,1,"9","NOL4L"
-## "CMTM71",0.00865261767139849,0.275182694458978,0.562,0.258,1,"9","CMTM7"
-## "FAM32A",0.00869927844267856,0.415623961276952,0.677,0.349,1,"9","FAM32A"
-## "EMILIN21",0.00873063861216325,0.391678180693592,0.576,0.208,1,"9","EMILIN2"
-## "ADA",0.00894147314221625,0.447721325117167,0.484,0.109,1,"9","ADA"
-## "LEPROT",0.00898756711069611,0.389888495977953,0.636,0.282,1,"9","LEPROT"
-## "NTAN1",0.00913318251310053,0.284392738865907,0.475,0.174,1,"9","NTAN1"
-## "RNF144B1",0.00929134990344027,0.362193774045147,0.438,0.163,1,"9","RNF144B"
-## "PTPRJ",0.00955481667708727,0.512017202711776,0.668,0.24,1,"9","PTPRJ"
+# aslo, save the list of DGE results to a file.
+write.csv(markers_genes, file = "data/3pbmc_qc_dr_int_cl_dge.csv")
 ```
 
 
@@ -2868,115 +772,78 @@ sessionInfo()
 ```
 
 ```
-## R version 4.1.2 (2021-11-01)
+## R version 4.1.3 (2022-03-10)
 ## Platform: x86_64-apple-darwin13.4.0 (64-bit)
-## Running under: macOS Catalina 10.15.7
+## Running under: macOS Big Sur/Monterey 10.16
 ## 
 ## Matrix products: default
-## BLAS/LAPACK: /Users/asbj/miniconda3/envs/scRNAseq2022_tmp/lib/libopenblasp-r0.3.18.dylib
+## BLAS/LAPACK: /Users/asabjor/miniconda3/envs/scRNAseq2023/lib/libopenblasp-r0.3.21.dylib
 ## 
 ## locale:
-## [1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
+## [1] C/UTF-8/C/C/C/C
 ## 
 ## attached base packages:
 ## [1] stats4    stats     graphics  grDevices utils     datasets  methods  
 ## [8] base     
 ## 
 ## other attached packages:
-##  [1] fgsea_1.20.0                msigdbr_7.4.1              
-##  [3] enrichR_3.0                 dplyr_1.0.7                
-##  [5] rafalib_1.0.0               pheatmap_1.0.12            
-##  [7] clustree_0.4.4              ggraph_2.0.5               
-##  [9] reticulate_1.22             harmony_1.0                
-## [11] Rcpp_1.0.8                  scran_1.22.0               
-## [13] scuttle_1.4.0               SingleCellExperiment_1.16.0
-## [15] SummarizedExperiment_1.24.0 Biobase_2.54.0             
-## [17] GenomicRanges_1.46.0        GenomeInfoDb_1.30.0        
-## [19] IRanges_2.28.0              S4Vectors_0.32.0           
-## [21] BiocGenerics_0.40.0         MatrixGenerics_1.6.0       
-## [23] matrixStats_0.61.0          ggplot2_3.3.5              
-## [25] cowplot_1.1.1               KernSmooth_2.23-20         
-## [27] fields_13.3                 viridis_0.6.2              
-## [29] viridisLite_0.4.0           spam_2.8-0                 
-## [31] DoubletFinder_2.0.3         Matrix_1.4-0               
-## [33] SeuratObject_4.0.4          Seurat_4.0.6               
-## [35] RJSONIO_1.3-1.6             optparse_1.7.1             
+##  [1] fgsea_1.20.0                msigdbr_7.5.1              
+##  [3] lme4_1.1-31                 MAST_1.20.0                
+##  [5] SingleCellExperiment_1.16.0 SummarizedExperiment_1.24.0
+##  [7] Biobase_2.54.0              GenomicRanges_1.46.1       
+##  [9] GenomeInfoDb_1.30.1         IRanges_2.28.0             
+## [11] S4Vectors_0.32.4            BiocGenerics_0.40.0        
+## [13] MatrixGenerics_1.6.0        matrixStats_0.63.0         
+## [15] edgeR_3.36.0                limma_3.50.3               
+## [17] Matrix_1.5-3                rafalib_1.0.0              
+## [19] enrichR_3.1                 pheatmap_1.0.12            
+## [21] ggplot2_3.4.0               cowplot_1.1.1              
+## [23] dplyr_1.0.10                SeuratObject_4.1.3         
+## [25] Seurat_4.3.0                RJSONIO_1.3-1.7            
+## [27] optparse_1.7.3             
 ## 
 ## loaded via a namespace (and not attached):
-##   [1] utf8_1.2.2                tidyselect_1.1.1         
-##   [3] htmlwidgets_1.5.4         grid_4.1.2               
-##   [5] BiocParallel_1.28.0       Rtsne_0.15               
-##   [7] munsell_0.5.0             ScaledMatrix_1.2.0       
-##   [9] codetools_0.2-18          ica_1.0-2                
-##  [11] statmod_1.4.36            future_1.23.0            
-##  [13] miniUI_0.1.1.1            withr_2.4.3              
-##  [15] colorspace_2.0-2          highr_0.9                
-##  [17] knitr_1.37                ROCR_1.0-11              
-##  [19] tensor_1.5                listenv_0.8.0            
-##  [21] labeling_0.4.2            GenomeInfoDbData_1.2.7   
-##  [23] polyclip_1.10-0           bit64_4.0.5              
-##  [25] farver_2.1.0              rprojroot_2.0.2          
-##  [27] parallelly_1.30.0         vctrs_0.3.8              
-##  [29] generics_0.1.1            xfun_0.29                
-##  [31] R6_2.5.1                  graphlayouts_0.8.0       
-##  [33] rsvd_1.0.5                locfit_1.5-9.4           
-##  [35] hdf5r_1.3.5               bitops_1.0-7             
-##  [37] spatstat.utils_2.3-0      DelayedArray_0.20.0      
-##  [39] assertthat_0.2.1          promises_1.2.0.1         
-##  [41] scales_1.1.1              gtable_0.3.0             
-##  [43] beachmat_2.10.0           globals_0.14.0           
-##  [45] processx_3.5.2            goftest_1.2-3            
-##  [47] tidygraph_1.2.0           rlang_0.4.12             
-##  [49] splines_4.1.2             lazyeval_0.2.2           
-##  [51] checkmate_2.0.0           spatstat.geom_2.3-1      
-##  [53] yaml_2.2.1                reshape2_1.4.4           
-##  [55] abind_1.4-5               backports_1.4.1          
-##  [57] httpuv_1.6.5              tools_4.1.2              
-##  [59] ellipsis_0.3.2            spatstat.core_2.3-2      
-##  [61] jquerylib_0.1.4           RColorBrewer_1.1-2       
-##  [63] ggridges_0.5.3            plyr_1.8.6               
-##  [65] sparseMatrixStats_1.6.0   zlibbioc_1.40.0          
-##  [67] purrr_0.3.4               RCurl_1.98-1.5           
-##  [69] ps_1.6.0                  prettyunits_1.1.1        
-##  [71] rpart_4.1-15              deldir_1.0-6             
-##  [73] pbapply_1.5-0             zoo_1.8-9                
-##  [75] ggrepel_0.9.1             cluster_2.1.2            
-##  [77] here_1.0.1                magrittr_2.0.1           
-##  [79] data.table_1.14.2         RSpectra_0.16-0          
-##  [81] scattermore_0.7           lmtest_0.9-39            
-##  [83] RANN_2.6.1                fitdistrplus_1.1-6       
-##  [85] patchwork_1.1.1           mime_0.12                
-##  [87] evaluate_0.14             xtable_1.8-4             
-##  [89] gridExtra_2.3             compiler_4.1.2           
-##  [91] tibble_3.1.6              maps_3.4.0               
-##  [93] crayon_1.4.2              htmltools_0.5.2          
-##  [95] mgcv_1.8-38               later_1.2.0              
-##  [97] tidyr_1.1.4               DBI_1.1.2                
-##  [99] tweenr_1.0.2              formatR_1.11             
-## [101] MASS_7.3-55               babelgene_21.4           
-## [103] getopt_1.20.3             cli_3.1.0                
-## [105] metapod_1.2.0             parallel_4.1.2           
-## [107] dotCall64_1.0-1           igraph_1.2.11            
-## [109] pkgconfig_2.0.3           plotly_4.10.0            
-## [111] spatstat.sparse_2.1-0     bslib_0.3.1              
-## [113] dqrng_0.3.0               XVector_0.34.0           
-## [115] stringr_1.4.0             callr_3.7.0              
-## [117] digest_0.6.29             sctransform_0.3.3        
-## [119] RcppAnnoy_0.0.19          spatstat.data_2.1-2      
-## [121] fastmatch_1.1-3           rmarkdown_2.11           
-## [123] leiden_0.3.9              edgeR_3.36.0             
-## [125] uwot_0.1.11               DelayedMatrixStats_1.16.0
-## [127] curl_4.3.2                shiny_1.7.1              
-## [129] rjson_0.2.21              lifecycle_1.0.1          
-## [131] nlme_3.1-155              jsonlite_1.7.2           
-## [133] BiocNeighbors_1.12.0      limma_3.50.0             
-## [135] fansi_1.0.0               pillar_1.6.4             
-## [137] lattice_0.20-45           fastmap_1.1.0            
-## [139] httr_1.4.2                pkgbuild_1.3.1           
-## [141] survival_3.2-13           glue_1.6.0               
-## [143] remotes_2.4.2             png_0.1-7                
-## [145] bluster_1.4.0             bit_4.0.4                
-## [147] ggforce_0.3.3             stringi_1.7.6            
-## [149] sass_0.4.0                BiocSingular_1.10.0      
-## [151] irlba_2.3.5               future.apply_1.8.1
+##   [1] fastmatch_1.1-3        plyr_1.8.8             igraph_1.3.5          
+##   [4] lazyeval_0.2.2         sp_1.6-0               splines_4.1.3         
+##   [7] BiocParallel_1.28.3    listenv_0.9.0          scattermore_0.8       
+##  [10] digest_0.6.31          htmltools_0.5.4        fansi_1.0.4           
+##  [13] magrittr_2.0.3         tensor_1.5             cluster_2.1.4         
+##  [16] ROCR_1.0-11            globals_0.16.2         spatstat.sparse_3.0-0 
+##  [19] colorspace_2.1-0       ggrepel_0.9.2          xfun_0.36             
+##  [22] RCurl_1.98-1.9         jsonlite_1.8.4         progressr_0.13.0      
+##  [25] spatstat.data_3.0-0    survival_3.5-0         zoo_1.8-11            
+##  [28] glue_1.6.2             polyclip_1.10-4        gtable_0.3.1          
+##  [31] zlibbioc_1.40.0        XVector_0.34.0         leiden_0.4.3          
+##  [34] DelayedArray_0.20.0    future.apply_1.10.0    abind_1.4-5           
+##  [37] scales_1.2.1           DBI_1.1.3              spatstat.random_3.0-1 
+##  [40] miniUI_0.1.1.1         Rcpp_1.0.10            viridisLite_0.4.1     
+##  [43] xtable_1.8-4           reticulate_1.27        htmlwidgets_1.6.1     
+##  [46] httr_1.4.4             getopt_1.20.3          RColorBrewer_1.1-3    
+##  [49] ellipsis_0.3.2         ica_1.0-3              farver_2.1.1          
+##  [52] pkgconfig_2.0.3        sass_0.4.5             uwot_0.1.14           
+##  [55] deldir_1.0-6           locfit_1.5-9.7         utf8_1.2.2            
+##  [58] labeling_0.4.2         tidyselect_1.2.0       rlang_1.0.6           
+##  [61] reshape2_1.4.4         later_1.3.0            munsell_0.5.0         
+##  [64] tools_4.1.3            cachem_1.0.6           cli_3.6.0             
+##  [67] generics_0.1.3         ggridges_0.5.4         evaluate_0.20         
+##  [70] stringr_1.5.0          fastmap_1.1.0          yaml_2.3.7            
+##  [73] goftest_1.2-3          babelgene_22.9         knitr_1.41            
+##  [76] fitdistrplus_1.1-8     purrr_1.0.1            RANN_2.6.1            
+##  [79] pbapply_1.7-0          future_1.30.0          nlme_3.1-161          
+##  [82] mime_0.12              formatR_1.14           compiler_4.1.3        
+##  [85] plotly_4.10.1          curl_4.3.3             png_0.1-8             
+##  [88] spatstat.utils_3.0-1   tibble_3.1.8           bslib_0.4.2           
+##  [91] stringi_1.7.12         highr_0.10             lattice_0.20-45       
+##  [94] nloptr_2.0.3           vctrs_0.5.2            pillar_1.8.1          
+##  [97] lifecycle_1.0.3        spatstat.geom_3.0-5    lmtest_0.9-40         
+## [100] jquerylib_0.1.4        RcppAnnoy_0.0.20       data.table_1.14.6     
+## [103] bitops_1.0-7           irlba_2.3.5.1          httpuv_1.6.8          
+## [106] patchwork_1.1.2        R6_2.5.1               promises_1.2.0.1      
+## [109] KernSmooth_2.23-20     gridExtra_2.3          parallelly_1.34.0     
+## [112] codetools_0.2-18       boot_1.3-28.1          MASS_7.3-58.2         
+## [115] assertthat_0.2.1       rjson_0.2.21           withr_2.5.0           
+## [118] sctransform_0.3.5      GenomeInfoDbData_1.2.7 parallel_4.1.3        
+## [121] grid_4.1.3             minqa_1.2.5            tidyr_1.2.1           
+## [124] rmarkdown_2.20         Rtsne_0.16             spatstat.explore_3.0-5
+## [127] shiny_1.7.4
 ```
