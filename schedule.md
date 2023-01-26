@@ -6,7 +6,7 @@ title:  'Schedule - scRNAseq course'
 #### <img border="0" src="https://www.svgrepo.com/show/158264/schedule.svg" width="50" height="50"> Schedule
 ***
 
-OBS! Shedule is preliminary and may be subject to changes!
+OBS! Schedule is preliminary and may be subject to changes!
 
 Lecture slides will be provided as links as they get completed.
 
@@ -26,7 +26,6 @@ Lecture slides will be provided as links as they get completed.
 | 15.00 | **Break** | |
 | 15.30 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [Data normalization](lectures/scRNAseq_normalization_Asa_Bjorklund_2021.pdf) | Åsa Björklund |
 | 16.30 | [Wrap up session](https://forms.gle/D66Y3ShaamWeJZm87) | Åsa & Paulo |
-|<div style="width:40px"></div>|<div style="width:450px"></div>|<div style="width:150px"></div>|
 
 <br>
 
@@ -46,7 +45,6 @@ Lecture slides will be provided as links as they get completed.
 | 15.30 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [Clustering techniques and scRNAseq toolkits](lectures/scRNAseq_clustering_Asa_Bjorklund_2021.pdf) | Åsa Björklund |
 | 16.30 | [Wrap up session](https://forms.gle/iZumacPY1iyscZPHA) | Åsa & Paulo |
 | 18.00 | **Course Dinner** (Shanti touch of Bengali) | |
-|<div style="width:40px"></div>|<div style="width:450px"></div>|<div style="width:150px"></div>|
 
 
 <br>
@@ -66,7 +64,6 @@ Lecture slides will be provided as links as they get completed.
 | 14.30 | **Break**     | |
 | 15.00 | <img border="0" src="https://www.svgrepo.com/show/6672/exercise.svg" width="20" height="20"> [Exercises: Differential expression](exercises.md) | Åsa, Paulo |
 | 16.30 | [Wrap up session](https://forms.gle/B9Tt7QqpBJsBmjRV6) | Åsa & Paulo |
-|<div style="width:40px"></div>|<div style="width:450px"></div>|<div style="width:150px"></div>|
 
 <br>
 
@@ -84,7 +81,6 @@ Lecture slides will be provided as links as they get completed.
 | 14.00 | <img border="0" src="https://www.svgrepo.com/show/6672/exercise.svg" width="20" height="20"> [Exercises: Spatial Transcriptomics](exercises.md) | Åsa, Paulo |
 | 15.00 | **Break**     | |
 | 16.30 | [Wrap up session](https://forms.gle/i9Vic1o3ZB83vSiH9) | Åsa & Paulo |
-|<div style="width:40px"></div>|<div style="width:450px"></div>|<div style="width:150px"></div>|
 
 <br>
 
@@ -100,7 +96,6 @@ Lecture slides will be provided as links as they get completed.
 | 11.30 | [Summary of exercises]() | Åsa & Paulo |
 | 12.00 | **Lunch** | |
 | 13.00 | [Wrap up](https://forms.gle/gATSp2VCSBXCMDaU9) and [Course Summary](lectures/course_summary_2021.pdf) | Åsa & Paulo |
-|<div style="width:40px"></div>|<div style="width:450px"></div>|<div style="width:150px"></div>|
 
 <br>
 
