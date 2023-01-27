@@ -35,7 +35,7 @@ p.caption {font-size: 0.9em;font-style: italic;color: grey;margin-right: 10%;mar
 ## Celltype prediction
 ***
 
- Celltype prediction can either be performed on indiviudal cells where each cell gets a predicted celltype label, or on the level of clusters. All methods are based on similarity to other datasets, single cell or sorted bulk RNAseq, or uses know marker genes for each celltype.
+ Celltype prediction can either be performed on indiviudal cells where each cell gets a predicted celltype label, or on the level of clusters. All methods are based on similarity to other datasets, single cell or sorted bulk RNAseq, or uses known marker genes for each celltype.
 
 We will select one sample from the Covid data, `ctrl_13` and predict celltype by cell on that sample.
 
@@ -119,7 +119,7 @@ DimPlot(reference, group.by = "cell_type", label = TRUE, repel = TRUE) + NoAxes(
 ![](seurat_06_celltype_files/figure-html/unnamed-chunk-5-1.png)<!-- -->
 
 
-Run all steps of the analysis for the ctrl sample as well. Use the clustering from the integration lab with resolution 0.3.
+Run all steps of the analysis for the ctrl sample as well. Use the clustering from the integration lab with resolution 0.5.
 
 
 ```r
@@ -143,7 +143,7 @@ DimPlot(ctrl, label = TRUE, repel = TRUE) + NoAxes()
 
 
 # Seurat label transfer
-First we will run label transfer using a similar method as in the integration exercise. But, instad of CCA the default for the 'FindTransferAnchors` function is to use "pcaproject", e.g. the query datset is projected onto the PCA of the reference dataset. Then, the labels of the reference data are predicted.
+First we will run label transfer using a similar method as in the integration exercise. But, instad of CCA the default for the 'FindTransferAnchors` function is to use "pcaproject", e.g. the query dataset is projected onto the PCA of the reference dataset. Then, the labels of the reference data are predicted.
 
 
 ```r
@@ -284,7 +284,7 @@ When we run differential expression for our dataset, we want to report as many g
 
 ```r
 # run differential expression in our dataset, using clustering at resolution
-# 0.3
+# 0.5
 alldata <- SetIdent(alldata, value = "CCA_snn_res.0.5")
 DGE_table <- FindAllMarkers(alldata, logfc.threshold = 0, test.use = "wilcox", min.pct = 0.1,
     min.diff.pct = 0, only.pos = TRUE, max.cells.per.ident = 20, return.thresh = 1,
@@ -486,7 +486,7 @@ res
 ## 6:                    CST3,NPC2,PLD4,MPEG1,TGFBI,CTSB,...
 ```
 
-Selecing top significant overlap per cluster, we can now rename the clusters according to the predicted labels. OBS! Be aware that if you have some clusters that have bad p-values for all the gene sets, the cluster label will not be very reliable. Also, the gene sets you are using may not cover all the celltypes you have in your dataset and hence predictions may just be the most similar celltype.
+Selecing top significant overlap per cluster, we can now rename the clusters according to the predicted labels. OBS! Be aware that if you have some clusters that have non-significant p-values for all the gene sets, the cluster label will not be very reliable. Also, the gene sets you are using may not cover all the celltypes you have in your dataset and hence predictions may just be the most similar celltype.
 Also, some of the clusters have very similar p-values to multiple celltypes, for instance the ncMono and cMono celltypes are equally good for some clusters.
 
 
@@ -525,14 +525,14 @@ First download celltype gene sets from CellMarker.
 # Download gene marker list
 if (!dir.exists("data/CellMarker_list/")) {
     dir.create("data/CellMarker_list")
-    download.file(url = "http://bio-bigdata.hrbmu.edu.cn/CellMarker/download/Human_cell_markers.txt",
+    download.file(url = "http://xteam.xbio.top/CellMarker/download/Human_cell_markers.txt",
         destfile = "./data/CellMarker_list/Human_cell_markers.txt")
-    download.file(url = "http://bio-bigdata.hrbmu.edu.cn/CellMarker/download/Mouse_cell_markers.txt",
+    download.file(url = "http://xteam.xbio.top/CellMarker/download/Mouse_cell_markers.txt",
         destfile = "./data/CellMarker_list/Mouse_cell_markers.txt")
 }
 ```
 
-Read in the gene lists and do some filering.
+Read in the gene lists and do some filtering.
 
 
 ```r
@@ -542,10 +542,100 @@ markers <- markers[markers$speciesType == "Human", ]
 markers <- markers[markers$cancerType == "Normal", ]
 
 # Filter by tissue (to reduce computational time and have tissue-specific
-# classification) sort(unique(markers$tissueType))
-# grep('blood',unique(markers$tissueType),value = T) markers <- markers [
-# markers$tissueType %in% c('Blood','Venous blood', 'Serum','Plasma',
-# 'Spleen','Bone marrow','Lymph node'), ]
+# classification)
+sort(unique(markers$tissueType))
+```
+
+```
+##   [1] "Abdominal adipose tissue"       "Adipose tissue"                
+##   [3] "Adrenal gland"                  "Adventitia"                    
+##   [5] "Airway epithelium"              "Alveolus"                      
+##   [7] "Amniotic fluid"                 "Amniotic membrane"             
+##   [9] "Antecubital vein"               "Anterior cruciate ligament"    
+##  [11] "Artery"                         "Ascites"                       
+##  [13] "Bladder"                        "Blood"                         
+##  [15] "Blood vessel"                   "Bone"                          
+##  [17] "Bone marrow"                    "Brain"                         
+##  [19] "Breast"                         "Bronchoalveolar system"        
+##  [21] "Brown adipose tissue"           "Cartilage"                     
+##  [23] "Chorionic villus"               "Colon"                         
+##  [25] "Colorectum"                     "Cornea"                        
+##  [27] "Corneal endothelium"            "Corneal epithelium"            
+##  [29] "Corpus luteum"                  "Decidua"                       
+##  [31] "Deciduous tooth"                "Dental pulp"                   
+##  [33] "Dermis"                         "Dorsolateral prefrontal cortex"
+##  [35] "Duodenum"                       "Embryo"                        
+##  [37] "Embryoid body"                  "Embryonic brain"               
+##  [39] "Embryonic prefrontal cortex"    "Embryonic stem cell"           
+##  [41] "Endometrium"                    "Endometrium stroma"            
+##  [43] "Epithelium"                     "Esophagus"                     
+##  [45] "Eye"                            "Fat pad"                       
+##  [47] "Fetal brain"                    "Fetal gonad"                   
+##  [49] "Fetal kidney"                   "Fetal liver"                   
+##  [51] "Fetal pancreas"                 "Foreskin"                      
+##  [53] "Gastric corpus"                 "Gastric epithelium"            
+##  [55] "Gastric gland"                  "Gastrointestinal tract"        
+##  [57] "Germ"                           "Gingiva"                       
+##  [59] "Gonad"                          "Gut"                           
+##  [61] "Hair follicle"                  "Heart"                         
+##  [63] "Hippocampus"                    "Inferior colliculus"           
+##  [65] "Intervertebral disc"            "Intestinal crypt"              
+##  [67] "Intestine"                      "Jejunum"                       
+##  [69] "Kidney"                         "Lacrimal gland"                
+##  [71] "Large intestine"                "Laryngeal squamous epithelium" 
+##  [73] "Ligament"                       "Limbal epithelium"             
+##  [75] "Liver"                          "Lung"                          
+##  [77] "Lymph"                          "Lymph node"                    
+##  [79] "Lymphoid tissue"                "Mammary epithelium"            
+##  [81] "Meniscus"                       "Midbrain"                      
+##  [83] "Molar"                          "Muscle"                        
+##  [85] "Myocardium"                     "Myometrium"                    
+##  [87] "Nasal concha"                   "Nasal epithelium"              
+##  [89] "Nerve"                          "Nucleus pulposus"              
+##  [91] "Optic nerve"                    "Oral mucosa"                   
+##  [93] "Osteoarthritic cartilage"       "Ovarian cortex"                
+##  [95] "Ovarian follicle"               "Ovary"                         
+##  [97] "Oviduct"                        "Pancreas"                      
+##  [99] "Pancreatic acinar tissue"       "Pancreatic islet"              
+## [101] "Periodontal ligament"           "Periosteum"                    
+## [103] "Peripheral blood"               "Placenta"                      
+## [105] "Plasma"                         "Pluripotent stem cell"         
+## [107] "Premolar"                       "Primitive streak"              
+## [109] "Prostate"                       "Pyloric gland"                 
+## [111] "Rectum"                         "Renal glomerulus"              
+## [113] "Retina"                         "Retinal pigment epithelium"    
+## [115] "Salivary gland"                 "Scalp"                         
+## [117] "Sclerocorneal tissue"           "Seminal plasma"                
+## [119] "Serum"                          "Sinonasal mucosa"              
+## [121] "Skeletal muscle"                "Skin"                          
+## [123] "Small intestinal crypt"         "Small intestine"               
+## [125] "Spinal cord"                    "Spleen"                        
+## [127] "Splenic red pulp"               "Sputum"                        
+## [129] "Stomach"                        "Subcutaneous adipose tissue"   
+## [131] "Submandibular gland"            "Sympathetic ganglion"          
+## [133] "Synovial fluid"                 "Synovium"                      
+## [135] "Tendon"                         "Testis"                        
+## [137] "Thymus"                         "Thyroid"                       
+## [139] "Tonsil"                         "Tooth"                         
+## [141] "Umbilical cord"                 "Umbilical cord blood"          
+## [143] "Umbilical vein"                 "Undefined"                     
+## [145] "Urine"                          "Uterus"                        
+## [147] "Vagina"                         "Venous blood"                  
+## [149] "Visceral adipose tissue"        "Vocal fold"                    
+## [151] "Whartons jelly"                 "White adipose tissue"
+```
+
+```r
+grep("blood", unique(markers$tissueType), value = T)
+```
+
+```
+## [1] "Peripheral blood"     "Umbilical cord blood" "Venous blood"
+```
+
+```r
+markers <- markers[markers$tissueType %in% c("Blood", "Venous blood", "Serum", "Plasma",
+    "Spleen", "Bone marrow", "Lymph node"), ]
 
 # remove strange characters etc.
 celltype_list <- lapply(unique(markers$cellName), function(x) {
@@ -589,96 +679,78 @@ lapply(res, head, 3)
 
 ```
 ## $`0`
-##                   pathway         pval        padj        ES      NES
-## 1:             Neutrophil 0.0001000000 0.004263727 0.8288483 1.808533
-## 2:             Fibroblast 0.0001039933 0.004263727 0.9064183 1.732358
-## 3: CD1C+_B dendritic cell 0.0001000000 0.004263727 0.7848090 1.702511
-##    nMoreExtreme size                              leadingEdge
-## 1:            0   55 S100A8,S100A9,S100A12,CD14,MNDA,G0S2,...
-## 2:            0   10       CD14,VIM,CD36,CKAP4,LRP1,ITGAM,...
-## 3:            0   49  S100A8,S100A9,LYZ,S100A12,VCAN,FCN1,...
+##                     pathway         pval        padj        ES      NES
+## 1:               Neutrophil 0.0001011122 0.001769464 0.8536217 1.710360
+## 2:   CD1C+_B dendritic cell 0.0000999900 0.001769464 0.7848090 1.703959
+## 3: Mesenchymal stromal cell 0.0025223332 0.022070415 0.8486335 1.597874
+##    nMoreExtreme size                             leadingEdge
+## 1:            0   15 CD14,CSF3R,JAML,C5AR1,FCGR2A,FCGR1A,...
+## 2:            0   49 S100A8,S100A9,LYZ,S100A12,VCAN,FCN1,...
+## 3:           23    9              CD14,VIM,ANPEP,CD44,PECAM1
 ## 
 ## $`1`
 ##                     pathway         pval         padj        ES      NES
-## 1:              CD8+ T cell 0.0001027116 0.0009963467 0.9329188 2.005094
-## 2:    CD4+ cytotoxic T cell 0.0000999900 0.0009963467 0.8059188 1.962303
-## 3: Mesenchymal stromal cell 0.0001032525 0.0009963467 0.9080580 1.931041
+## 1:                   T cell 0.0001103875 0.0009846154 0.9653614 1.886212
+## 2:             Myeloid cell 0.0001025326 0.0009846154 0.8446049 1.826966
+## 3: Mesenchymal stromal cell 0.0023917995 0.0085041762 0.8806531 1.666315
 ##    nMoreExtreme size                        leadingEdge
-## 1:            0   13  GZMK,CD8A,CD3D,CD3G,CD8B,CD3E,...
-## 2:            0   57 GZMH,CCL5,LYAR,KLRG1,GZMA,NKG7,...
-## 3:            0   12   CD3D,CD3G,CD3E,CD99,CD81,B2M,...
+## 1:            0    7    CD8A,CD3D,CD3G,CD3E,CD2,CD5,...
+## 2:            0   14 CD3D,CD3G,CD3E,CD81,PTPRC,CD84,...
+## 3:           20    6               CD81,B2M,PTPRC,ITGB1
 ## 
 ## $`2`
-##                         pathway         pval       padj        ES      NES
-## 1:            Follicular B cell 0.0001026483 0.01293369 0.8921216 1.796957
-## 2: Megakaryocyte erythroid cell 0.0020957770 0.03463203 0.8304474 1.631345
-##    nMoreExtreme size                         leadingEdge
-## 1:            0   12 MS4A1,CD69,FCER2,CD22,CD40,PAX5,...
-## 2:           19   10           CD79A,CD83,CD69,FCER2,LY9
+##    pathway         pval        padj       ES      NES nMoreExtreme size
+## 1:  B cell 0.0001034661 0.002793585 0.904135 1.799886            0   11
+##                             leadingEdge
+## 1: CD79A,MS4A1,FCER2,PAX5,CD24,CD19,...
 ## 
 ## $`3`
-##                              pathway      pval       padj        ES      NES
-## 1:             CD4+ cytotoxic T cell 9.999e-05 0.00317556 0.8684266 2.338228
-## 2: Effector CD8+ memory T (Tem) cell 9.999e-05 0.00317556 0.8373610 2.237026
-## 3:               Natural killer cell 1.000e-04 0.00317556 0.8351387 2.167593
-##    nMoreExtreme size                           leadingEdge
-## 1:            0   75   FGFBP2,GNLY,NKG7,CST7,GZMB,CTSW,...
-## 2:            0   66 FGFBP2,GNLY,GZMB,GZMH,KLRF1,KLRD1,...
-## 3:            0   43  GNLY,NKG7,GZMB,KLRF1,KLRD1,CD247,...
+##                pathway         pval        padj        ES      NES nMoreExtreme
+## 1: Natural killer cell 0.0002180074 0.007630259 0.8783637 1.850136            1
+## 2:        Myeloid cell 0.0006163961 0.010786932 0.7829894 1.805936            5
+## 3:            Platelet 0.0010719263 0.012505806 0.8247617 1.778775            9
+##    size                          leadingEdge
+## 1:    8  KLRD1,FCGR3A,CD3E,CD2,NCR1,CD3D,...
+## 2:   14 FCGR3A,CD3E,CD81,ZAP70,IL2RB,SPN,...
+## 3:    9     CCL5,CD63,SPN,BSG,CD226,CD47,...
 ## 
 ## $`4`
-##                              pathway         pval        padj        ES
-## 1:             CD4+ cytotoxic T cell 0.0000999900 0.002520539 0.8606149
-## 2: Effector CD8+ memory T (Tem) cell 0.0000999900 0.002520539 0.8168166
-## 3:      Megakaryocyte erythroid cell 0.0001003613 0.002520539 0.8489964
-##         NES nMoreExtreme size                            leadingEdge
-## 1: 2.282156            0   67    SPON2,PRF1,GNLY,GZMB,PTGDS,CTSW,...
-## 2: 2.151255            0   60 SPON2,GNLY,GZMB,KLRF1,FGFBP2,KLRD1,...
-## 3: 2.100722            0   25    GZMB,CD7,KLRB1,IL2RB,KLRD1,GZMA,...
+##                        pathway         pval        padj        ES      NES
+## 1:      CD1C+_A dendritic cell 0.0003346347 0.005502882 0.9071010 1.837834
+## 2:         Natural killer cell 0.0004461796 0.005502882 0.8988555 1.821129
+## 3: AXL+SIGLEC6+ dendritic cell 0.0003019324 0.005502882 0.7424172 1.807450
+##    nMoreExtreme size                                leadingEdge
+## 1:            2    7                    AREG,LPCAT1,ADAM8,NR4A2
+## 2:            3    7              KLRD1,FCGR3A,KLRC1,NCAM1,NCR1
+## 3:            2   23 PTGDS,CTSW,BHLHE40,TSEN54,CX3CR1,PLAC8,...
 ## 
 ## $`5`
-##          pathway         pval       padj        ES      NES nMoreExtreme size
-## 1: Megakaryocyte 0.0001055409 0.01562005 0.9392763 1.769736            0    9
-##                        leadingEdge
-## 1: PPBP,PF4,GP9,ITGA2B,RASGRP2,CD9
+## Empty data.table (0 rows and 8 cols): pathway,pval,padj,ES,NES,nMoreExtreme...
 ## 
 ## $`6`
-##                pathway         pval        padj        ES      NES nMoreExtreme
-## 1:         CD4+ T cell 0.0001014713 0.006242053 0.8963596 1.758977            0
-## 2: Natural killer cell 0.0003044140 0.006323111 0.8386457 1.645722            2
-## 3:    Activated T cell 0.0004215407 0.006323111 0.8830529 1.643477            3
-##    size                          leadingEdge
-## 1:   14   IL7R,LTB,CD3D,CD3E,CD2,TNFRSF4,...
-## 2:   14    IL7R,GATA3,CD3D,CD3E,CD2,CD3G,...
-## 3:    9 CD3D,CD3E,TNFRSF4,CD3G,CD28,CD27,...
+##    pathway        pval        padj        ES      NES nMoreExtreme size
+## 1:  T cell 0.000224341 0.006281548 0.9543946 1.680394            1    6
+##               leadingEdge
+## 1: CD3D,CD3E,CD2,CD5,CD3G
 ## 
 ## $`7`
-##              pathway         pval        padj        ES      NES nMoreExtreme
-## 1: Naive CD4+ T cell 0.0001000700 0.006004203 0.8201390 1.888731            0
-## 2: Naive CD8+ T cell 0.0000999900 0.006004203 0.7595543 1.849176            0
-## 3:       CD4+ T cell 0.0008174109 0.023928215 0.7980017 1.693149            7
-##    size                             leadingEdge
-## 1:   29    CCR7,IL7R,TCF7,TSHZ2,TRABD2A,MAL,...
-## 2:   72 CCR7,TCF7,PIK3IP1,LEF1,LDHB,TRABD2A,...
-## 3:   13        IL7R,LTB,CD28,CD3E,CD27,CD3G,...
+## Empty data.table (0 rows and 8 cols): pathway,pval,padj,ES,NES,nMoreExtreme...
 ## 
 ## $`8`
-##              pathway        pval      padj        ES      NES nMoreExtreme size
-## 1: Follicular B cell 0.003402062 0.1877344 0.8186725 1.574848           32   11
-## 2:         Leukocyte 0.007399103 0.1877344 0.8798040 1.552342           65    6
-##                           leadingEdge
-## 1: MS4A1,CD24,CD40,CD22,PAX5,CD69,...
-## 2:                MS4A1,CD40,LY9,CD69
+##    pathway        pval      padj        ES      NES nMoreExtreme size
+## 1:  B cell 0.001018745 0.0295436 0.8258259 1.612312            9   13
+##                                   leadingEdge
+## 1: CD79A,MS4A1,POU2AF1,CD24,FCGR2B,POU2F2,...
 ## 
 ## $`9`
-##                         pathway         pval       padj        ES      NES
-## 1: Megakaryocyte erythroid cell 0.0003034594 0.02458021 0.8349984 1.646081
-## 2:                 Myeloid cell 0.0003007217 0.02458021 0.7902213 1.605348
-## 3:                Lymphoid cell 0.0013308763 0.04863404 0.8323066 1.603290
-##    nMoreExtreme size                            leadingEdge
-## 1:            2   15  FCGR3A,PECAM1,CD68,ITGAX,SPN,CD86,...
-## 2:            2   22 FCGR3A,CSF1R,PECAM1,CD68,ITGAX,SPN,...
-## 3:           12   12              FCGR3A,CD68,ITGAX,SPN,CD4
+##         pathway         pval        padj        ES      NES nMoreExtreme size
+## 1: Myeloid cell 0.0001003009 0.003711133 0.8090077 1.640188            0   21
+## 2:       B cell 0.0055236651 0.052259887 0.8666978 1.560994           50    7
+## 3:   Neutrophil 0.0056497175 0.052259887 0.8320532 1.550656           53    9
+##                               leadingEdge
+## 1: FCGR3A,CSF1R,PECAM1,CD68,ITGAX,SPN,...
+## 2:                LMO2,POU2F2,CD86,FCGR2A
+## 3:       FCGR3A,PECAM1,ITGAX,C5AR1,FCGR2A
 ```
 
 
@@ -699,7 +771,7 @@ cowplot::plot_grid(ncol = 2, DimPlot(alldata, label = T, group.by = "ref_gsea") 
 
 Do you think that the methods overlap well? Where do you see the most inconsistencies?
 
-In this case we do not have any ground truth, and we cannot say wich method performs best. You should keep in mind, that any celltype classification method is just a prediction, and you still need to use your common sense and knowledge of the biological system to judge if the results make sense.
+In this case we do not have any ground truth, and we cannot say which method performs best. You should keep in mind, that any celltype classification method is just a prediction, and you still need to use your common sense and knowledge of the biological system to judge if the results make sense.
 
 # Save data
 Finally, lets save the data with predictions.

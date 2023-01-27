@@ -38,7 +38,7 @@ p.caption {font-size: 0.9em;font-style: italic;color: grey;margin-right: 10%;mar
 ## Celltype prediction
 ***
 
- Celltype prediction can either be performed on indiviudal cells where each cell gets a predicted celltype label, or on the level of clusters. All methods are based on similarity to other datasets, single cell or sorted bulk RNAseq, or uses know marker genes for each celltype.
+ Celltype prediction can either be performed on indiviudal cells where each cell gets a predicted celltype label, or on the level of clusters. All methods are based on similarity to other datasets, single cell or sorted bulk RNAseq, or uses known marker genes for each celltype.
 
 We will select one sample from the Covid data, `ctrl_13` and predict celltype by cell on that sample.
 
@@ -102,7 +102,7 @@ DimPlot(reference, group.by = "cell_type", label = TRUE, repel = TRUE) + NoAxes(
 ```
 
 
-Run all steps of the analysis for the ctrl sample as well. Use the clustering from the integration lab with resolution 0.3.
+Run all steps of the analysis for the ctrl sample as well. Use the clustering from the integration lab with resolution 0.5.
 
 ```{r}
 #Set the identity as louvain with resolution 0.3
@@ -122,7 +122,7 @@ DimPlot(ctrl,  label = TRUE, repel = TRUE) + NoAxes()
 
 
 # Seurat label transfer
-First we will run label transfer using a similar method as in the integration exercise. But, instad of CCA the default for the 'FindTransferAnchors` function is to use "pcaproject", e.g. the query datset is projected onto the PCA of the reference dataset. Then, the labels of the reference data are predicted.
+First we will run label transfer using a similar method as in the integration exercise. But, instad of CCA the default for the 'FindTransferAnchors` function is to use "pcaproject", e.g. the query dataset is projected onto the PCA of the reference dataset. Then, the labels of the reference data are predicted.
 
 ```{r}
 transfer.anchors <- FindTransferAnchors(reference = reference, query = ctrl, 
@@ -195,7 +195,7 @@ First, lets extract top DEGs for our Covid-19 dataset and the reference dataset.
 When we run differential expression for our dataset, we want to report as many genes as possible, hence we set the cutoffs quite lenient.
 
 ```{r}
-# run differential expression in our dataset, using clustering at resolution 0.3
+# run differential expression in our dataset, using clustering at resolution 0.5
 alldata <- SetIdent(alldata,value = "CCA_snn_res.0.5")
 DGE_table <- FindAllMarkers(alldata,
                                logfc.threshold = 0,
@@ -255,7 +255,7 @@ res <- lapply(res, function(x) {x[order(x$NES,decreasing = T), ]} )
 res
 ```
 
-Selecing top significant overlap per cluster, we can now rename the clusters according to the predicted labels. OBS! Be aware that if you have some clusters that have bad p-values for all the gene sets, the cluster label will not be very reliable. Also, the gene sets you are using may not cover all the celltypes you have in your dataset and hence predictions may just be the most similar celltype.
+Selecing top significant overlap per cluster, we can now rename the clusters according to the predicted labels. OBS! Be aware that if you have some clusters that have non-significant p-values for all the gene sets, the cluster label will not be very reliable. Also, the gene sets you are using may not cover all the celltypes you have in your dataset and hence predictions may just be the most similar celltype.
 Also, some of the clusters have very similar p-values to multiple celltypes, for instance the ncMono and cMono celltypes are equally good for some clusters.
 
 ```{r}
@@ -287,14 +287,14 @@ First download celltype gene sets from CellMarker.
 # Download gene marker list
 if(!dir.exists("data/CellMarker_list/")) {
   dir.create("data/CellMarker_list")
-  download.file(url="http://bio-bigdata.hrbmu.edu.cn/CellMarker/download/Human_cell_markers.txt",
+  download.file(url="http://xteam.xbio.top/CellMarker/download/Human_cell_markers.txt",
                 destfile = "./data/CellMarker_list/Human_cell_markers.txt")
-  download.file(url="http://bio-bigdata.hrbmu.edu.cn/CellMarker/download/Mouse_cell_markers.txt",
+  download.file(url="http://xteam.xbio.top/CellMarker/download/Mouse_cell_markers.txt",
                 destfile = "./data/CellMarker_list/Mouse_cell_markers.txt")
 }
 ```
 
-Read in the gene lists and do some filering.
+Read in the gene lists and do some filtering.
 
 ```{r}
 # Load the human marker table
@@ -303,11 +303,11 @@ markers <- markers [ markers$speciesType == "Human", ]
 markers <- markers [ markers$cancerType == "Normal", ]
 
 #Filter by tissue (to reduce computational time and have tissue-specific classification)
-# sort(unique(markers$tissueType))
-# grep("blood",unique(markers$tissueType),value = T)
-# markers <- markers [ markers$tissueType %in% c("Blood","Venous blood",
-#                                                "Serum","Plasma",
-#                                                "Spleen","Bone marrow","Lymph node"), ]
+sort(unique(markers$tissueType))
+grep("blood",unique(markers$tissueType),value = T)
+markers <- markers [ markers$tissueType %in% c("Blood","Venous blood",
+                                                "Serum","Plasma",
+                                                "Spleen","Bone marrow","Lymph node"), ]
 
 # remove strange characters etc.
 celltype_list <- lapply( unique(markers$cellName) , function(x){
@@ -357,7 +357,7 @@ DimPlot(alldata,label = T, group.by = "cellmarker_gsea") + NoAxes()
 
 Do you think that the methods overlap well? Where do you see the most inconsistencies?
 
-In this case we do not have any ground truth, and we cannot say wich method performs best. You should keep in mind, that any celltype classification method is just a prediction, and you still need to use your common sense and knowledge of the biological system to judge if the results make sense.
+In this case we do not have any ground truth, and we cannot say which method performs best. You should keep in mind, that any celltype classification method is just a prediction, and you still need to use your common sense and knowledge of the biological system to judge if the results make sense.
 
 # Save data
 Finally, lets save the data with predictions.

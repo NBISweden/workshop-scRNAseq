@@ -121,17 +121,17 @@ SpatialFeaturePlot(brain, features = c("nCount_Spatial", "nFeature_Spatial","per
 ```
 
 
-As you can see, the spots with low number of counts/features and high mitochondrial content is mainly towards the edges of the tissue. It is quite likely that these regions are damaged tissue. You may also see regions within a tissue with low quality if you have tears or folds in your section. 
+As you can see, the spots with low number of counts/features and high mitochondrial content are mainly towards the edges of the tissue. It is quite likely that these regions are damaged tissue. You may also see regions within a tissue with low quality if you have tears or folds in your section. 
 
 But remember, for some tissue types, the amount of genes expressed and proportion mitochondria may also be a biological features, so bear in mind what tissue you are working on and what these features mean.
 
 ### Filter
 
-Select all spots with less than 25% mitocondrial reads, less than 20% hb-reads and 1000 detected genes. You must judge for yourself based on your knowledge of the tissue what are appropriate filtering criteria for your dataset.
+Select all spots with less than **25%** mitocondrial reads, less than **20%** hb-reads and **500** detected genes. You must judge for yourself based on your knowledge of the tissue what are appropriate filtering criteria for your dataset.
 
 
 ```{r}
-brain = brain[, brain$nFeature_Spatial>500 & brain$percent_mito < 25 & brain$percent_hb < 20]
+brain <- brain[, brain$nFeature_Spatial>500 & brain$percent_mito < 25 & brain$percent_hb < 20]
 ```
 
 And replot onto tissue section:
@@ -152,10 +152,10 @@ boxplot(as.matrix(t(C[most_expressed, ])), cex = 0.1, las = 1, xlab = "% total c
     col = (scales::hue_pal())(20)[20:1], horizontal = TRUE)
 ```
 
-As you can see, the mitochondrial genes are among the top expressed. Also the lncRNA gene Bc1 (brain cytoplasmic RNA 1). Also one hemoglobin gene.
+As you can see, the mitochondrial genes are among the top expressed genes. Also the lncRNA gene Bc1 (brain cytoplasmic RNA 1). Also one hemoglobin gene.
 
 ### Filter genes
-We will remove the Bc1 gene, hemoglobin genes (blood contamination) and the mitochondrial genes.
+We will remove the *Bc1* gene, hemoglobin genes (blood contamination) and the mitochondrial genes.
 
 ```{r}
 dim(brain)
@@ -184,14 +184,14 @@ brain <- SCTransform(brain, assay = "Spatial", verbose = TRUE, method = 'poisson
 ```
 
 
-Now we can plot gene expression of individual genes, the gene Hpca is a strong hippocampal marker and Ttr is a marker of the choroid plexus.
+Now we can plot gene expression of individual genes, the gene *Hpca* is a strong hippocampal marker and *Ttr* is a marker of the choroid plexus.
 
 ```{r}
 SpatialFeaturePlot(brain, features = c("Hpca", "Ttr"))
 
 ```
 
-If you want to see the tissue better you can modify point size and transparancy of the points.
+If you want to see the tissue better you can modify point size and transparency of the points.
 
 ```{r}
 SpatialFeaturePlot(brain, features = "Ttr", pt.size.factor = 1, alpha = c(0.1, 1))
@@ -251,7 +251,7 @@ st.list <- PrepSCTIntegration(object.list = st.list, anchor.features = st.featur
 
 ```
 
-Now we can perform the actual integraion.
+Now we can perform the actual integration.
 
 ```{r}
 int.anchors <- FindIntegrationAnchors(object.list = st.list, normalization.method = "SCT",   verbose = FALSE, anchor.features = st.features)
@@ -279,12 +279,12 @@ SpatialDimPlot(brain.integrated)
 
 ```
 
-Do you see any differences between the integrated and non-integrated clusering? Judge for yourself, which of the clusterings do you think looks best? 
+Do you see any differences between the integrated and non-integrated clustering? Judge for yourself, which of the clusterings do you think looks best? 
 As a reference, you can compare to brain regions in the [Allen brain atlas](https://mouse.brain-map.org/experiment/thumbnails/100042147?image_type=atlas). 
 
 ### Identification of Spatially Variable Features
 
- There are two main workflows to identify molecular features that correlate with spatial location within a tissue. The first is to perform differential expression based on spatially distinct clusters, the other is to find features that are have spatial patterning without taking clusters or spatial annotation into account. 
+ There are two main workflows to identify molecular features that correlate with spatial location within a tissue. The first is to perform differential expression based on spatially distinct clusters, the other is to find features that have spatial patterning without taking clusters or spatial annotation into account. 
 
 First, we will do differential expression between clusters just as we did for the scRNAseq data before.
 
@@ -301,7 +301,7 @@ SpatialFeaturePlot(object = brain.integrated, features = rownames(de_markers)[1:
 
 
 
-In `FindSpatiallyVariables` the default method in Seurat (method = 'markvariogram), is inspired by the Trendsceek, which models spatial transcriptomics data as a mark point process and computes a 'variogram', which identifies genes whose expression level is dependent on their spatial location. More specifically, this process calculates gamma(r) values measuring the dependence between two spots a certain "r" distance apart. By default, we use an r-value of '5' in these analyes, and only compute these values for variable genes (where variation is calculated independently of spatial location) to save time.
+In `FindSpatiallyVariables` the default method in Seurat (method = 'markvariogram), is inspired by the Trendsceek, which models spatial transcriptomics data as a mark point process and computes a 'variogram', which identifies genes whose expression level is dependent on their spatial location. More specifically, this process calculates gamma(r) values measuring the dependence between two spots a certain "r" distance apart. By default, we use an r-value of '5' in these analyses, and only compute these values for variable genes (where variation is calculated independently of spatial location) to save time.
 
 
 **OBS!** Takes a long time to run, so skip this step for now!
@@ -320,14 +320,14 @@ In `FindSpatiallyVariables` the default method in Seurat (method = 'markvariogra
 
 # Single cell data
 
-We can use a scRNA-seq dataset as a referenced to predict the proportion of different celltypes in the Visium spots. 
+We can use a scRNA-seq dataset as a reference to predict the proportion of different celltypes in the Visium spots. 
 
 Keep in mind that it is important to have a reference that contains all the celltypes you expect to find in your spots. Ideally it should be a scRNAseq reference from the exact same tissue. 
 
 We will use a reference scRNA-seq dataset of ~14,000 adult mouse cortical cell taxonomy from the Allen Institute, generated with the SMART-Seq2 protocol.
 
 
-First dowload the seurat data from: https://www.dropbox.com/s/cuowvm4vrf65pvq/allen_cortex.rds?dl=1 to folder `data/spatial/` with command:
+First download the seurat data from: https://www.dropbox.com/s/cuowvm4vrf65pvq/allen_cortex.rds?dl=1 to folder `data/spatial/` with command:
 
 
 ```{bash}
@@ -372,7 +372,7 @@ DimPlot(allen_reference, label = TRUE)
 ```
 
 # Subset ST for cortex
-Since the scRNAseq dataset was generated from the mouse cortex, we will subset the visium dataset in order to select mainly the spots part of the cortex. Note that the integration can also be performed on the whole brain slice, but it would give rise to false positive cell type assignments and and therefore it should be interpreted with more care.
+Since the scRNAseq dataset was generated from the mouse cortex, we will subset the visium dataset in order to select mainly the spots part of the cortex. Note that the integration can also be performed on the whole brain slice, but it would give rise to false positive cell type assignments and therefore it should be interpreted with more care.
 
 ```{r}
 # subset for the anterior dataset
@@ -386,7 +386,7 @@ cortex <- subset(cortex, anterior1_imagerow > 400 | anterior1_imagecol < 150, in
 cortex <- subset(cortex, anterior1_imagerow > 275 & anterior1_imagecol > 370, invert = TRUE)
 cortex <- subset(cortex, anterior1_imagerow > 250 & anterior1_imagecol > 440, invert = TRUE)
 
-# also subset for FC clusters
+# also subset for Frontal cortex clusters
 cortex <- subset(cortex, idents = c(1,2,3,4,5))
 
 p1 <- SpatialDimPlot(cortex, crop = TRUE, label = TRUE)
@@ -428,9 +428,9 @@ Most deconvolution methods does a prior gene selection and there are different o
 * Use variable genes in both SC and ST data
 * DE genes between clusters in the SC data.
 
-In this case we will use top DEG genes per cluster, so first we have to run DEG detection on the scRNAseq data.
+In this case we will use top DE genes per cluster, so first we have to run DGE detection on the scRNAseq data.
 
-For SCDC we want to find a we unique markers per cluster, so we select top 20 DEGs per cluster.
+For SCDC we want to find unique markers per cluster, so we select top 20 DEGs per cluster.
 Ideally you should run with a larger set of genes, perhaps 100 genes per cluster to get better results. However, for the sake of speed, we are now selecting only top20 genes and it still takes about 10 minutes to run.
 
 ```{r}
