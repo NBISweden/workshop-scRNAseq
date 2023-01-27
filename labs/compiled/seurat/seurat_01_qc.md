@@ -1,7 +1,7 @@
 ---
 title: "Seurat: Quality control"
 author: "Åsa Björklund  &  Paulo Czarnewski"
-date: 'January 14, 2022'
+date: 'January 27, 2023'
 output:
   html_document:
     self_contained: true
@@ -63,48 +63,18 @@ With data in place, now we can start loading libraries we will use in this tutor
 ```r
 suppressMessages(require(Seurat))
 suppressMessages(require(Matrix))
-remotes::install_github("chris-mcginnis-ucsf/DoubletFinder", upgrade = F)
+if (!require(DoubletFinder)) {
+    remotes::install_github("chris-mcginnis-ucsf/DoubletFinder", upgrade = FALSE,
+        dependencies = FALSE)
+}
 ```
 
 ```
-## Downloading GitHub repo chris-mcginnis-ucsf/DoubletFinder@HEAD
-```
-
-```
-## Registered S3 method overwritten by 'cli':
-##   method     from         
-##   print.boxx spatstat.geom
+## Loading required package: DoubletFinder
 ```
 
 ```r
 suppressMessages(require(DoubletFinder))
-```
-
-```
-##   
-   checking for file ‘/private/var/folders/1s/j9ck5c_162s487xcprlxtmdh0000gp/T/RtmpLPXWAN/remotesd9e1753bc4b5/chris-mcginnis-ucsf-DoubletFinder-554097b/DESCRIPTION’ ...
-  
-✔  checking for file ‘/private/var/folders/1s/j9ck5c_162s487xcprlxtmdh0000gp/T/RtmpLPXWAN/remotesd9e1753bc4b5/chris-mcginnis-ucsf-DoubletFinder-554097b/DESCRIPTION’ (421ms)
-## 
-  
-─  preparing ‘DoubletFinder’:
-##    checking DESCRIPTION meta-information ...
-  
-✔  checking DESCRIPTION meta-information
-## 
-  
-─  checking for LF line-endings in source and make files and shell scripts
-## 
-  
-─  checking for empty or unneeded directories
-##    Omitted ‘LazyData’ from DESCRIPTION
-## 
-  
-─  building ‘DoubletFinder_2.0.3.tar.gz’
-## 
-  
-   
-## 
 ```
 
 We can first load the data individually by reading directly from HDF5 file format (.h5).
@@ -112,56 +82,12 @@ We can first load the data individually by reading directly from HDF5 file forma
 
 ```r
 cov.15 <- Seurat::Read10X_h5(filename = "data/raw/nCoV_PBMC_15.h5", use.names = T)
-```
-
-```
-## Warning in sparseMatrix(i = indices[] + 1, p = indptr[], x = as.numeric(x =
-## counts[]), : 'giveCsparse' has been deprecated; setting 'repr = "T"' for you
-```
-
-```r
 cov.1 <- Seurat::Read10X_h5(filename = "data/raw/nCoV_PBMC_1.h5", use.names = T)
-```
-
-```
-## Warning in sparseMatrix(i = indices[] + 1, p = indptr[], x = as.numeric(x =
-## counts[]), : 'giveCsparse' has been deprecated; setting 'repr = "T"' for you
-```
-
-```r
 cov.17 <- Seurat::Read10X_h5(filename = "data/raw/nCoV_PBMC_17.h5", use.names = T)
-```
 
-```
-## Warning in sparseMatrix(i = indices[] + 1, p = indptr[], x = as.numeric(x =
-## counts[]), : 'giveCsparse' has been deprecated; setting 'repr = "T"' for you
-```
-
-```r
 ctrl.5 <- Seurat::Read10X_h5(filename = "data/raw/Normal_PBMC_5.h5", use.names = T)
-```
-
-```
-## Warning in sparseMatrix(i = indices[] + 1, p = indptr[], x = as.numeric(x =
-## counts[]), : 'giveCsparse' has been deprecated; setting 'repr = "T"' for you
-```
-
-```r
 ctrl.13 <- Seurat::Read10X_h5(filename = "data/raw/Normal_PBMC_13.h5", use.names = T)
-```
-
-```
-## Warning in sparseMatrix(i = indices[] + 1, p = indptr[], x = as.numeric(x =
-## counts[]), : 'giveCsparse' has been deprecated; setting 'repr = "T"' for you
-```
-
-```r
 ctrl.14 <- Seurat::Read10X_h5(filename = "data/raw/Normal_PBMC_14.h5", use.names = T)
-```
-
-```
-## Warning in sparseMatrix(i = indices[] + 1, p = indptr[], x = as.numeric(x =
-## counts[]), : 'giveCsparse' has been deprecated; setting 'repr = "T"' for you
 ```
 
 ***
@@ -208,8 +134,8 @@ gc()
 
 ```
 ##            used  (Mb) gc trigger  (Mb)  max used  (Mb)
-## Ncells  3057155 163.3    4830348 258.0   4830348 258.0
-## Vcells 44924108 342.8  112282786 856.7 102690337 783.5
+## Ncells  3386632 180.9    6555255 350.1   6416109 342.7
+## Vcells 44790550 341.8  129023968 984.4 102624970 783.0
 ```
  Here it is how the count matrix and the metatada look like for every cell.
 
@@ -367,6 +293,14 @@ par(mar = c(4, 8, 2, 1))
 C <- data.filt@assays$RNA@counts
 C <- Matrix::t(Matrix::t(C)/Matrix::colSums(C)) * 100
 most_expressed <- order(apply(C, 1, median), decreasing = T)[20:1]
+```
+
+```
+## Warning in asMethod(object): sparse->dense coercion: allocating vector of size
+## 1.1 GiB
+```
+
+```r
 boxplot(as.matrix(t(C[most_expressed, ])), cex = 0.1, las = 1, xlab = "% total count per cell",
     col = (scales::hue_pal())(20)[20:1], horizontal = TRUE)
 ```
@@ -564,13 +498,14 @@ In this case it looks like we only have a few cycling cells in the datasets.
 Doublets/Mulitples of cells in the same well/droplet is a common issue in scRNAseq protocols. Especially in droplet-based methods whith overloading of cells. In a typical 10x experiment the proportion of doublets is linearly dependent on the amount of loaded cells. As  indicated from the Chromium user guide, doublet rates are about as follows:
 ![](../../figs/10x_doublet_rate.png)
 Most doublet detectors simulates doublets by merging cell counts and predicts doublets as cells that have similar embeddings as the simulated doublets. Most such packages need an assumption about the number/proportion of expected doublets in the dataset. The data you are using is subsampled, but the orignial datasets contained about 5 000 cells per sample, hence we can assume that they loaded about 9 000 cells and should have a doublet rate at about 4%.
-OBS! Ideally doublet prediction should be run on each sample separately, especially if your different samples have different proportions of celltypes. In this case, the data is subsampled so we have very few cells per sample and all samples are sorted PBMCs so it is okay to run them together.
+
+**OBS!** Ideally doublet prediction should be run on each sample separately, especially if your different samples have different proportions of celltypes. In this case, the data is subsampled so we have very few cells per sample and all samples are sorted PBMCs so it is okay to run them together.
 
 Here, we will use `DoubletFinder` to predict doublet cells. But before doing doublet detection we need to run scaling, variable gene selection and pca, as well as UMAP for visualization. These steps will be explored in more detail in coming exercises.
 
 
+
 ```r
-# remotes::install_github('chris-mcginnis-ucsf/DoubletFinder')
 suppressMessages(require(DoubletFinder))
 
 data.filt = FindVariableFeatures(data.filt, verbose = F)
@@ -584,7 +519,7 @@ Then we run doubletFinder, selecting first 10 PCs and a pK value of 0.9. To opti
 
 
 ```r
-# Can run parameter optimization with paramSweep, but skip for now.
+# Can run parameter optimization with paramSweep
 
 # sweep.res <- paramSweep_v3(data.filt) sweep.stats <-
 # summarizeSweep(sweep.res, GT = FALSE) bcmvn <- find.pK(sweep.stats)
@@ -611,7 +546,6 @@ data.filt <- doubletFinder_v3(data.filt, pN = 0.25, pK = 0.09, nExp = nExp, PCs 
 ```r
 # name of the DF prediction can change, so extract the correct column name.
 DF.name = colnames(data.filt@meta.data)[grepl("DF.classification", colnames(data.filt@meta.data))]
-
 
 
 cowplot::plot_grid(ncol = 2, DimPlot(data.filt, group.by = "orig.ident") + NoAxes(),
@@ -662,69 +596,66 @@ sessionInfo()
 ```
 
 ```
-## R version 4.1.2 (2021-11-01)
+## R version 4.1.3 (2022-03-10)
 ## Platform: x86_64-apple-darwin13.4.0 (64-bit)
-## Running under: macOS Catalina 10.15.7
+## Running under: macOS Big Sur/Monterey 10.16
 ## 
 ## Matrix products: default
-## BLAS/LAPACK: /Users/asbj/miniconda3/envs/scRNAseq2022_tmp/lib/libopenblasp-r0.3.18.dylib
+## BLAS/LAPACK: /Users/asabjor/miniconda3/envs/scRNAseq2023/lib/libopenblasp-r0.3.21.dylib
 ## 
 ## locale:
-## [1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
+## [1] C/UTF-8/C/C/C/C
 ## 
 ## attached base packages:
 ## [1] stats     graphics  grDevices utils     datasets  methods   base     
 ## 
 ## other attached packages:
-##  [1] KernSmooth_2.23-20  fields_13.3         viridis_0.6.2      
-##  [4] viridisLite_0.4.0   spam_2.8-0          DoubletFinder_2.0.3
-##  [7] Matrix_1.4-0        SeuratObject_4.0.4  Seurat_4.0.6       
-## [10] RJSONIO_1.3-1.6     optparse_1.7.1     
+##  [1] KernSmooth_2.23-20  fields_14.1         viridis_0.6.2      
+##  [4] viridisLite_0.4.1   spam_2.9-1          DoubletFinder_2.0.3
+##  [7] Matrix_1.5-3        SeuratObject_4.1.3  Seurat_4.3.0       
+## [10] RJSONIO_1.3-1.7     optparse_1.7.3     
 ## 
 ## loaded via a namespace (and not attached):
-##   [1] plyr_1.8.6            igraph_1.2.11         lazyeval_0.2.2       
-##   [4] splines_4.1.2         listenv_0.8.0         scattermore_0.7      
-##   [7] ggplot2_3.3.5         digest_0.6.29         htmltools_0.5.2      
-##  [10] fansi_1.0.0           magrittr_2.0.1        tensor_1.5           
-##  [13] cluster_2.1.2         ROCR_1.0-11           remotes_2.4.2        
-##  [16] globals_0.14.0        matrixStats_0.61.0    spatstat.sparse_2.1-0
-##  [19] prettyunits_1.1.1     colorspace_2.0-2      ggrepel_0.9.1        
-##  [22] xfun_0.29             dplyr_1.0.7           callr_3.7.0          
-##  [25] crayon_1.4.2          jsonlite_1.7.2        spatstat.data_2.1-2  
-##  [28] survival_3.2-13       zoo_1.8-9             glue_1.6.0           
-##  [31] polyclip_1.10-0       gtable_0.3.0          leiden_0.3.9         
-##  [34] pkgbuild_1.3.1        future.apply_1.8.1    maps_3.4.0           
-##  [37] abind_1.4-5           scales_1.1.1          DBI_1.1.2            
-##  [40] miniUI_0.1.1.1        Rcpp_1.0.8            xtable_1.8-4         
-##  [43] reticulate_1.22       spatstat.core_2.3-2   bit_4.0.4            
-##  [46] dotCall64_1.0-1       htmlwidgets_1.5.4     httr_1.4.2           
-##  [49] getopt_1.20.3         RColorBrewer_1.1-2    ellipsis_0.3.2       
-##  [52] ica_1.0-2             pkgconfig_2.0.3       farver_2.1.0         
-##  [55] sass_0.4.0            uwot_0.1.11           deldir_1.0-6         
-##  [58] utf8_1.2.2            tidyselect_1.1.1      labeling_0.4.2       
-##  [61] rlang_0.4.12          reshape2_1.4.4        later_1.2.0          
-##  [64] munsell_0.5.0         tools_4.1.2           cli_3.1.0            
-##  [67] generics_0.1.1        ggridges_0.5.3        evaluate_0.14        
-##  [70] stringr_1.4.0         fastmap_1.1.0         yaml_2.2.1           
-##  [73] goftest_1.2-3         processx_3.5.2        knitr_1.37           
-##  [76] bit64_4.0.5           fitdistrplus_1.1-6    purrr_0.3.4          
-##  [79] RANN_2.6.1            pbapply_1.5-0         future_1.23.0        
-##  [82] nlme_3.1-155          mime_0.12             formatR_1.11         
-##  [85] hdf5r_1.3.5           compiler_4.1.2        plotly_4.10.0        
-##  [88] curl_4.3.2            png_0.1-7             spatstat.utils_2.3-0 
-##  [91] tibble_3.1.6          bslib_0.3.1           stringi_1.7.6        
-##  [94] highr_0.9             ps_1.6.0              RSpectra_0.16-0      
-##  [97] lattice_0.20-45       vctrs_0.3.8           pillar_1.6.4         
-## [100] lifecycle_1.0.1       spatstat.geom_2.3-1   lmtest_0.9-39        
-## [103] jquerylib_0.1.4       RcppAnnoy_0.0.19      data.table_1.14.2    
-## [106] cowplot_1.1.1         irlba_2.3.5           httpuv_1.6.5         
-## [109] patchwork_1.1.1       R6_2.5.1              promises_1.2.0.1     
-## [112] gridExtra_2.3         parallelly_1.30.0     codetools_0.2-18     
-## [115] MASS_7.3-55           assertthat_0.2.1      rprojroot_2.0.2      
-## [118] withr_2.4.3           sctransform_0.3.3     mgcv_1.8-38          
-## [121] parallel_4.1.2        grid_4.1.2            rpart_4.1-15         
-## [124] tidyr_1.1.4           rmarkdown_2.11        Rtsne_0.15           
-## [127] shiny_1.7.1
+##   [1] Rtsne_0.16             colorspace_2.1-0       deldir_1.0-6          
+##   [4] ellipsis_0.3.2         ggridges_0.5.4         spatstat.data_3.0-0   
+##   [7] farver_2.1.1           leiden_0.4.3           listenv_0.9.0         
+##  [10] bit64_4.0.5            getopt_1.20.3          ggrepel_0.9.2         
+##  [13] fansi_1.0.4            codetools_0.2-18       splines_4.1.3         
+##  [16] cachem_1.0.6           knitr_1.41             polyclip_1.10-4       
+##  [19] jsonlite_1.8.4         ica_1.0-3              cluster_2.1.4         
+##  [22] png_0.1-8              uwot_0.1.14            shiny_1.7.4           
+##  [25] sctransform_0.3.5      spatstat.sparse_3.0-0  compiler_4.1.3        
+##  [28] httr_1.4.4             assertthat_0.2.1       fastmap_1.1.0         
+##  [31] lazyeval_0.2.2         cli_3.6.0              later_1.3.0           
+##  [34] formatR_1.14           htmltools_0.5.4        tools_4.1.3           
+##  [37] dotCall64_1.0-2        igraph_1.3.5           gtable_0.3.1          
+##  [40] glue_1.6.2             RANN_2.6.1             reshape2_1.4.4        
+##  [43] dplyr_1.0.10           maps_3.4.1             Rcpp_1.0.10           
+##  [46] scattermore_0.8        jquerylib_0.1.4        vctrs_0.5.2           
+##  [49] nlme_3.1-161           spatstat.explore_3.0-5 progressr_0.13.0      
+##  [52] lmtest_0.9-40          spatstat.random_3.0-1  xfun_0.36             
+##  [55] stringr_1.5.0          globals_0.16.2         mime_0.12             
+##  [58] miniUI_0.1.1.1         lifecycle_1.0.3        irlba_2.3.5.1         
+##  [61] goftest_1.2-3          future_1.30.0          MASS_7.3-58.2         
+##  [64] zoo_1.8-11             scales_1.2.1           promises_1.2.0.1      
+##  [67] spatstat.utils_3.0-1   parallel_4.1.3         RColorBrewer_1.1-3    
+##  [70] yaml_2.3.7             reticulate_1.27        pbapply_1.7-0         
+##  [73] gridExtra_2.3          ggplot2_3.4.0          sass_0.4.5            
+##  [76] stringi_1.7.12         highr_0.10             rlang_1.0.6           
+##  [79] pkgconfig_2.0.3        matrixStats_0.63.0     evaluate_0.20         
+##  [82] lattice_0.20-45        tensor_1.5             ROCR_1.0-11           
+##  [85] purrr_1.0.1            labeling_0.4.2         patchwork_1.1.2       
+##  [88] htmlwidgets_1.6.1      bit_4.0.5              cowplot_1.1.1         
+##  [91] tidyselect_1.2.0       parallelly_1.34.0      RcppAnnoy_0.0.20      
+##  [94] plyr_1.8.8             magrittr_2.0.3         R6_2.5.1              
+##  [97] generics_0.1.3         DBI_1.1.3              withr_2.5.0           
+## [100] pillar_1.8.1           fitdistrplus_1.1-8     survival_3.5-0        
+## [103] abind_1.4-5            sp_1.6-0               tibble_3.1.8          
+## [106] future.apply_1.10.0    crayon_1.5.2           hdf5r_1.3.8           
+## [109] utf8_1.2.2             spatstat.geom_3.0-5    plotly_4.10.1         
+## [112] rmarkdown_2.20         grid_4.1.3             data.table_1.14.6     
+## [115] digest_0.6.31          xtable_1.8-4           tidyr_1.2.1           
+## [118] httpuv_1.6.8           munsell_0.5.0          bslib_0.4.2
 ```
 
 

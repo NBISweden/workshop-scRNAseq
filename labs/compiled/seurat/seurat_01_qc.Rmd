@@ -58,7 +58,9 @@ With data in place, now we can start loading libraries we will use in this tutor
 ```{r, message='hide',warning='hide',results='hold'}
 suppressMessages(require(Seurat))
 suppressMessages(require(Matrix))
-remotes::install_github('chris-mcginnis-ucsf/DoubletFinder',upgrade = F)
+if(!require(DoubletFinder)){
+   remotes::install_github('chris-mcginnis-ucsf/DoubletFinder',upgrade = FALSE, dependencies=FALSE)
+}
 suppressMessages(require(DoubletFinder))
 ```
 
@@ -389,12 +391,13 @@ In this case it looks like we only have a few cycling cells in the datasets.
 Doublets/Mulitples of cells in the same well/droplet is a common issue in scRNAseq protocols. Especially in droplet-based methods whith overloading of cells. In a typical 10x experiment the proportion of doublets is linearly dependent on the amount of loaded cells. As  indicated from the Chromium user guide, doublet rates are about as follows:
 ![](../../figs/10x_doublet_rate.png)
 Most doublet detectors simulates doublets by merging cell counts and predicts doublets as cells that have similar embeddings as the simulated doublets. Most such packages need an assumption about the number/proportion of expected doublets in the dataset. The data you are using is subsampled, but the orignial datasets contained about 5 000 cells per sample, hence we can assume that they loaded about 9 000 cells and should have a doublet rate at about 4%.
-OBS! Ideally doublet prediction should be run on each sample separately, especially if your different samples have different proportions of celltypes. In this case, the data is subsampled so we have very few cells per sample and all samples are sorted PBMCs so it is okay to run them together.
+
+**OBS!** Ideally doublet prediction should be run on each sample separately, especially if your different samples have different proportions of celltypes. In this case, the data is subsampled so we have very few cells per sample and all samples are sorted PBMCs so it is okay to run them together.
 
 Here, we will use `DoubletFinder` to predict doublet cells. But before doing doublet detection we need to run scaling, variable gene selection and pca, as well as UMAP for visualization. These steps will be explored in more detail in coming exercises.
 
+
 ```{r}
-# remotes::install_github('chris-mcginnis-ucsf/DoubletFinder')
 suppressMessages(require(DoubletFinder))
 
 data.filt = FindVariableFeatures(data.filt, verbose = F)
@@ -407,7 +410,7 @@ data.filt = RunUMAP(data.filt, dims = 1:10, verbose = F)
 Then we run doubletFinder, selecting first 10 PCs and a pK value of 0.9. To optimize the parameters, you can run the `paramSweep` function in the package.
 
 ```{r doubletfinder, message=FALSE}
-# Can run parameter optimization with paramSweep, but skip for now.
+# Can run parameter optimization with paramSweep
 
 #sweep.res <- paramSweep_v3(data.filt)
 #sweep.stats <- summarizeSweep(sweep.res, GT = FALSE)
@@ -423,7 +426,6 @@ data.filt <- doubletFinder_v3(data.filt, pN=0.25, pK = 0.09, nExp = nExp, PCs = 
 
 # name of the DF prediction can change, so extract the correct column name.
 DF.name = colnames(data.filt@meta.data)[grepl("DF.classification", colnames(data.filt@meta.data))]
-
 
 
 cowplot::plot_grid( ncol = 2,
