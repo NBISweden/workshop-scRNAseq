@@ -23,6 +23,8 @@ output:
       collapsed: false
       smooth_scroll: true
     toc_depth: 3
+editor_options: 
+  chunk_output_type: console
 ---
 
 ```{r setup, include=FALSE}
@@ -41,7 +43,7 @@ This tutorial is adapted from the Seurat vignette: https://satijalab.org/seurat/
 
 Spatial transcriptomic data with the Visium platform is in many ways similar to scRNAseq data. It contains UMI counts for 5-20 cells instead of single cells, but is still quite sparse in the same way as scRNAseq data is, but with the additional information about spatial location in the tissue. 
 
-Here we will first run quality control in a similar manner to scRNAseq data, then QC filtering, dimensionality reduction, integration and clustering. Then we will use scRNAseq data from mouse cortex to run LabelTransfer to predict celltypes in the Visium spots. 
+Here we will first run quality control in a similar manner to scRNAseq data, then filtering, dimensionality reduction, integration and clustering. Then we will use scRNAseq data from mouse cortex to run LabelTransfer to predict celltypes in the Visium spots. 
 
 We will use two **Visium** spatial transcriptomics dataset of the mouse brain (Sagittal), which are publicly available from the [10x genomics website](https://support.10xgenomics.com/spatial-gene-expression/datasets/). Note, that these dataset have already been filtered for spots that does not overlap with the tissue.
 
@@ -121,17 +123,17 @@ SpatialFeaturePlot(brain, features = c("nCount_Spatial", "nFeature_Spatial","per
 ```
 
 
-As you can see, the spots with low number of counts/features and high mitochondrial content is mainly towards the edges of the tissue. It is quite likely that these regions are damaged tissue. You may also see regions within a tissue with low quality if you have tears or folds in your section. 
+As you can see, the spots with low number of counts/features and high mitochondrial content are mainly towards the edges of the tissue. It is quite likely that these regions are damaged tissue. You may also see regions within a tissue with low quality if you have tears or folds in your section. 
 
 But remember, for some tissue types, the amount of genes expressed and proportion mitochondria may also be a biological features, so bear in mind what tissue you are working on and what these features mean.
 
 ### Filter
 
-Select all spots with less than 25% mitocondrial reads, less than 20% hb-reads and 1000 detected genes. You must judge for yourself based on your knowledge of the tissue what are appropriate filtering criteria for your dataset.
+Select all spots with less than **25%** mitochondrial reads, less than **20%** hb-reads and at least **500** detected genes. You must judge for yourself based on your knowledge of the tissue what are appropriate filtering criteria for your dataset.
 
 
 ```{r}
-brain = brain[, brain$nFeature_Spatial>500 & brain$percent_mito < 25 & brain$percent_hb < 20]
+brain <- brain[, brain$nFeature_Spatial>500 & brain$percent_mito < 25 & brain$percent_hb < 20]
 ```
 
 And replot onto tissue section:
@@ -145,17 +147,17 @@ SpatialFeaturePlot(brain, features = c("nCount_Spatial", "nFeature_Spatial","per
 As for scRNAseq data, we will look at what the top expressed genes are.
 
 ```{r, fig.height=8, fig.width=6}
-C = brain@assays$Spatial@counts
-C@x = C@x/rep.int(colSums(C), diff(C@p))
+C <- brain@assays$Spatial@counts
+C@x <- C@x/rep.int(colSums(C), diff(C@p))
 most_expressed <- order(Matrix::rowSums(C), decreasing = T)[20:1]
 boxplot(as.matrix(t(C[most_expressed, ])), cex = 0.1, las = 1, xlab = "% total count per cell", 
     col = (scales::hue_pal())(20)[20:1], horizontal = TRUE)
 ```
 
-As you can see, the mitochondrial genes are among the top expressed. Also the lncRNA gene Bc1 (brain cytoplasmic RNA 1). Also one hemoglobin gene.
+As you can see, the mitochondrial genes are among the top expressed genes. Also the lncRNA gene *Bc1* (brain cytoplasmic RNA 1). Also one hemoglobin gene.
 
 ### Filter genes
-We will remove the Bc1 gene, hemoglobin genes (blood contamination) and the mitochondrial genes.
+We will remove *Bc1* gene, hemoglobin genes (blood contamination) and the mitochondrial genes.
 
 ```{r}
 dim(brain)
@@ -178,29 +180,25 @@ dim(brain)
 For ST data, the Seurat team recommends to use SCTranform for normalization, so we will do that. `SCTransform` will select variable genes and normalize in one step.
 
 ```{r}
-
-brain <- SCTransform(brain, assay = "Spatial", verbose = TRUE, method = 'poisson')
-
+brain <- SCTransform(brain, assay = "Spatial", verbose = TRUE)#, method = 'poisson')
 ```
 
 
-Now we can plot gene expression of individual genes, the gene Hpca is a strong hippocampal marker and Ttr is a marker of the choroid plexus.
+Now we can plot gene expression of individual genes, the gene *Hpca* is a strong hippocampal marker and *Ttr* is a marker of the choroid plexus.
 
 ```{r}
 SpatialFeaturePlot(brain, features = c("Hpca", "Ttr"))
-
 ```
 
-If you want to see the tissue better you can modify point size and transparancy of the points.
+If you want to see the tissue better, you can modify point size and transparency of the points.
 
 ```{r}
 SpatialFeaturePlot(brain, features = "Ttr", pt.size.factor = 1, alpha = c(0.1, 1))
-
 ```
 
 
 ### Dimensionality reduction and clustering
-We can then now run dimensionality reduction and clustering using the same workflow as we use for scRNA-seq analysis. 
+We can then now run dimensionality reduction and clustering using the same workflow as we use for scRNAseq analysis. 
 
 But make sure you run it on the `SCT` assay.
 
@@ -251,7 +249,7 @@ st.list <- PrepSCTIntegration(object.list = st.list, anchor.features = st.featur
 
 ```
 
-Now we can perform the actual integraion.
+Now we can perform the actual integration.
 
 ```{r}
 int.anchors <- FindIntegrationAnchors(object.list = st.list, normalization.method = "SCT",   verbose = FALSE, anchor.features = st.features)
@@ -279,17 +277,14 @@ SpatialDimPlot(brain.integrated)
 
 ```
 
-Do you see any differences between the integrated and non-integrated clusering? Judge for yourself, which of the clusterings do you think looks best? 
+Do you see any differences between the integrated and non-integrated clustering? Judge for yourself, which of the clusterings do you think looks best? 
 As a reference, you can compare to brain regions in the [Allen brain atlas](https://mouse.brain-map.org/experiment/thumbnails/100042147?image_type=atlas). 
 
 ### Identification of Spatially Variable Features
 
- There are two main workflows to identify molecular features that correlate with spatial location within a tissue. The first is to perform differential expression based on spatially distinct clusters, the other is to find features that are have spatial patterning without taking clusters or spatial annotation into account. 
+There are two main workflows to identify molecular features that correlate with spatial location within a tissue. The first is to perform differential expression based on spatially distinct clusters, the other is to find features that have spatial patterning without taking clusters or spatial annotation into account. 
 
 First, we will do differential expression between clusters just as we did for the scRNAseq data before.
-
-
-
 ```{r, fig.height=12}
 # differential expression between cluster 1 and cluster 6
 de_markers <- FindMarkers(brain.integrated, ident.1 = 5, ident.2 = 6)
@@ -301,7 +296,7 @@ SpatialFeaturePlot(object = brain.integrated, features = rownames(de_markers)[1:
 
 
 
-In `FindSpatiallyVariables` the default method in Seurat (method = 'markvariogram), is inspired by the Trendsceek, which models spatial transcriptomics data as a mark point process and computes a 'variogram', which identifies genes whose expression level is dependent on their spatial location. More specifically, this process calculates gamma(r) values measuring the dependence between two spots a certain "r" distance apart. By default, we use an r-value of '5' in these analyes, and only compute these values for variable genes (where variation is calculated independently of spatial location) to save time.
+In `FindSpatiallyVariables` the default method in Seurat (method = 'markvariogram), is inspired by the Trendsceek, which models spatial transcriptomics data as a mark point process and computes a 'variogram', which identifies genes whose expression level is dependent on their spatial location. More specifically, this process calculates gamma(r) values measuring the dependence between two spots a certain "r" distance apart. By default, we use an r-value of '5' in these analyses, and only compute these values for variable genes (where variation is calculated independently of spatial location) to save time.
 
 
 **OBS!** Takes a long time to run, so skip this step for now!
@@ -320,14 +315,14 @@ In `FindSpatiallyVariables` the default method in Seurat (method = 'markvariogra
 
 # Single cell data
 
-We can use a scRNA-seq dataset as a referenced to predict the proportion of different celltypes in the Visium spots. 
+We can use a scRNAseq dataset as a reference to predict the proportion of different celltypes in the Visium spots. 
 
 Keep in mind that it is important to have a reference that contains all the celltypes you expect to find in your spots. Ideally it should be a scRNAseq reference from the exact same tissue. 
 
-We will use a reference scRNA-seq dataset of ~14,000 adult mouse cortical cell taxonomy from the Allen Institute, generated with the SMART-Seq2 protocol.
+We will use a reference scRNAseq dataset of ~14,000 adult mouse cortical cell taxonomy from the Allen Institute, generated with the SMART-Seq2 protocol.
 
 
-First dowload the seurat data from: https://www.dropbox.com/s/cuowvm4vrf65pvq/allen_cortex.rds?dl=1 to folder `data/spatial/` with command:
+First download the seurat data from: https://www.dropbox.com/s/cuowvm4vrf65pvq/allen_cortex.rds?dl=1 to folder `data/spatial/` with command:
 
 
 ```{bash}
@@ -345,7 +340,7 @@ fi
 
 ```
 
-For speed, and for a more fair comparison of the celltypes, we will subsample all celltypes to a maximum of 200 cells per class (`subclass`).
+For speed, and for a more fair comparison of the celltypes, we will subsample all celltypes to a maximum of **200** cells per class (`subclass`).
 
 ```{r subset_sc}
 allen_reference <- readRDS("data/spatial/allen_cortex.rds")
@@ -372,7 +367,7 @@ DimPlot(allen_reference, label = TRUE)
 ```
 
 # Subset ST for cortex
-Since the scRNAseq dataset was generated from the mouse cortex, we will subset the visium dataset in order to select mainly the spots part of the cortex. Note that the integration can also be performed on the whole brain slice, but it would give rise to false positive cell type assignments and and therefore it should be interpreted with more care.
+Since the scRNAseq dataset was generated from the mouse cortex, we will subset the visium dataset in order to select mainly the spots part of the cortex. Note that the integration can also be performed on the whole brain slice, but it would give rise to false positive cell type assignments  and therefore it should be interpreted with more care.
 
 ```{r}
 # subset for the anterior dataset
@@ -386,7 +381,7 @@ cortex <- subset(cortex, anterior1_imagerow > 400 | anterior1_imagecol < 150, in
 cortex <- subset(cortex, anterior1_imagerow > 275 & anterior1_imagecol > 370, invert = TRUE)
 cortex <- subset(cortex, anterior1_imagerow > 250 & anterior1_imagecol > 440, invert = TRUE)
 
-# also subset for FC clusters
+# also subset for FC (Frontal cortex) clusters
 cortex <- subset(cortex, idents = c(1,2,3,4,5))
 
 p1 <- SpatialDimPlot(cortex, crop = TRUE, label = TRUE)
@@ -398,8 +393,7 @@ p1 + p2
 
 
 # Deconvolution
-Deconvolution is a method to estimate the abundance (or proportion) of different celltypes in a bulkRNAseq dataset using a single cell reference. As the Visium data can be seen as a small bulk, we can both use methods for traditional bulkRNAseq as well as methods especially developed for Visium data.
- Some methods for deconvolution are DWLS, cell2location, Tangram, Stereoscope, RCTD, SCDC and many more. 
+Deconvolution is a method to estimate the abundance (or proportion) of different celltypes in a bulkRNAseq dataset using a single cell reference. As the Visium data can be seen as a small bulk, we can both use methods for traditional bulkRNAseq as well as methods especially developed for Visium data. Some methods for deconvolution are DWLS, cell2location, Tangram, Stereoscope, RCTD, SCDC and many more. 
 
 Here we will use SCDC for deconvolution of celltypes in the Visium spots. For more information on the tool please check their website: https://meichendong.github.io/SCDC/articles/SCDC.html
 First, make sure the packages you need are installed. All dependencies should be in the conda environment.
@@ -428,11 +422,11 @@ Most deconvolution methods does a prior gene selection and there are different o
 * Use variable genes in both SC and ST data
 * DE genes between clusters in the SC data.
 
-In this case we will use top DEG genes per cluster, so first we have to run DEG detection on the scRNAseq data.
+In this case we will use top DEGs per cluster, so first we have to perform differential expression on the scRNAseq data.
 
-For SCDC we want to find a we unique markers per cluster, so we select top 20 DEGs per cluster.
+For SCDC we want to find unique markers per cluster, so we select top 20 DEGs per cluster.
 Ideally you should run with a larger set of genes, perhaps 100 genes per cluster to get better results. However, for the sake of speed, we are now selecting only top20 genes and it still takes about 10 minutes to run.
-
+word
 ```{r}
 allen_reference@active.assay = "RNA"
 
@@ -458,9 +452,9 @@ m_feats <- unique(as.character(top20$gene))
 
 ```
 
-### Create Expression Sets
+### Create ExpressionSets
 
-For SCDC both the SC and the ST data need to be in the format of an Expression set with the count matrices as `AssayData`. We also subset the matrices for the genes we selected in the previous step.
+For SCDC both the SC and the ST data need to be in the format of an **ExpressionSet** with the count matrices as `AssayData`. We also subset the matrices for the genes we selected in the previous step.
 
 ```{r}
 eset_SC <- ExpressionSet(assayData=as.matrix(allen_reference@assays$RNA@counts[m_feats,]),
