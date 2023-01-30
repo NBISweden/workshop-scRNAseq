@@ -47,7 +47,7 @@ dir.create("./data/raw",recursive = T)
 file_list <- c("Normal_PBMC_13.h5","Normal_PBMC_14.h5","Normal_PBMC_5.h5",
                "nCoV_PBMC_15.h5","nCoV_PBMC_17.h5","nCoV_PBMC_1.h5")
 for(i in file_list){
-  download.file( url = paste0(webpath,i) , 
+  download.file( url = paste0(webpath,i) ,
                  destfile = paste0("./data/raw/",i))
 }
 ```
@@ -59,7 +59,10 @@ suppressMessages(require(scater))
 suppressMessages(require(scran))
 suppressMessages(require(cowplot))
 suppressMessages(require(org.Hs.eg.db))
-remotes::install_github('chris-mcginnis-ucsf/DoubletFinder',upgrade = F)
+
+if(!require(DoubletFinder)){
+   remotes::install_github('chris-mcginnis-ucsf/DoubletFinder',upgrade = F, dependencies=F)
+}
 suppressMessages(require(DoubletFinder))
 ```
 
@@ -404,7 +407,8 @@ Cyclone predicts most cells as G1, but also quite a lot of cells with high S-Pha
 Doublets/Mulitples of cells in the same well/droplet is a common issue in scRNAseq protocols. Especially in droplet-based methods whith overloading of cells. In a typical 10x experiment the proportion of doublets is linearly dependent on the amount of loaded cells. As  indicated from the Chromium user guide, doublet rates are about as follows:
 ![](../../figs/10x_doublet_rate.png)
 Most doublet detectors simulates doublets by merging cell counts and predicts doublets as cells that have similar embeddings as the simulated doublets. Most such packages need an assumption about the number/proportion of expected doublets in the dataset. The data you are using is subsampled, but the orignial datasets contained about 5 000 cells per sample, hence we can assume that they loaded about 9 000 cells and should have a doublet rate at about 4%.
-OBS! Ideally doublet prediction should be run on each sample separately, especially if your different samples have different proportions of celltypes. In this case, the data is subsampled so we have very few cells per sample and all samples are sorted PBMCs so it is okay to run them together.
+
+**OBS!** Ideally doublet prediction should be run on each sample separately, especially if your different samples have different proportions of celltypes. In this case, the data is subsampled so we have very few cells per sample and all samples are sorted PBMCs so it is okay to run them together.
 
 There is a method to predict if a cluster consists of mainly doublets `findDoubletClusters()`, but we can also predict individual cells based on simulations using the function `computeDoubletDensity()` which we will do here.
 Doublet detection will be performed using PCA, so we need to first normalize the data and run variable gene detection, as well as UMAP for visualization. These steps will be explored in more detail in coming exercises.
@@ -422,7 +426,6 @@ sce.filt <- runUMAP(sce.filt, pca = 10)
 ```
 
 ```{r}
-BiocManager::install('scDblFinder',update = F)
 suppressPackageStartupMessages(require(scDblFinder))
 
 # run computeDoubletDensity with 10 principal components.
