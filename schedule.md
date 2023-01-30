@@ -33,18 +33,18 @@ Lecture slides will be provided as links as they get completed.
 
 ###### Tuesday 31st of January
 
-| Time  | Description         | Lecturer  |
-|-----|------------------- |---------|
-| 09.00 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [Dimensionality reduction](lectures/dimensionality_reduction_paulo_czarnewski_2021.pdf) | Paulo Czarnewski |
-| 10.00 | **Break**     | |
-| 11.30 | <img border="0" src="https://www.svgrepo.com/show/6672/exercise.svg" width="20" height="20"> [Exercises: Dimensionality reduction](exercises.md) | Åsa, Paulo |
-| 12.00 | **Lunch** | |
-| 13.00 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [Batch correction + Data integration](lectures/data_integration_paulo_czarnewski_2021.pdf) | Paulo Czarnewski |
-| 14.00 | <img border="0" src="https://www.svgrepo.com/show/6672/exercise.svg" width="20" height="20"> [Exercises: Data integration](exercises.md) | Åsa, Paulo |
-| 15.00 | **Break** | |
-| 15.30 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [Clustering techniques and scRNAseq toolkits](lectures/scRNAseq_clustering_Asa_Bjorklund_2021.pdf) | Åsa Björklund |
-| 16.30 | [Wrap up session](https://forms.gle/iZumacPY1iyscZPHA) | Åsa & Paulo |
-| 18.00 | **Course Dinner** (Shanti touch of Bengali) | |
+| Time  | Description                                                                                                                                                                                                                            | Lecturer         |
+| ----- | -------------------                                                                                                                                                                                                                    | ---------        |
+| 09.00 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [Dimensionality reduction](lectures/dimensionality_reduction_paulo_czarnewski_2023.pdf) | Paulo Czarnewski |
+| 10.00 | **Break**                                                                                                                                                                                                                              |                  |
+| 11.30 | <img border="0" src="https://www.svgrepo.com/show/6672/exercise.svg" width="20" height="20"> [Exercises: Dimensionality reduction](exercises.md)                                                                                       | Åsa, Paulo       |
+| 12.00 | **Lunch**                                                                                                                                                                                                                                                                    |                  |
+| 13.00 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [Batch correction + Data integration](lectures/data_integration_paulo_czarnewski_2023.pdf)                                               | Paulo Czarnewski |
+| 14.00 | <img border="0" src="https://www.svgrepo.com/show/6672/exercise.svg" width="20" height="20"> [Exercises: Data integration](exercises.md)                                                                                               | Åsa, Paulo       |
+| 15.00 | **Break**                                                                                                                                                                                                                              |                  |
+| 15.30 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [Clustering techniques and scRNAseq toolkits](lectures/scRNAseq_clustering_Asa_Bjorklund_2021.pdf)         | Åsa Björklund    |
+| 16.30 | [Wrap up session](https://forms.gle/iZumacPY1iyscZPHA)                                                                                                                                                                                 | Åsa & Paulo      |
+| 18.00 | **Course Dinner** (Shanti touch of Bengali)                                                                                                                                                                                            |                  |
 
 
 <br>
@@ -53,17 +53,17 @@ Lecture slides will be provided as links as they get completed.
 
 ###### Wednesday 1st of February
 
-| Time  | Description         | Lecturer  |
-| ----- | ------------------- | --------- |
-| 09.00 | <img border="0" src="https://www.svgrepo.com/show/6672/exercise.svg" width="20" height="20"> [Exercises: Clustering](exercises.md) | Åsa, Paulo |
-| 10.00 | **Break**     | |
-| 10.30 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [Invited Lecturer: Single cell Epigenetics] | Jakub Westholm |
-| 12.00 | **Lunch** | |
-| 13.00 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [Differential gene expression](lectures/scDEG_lecture_2021.pdf) | Åsa Björklund |
-| 14.00 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [Gene Set Analysis](lectures/gene_set_analysis_paulo_czarnewski_2021.pdf) | Paulo Czarnewski |
-| 14.30 | **Break**     | |
-| 15.00 | <img border="0" src="https://www.svgrepo.com/show/6672/exercise.svg" width="20" height="20"> [Exercises: Differential expression](exercises.md) | Åsa, Paulo |
-| 16.30 | [Wrap up session](https://forms.gle/B9Tt7QqpBJsBmjRV6) | Åsa & Paulo |
+| Time  | Description                                                                                                                                                                             | Lecturer         |
+| ----- | -------------------                                                                                                                                                                     | ---------        |
+| 09.00 | <img border="0" src="https://www.svgrepo.com/show/6672/exercise.svg" width="20" height="20"> [Exercises: Clustering](exercises.md)                                                      | Åsa, Paulo       |
+| 10.00 | **Break**                                                                                                                                                                               |                  |
+| 10.30 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [Invited Lecturer: Single cell Epigenetics]                                 | Jakub Westholm   |
+| 12.00 | **Lunch**                                                                                                                                                                               |                  |
+| 13.00 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [Differential gene expression](lectures/scDEG_lecture_2021.pdf)             | Åsa Björklund    |
+| 14.00 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [Gene Set Analysis](lectures/gene_set_analysis_paulo_czarnewski_2023.pdf)             | Paulo Czarnewski |
+| 14.30 | **Break**                                                                                                                                                                                           |                  |
+| 15.00 | <img border="0" src="https://www.svgrepo.com/show/6672/exercise.svg" width="20" height="20"> [Exercises: Differential expression](exercises.md)                                         | Åsa, Paulo       |
+| 16.30 | [Wrap up session](https://forms.gle/B9Tt7QqpBJsBmjRV6)                                                                                                                                  | Åsa & Paulo      |
 
 <br>
 
@@ -90,7 +90,7 @@ Lecture slides will be provided as links as they get completed.
 
 | Time  | Description         | Lecturer  |
 | ----- | ------------------- | --------- |
-| 9.00 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [Trajectory inference analysis](lectures/trajectory_inference_analysis_paulo_czarnewski_2021.pdf) | Paulo Czarnewski |
+| 9.00 | <img border="0" src="https://www.svgrepo.com/show/165459/business-presentation.svg" width="20" height="20"> [Trajectory inference analysis](lectures/trajectory_inference_analysis_paulo_czarnewski_2023.pdf) | Paulo Czarnewski |
 | 10.00 | **Break**     | |
 | 10.15 | <img border="0" src="https://www.svgrepo.com/show/6672/exercise.svg" width="20" height="20"> [Exercises: Trajectory inference](exercises.md) | Åsa, Paulo |
 | 11.30 | [Summary of exercises]() | Åsa & Paulo |
