@@ -111,6 +111,13 @@ Start by installing Conda. We suggest installing **Miniconda3** and NOT Anaconda
   xcode-select --install
   ```
 
+  **OBS!** If you are on an **M1** (Silicon) Mac computer you will have to use a Rosetta2 enabled terminal and install the x86_64 miniconda3 version. All R packages are not yet available as conda packages for the arm64 architecture.
+
+  Just right-click on the icon for the terminal app in a Finder window and click "Get Info". There you have a selection box: "Open using Rosetta" that you need to tick before opening the application.  Then you can install the x86_64 miniconda3 following instructions below.
+
+
+
+
   First download the latest version of Miniconda3 and run it to install.
 
   ```
