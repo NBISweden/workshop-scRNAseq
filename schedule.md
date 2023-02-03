@@ -95,7 +95,7 @@ Lecture slides will be provided as links as they get completed.
 | 10.15 | <img border="0" src="https://www.svgrepo.com/show/6672/exercise.svg" width="20" height="20"> [Exercises: Trajectory inference](exercises.md) | Åsa, Paulo |
 | 11.30 | [Summary of exercises]() | Åsa & Paulo |
 | 12.00 | **Lunch** | |
-| 13.00 | [Wrap up](https://forms.gle/gATSp2VCSBXCMDaU9) and [Course Summary](lectures/course_summary_2021.pdf) | Åsa & Paulo |
+| 13.00 | [Wrap up](https://forms.gle/gATSp2VCSBXCMDaU9) and [Course Summary](lectures/course_summary_2023.pdf) | Åsa & Paulo |
 
 <br>
 
