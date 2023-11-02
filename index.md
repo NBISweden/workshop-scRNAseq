@@ -8,6 +8,7 @@ title: Single cell RNA-seq analysis
 This workshop will introduce the best practice bioinformatics methods for processing and analyses of single cell RNA-seq data via a series of lectures and computer practicals. The total course duration is 5 days, with 4 course days followed by a Bring Your Own Data day where you can apply the skills learned on a dataset of your chosing.
 
 **When:** 12-16 February 2024  (9.00-17.00)
+
 **Location:** TrippelrummetLinks to an external site., Entrance C11, BMC, Husargatan 3, Uppsala 75237, Sweden
 
 
