@@ -1,0 +1,211 @@
+---
+title: "{{< meta clust_title >}}"
+subtitle: "{{< meta subtitle_seurat >}}"
+description: "{{< meta clust_description >}}"
+format: html
+---
+
+::: {.callout-note}
+Code chunks run R commands unless otherwise specified.
+:::
+
+{{< meta clust_1 >}}
+
+{{< meta clust_2 >}}
+
+```{r}
+
+suppressPackageStartupMessages({
+  library(Seurat)
+  library(cowplot)
+  library(ggplot2)
+  library(pheatmap)
+  library(rafalib)
+  library(clustree)
+})
+
+alldata <- readRDS("data/results/covid_qc_dr_int.rds")
+```
+
+## {{< meta clust_graphclust >}}
+
+{{< meta clust_graphclust_1 >}}
+
+### {{< meta clust_graphclust_knn >}}
+
+{{< meta clust_graphclust_knn_1 >}}
+
+As we can see above, the **Seurat** function `FindNeighbors()` already computes both the KNN and SNN graphs, in which we can control the minimal percentage of shared neighbours to be kept. See `?FindNeighbors` for additional options.
+
+```{r}
+# check that CCA is still the active assay
+alldata@active.assay
+
+alldata <- FindNeighbors(alldata, dims = 1:30, k.param = 60, prune.SNN = 1/15)
+
+# check the names for graphs in the object.
+names(alldata@graphs)
+```
+
+{{< meta clust_graphclust_knn_2 >}}
+
+```{r}
+#| fig-height: 6
+#| fig-width: 6
+
+pheatmap(alldata@graphs$CCA_nn[1:200,1:200],
+         col=c("white","black"),border_color = "grey90", main = "KNN graph",
+         legend = F,cluster_rows = F,cluster_cols = F,fontsize = 2)
+
+pheatmap(alldata@graphs$CCA_snn[1:200,1:200],
+         col=colorRampPalette(c("white","yellow","red"))(100), 
+         border_color = "grey90", main = "SNN graph",
+         legend = F,cluster_rows = F,cluster_cols = F,fontsize = 2)
+```
+
+### {{< meta clust_graphclust_graph >}}
+
+{{< meta clust_graphclust_graph_1 >}}
+
+In **Seurat**, the function `FindClusters()` will do a graph-based clustering using "Louvain" algorithim by default (`algorithm = 1`). To use the leiden algorithm, you need to set it to `algorithm = 4`. See `?FindClusters` for additional options.
+
+```{r}
+#| fig-height: 4
+#| fig-width: 12
+#| results: hide
+
+# Clustering with louvain (algorithm 1)
+for (res in c( 0.1 , 0.25 , .5 , 1 , 1.5 , 2 )){
+  alldata <- FindClusters(alldata, graph.name = "CCA_snn", resolution = res , algorithm = 1)
+}
+
+# each time you run clustering, the data is stored in meta data columns:
+# seurat_clusters - lastest results only
+# CCA_snn_res.XX - for each different resolution you test.
+```
+
+```{r}
+#| fig-height: 4
+#| fig-width: 12
+
+plot_grid(ncol = 3,
+  DimPlot(alldata, reduction = "umap", group.by = "CCA_snn_res.0.5")+ggtitle("louvain_0.5"),
+  DimPlot(alldata, reduction = "umap", group.by = "CCA_snn_res.1")+ggtitle("louvain_1"),
+  DimPlot(alldata, reduction = "umap", group.by = "CCA_snn_res.2")+ggtitle("louvain_2")
+)
+```
+
+{{< meta clust_graphclust_graph_2 >}}
+
+```{r}
+#| fig-height: 8
+#| fig-width: 8
+
+suppressPackageStartupMessages(library(clustree))
+clustree(alldata@meta.data, prefix = "CCA_snn_res.")
+```
+
+## {{< meta clust_kmean >}}
+
+{{< meta clust_kmean_1 >}}
+
+```{r}
+#| fig-height: 4
+#| fig-width: 12
+
+for (k in c( 5 , 7 , 10 , 12 , 15 , 17 , 20)){
+  alldata@meta.data[,paste0("kmeans_",k)] <- kmeans(x = alldata@reductions[["pca"]]@cell.embeddings, centers = k,nstart = 100)$cluster
+}
+
+plot_grid(ncol = 3,
+  DimPlot(alldata, reduction = "umap", group.by = "kmeans_5")+ggtitle("kmeans_5"),
+  DimPlot(alldata, reduction = "umap", group.by = "kmeans_10")+ggtitle("kmeans_10"),
+  DimPlot(alldata, reduction = "umap", group.by = "kmeans_15")+ggtitle("kmeans_15")
+)
+```
+
+```{r}
+#| fig-height: 8
+#| fig-width: 8
+
+clustree(alldata@meta.data, prefix = "kmeans_")
+```
+
+## {{< meta clust_hier >}}
+
+### {{< meta clust_hier_dist >}}
+
+{{< meta clust_hier_dist_1 >}}
+
+```{r}
+d <- dist( alldata@reductions[["pca"]]@cell.embeddings, method="euclidean")
+```
+
+{{< meta clust_hier_dist_2 >}}
+
+```{r}
+#Compute sample correlations
+sample_cor <- cor( Matrix::t(alldata@reductions[["pca"]]@cell.embeddings) )
+
+#Transform the scale from correlations
+sample_cor <- (1 - sample_cor) / 2
+
+#Convert it to a distance object
+d2 <- as.dist(sample_cor)
+```
+
+### {{< meta clust_hier_clust >}}
+
+{{< meta clust_hier_clust_1 >}}
+
+```{r}
+#euclidean
+h_euclidean <- hclust(d, method="ward.D2")
+
+#correlation
+h_correlation <- hclust(d2, method="ward.D2")
+```
+
+{{< meta clust_hier_clust_2 >}}
+
+```{r}
+#| fig-height: 8
+#| fig-width: 13
+
+#euclidean distance
+alldata$hc_euclidean_5 <- cutree(h_euclidean,k = 5)
+alldata$hc_euclidean_10 <- cutree(h_euclidean,k = 10)
+alldata$hc_euclidean_15 <- cutree(h_euclidean,k = 15)
+
+#correlation distance
+alldata$hc_corelation_5 <- cutree(h_correlation,k = 5)
+alldata$hc_corelation_10 <- cutree(h_correlation,k = 10)
+alldata$hc_corelation_15 <- cutree(h_correlation,k = 15)
+
+
+plot_grid(ncol = 3,
+  DimPlot(alldata, reduction = "umap", group.by = "hc_euclidean_5")+ggtitle("hc_euc_5"),
+  DimPlot(alldata, reduction = "umap", group.by = "hc_euclidean_10")+ggtitle("hc_euc_10"),
+  DimPlot(alldata, reduction = "umap", group.by = "hc_euclidean_15")+ggtitle("hc_euc_15"),
+
+  DimPlot(alldata, reduction = "umap", group.by = "hc_corelation_5")+ggtitle("hc_cor_5"),
+  DimPlot(alldata, reduction = "umap", group.by = "hc_corelation_10")+ggtitle("hc_cor_10"),
+  DimPlot(alldata, reduction = "umap", group.by = "hc_corelation_15")+ggtitle("hc_cor_15")
+)
+```
+
+{{< meta clust_save >}}
+
+```{r}
+saveRDS(alldata,"data/results/covid_qc_dr_int_cl.rds")
+```
+
+:::{.callout-note title="Discuss"}
+{{< meta clust_3 >}}
+:::
+
+## {{< meta session >}}
+
+```{r}
+sessionInfo()
+```

@@ -1,0 +1,245 @@
+---
+title: "{{< meta int_title >}}"
+subtitle: "{{< meta subtitle_bioc >}}"
+description: "{{< meta int_description >}}"
+format: html
+---
+
+::: {.callout-note}
+Code chunks run R commands unless otherwise specified.
+:::
+
+{{< meta int_1 >}}
+
+|Markdown | Language | Library | Ref|
+|:---|:---|:---|:---|
+|CCA | R | Seurat | [Cell](https://www.sciencedirect.com/science/article/pii/S0092867419305598?via%3Dihub)|
+|MNN | R/Python | Scater/Scanpy | [Nat. Biotech.](https://www.nature.com/articles/nbt.4091)|
+|Conos | R | conos | [Nat. Methods](https://www.nature.com/articles/s41592-019-0466-z?error=cookies_not_supported&code=5680289b-6edb-40ad-9934-415dac4fdb2f)|
+|Scanorama | Python | scanorama | [Nat. Biotech.](https://www.nature.com/articles/s41587-019-0113-3)|
+
+## {{< meta int_prep >}}
+
+{{< meta int_prep_1 >}}
+
+```{r}
+suppressPackageStartupMessages({
+  library(scater)
+  library(scran)
+  library(cowplot)
+  library(ggplot2)
+  library(rafalib)
+# library(venn)
+})
+
+sce <- readRDS("data/results/covid_qc_dm.rds")
+print(reducedDims(sce))
+```
+
+{{< meta int_prep_2 >}}
+
+```{r}
+#| fig-height: 4
+#| fig-width: 8
+
+sce.list <- lapply( unique(sce$sample), function(x){
+  x <- sce[ , sce$sample == x ] })
+
+mypar(1,3)
+hvgs_per_dataset <- lapply( sce.list, function(x){
+  x <- computeSumFactors(x, sizes=c(20, 40, 60, 80))
+  x <- logNormCounts(x)
+  var.out <- modelGeneVar(x, method="loess")
+  hvg.out <- var.out[which(var.out$FDR <= 0.05 & var.out$bio >= 0.2),]
+  hvg.out <- hvg.out[order(hvg.out$bio, decreasing=TRUE),]
+  return(rownames(hvg.out))
+})
+names(hvgs_per_dataset) <- unique(sce$sample)
+
+# venn::venn(hvgs_per_dataset,opacity = .4,zcolor = scales::hue_pal()(3),cexsn = 1,cexil = 1,lwd=1,col="white",borders = NA)
+
+temp <- unique(unlist(hvgs_per_dataset))
+overlap <- sapply( hvgs_per_dataset, function(x) { temp %in% x } )
+pheatmap::pheatmap(t(overlap*1),cluster_rows = F, color = c("grey90","grey20"))
+```
+
+## MNN
+
+The mutual nearest neighbors (MNN) approach within the scran package utilizes a novel approach to adjust for batch effects. The `fastMNN()` function returns a representation of the data with reduced dimensionality, which can be used in a similar fashion to other lower-dimensional representations such as PCA. In particular, this representation can be used for downstream methods such as clustering. The BNPARAM can be used to specify the specific nearest neighbors method to use from the BiocNeighbors package. Here we make use of the [Annoy library](https://github.com/spotify/annoy) via the `BiocNeighbors::AnnoyParam()` argument. We save the reduced-dimension MNN representation into the reducedDims slot of our sce object.
+
+```{r}
+mnn_out <- batchelor::fastMNN(sce,subset.row = unique(unlist(hvgs_per_dataset)), batch = factor(sce$sample), k = 20, d = 50)
+```
+
+:::{.callout-caution}
+`fastMNN()` does not produce a batch-corrected expression matrix.
+:::
+
+```{r}
+mnn_out <- t(reducedDim(mnn_out,"corrected"))
+colnames(mnn_out) <- unlist(lapply(sce.list,function(x){colnames(x)}))
+mnn_out <- mnn_out[,colnames(sce)]
+rownames(mnn_out) <- paste0("dim",1:50)
+reducedDim(sce, "MNN") <- t(mnn_out)
+```
+
+We can observe that a new assay slot is now created under the name `MNN`.
+
+```{r}
+reducedDims(sce)
+```
+
+Thus, the result from `fastMNN()` should solely be treated as a reduced dimensionality representation, suitable for direct plotting, TSNE/UMAP, clustering, and trajectory analysis that relies on such results.
+
+```{r}
+set.seed(42)
+sce <- runTSNE(sce, dimred = "MNN", n_dimred = 50, perplexity = 30,name = "tSNE_on_MNN")
+sce <- runUMAP(sce,dimred = "MNN", n_dimred = 50, ncomponents = 2,name = "UMAP_on_MNN")
+```
+
+{{< meta int_plot >}}
+
+```{r}
+#| fig-height: 8
+#| fig-width: 14
+
+plot_grid(ncol = 3,
+  plotReducedDim(sce,dimred = "PCA",colour_by = "sample", point_size = 0.6)+ ggplot2::ggtitle(label ="PCA"),
+  plotReducedDim(sce,dimred = "tSNE_on_PCA",colour_by = "sample", point_size = 0.6)+ ggplot2::ggtitle(label ="tSNE_on_PCA"),
+  plotReducedDim(sce,dimred = "UMAP_on_PCA",colour_by = "sample",point_size = 0.6)+ ggplot2::ggtitle(label ="UMAP_on_PCA"),
+
+  plotReducedDim(sce,dimred = "MNN",colour_by = "sample", point_size = 0.6)+ ggplot2::ggtitle(label ="MNN"),
+  plotReducedDim(sce,dimred = "tSNE_on_MNN",colour_by = "sample", point_size = 0.6)+ ggplot2::ggtitle(label ="tSNE_on_MNN"),
+  plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = "sample", point_size = 0.6)+ ggplot2::ggtitle(label ="UMAP_on_MNN")
+)
+```
+
+{{< meta dimred_plotgenes_1 >}}
+
+|Markers|Cell Type|
+|:---|:---|
+|CD3E|T cells|
+|CD3E CD4|CD4+ T cells|
+|CD3E CD8A|CD8+ T cells|
+|GNLY, NKG7|NK cells|
+|MS4A1|B cells|
+|CD14, LYZ, CST3, MS4A7|CD14+ Monocytes|
+|FCGR3A, LYZ, CST3, MS4A7|FCGR3A+  Monocytes|
+|FCER1A, CST3|DCs|
+
+```{r}
+#| fig-height: 16
+#| fig-width: 13
+
+plotlist <- list()
+for(i in c("CD3E","CD4","CD8A","NKG7","GNLY","MS4A1","CD14","LYZ","MS4A7","FCGR3A","CST3","FCER1A")){
+  plotlist[[i]] <- plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = i,by_exprs_values = "logcounts", point_size = 0.6) +
+  scale_fill_gradientn(colours = colorRampPalette(c("grey90","orange3","firebrick","firebrick","red","red" ))(10)) +
+  ggtitle(label = i)+ theme(plot.title = element_text(size=20)) }
+plot_grid(ncol=3, plotlist = plotlist)
+```
+
+INTEG_R1:
+
+INTEG_R2:
+
+```{r}
+#| fig-height: 5
+#| fig-width: 14
+
+library(harmony)
+
+reducedDimNames(sce)
+
+sce <- RunHarmony(
+  sce,
+  group.by.vars = "sample",
+  reduction.save = "harmony",
+  reduction = "PCA",
+  dims.use = 1:50)
+
+#Here we use all PCs computed from Harmony for UMAP calculation
+sce <- runUMAP(sce,dimred = "harmony", n_dimred = 50, ncomponents = 2,name = "UMAP_on_Harmony")
+```
+
+INTEG_R3:
+
+INTEG_R4:
+
+```{r}
+#| fig-height: 5
+#| fig-width: 15
+
+hvgs <- unique(unlist(hvgs_per_dataset))
+
+scelist <- list()
+genelist <- list()
+for(i in 1:length(sce.list)) {
+  scelist[[i]] <- t(as.matrix(logcounts(sce.list[[i]])[hvgs,]))
+  genelist[[i]] <- hvgs
+}
+
+lapply(scelist,dim)
+```
+
+INTEG_R5:
+
+```{r}
+#| fig-height: 5
+#| fig-width: 15
+
+library(reticulate)
+reticulate::use_condaenv("sspy")
+scanorama <- import("scanorama")
+
+integrated.data <- scanorama$integrate(datasets_full = scelist, genes_list = genelist )
+
+intdimred <- do.call(rbind, integrated.data[[1]])
+colnames(intdimred) <- paste0("PC_", 1:100)
+rownames(intdimred) <- colnames(logcounts(sce))
+
+# Add standard deviations in order to draw Elbow Plots in Seurat
+stdevs <- apply(intdimred, MARGIN = 2, FUN = sd)
+attr(intdimred,"varExplained") <- stdevs
+
+reducedDim(sce,"Scanorama_PCA") <- intdimred
+
+#Here we use all PCs computed from Scanorama for UMAP calculation
+sce <- runUMAP(sce, dimred = "Scanorama_PCA", n_dimred = 50, ncomponents = 2, name = "UMAP_on_Scanorama")
+```
+
+INTEG_R6:
+
+```{r}
+#| fig-height: 8
+#| fig-width: 10
+
+p1 <- plotReducedDim(sce,dimred = "UMAP_on_PCA",colour_by = "sample", point_size = 0.6)+ ggplot2::ggtitle(label ="UMAP_on_PCA")
+p2 <- plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = "sample", point_size = 0.6)+ ggplot2::ggtitle(label ="UMAP_on_MNN")
+p3 <- plotReducedDim(sce,dimred = "UMAP_on_Harmony",colour_by = "sample", point_size = 0.6)+ ggplot2::ggtitle(label ="UMAP_on_Harmony")
+p4 <- plotReducedDim(sce,dimred = "UMAP_on_Scanorama",colour_by = "sample", point_size = 0.6)+ ggplot2::ggtitle(label ="UMAP_on_Scanorama")
+leg <- get_legend(p1)
+
+gridExtra::grid.arrange(
+  gridExtra::arrangeGrob(
+    p1 + Seurat::NoLegend() + Seurat::NoAxes(),
+    p2 + Seurat::NoLegend() + Seurat::NoAxes(),
+    p3 + Seurat::NoLegend() + Seurat::NoAxes(),
+    p4 + Seurat::NoLegend() + Seurat::NoAxes(), nrow=2),
+  leg, ncol=2,widths=c(8,2)
+)
+```
+
+INTEG_R7:
+
+{{< meta int_save >}}
+
+```{r}
+saveRDS(sce,"data/results/covid_qc_dr_int.rds")
+```
+
+## {{< meta session >}}
+
+```{r}
+sessionInfo()
+```

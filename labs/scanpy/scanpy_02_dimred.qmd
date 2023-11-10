@@ -1,0 +1,238 @@
+---
+title: "{{< meta dimred_title >}}"
+subtitle: "{{< meta subtitle_scanpy >}}"
+description: "{{< meta dimred_description >}}"
+format: html
+engine: jupyter
+---
+
+::: {.callout-note}
+Code chunks run Python commands unless it starts with `%%bash`, in which case, those chunks run shell commands.
+:::
+
+## {{< meta dimred_prep >}}
+
+{{< meta dimred_prep_1 >}}
+
+```{python}
+import numpy as np
+import pandas as pd
+import scanpy as sc
+import matplotlib.pyplot as plt
+
+# verbosity: errors (0), warnings (1), info (2), hints (3)
+sc.settings.verbosity = 3
+#sc.logging.print_versions()
+
+sc.settings.set_figure_params(dpi=80)
+adata = sc.read_h5ad('data/results/scanpy_qc_filtered_covid.h5ad')
+adata
+```
+
+Before variable gene selection we need to normalize and log transform the data. Then  store the full matrix in the `raw` slot before doing variable gene selection.
+
+```{python}
+# normalize to depth 10 000
+sc.pp.normalize_per_cell(adata, counts_per_cell_after=1e4)
+
+# log transform
+sc.pp.log1p(adata)
+
+# store normalized counts in the raw slot, 
+# we will subset adata.X for variable genes, but want to keep all genes matrix as well.
+adata.raw = adata
+
+adata
+```
+
+## {{< meta dimred_fs >}}
+
+{{< meta dimred_fs_2 >}}
+
+```{python}
+# compute variable genes
+sc.pp.highly_variable_genes(adata, min_mean=0.0125, max_mean=3, min_disp=0.5)
+print("Highly variable genes: %d"%sum(adata.var.highly_variable))
+
+#plot variable genes
+sc.pl.highly_variable_genes(adata)
+
+# subset for variable genes in the dataset
+adata = adata[:, adata.var['highly_variable']]
+```
+
+## {{< meta dimred_zs >}}
+
+{{< meta dimred_zs_1 >}}
+
+```{python}
+#run this line if you get the "AttributeError: swapaxes not found" 
+# adata = adata.copy()
+
+# regress out unwanted variables
+sc.pp.regress_out(adata, ['total_counts', 'pct_counts_mt'])
+
+# scale data, clip values exceeding standard deviation 10.
+sc.pp.scale(adata, max_value=10)
+```
+
+## {{< meta dimred_pca >}}
+
+{{< meta dimred_pca_1 >}}
+
+To run PCA, you can use the function `pca()`.
+
+```{python}
+sc.tl.pca(adata, svd_solver='arpack')
+```
+
+{{< meta dimred_pca_2 >}}
+
+```{python}
+# plot more PCS
+sc.pl.pca(adata, color='sample', components = ['1,2','3,4','5,6','7,8'], ncols=2)
+```
+
+To identify genes that contribute most to each PC, one can retrieve the loading matrix information.
+
+```{python}
+#Plot loadings
+sc.pl.pca_loadings(adata, components=[1,2,3,4,5,6,7,8])
+
+# OBS! only plots the positive axes genes from each PC!!
+```
+
+The function to plot loading genes only plots genes on the positive axes. Instead plot as a heatmaps, with genes on both positive and negative side, one per pc, and plot their expression amongst cells ordered by their position along the pc.
+
+```{python}
+# adata.obsm["X_pca"] is the embeddings
+# adata.uns["pca"] is pc variance
+# adata.varm['PCs'] is the loadings
+
+genes = adata.var['gene_ids']
+
+for pc in [1,2,3,4]:
+    g = adata.varm['PCs'][:,pc-1]
+    o = np.argsort(g)
+    sel = np.concatenate((o[:10],o[-10:])).tolist()
+    emb = adata.obsm['X_pca'][:,pc-1]
+    # order by position on that pc
+    tempdata = adata[np.argsort(emb),]
+    sc.pl.heatmap(tempdata, var_names = genes[sel].index.tolist(), groupby='predicted_doublets', swap_axes = True, use_raw=False)
+```
+
+{{< meta dimred_pca_4 >}}
+
+```{python}
+sc.pl.pca_variance_ratio(adata, log=True, n_pcs = 50)
+```
+
+{{< meta dimred_pca_5 >}}
+
+## {{< meta dimred_tsne >}}
+
+{{< meta dimred_tsne_1 >}}
+
+```{python}
+sc.tl.tsne(adata, n_pcs = 30)
+```
+
+{{< meta dimred_tsne_2 >}}
+
+```{python}
+sc.pl.tsne(adata, color='sample')
+```
+
+## {{< meta dimred_umap >}}
+
+The UMAP implementation in SCANPY uses a neighborhood graph as the distance matrix, so we need to first calculate the graph.
+
+```{python}
+sc.pp.neighbors(adata, n_pcs = 30, n_neighbors = 20)
+```
+
+{{< meta dimred_umap_1 >}}
+
+```{python}
+sc.tl.umap(adata)
+sc.pl.umap(adata, color='sample')
+```
+
+{{< meta dimred_umap_2 >}}
+
+```{python}
+#run with 10 components, save to a new object so that the umap with 2D is not overwritten.
+umap10 = sc.tl.umap(adata, n_components=10, copy=True)
+fig, axs = plt.subplots(1, 3, figsize=(10,4),constrained_layout=True)
+
+sc.pl.umap(adata, color='sample',  title="UMAP", show=False, ax=axs[0])
+sc.pl.umap(umap10, color='sample', title="UMAP10", show=False, ax=axs[1], components=['1,2'])
+sc.pl.umap(umap10, color='sample', title="UMAP10", show=False, ax=axs[2], components=['3,4'])
+
+# we can also plot the umap with neighbor edges
+sc.pl.umap(adata, color='sample', title="UMAP", edges=True)
+```
+
+{{< meta dimred_umap_3 >}}
+
+TODO: [pca, tsne and umap plots side by side]
+
+::: {.callout-note title="Discuss"}
+{{< meta dimred_umap_4 >}}
+:::
+
+## {{< meta dimred_plotgenes >}}
+
+{{< meta dimred_plotgenes_1 >}}
+
+|Markers|Cell Type|
+|:---|:---|
+|CD3E|T cells|
+|CD3E CD4|CD4+ T cells|
+|CD3E CD8A|CD8+ T cells|
+|GNLY, NKG7|NK cells|
+|MS4A1|B cells|
+|CD14, LYZ, CST3, MS4A7|CD14+ Monocytes|
+|FCGR3A, LYZ, CST3, MS4A7|FCGR3A+  Monocytes|
+|FCER1A, CST3|DCs|
+
+```{python}
+sc.pl.umap(adata, color=["CD3E", "CD4", "CD8A", "GNLY","NKG7", "MS4A1","CD14","LYZ","CST3","MS4A7","FCGR3A"])
+```
+
+The default is to plot gene expression in the normalized and log-transformed data. You can also plot it on the scaled and corrected data by using `use_raw=False`. However, not all of these genes are included in the variable gene set so we first need to filter them.
+
+```{python}
+genes  = ["CD3E", "CD4", "CD8A", "GNLY","NKG7", "MS4A1","CD14","LYZ","CST3","MS4A7","FCGR3A"]
+var_genes = adata.var.highly_variable
+var_genes.index[var_genes]
+varg = [x for x in genes if x in var_genes.index[var_genes]]
+sc.pl.umap(adata, color=varg, use_raw=False)
+```
+
+:::{.callout-note title="Discuss"}
+{{< meta dimred_plotgenes_2 >}}
+:::
+
+## {{< meta dimred_save >}}
+
+{{< meta dimred_save_1 >}}
+
+```{python}
+import os
+path = "./data/results/scanpy_dr_covid.h5ad"
+if not os.path.exists(path):
+    adata.write_h5ad(path)
+```
+
+```{python}
+print(adata.X.shape)
+print(adata.raw.X.shape)
+```
+
+## {{< meta session >}}
+
+```{python}
+sc.logging.print_versions()
+```
+

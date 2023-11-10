@@ -1,0 +1,135 @@
+---
+title: "Schedule"
+description: "The schedule is intended for when following a live workshop. If you are following this at your own pace, see **Contents**"
+date: ""
+author: ""
+toc: false
+number-sections: false
+sidebar: false
+code-tools: false
+format: html
+---
+
+```{r}
+#| echo: false
+#| include: false
+library(lubridate)
+library(dplyr)
+library(htmlTable)
+library(yaml)
+library(readxl)
+library(here)
+
+schedule_message <- yaml::read_yaml(here("_quarto.yml"))$schedule_message
+color_primary <- yaml::read_yaml(here("_quarto.yml"))$colors$primary
+
+asst <- yaml::read_yaml("_quarto.yml")$assistant
+
+#' @description
+#' @param a vector of assistants
+#' @param ids named vector of assistant ids
+fix_assis <- function(a,asst){
+  asst <- lapply(strsplit(asst,":"),trimws)
+  ids <- sapply(asst,"[[",1)
+  names(ids) <- sapply(asst,"[[",2)
+
+  for(i in seq_along(a)){
+  if(!is.na(a[i])){
+    x <- sapply(unlist(strsplit(a[i],",")),trimws)
+    y <- sapply(x,function(x) if(x %in% ids){names(ids)[match(x,ids)]}else{x})
+    a[i] <- paste(mapply(function(abbr,name) paste0('<span class="hover-text">',abbr,'<span class="tooltip-text top">',name,'</span></span>'),abbr=x,name=y),collapse="<span>,</span>")
+  }
+}
+return(a)
+}
+```
+
+```{r}
+#| echo: false
+#| eval: true
+
+s <- readxl::read_xlsx("schedule.xlsx") %>%
+  # remove rows that are all NA
+  filter(if_any(everything(), ~ !is.na(.))) %>%
+  # missing values in date and room are filled
+  tidyr::fill(date,room,link_room,.direction="down") %>%
+  # convert date characters to date objects
+  dplyr::mutate(date=format(as_datetime(date,format="%d/%m/%Y"),"%d-%b-%Y")) %>%
+  dplyr::mutate(day=format(as_datetime(date,format="%d-%b-%Y"),"%a")) %>%
+  dplyr::group_by(date) %>%
+  dplyr::mutate(start_time=format(start_time,"%H:%M"),
+                end_time=format(end_time,"%H:%M")) %>%
+  as.data.frame() %>%
+  dplyr::mutate(room=ifelse(is.na(link_room),room,paste0("<a href='",link_room,"'>",room,"</a>"))) %>%
+  # create day label (with date, day, room)
+  dplyr::mutate(date=paste0("<p style='font-size:110%;padding-top:10px;padding-bottom:5px;margin-top:10px;'><span style='font-weight:bold;'><span class='marker'>{{< fa calendar >}}</span>",date,"</span>", "<span style='color:white;border-radius:4px;padding-right:4px;padding-left:4px;background:",color_primary,";margin-left:9px;margin-right:7px;'>",day,"</span>", "<span class='marker'>{{< fa map-marker-alt >}}</span>",room,"</p>")) %>%
+  # style topic
+  dplyr::mutate(topic=ifelse(tolower(topic)=="break" | tolower(topic)=="lunch",paste0("<span class='topic'>",topic,"</span>"),topic)) %>%
+  dplyr::mutate(topic=ifelse(tolower(topic)=="course dinner",paste0("<span class='topic-dinner'>",topic,"</span>"),topic)) %>%
+  dplyr::mutate(topic=ifelse(!startsWith(topic,"<span"),paste0("<span style='margin-right:5px;'>",topic,"</span>"),topic)) %>%
+  # add links to topic
+  dplyr::mutate(topic=ifelse(is.na(link_slide),topic,paste0("<span>",topic,"<a href='",link_slide,"'>{{< fa file-powerpoint >}}</a></span>&#160"))) %>%
+  dplyr::mutate(topic=ifelse(is.na(link_lab),topic,paste0("<span>",topic,"<a href='",link_lab,"'>{{< fa file-lines >}}</a></span>&#160"))) %>%
+  dplyr::mutate(topic=ifelse(is.na(link_youtube),topic,paste0("<span>",topic,"<a href='",link_youtube,"'>{{< fa brands youtube >}}</a></span>"))) %>%
+  dplyr::mutate(topic=ifelse(is.na(link_form),topic,paste0("<span>",topic,"<a href='",link_form,"'>{{< fa clipboard-list >}}</a></span>"))) %>%
+  dplyr::mutate(time=paste0(start_time," - ",end_time)) %>%
+  dplyr::mutate(teacher=ifelse(is.na(teacher),"",teacher)) %>%
+  dplyr::mutate(assistant=ifelse(is.na(assistant),"",assistant)) %>%
+  dplyr::select(date,room,time,topic,teacher,assistant)
+
+if(all(is.na(s$assistant)) | all(s$assistant=="")) {
+  s$assistant <- NULL
+  cnames <- c("Time","Topic","Teacher")
+}else{
+  s$assistant <- fix_assis(s$assistant,asst)
+  cnames <- c("Time","Topic","Teacher","Assistant")
+}
+```
+
+```{r}
+#| echo: false
+#| results: asis
+if(!is.null(schedule_message) & nchar(schedule_message)!=0){
+  cat(paste0('::: {.callout-note}\n',schedule_message,'\n:::'))
+}
+```
+
+::: {.table-schedule}
+
+```{r}
+#| echo: false
+#| eval: true
+
+# grouping vector
+r <- rle(s$date)
+row.names(s) <- NULL
+
+s %>%
+  dplyr::select(-date,-room) %>%
+  setNames(cnames) %>%
+  addHtmlTableStyle(align = "clcl") %>% 
+  htmlTable(rnames=FALSE,rgroup=r$values,n.rgroup=r$lengths)
+```
+
+<!-- marker legend -->
+<p class="small" style="margin-top:20px;">
+<span>
+<span style="margin-left:6px; margin-right:6px;">
+{{< fa calendar >}} Date
+</span>
+<span style="margin-left:6px; margin-right:6px;">
+{{< fa map-marker-alt >}}  Venue
+</span>
+<span style="margin-left:6px; margin-right:6px;">
+{{< fa file-powerpoint >}}  Slides
+</span>
+<span style="margin-left:6px; margin-right:6px;">
+{{< fa file-lines >}}  Lab
+</span>
+<span style="margin-left:6px; margin-right:6px;">
+{{< fa brands youtube >}}  Video
+</span>
+</span>
+</p>
+
+:::
