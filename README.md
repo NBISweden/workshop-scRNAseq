@@ -18,6 +18,25 @@ git commit -m "I did this and that"
 git push origin
 ```
 
+## Rendering
+
+Be in suitable conda environment or use a docker container with all the tools necessary. Then,
+
+- Build the whole website
+
+```
+quarto render
+```
+
+- Build individual files
+
+```
+quarto render index.qmd
+quarto render labs/seurat/seurat_01_qc.qmd
+```
+
+Successfully rendered outputs are moved to `docs` folder.
+
 ---
 
 **2023** • NBIS • SciLifeLab
