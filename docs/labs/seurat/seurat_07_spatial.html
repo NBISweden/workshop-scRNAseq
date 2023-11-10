@@ -1,0 +1,1306 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.3.433">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Åsa Björklund &amp; Paulo Czarnewski">
+<meta name="description" content="Combining single-cell gene expression data with spatial information to reveal the spatial distribution of gene activity within tissues.">
+
+<title> Spatial Transcriptomics</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../">
+<link href="../../assets/favicon.png" rel="icon" type="image/png">
+<script src="../../site_libs/quarto-html/quarto.js"></script>
+<script src="../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<script src="../../site_libs/quarto-contrib/glightbox/glightbox.min.js"></script>
+<link href="../../site_libs/quarto-contrib/glightbox/glightbox.min.css" rel="stylesheet">
+<link href="../../site_libs/quarto-contrib/glightbox/lightbox.css" rel="stylesheet">
+<link href="../../site_libs/quarto-contrib/fontawesome6-0.1.0/all.css" rel="stylesheet">
+<link href="../../site_libs/quarto-contrib/fontawesome6-0.1.0/latex-fontsize.css" rel="stylesheet">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 20,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<style>html{ scroll-behavior: smooth; }</style>
+<style>
+
+      .quarto-title-block .quarto-title-banner {
+        background: #E9F2D1;
+      }
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono&amp;family=Nunito:ital,wght@0,400;0,600;1,400;1,600&amp;display=swap" rel="stylesheet">
+    
+
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+</head>
+
+<body class="nav-fixed">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg navbar-dark ">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container">
+    <a href="../../index.html" class="navbar-brand navbar-brand-logo">
+    <img src="../../assets/logos/nbis-scilifelab.png" alt="nbis-scilifelab-logo." class="navbar-logo">
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="../../index.html" rel="" target="">
+ <span class="menu-text">Home</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../home_schedule.html" rel="" target="">
+ <span class="menu-text">Schedule</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../home_contents.html" rel="" target="">
+ <span class="menu-text">Contents</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../home_precourse.html" rel="" target="">
+ <span class="menu-text">Precourse</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../home_syllabus.html" rel="" target="">
+ <span class="menu-text">Syllabus</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../home_info.html" rel="" target="">
+ <span class="menu-text">Info</span></a>
+  </li>  
+</ul>
+            <div class="quarto-navbar-tools">
+</div>
+          </div> <!-- /navcollapse -->
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<header id="title-block-header" class="quarto-title-block default page-columns page-full">
+  <div class="quarto-title-banner page-columns page-full">
+    <div class="quarto-title column-body">
+      <h1 class="title"><i class="fa-solid fa-microscope" aria-label="microscope"></i> Spatial Transcriptomics</h1>
+            <p class="subtitle lead"><i class="fa-brands fa-r-project" aria-label="r-project"></i> SEURAT TOOLKIT</p>
+                  <div>
+        <div class="description">
+          Combining single-cell gene expression data with spatial information to reveal the spatial distribution of gene activity within tissues.
+        </div>
+      </div>
+                </div>
+  </div>
+    
+  
+  <div class="quarto-title-meta">
+
+      <div>
+      <div class="quarto-title-meta-heading">Author</div>
+      <div class="quarto-title-meta-contents">
+               <p>Åsa Björklund &amp; Paulo Czarnewski </p>
+            </div>
+    </div>
+      
+      <div>
+      <div class="quarto-title-meta-heading">Published</div>
+      <div class="quarto-title-meta-contents">
+        <p class="date">10-Nov-2023</p>
+      </div>
+    </div>
+    
+      
+    </div>
+    
+  
+  </header><div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#meta-st_prep" id="toc-meta-st_prep" class="nav-link active" data-scroll-target="#meta-st_prep"><span class="header-section-number">1</span> Preparation</a></li>
+  <li><a href="#meta-st_qc" id="toc-meta-st_qc" class="nav-link" data-scroll-target="#meta-st_qc"><span class="header-section-number">2</span> Quality control</a>
+  <ul>
+  <li><a href="#meta-st_qc_filter" id="toc-meta-st_qc_filter" class="nav-link" data-scroll-target="#meta-st_qc_filter"><span class="header-section-number">2.1</span> Filter spots</a></li>
+  <li><a href="#meta-st_qc_top" id="toc-meta-st_qc_top" class="nav-link" data-scroll-target="#meta-st_qc_top"><span class="header-section-number">2.2</span> Top expressed genes</a></li>
+  <li><a href="#meta-st_qc_filterg" id="toc-meta-st_qc_filterg" class="nav-link" data-scroll-target="#meta-st_qc_filterg"><span class="header-section-number">2.3</span> Filter genes</a></li>
+  </ul></li>
+  <li><a href="#meta-st_analysis" id="toc-meta-st_analysis" class="nav-link" data-scroll-target="#meta-st_analysis"><span class="header-section-number">3</span> Analysis</a>
+  <ul>
+  <li><a href="#meta-st_analysis_dimred" id="toc-meta-st_analysis_dimred" class="nav-link" data-scroll-target="#meta-st_analysis_dimred"><span class="header-section-number">3.1</span> Dimensionality reduction and clustering</a></li>
+  <li><a href="#meta-st_analysis_int" id="toc-meta-st_analysis_int" class="nav-link" data-scroll-target="#meta-st_analysis_int"><span class="header-section-number">3.2</span> Integration</a></li>
+  <li><a href="#meta-st_analysis_svg" id="toc-meta-st_analysis_svg" class="nav-link" data-scroll-target="#meta-st_analysis_svg"><span class="header-section-number">3.3</span> Spatially Variable Features</a></li>
+  </ul></li>
+  <li><a href="#meta-st_ss" id="toc-meta-st_ss" class="nav-link" data-scroll-target="#meta-st_ss"><span class="header-section-number">4</span> Single cell data</a></li>
+  <li><a href="#meta-st_sub" id="toc-meta-st_sub" class="nav-link" data-scroll-target="#meta-st_sub"><span class="header-section-number">5</span> Subset ST for cortex</a></li>
+  <li><a href="#meta-st_deconv" id="toc-meta-st_deconv" class="nav-link" data-scroll-target="#meta-st_deconv"><span class="header-section-number">6</span> Deconvolution</a>
+  <ul>
+  <li><a href="#meta-st_deconv_genes" id="toc-meta-st_deconv_genes" class="nav-link" data-scroll-target="#meta-st_deconv_genes"><span class="header-section-number">6.1</span> Select genes for deconvolution</a></li>
+  <li><a href="#create-expression-sets" id="toc-create-expression-sets" class="nav-link" data-scroll-target="#create-expression-sets"><span class="header-section-number">6.2</span> Create Expression Sets</a></li>
+  <li><a href="#deconvolve" id="toc-deconvolve" class="nav-link" data-scroll-target="#deconvolve"><span class="header-section-number">6.3</span> Deconvolve</a></li>
+  </ul></li>
+  <li><a href="#meta-session" id="toc-meta-session" class="nav-link" data-scroll-target="#meta-session"><span class="header-section-number">7</span> Session info</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content quarto-banner-title-block" id="quarto-document-content">
+
+
+
+
+<div class="callout callout-style-default callout-note no-icon callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon no-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Note
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Code chunks run R commands unless otherwise specified.</p>
+</div>
+</div>
+<p>This tutorial is adapted from the (Seurat vignette)[https://satijalab.org/seurat/v3.2/spatial_vignette.html].</p>
+<p>Spatial transcriptomic data with the Visium platform is in many ways similar to scRNAseq data. It contains UMI counts for 5-20 cells instead of single cells, but is still quite sparse in the same way as scRNAseq data is, but with the additional information about spatial location in the tissue.<br>
+Here we will first run quality control in a similar manner to scRNAseq data, then QC filtering, dimensionality reduction, integration and clustering. Then we will use scRNAseq data from mouse cortex to run LabelTransfer to predict celltypes in the Visium spots.<br>
+We will use two <strong>Visium</strong> spatial transcriptomics dataset of the mouse brain (Sagittal), which are publicly available from the <a href="https://support.10xgenomics.com/spatial-gene-expression/datasets/">10x genomics website</a>. Note, that these dataset have already been filtered for spots that does not overlap with the tissue.</p>
+<section id="meta-st_prep" class="level2" data-number="1">
+<h2 data-number="1" class="anchored" data-anchor-id="meta-st_prep"><span class="header-section-number">1</span> Preparation</h2>
+<p>Load packages</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># devtools::install_github('satijalab/seurat-data', dependencies=FALSE)</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">suppressPackageStartupMessages</span>({</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">require</span>(Matrix)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">require</span>(dplyr)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">require</span>(SeuratData)</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">require</span>(Seurat)</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">require</span>(ggplot2)</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">require</span>(patchwork)</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">require</span>(dplyr)</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>})</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Load ST data</p>
+<p>The package <code>SeuratData</code> has some seurat objects for different datasets. Among those are spatial transcriptomics data from mouse brain and kidney. Here we will download and process sections from the mouse brain.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>outdir <span class="ot">=</span> <span class="st">"data/spatial/"</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span>(<span class="sc">!</span><span class="fu">dir.exists</span>(outdir)) <span class="fu">dir.create</span>(outdir, <span class="at">showWarnings =</span> F)</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co"># to list available datasets in SeuratData you can run AvailableData()</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="co"># first we dowload the dataset</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span>(<span class="st">"stxBrain.SeuratData"</span> <span class="sc">%in%</span> <span class="fu">rownames</span>(<span class="fu">InstalledData</span>()))){</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">InstallData</span>(<span class="st">"stxBrain"</span>)</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="co"># now we can list what datasets we have downloaded</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="fu">InstalledData</span>()</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="co"># now we will load the seurat object for one section</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>brain1 <span class="ot">&lt;-</span> <span class="fu">LoadData</span>(<span class="st">"stxBrain"</span>, <span class="at">type =</span> <span class="st">"anterior1"</span>)</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>brain2 <span class="ot">&lt;-</span> <span class="fu">LoadData</span>(<span class="st">"stxBrain"</span>, <span class="at">type =</span> <span class="st">"posterior1"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="kable-table">
+<table class="table table-sm table-striped small">
+<colgroup>
+<col style="width: 6%">
+<col style="width: 2%">
+<col style="width: 2%">
+<col style="width: 19%">
+<col style="width: 2%">
+<col style="width: 3%">
+<col style="width: 2%">
+<col style="width: 2%">
+<col style="width: 2%">
+<col style="width: 5%">
+<col style="width: 4%">
+<col style="width: 14%">
+<col style="width: 23%">
+<col style="width: 3%">
+<col style="width: 5%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;"></th>
+<th style="text-align: left;">Dataset</th>
+<th style="text-align: left;">Version</th>
+<th style="text-align: left;">Summary</th>
+<th style="text-align: left;">species</th>
+<th style="text-align: left;">system</th>
+<th style="text-align: right;">ncells</th>
+<th style="text-align: left;">tech</th>
+<th style="text-align: left;">seurat</th>
+<th style="text-align: left;">default.dataset</th>
+<th style="text-align: left;">disk.datasets</th>
+<th style="text-align: left;">other.datasets</th>
+<th style="text-align: left;">notes</th>
+<th style="text-align: left;">Installed</th>
+<th style="text-align: left;">InstalledVersion</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">bmcite.SeuratData</td>
+<td style="text-align: left;">bmcite</td>
+<td style="text-align: left;">0.3.0</td>
+<td style="text-align: left;">30k Bone Marrow Cells</td>
+<td style="text-align: left;">human</td>
+<td style="text-align: left;">bone marrow</td>
+<td style="text-align: right;">30672</td>
+<td style="text-align: left;">NA</td>
+<td style="text-align: left;">3.2.2</td>
+<td style="text-align: left;">NA</td>
+<td style="text-align: left;">NA</td>
+<td style="text-align: left;">NA</td>
+<td style="text-align: left;">NA</td>
+<td style="text-align: left;">TRUE</td>
+<td style="text-align: left;">0.3.0</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">hcabm40k.SeuratData</td>
+<td style="text-align: left;">hcabm40k</td>
+<td style="text-align: left;">3.0.0</td>
+<td style="text-align: left;">40,000 Cells From the Human Cell Atlas ICA Bone Marrow Dataset</td>
+<td style="text-align: left;">human</td>
+<td style="text-align: left;">bone marrow</td>
+<td style="text-align: right;">40000</td>
+<td style="text-align: left;">10x v2</td>
+<td style="text-align: left;">NA</td>
+<td style="text-align: left;">raw</td>
+<td style="text-align: left;">NA</td>
+<td style="text-align: left;">NA</td>
+<td style="text-align: left;">NA</td>
+<td style="text-align: left;">TRUE</td>
+<td style="text-align: left;">3.0.0</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">stxBrain.SeuratData</td>
+<td style="text-align: left;">stxBrain</td>
+<td style="text-align: left;">0.1.1</td>
+<td style="text-align: left;">10X Genomics Visium Mouse Brain Dataset</td>
+<td style="text-align: left;">mouse</td>
+<td style="text-align: left;">brain</td>
+<td style="text-align: right;">12167</td>
+<td style="text-align: left;">visium</td>
+<td style="text-align: left;">NA</td>
+<td style="text-align: left;">NA</td>
+<td style="text-align: left;">NA</td>
+<td style="text-align: left;">posterior1, posterior2, anterior1, anterior2</td>
+<td style="text-align: left;">One sample split across four datasets as paired anterior/posterior slices</td>
+<td style="text-align: left;">TRUE</td>
+<td style="text-align: left;">0.1.1</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<p>Merge into one seurat object</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>brain <span class="ot">&lt;-</span> <span class="fu">merge</span>(brain1, brain2)</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>brain</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>An object of class Seurat 
+31053 features across 6049 samples within 1 assay 
+Active assay: Spatial (31053 features, 0 variable features)
+ 2 images present: anterior1, posterior1</code></pre>
+</div>
+</div>
+<p>As you can see, now we do not have the assay “RNA”, but instead an assay called “Spatial”.</p>
+</section>
+<section id="meta-st_qc" class="level2" data-number="2">
+<h2 data-number="2" class="anchored" data-anchor-id="meta-st_qc"><span class="header-section-number">2</span> Quality control</h2>
+<p>Similar to scRNA-seq we use statistics on number of counts, number of features and percent mitochondria for quality control.</p>
+<p>Now the counts and feature counts are calculated on the Spatial assay, so they are named “nCount_Spatial” and “nFeature_Spatial”.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>brain <span class="ot">&lt;-</span> <span class="fu">PercentageFeatureSet</span>(brain, <span class="st">"^mt-"</span>, <span class="at">col.name =</span> <span class="st">"percent_mito"</span>)</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>brain <span class="ot">&lt;-</span> <span class="fu">PercentageFeatureSet</span>(brain, <span class="st">"^Hb.*-"</span>, <span class="at">col.name =</span> <span class="st">"percent_hb"</span>)</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="fu">VlnPlot</span>(brain, <span class="at">features =</span> <span class="fu">c</span>(<span class="st">"nCount_Spatial"</span>, <span class="st">"nFeature_Spatial"</span>,<span class="st">"percent_mito"</span>,<span class="st">"percent_hb"</span>), <span class="at">pt.size =</span> <span class="fl">0.1</span>, <span class="at">ncol =</span> <span class="dv">2</span>) <span class="sc">+</span> <span class="fu">NoLegend</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-left">
+<figure class="figure">
+<p><a href="seurat_07_spatial_files/figure-html/unnamed-chunk-2-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-2"><img src="seurat_07_spatial_files/figure-html/unnamed-chunk-2-1.png" class="img-fluid figure-img" width="768"></a></p>
+</figure>
+</div>
+</div>
+</div>
+<p>We can also plot the same data onto the tissue section.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">SpatialFeaturePlot</span>(brain, <span class="at">features =</span> <span class="fu">c</span>(<span class="st">"nCount_Spatial"</span>, <span class="st">"nFeature_Spatial"</span>,<span class="st">"percent_mito"</span>,<span class="st">"percent_hb"</span>)) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-left">
+<figure class="figure">
+<p><a href="seurat_07_spatial_files/figure-html/unnamed-chunk-3-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-3"><img src="seurat_07_spatial_files/figure-html/unnamed-chunk-3-1.png" class="img-fluid figure-img" width="480"></a></p>
+</figure>
+</div>
+</div>
+</div>
+<p>As you can see, the spots with low number of counts/features and high mitochondrial content are mainly towards the edges of the tissue. It is quite likely that these regions are damaged tissue. You may also see regions within a tissue with low quality if you have tears or folds in your section.<br>
+But remember, for some tissue types, the amount of genes expressed and proportion mitochondria may also be a biological features, so bear in mind what tissue you are working on and what these features mean.</p>
+<section id="meta-st_qc_filter" class="level3" data-number="2.1">
+<h3 data-number="2.1" class="anchored" data-anchor-id="meta-st_qc_filter"><span class="header-section-number">2.1</span> Filter spots</h3>
+<p>Select all spots with less than <strong>25%</strong> mitocondrial reads, less than <strong>20%</strong> hb-reads and <strong>500</strong> detected genes. You must judge for yourself based on your knowledge of the tissue what are appropriate filtering criteria for your dataset.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>brain <span class="ot">&lt;-</span> brain[, brain<span class="sc">$</span>nFeature_Spatial<span class="sc">&gt;</span><span class="dv">500</span> <span class="sc">&amp;</span> brain<span class="sc">$</span>percent_mito <span class="sc">&lt;</span> <span class="dv">25</span> <span class="sc">&amp;</span> brain<span class="sc">$</span>percent_hb <span class="sc">&lt;</span> <span class="dv">20</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>And replot onto tissue section:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">SpatialFeaturePlot</span>(brain, <span class="at">features =</span> <span class="fu">c</span>(<span class="st">"nCount_Spatial"</span>, <span class="st">"nFeature_Spatial"</span>,<span class="st">"percent_mito"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-left">
+<figure class="figure">
+<p><a href="seurat_07_spatial_files/figure-html/unnamed-chunk-5-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-4"><img src="seurat_07_spatial_files/figure-html/unnamed-chunk-5-1.png" class="img-fluid figure-img" width="480"></a></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="meta-st_qc_top" class="level3" data-number="2.2">
+<h3 data-number="2.2" class="anchored" data-anchor-id="meta-st_qc_top"><span class="header-section-number">2.2</span> Top expressed genes</h3>
+<p>As for scRNA-seq data, we will look at what the top expressed genes are.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>C <span class="ot">&lt;-</span> brain<span class="sc">@</span>assays<span class="sc">$</span>Spatial<span class="sc">@</span>counts</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>C<span class="sc">@</span>x <span class="ot">&lt;-</span> C<span class="sc">@</span>x <span class="sc">/</span> <span class="fu">rep.int</span>(<span class="fu">colSums</span>(C), <span class="fu">diff</span>(C<span class="sc">@</span>p))</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>most_expressed <span class="ot">&lt;-</span> <span class="fu">order</span>(Matrix<span class="sc">::</span><span class="fu">rowSums</span>(C), <span class="at">decreasing =</span> T)[<span class="dv">20</span><span class="sc">:</span><span class="dv">1</span>]</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="fu">boxplot</span>(<span class="fu">as.matrix</span>(<span class="fu">t</span>(C[most_expressed, ])),</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">cex =</span> <span class="fl">0.1</span>, <span class="at">las =</span> <span class="dv">1</span>, <span class="at">xlab =</span> <span class="st">"% total count per cell"</span>,</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">col =</span> (scales<span class="sc">::</span><span class="fu">hue_pal</span>())(<span class="dv">20</span>)[<span class="dv">20</span><span class="sc">:</span><span class="dv">1</span>], <span class="at">horizontal =</span> <span class="cn">TRUE</span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-left">
+<figure class="figure">
+<p><a href="seurat_07_spatial_files/figure-html/unnamed-chunk-6-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-5"><img src="seurat_07_spatial_files/figure-html/unnamed-chunk-6-1.png" class="img-fluid figure-img" width="576"></a></p>
+</figure>
+</div>
+</div>
+</div>
+<p>As you can see, the mitochondrial genes are among the top expressed genes. Also the lncRNA gene Bc1 (brain cytoplasmic RNA 1). Also one hemoglobin gene.</p>
+</section>
+<section id="meta-st_qc_filterg" class="level3" data-number="2.3">
+<h3 data-number="2.3" class="anchored" data-anchor-id="meta-st_qc_filterg"><span class="header-section-number">2.3</span> Filter genes</h3>
+<p>We will remove the <em>Bc1</em> gene, hemoglobin genes (blood contamination) and the mitochondrial genes.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">dim</span>(brain)</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Filter Bl1</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>brain <span class="ot">&lt;-</span> brain[<span class="sc">!</span><span class="fu">grepl</span>(<span class="st">"Bc1"</span>, <span class="fu">rownames</span>(brain)), ]</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Filter Mitocondrial</span></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>brain <span class="ot">&lt;-</span> brain[<span class="sc">!</span><span class="fu">grepl</span>(<span class="st">"^mt-"</span>, <span class="fu">rownames</span>(brain)), ]</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Filter Hemoglobin gene (optional if that is a problem on your data)</span></span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>brain <span class="ot">&lt;-</span> brain[<span class="sc">!</span><span class="fu">grepl</span>(<span class="st">"^Hb.*-"</span>, <span class="fu">rownames</span>(brain)), ]</span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a><span class="fu">dim</span>(brain)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 31053  5789
+[1] 31031  5789</code></pre>
+</div>
+</div>
+</section>
+</section>
+<section id="meta-st_analysis" class="level2" data-number="3">
+<h2 data-number="3" class="anchored" data-anchor-id="meta-st_analysis"><span class="header-section-number">3</span> Analysis</h2>
+<p>We will proceed with the data in a very similar manner to scRNA-seq data.</p>
+<p>For ST data, the Seurat team recommends to use SCTranform for normalization, so we will do that. <code>SCTransform</code> will select variable genes and normalize in one step.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>brain <span class="ot">&lt;-</span> <span class="fu">SCTransform</span>(brain, <span class="at">assay =</span> <span class="st">"Spatial"</span>, <span class="at">verbose =</span> <span class="cn">TRUE</span>, <span class="at">method =</span> <span class="st">'poisson'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Now we can plot gene expression of individual genes, the gene <em>Hpca</em> is a strong hippocampal marker and <em>Ttr</em> is a marker of the choroid plexus.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">SpatialFeaturePlot</span>(brain, <span class="at">features =</span> <span class="fu">c</span>(<span class="st">"Hpca"</span>, <span class="st">"Ttr"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-left">
+<figure class="figure">
+<p><a href="seurat_07_spatial_files/figure-html/unnamed-chunk-9-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-6"><img src="seurat_07_spatial_files/figure-html/unnamed-chunk-9-1.png" class="img-fluid figure-img" width="768"></a></p>
+</figure>
+</div>
+</div>
+</div>
+<p>If you want to see the tissue better you can modify point size and transparency of the points.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="fu">SpatialFeaturePlot</span>(brain, <span class="at">features =</span> <span class="st">"Ttr"</span>, <span class="at">pt.size.factor =</span> <span class="dv">1</span>, <span class="at">alpha =</span> <span class="fu">c</span>(<span class="fl">0.1</span>, <span class="dv">1</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-left">
+<figure class="figure">
+<p><a href="seurat_07_spatial_files/figure-html/unnamed-chunk-10-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-7"><img src="seurat_07_spatial_files/figure-html/unnamed-chunk-10-1.png" class="img-fluid figure-img" width="768"></a></p>
+</figure>
+</div>
+</div>
+</div>
+<section id="meta-st_analysis_dimred" class="level3" data-number="3.1">
+<h3 data-number="3.1" class="anchored" data-anchor-id="meta-st_analysis_dimred"><span class="header-section-number">3.1</span> Dimensionality reduction and clustering</h3>
+<p>We can then now run dimensionality reduction and clustering using the same workflow as we use for scRNA-seq analysis.</p>
+<p>But make sure you run it on the <code>SCT</code> assay.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>brain <span class="ot">&lt;-</span> <span class="fu">RunPCA</span>(brain, <span class="at">assay =</span> <span class="st">"SCT"</span>, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>brain <span class="ot">&lt;-</span> <span class="fu">FindNeighbors</span>(brain, <span class="at">reduction =</span> <span class="st">"pca"</span>, <span class="at">dims =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">30</span>)</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>brain <span class="ot">&lt;-</span> <span class="fu">FindClusters</span>(brain, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>brain <span class="ot">&lt;-</span> <span class="fu">RunUMAP</span>(brain, <span class="at">reduction =</span> <span class="st">"pca"</span>, <span class="at">dims =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">30</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>We can then plot clusters onto umap or onto the tissue section.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="fu">DimPlot</span>(brain, <span class="at">reduction =</span> <span class="st">"umap"</span>, <span class="at">group.by =</span> <span class="fu">c</span>(<span class="st">"ident"</span>, <span class="st">"orig.ident"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-left">
+<figure class="figure">
+<p><a href="seurat_07_spatial_files/figure-html/unnamed-chunk-12-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-8"><img src="seurat_07_spatial_files/figure-html/unnamed-chunk-12-1.png" class="img-fluid figure-img" width="864"></a></p>
+</figure>
+</div>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="fu">SpatialDimPlot</span>(brain)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-left">
+<figure class="figure">
+<p><a href="seurat_07_spatial_files/figure-html/unnamed-chunk-13-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-9"><img src="seurat_07_spatial_files/figure-html/unnamed-chunk-13-1.png" class="img-fluid figure-img" width="864"></a></p>
+</figure>
+</div>
+</div>
+</div>
+<p>We can also plot each cluster separately</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="fu">SpatialDimPlot</span>(brain, <span class="at">cells.highlight =</span> <span class="fu">CellsByIdentities</span>(brain), <span class="at">facet.highlight =</span> <span class="cn">TRUE</span>, <span class="at">ncol =</span> <span class="dv">5</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-left">
+<figure class="figure">
+<p><a href="seurat_07_spatial_files/figure-html/unnamed-chunk-14-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-10"><img src="seurat_07_spatial_files/figure-html/unnamed-chunk-14-1.png" class="img-fluid figure-img" width="1440"></a></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="meta-st_analysis_int" class="level3" data-number="3.2">
+<h3 data-number="3.2" class="anchored" data-anchor-id="meta-st_analysis_int"><span class="header-section-number">3.2</span> Integration</h3>
+<p>Quite often there are strong batch effects between different ST sections, so it may be a good idea to integrate the data across sections.</p>
+<p>We will do a similar integration as in the Data Integration lab, but this time we will use the SCT assay for integration. Therefore we need to run <code>PrepSCTIntegration</code> which will compute the sctransform residuals for all genes in both the datasets.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="co"># create a list of the original data that we loaded to start with</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>st.list <span class="ot">=</span> <span class="fu">list</span>(<span class="at">anterior1=</span>brain1, <span class="at">posterior1=</span>brain2)</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a><span class="co"># run SCT on both datasets</span></span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>st.list <span class="ot">=</span> <span class="fu">lapply</span>(st.list, SCTransform, <span class="at">assay =</span> <span class="st">"Spatial"</span>, <span class="at">method=</span><span class="st">'poisson'</span>)</span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a><span class="co"># need to set maxSize for PrepSCTIntegration to work</span></span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a><span class="fu">options</span>(<span class="at">future.globals.maxSize =</span> <span class="dv">2000</span> <span class="sc">*</span> <span class="dv">1024</span><span class="sc">^</span><span class="dv">2</span>) <span class="co"># set allowed size to 2K MiB</span></span>
+<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a>st.features <span class="ot">=</span> <span class="fu">SelectIntegrationFeatures</span>(st.list, <span class="at">nfeatures =</span> <span class="dv">3000</span>, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb19-11"><a href="#cb19-11" aria-hidden="true" tabindex="-1"></a>st.list <span class="ot">&lt;-</span> <span class="fu">PrepSCTIntegration</span>(<span class="at">object.list =</span> st.list, <span class="at">anchor.features =</span> st.features, </span>
+<span id="cb19-12"><a href="#cb19-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Now we can perform the actual integration.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>int.anchors <span class="ot">&lt;-</span> <span class="fu">FindIntegrationAnchors</span>(<span class="at">object.list =</span> st.list, <span class="at">normalization.method =</span> <span class="st">"SCT"</span>,   <span class="at">verbose =</span> <span class="cn">FALSE</span>, <span class="at">anchor.features =</span> st.features)</span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>brain.integrated <span class="ot">&lt;-</span> <span class="fu">IntegrateData</span>(<span class="at">anchorset =</span> int.anchors, <span class="at">normalization.method =</span> <span class="st">"SCT"</span>, </span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a><span class="fu">rm</span>(int.anchors, st.list)</span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a><span class="fu">gc</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>            used   (Mb) gc trigger   (Mb)   max used   (Mb)
+Ncells   3531578  188.7    5288780  282.5    5288780  282.5
+Vcells 590722638 4506.9 1192401510 9097.4 1176016297 8972.3</code></pre>
+</div>
+</div>
+<p>Then we run dimensionality reduction and clustering as before.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>brain.integrated <span class="ot">&lt;-</span> <span class="fu">RunPCA</span>(brain.integrated, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>brain.integrated <span class="ot">&lt;-</span> <span class="fu">FindNeighbors</span>(brain.integrated, <span class="at">dims =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">30</span>)</span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>brain.integrated <span class="ot">&lt;-</span> <span class="fu">FindClusters</span>(brain.integrated, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>brain.integrated <span class="ot">&lt;-</span> <span class="fu">RunUMAP</span>(brain.integrated, <span class="at">dims =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">30</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="fu">DimPlot</span>(brain.integrated, <span class="at">reduction =</span> <span class="st">"umap"</span>, <span class="at">group.by =</span> <span class="fu">c</span>(<span class="st">"ident"</span>, <span class="st">"orig.ident"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-left">
+<figure class="figure">
+<p><a href="seurat_07_spatial_files/figure-html/unnamed-chunk-18-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-11"><img src="seurat_07_spatial_files/figure-html/unnamed-chunk-18-1.png" class="img-fluid figure-img" width="864"></a></p>
+</figure>
+</div>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="fu">SpatialDimPlot</span>(brain.integrated)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-left">
+<figure class="figure">
+<p><a href="seurat_07_spatial_files/figure-html/unnamed-chunk-19-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-12"><img src="seurat_07_spatial_files/figure-html/unnamed-chunk-19-1.png" class="img-fluid figure-img" width="864"></a></p>
+</figure>
+</div>
+</div>
+</div>
+<div class="callout callout-style-default callout-note no-icon callout-titled" title="Discuss">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon no-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Discuss
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Do you see any differences between the integrated and non-integrated clustering? Judge for yourself, which of the clusterings do you think looks best? As a reference, you can compare to brain regions in the <a href="https://mouse.brain-map.org/experiment/thumbnails/100042147?image_type=atlas">Allen brain atlas</a>.</p>
+</div>
+</div>
+</section>
+<section id="meta-st_analysis_svg" class="level3" data-number="3.3">
+<h3 data-number="3.3" class="anchored" data-anchor-id="meta-st_analysis_svg"><span class="header-section-number">3.3</span> Spatially Variable Features</h3>
+<p>There are two main workflows to identify molecular features that correlate with spatial location within a tissue. The first is to perform differential expression based on spatially distinct clusters, the other is to find features that have spatial patterning without taking clusters or spatial annotation into account. First, we will do differential expression between clusters just as we did for the scRNAseq data before.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="co"># differential expression between cluster 1 and cluster 6</span></span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>de_markers <span class="ot">&lt;-</span> <span class="fu">FindMarkers</span>(brain.integrated, <span class="at">ident.1 =</span> <span class="dv">5</span>, <span class="at">ident.2 =</span> <span class="dv">6</span>)</span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a><span class="co"># plot top markers</span></span>
+<span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a><span class="fu">SpatialFeaturePlot</span>(<span class="at">object =</span> brain.integrated, <span class="at">features =</span> <span class="fu">rownames</span>(de_markers)[<span class="dv">1</span><span class="sc">:</span><span class="dv">3</span>], <span class="at">alpha =</span> <span class="fu">c</span>(<span class="fl">0.1</span>, <span class="dv">1</span>), <span class="at">ncol =</span> <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-left">
+<figure class="figure">
+<p><a href="seurat_07_spatial_files/figure-html/unnamed-chunk-20-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-13"><img src="seurat_07_spatial_files/figure-html/unnamed-chunk-20-1.png" class="img-fluid figure-img" width="1152"></a></p>
+</figure>
+</div>
+</div>
+</div>
+<p>Spatial transcriptomics allows researchers to investigate how gene expression trends varies in space, thus identifying spatial patterns of gene expression. For this purpose there are multiple methods, such as SpatailDE, SPARK, Trendsceek, HMRF and Splotch.</p>
+<p>In <code>FindSpatiallyVariables</code> the default method in Seurat (method = ‘markvariogram), is inspired by the Trendsceek, which models spatial transcriptomics data as a mark point process and computes a ’variogram’, which identifies genes whose expression level is dependent on their spatial location. More specifically, this process calculates gamma(r) values measuring the dependence between two spots a certain “r” distance apart. By default, we use an r-value of ‘5’ in these analyses, and only compute these values for variable genes (where variation is calculated independently of spatial location) to save time.</p>
+<div class="callout callout-style-default callout-caution no-icon callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon no-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Caution
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Takes a long time to run, so skip this step for now!</p>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="co"># brain &lt;- FindSpatiallyVariableFeatures(brain, assay = "SCT", features = VariableFeatures(brain)[1:1000], </span></span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a><span class="co">#     selection.method = "markvariogram")</span></span>
+<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a><span class="co"># We would get top features from SpatiallyVariableFeatures</span></span>
+<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a><span class="co"># top.features &lt;- head(SpatiallyVariableFeatures(brain, selection.method = "markvariogram"), 6)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+</section>
+<section id="meta-st_ss" class="level2" data-number="4">
+<h2 data-number="4" class="anchored" data-anchor-id="meta-st_ss"><span class="header-section-number">4</span> Single cell data</h2>
+<p>We can use a scRNA-seq dataset as a reference to predict the proportion of different celltypes in the Visium spots. Keep in mind that it is important to have a reference that contains all the celltypes you expect to find in your spots. Ideally it should be a scRNA-seq reference from the exact same tissue. We will use a reference scRNA-seq dataset of ~14,000 adult mouse cortical cell taxonomy from the Allen Institute, generated with the SMART-Seq2 protocol.</p>
+<p>First download the seurat data from: https://www.dropbox.com/s/cuowvm4vrf65pvq/allen_cortex.rds?dl=1 to folder <code>data/spatial/</code> with command:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb27"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a><span class="va">FILE</span><span class="op">=</span><span class="st">"./data/spatial/allen_cortex.rds"</span></span>
+<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-4"><a href="#cb27-4" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="bu">[</span> <span class="ot">-e</span> <span class="va">$FILE</span> <span class="bu">]</span></span>
+<span id="cb27-5"><a href="#cb27-5" aria-hidden="true" tabindex="-1"></a><span class="cf">then</span></span>
+<span id="cb27-6"><a href="#cb27-6" aria-hidden="true" tabindex="-1"></a>   <span class="bu">echo</span> <span class="st">"File </span><span class="va">$FILE</span><span class="st"> is downloaded."</span></span>
+<span id="cb27-7"><a href="#cb27-7" aria-hidden="true" tabindex="-1"></a><span class="cf">else</span></span>
+<span id="cb27-8"><a href="#cb27-8" aria-hidden="true" tabindex="-1"></a>   <span class="bu">echo</span> <span class="st">"Downloading </span><span class="va">$FILE</span><span class="st">"</span></span>
+<span id="cb27-9"><a href="#cb27-9" aria-hidden="true" tabindex="-1"></a>   <span class="fu">mkdir</span> <span class="at">-p</span> data/spatial</span>
+<span id="cb27-10"><a href="#cb27-10" aria-hidden="true" tabindex="-1"></a>   <span class="fu">wget</span>  <span class="at">-O</span> data/spatial/allen_cortex.rds https://www.dropbox.com/s/cuowvm4vrf65pvq/allen_cortex.rds<span class="pp">?</span>dl=1</span>
+<span id="cb27-11"><a href="#cb27-11" aria-hidden="true" tabindex="-1"></a><span class="cf">fi</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>File ./data/spatial/allen_cortex.rds is downloaded.</code></pre>
+</div>
+</div>
+<p>For speed, and for a more fair comparison of the celltypes, we will subsample all celltypes to a maximum of 200 cells per class (<code>subclass</code>).</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>allen_reference <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="st">"data/spatial/allen_cortex.rds"</span>)</span>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a><span class="co"># check number of cells per subclass</span></span>
+<span id="cb29-4"><a href="#cb29-4" aria-hidden="true" tabindex="-1"></a><span class="fu">table</span>(allen_reference<span class="sc">$</span>subclass)</span>
+<span id="cb29-5"><a href="#cb29-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb29-6"><a href="#cb29-6" aria-hidden="true" tabindex="-1"></a><span class="co"># select 200 cells per subclass, fist set subclass ass active.ident</span></span>
+<span id="cb29-7"><a href="#cb29-7" aria-hidden="true" tabindex="-1"></a><span class="fu">Idents</span>(allen_reference) <span class="ot">&lt;-</span> allen_reference<span class="sc">$</span>subclass</span>
+<span id="cb29-8"><a href="#cb29-8" aria-hidden="true" tabindex="-1"></a>allen_reference <span class="ot">&lt;-</span> <span class="fu">subset</span>(allen_reference, <span class="at">cells =</span> <span class="fu">WhichCells</span>(allen_reference, <span class="at">downsample =</span> <span class="dv">200</span>))</span>
+<span id="cb29-9"><a href="#cb29-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb29-10"><a href="#cb29-10" aria-hidden="true" tabindex="-1"></a><span class="co"># check again number of cells per subclass</span></span>
+<span id="cb29-11"><a href="#cb29-11" aria-hidden="true" tabindex="-1"></a><span class="fu">table</span>(allen_reference<span class="sc">$</span>subclass)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+     Astro         CR       Endo    L2/3 IT         L4      L5 IT      L5 PT 
+       368          7         94        982       1401        880        544 
+     L6 CT      L6 IT        L6b      Lamp5 Macrophage      Meis2         NP 
+       960       1872        358       1122         51         45        362 
+     Oligo       Peri      Pvalb   Serpinf1        SMC       Sncg        Sst 
+        91         32       1337         27         55        125       1741 
+       Vip       VLMC 
+      1728         67 
+
+     Astro         CR       Endo    L2/3 IT         L4      L5 IT      L5 PT 
+       200          7         94        200        200        200        200 
+     L6 CT      L6 IT        L6b      Lamp5 Macrophage      Meis2         NP 
+       200        200        200        200         51         45        200 
+     Oligo       Peri      Pvalb   Serpinf1        SMC       Sncg        Sst 
+        91         32        200         27         55        125        200 
+       Vip       VLMC 
+       200         67 </code></pre>
+</div>
+</div>
+<p>Then run normalization and dimensionality reduction.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb31"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="co"># First run SCTransform and PCA </span></span>
+<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>allen_reference <span class="ot">&lt;-</span> <span class="fu">SCTransform</span>(allen_reference, <span class="at">ncells =</span> <span class="dv">3000</span>, <span class="at">verbose =</span> <span class="cn">FALSE</span>, <span class="at">method =</span> <span class="st">'poisson'</span>) <span class="sc">%&gt;%</span> <span class="fu">RunPCA</span>(<span class="at">verbose =</span> <span class="cn">FALSE</span>) <span class="sc">%&gt;%</span>    <span class="fu">RunUMAP</span>(<span class="at">dims =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">30</span>)</span>
+<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-4"><a href="#cb31-4" aria-hidden="true" tabindex="-1"></a><span class="co"># the annotation is stored in the 'subclass' column of object metadata</span></span>
+<span id="cb31-5"><a href="#cb31-5" aria-hidden="true" tabindex="-1"></a><span class="fu">DimPlot</span>(allen_reference, <span class="at">label =</span> <span class="cn">TRUE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-left">
+<figure class="figure">
+<p><a href="seurat_07_spatial_files/figure-html/unnamed-chunk-24-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-14"><img src="seurat_07_spatial_files/figure-html/unnamed-chunk-24-1.png" class="img-fluid figure-img" width="672"></a></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="meta-st_sub" class="level2" data-number="5">
+<h2 data-number="5" class="anchored" data-anchor-id="meta-st_sub"><span class="header-section-number">5</span> Subset ST for cortex</h2>
+<p>Since the scRNAseq dataset was generated from the mouse cortex, we will subset the visium dataset in order to select mainly the spots part of the cortex. Note that the integration can also be performed on the whole brain slice, but it would give rise to false positive cell type assignments and therefore it should be interpreted with more care.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb32"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a><span class="co"># subset for the anterior dataset</span></span>
+<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a>cortex <span class="ot">&lt;-</span> <span class="fu">subset</span>(brain.integrated, orig.ident <span class="sc">==</span> <span class="st">"anterior1"</span>)</span>
+<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-4"><a href="#cb32-4" aria-hidden="true" tabindex="-1"></a><span class="co"># there seems to be an error in the subsetting, so the posterior1 image is not removed, do it manually</span></span>
+<span id="cb32-5"><a href="#cb32-5" aria-hidden="true" tabindex="-1"></a>cortex<span class="sc">@</span>images<span class="sc">$</span>posterior1 <span class="ot">=</span> <span class="cn">NULL</span></span>
+<span id="cb32-6"><a href="#cb32-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-7"><a href="#cb32-7" aria-hidden="true" tabindex="-1"></a><span class="co"># subset for a specific region</span></span>
+<span id="cb32-8"><a href="#cb32-8" aria-hidden="true" tabindex="-1"></a>cortex <span class="ot">&lt;-</span> <span class="fu">subset</span>(cortex, anterior1_imagerow <span class="sc">&gt;</span> <span class="dv">400</span> <span class="sc">|</span> anterior1_imagecol <span class="sc">&lt;</span> <span class="dv">150</span>, <span class="at">invert =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb32-9"><a href="#cb32-9" aria-hidden="true" tabindex="-1"></a>cortex <span class="ot">&lt;-</span> <span class="fu">subset</span>(cortex, anterior1_imagerow <span class="sc">&gt;</span> <span class="dv">275</span> <span class="sc">&amp;</span> anterior1_imagecol <span class="sc">&gt;</span> <span class="dv">370</span>, <span class="at">invert =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb32-10"><a href="#cb32-10" aria-hidden="true" tabindex="-1"></a>cortex <span class="ot">&lt;-</span> <span class="fu">subset</span>(cortex, anterior1_imagerow <span class="sc">&gt;</span> <span class="dv">250</span> <span class="sc">&amp;</span> anterior1_imagecol <span class="sc">&gt;</span> <span class="dv">440</span>, <span class="at">invert =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb32-11"><a href="#cb32-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-12"><a href="#cb32-12" aria-hidden="true" tabindex="-1"></a><span class="co"># also subset for Frontal cortex clusters</span></span>
+<span id="cb32-13"><a href="#cb32-13" aria-hidden="true" tabindex="-1"></a>cortex <span class="ot">&lt;-</span> <span class="fu">subset</span>(cortex, <span class="at">idents =</span> <span class="fu">c</span>(<span class="dv">1</span>,<span class="dv">2</span>,<span class="dv">3</span>,<span class="dv">4</span>,<span class="dv">5</span>))</span>
+<span id="cb32-14"><a href="#cb32-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-15"><a href="#cb32-15" aria-hidden="true" tabindex="-1"></a>p1 <span class="ot">&lt;-</span> <span class="fu">SpatialDimPlot</span>(cortex, <span class="at">crop =</span> <span class="cn">TRUE</span>, <span class="at">label =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb32-16"><a href="#cb32-16" aria-hidden="true" tabindex="-1"></a>p2 <span class="ot">&lt;-</span> <span class="fu">SpatialDimPlot</span>(cortex, <span class="at">crop =</span> <span class="cn">FALSE</span>, <span class="at">label =</span> <span class="cn">TRUE</span>, <span class="at">pt.size.factor =</span> <span class="dv">1</span>, <span class="at">label.size =</span> <span class="dv">3</span>)</span>
+<span id="cb32-17"><a href="#cb32-17" aria-hidden="true" tabindex="-1"></a>p1 <span class="sc">+</span> p2</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-left">
+<figure class="figure">
+<p><a href="seurat_07_spatial_files/figure-html/unnamed-chunk-25-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-15"><img src="seurat_07_spatial_files/figure-html/unnamed-chunk-25-1.png" class="img-fluid figure-img" width="864"></a></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="meta-st_deconv" class="level2" data-number="6">
+<h2 data-number="6" class="anchored" data-anchor-id="meta-st_deconv"><span class="header-section-number">6</span> Deconvolution</h2>
+<p>Deconvolution is a method to estimate the abundance (or proportion) of different celltypes in a bulkRNAseq dataset using a single cell reference. As the Visium data can be seen as a small bulk, we can both use methods for traditional bulkRNAseq as well as methods especially developed for Visium data. Some methods for deconvolution are DWLS, cell2location, Tangram, Stereoscope, RCTD, SCDC and many more.</p>
+<p>Here we will use SCDC for deconvolution of celltypes in the Visium spots. For more information on the tool please check their website: https://meichendong.github.io/SCDC/articles/SCDC.html. First, make sure the packages you need are installed. All dependencies should be in the conda environment.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb33"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>inst <span class="ot">=</span> <span class="fu">installed.packages</span>()</span>
+<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span>(<span class="st">"xbioc"</span> <span class="sc">%in%</span> <span class="fu">rownames</span>(inst))){</span>
+<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a>  remotes<span class="sc">::</span><span class="fu">install_github</span>(<span class="st">"renozao/xbioc"</span>, <span class="at">dependencies =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb33-5"><a href="#cb33-5" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb33-6"><a href="#cb33-6" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span>(<span class="st">"SCDC"</span> <span class="sc">%in%</span> <span class="fu">rownames</span>(inst))){</span>
+<span id="cb33-7"><a href="#cb33-7" aria-hidden="true" tabindex="-1"></a>  remotes<span class="sc">::</span><span class="fu">install_github</span>(<span class="st">"meichendong/SCDC"</span>, <span class="at">dependencies =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb33-8"><a href="#cb33-8" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb33-9"><a href="#cb33-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb33-10"><a href="#cb33-10" aria-hidden="true" tabindex="-1"></a><span class="fu">suppressPackageStartupMessages</span>(<span class="fu">require</span>(SCDC))</span>
+<span id="cb33-11"><a href="#cb33-11" aria-hidden="true" tabindex="-1"></a><span class="fu">suppressPackageStartupMessages</span>(<span class="fu">require</span>(Biobase))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<section id="meta-st_deconv_genes" class="level3" data-number="6.1">
+<h3 data-number="6.1" class="anchored" data-anchor-id="meta-st_deconv_genes"><span class="header-section-number">6.1</span> Select genes for deconvolution</h3>
+<p>Most deconvolution methods does a prior gene selection and there are different options that are used: - Use variable genes in the SC data. - Use variable genes in both SC and ST data - DE genes between clusters in the SC data.<br>
+In this case we will use top DE genes per cluster, so first we have to run DGE detection on the scRNAseq data.</p>
+<p>For SCDC we want to find unique markers per cluster, so we select top 20 DEGs per cluster. Ideally you should run with a larger set of genes, perhaps 100 genes per cluster to get better results. However, for the sake of speed, we are now selecting only top20 genes and it still takes about 10 minutes to run.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb34"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a>allen_reference<span class="sc">@</span>active.assay <span class="ot">=</span> <span class="st">"RNA"</span></span>
+<span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb34-3"><a href="#cb34-3" aria-hidden="true" tabindex="-1"></a>markers_sc <span class="ot">&lt;-</span> <span class="fu">FindAllMarkers</span>(allen_reference,</span>
+<span id="cb34-4"><a href="#cb34-4" aria-hidden="true" tabindex="-1"></a>                            <span class="at">only.pos =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb34-5"><a href="#cb34-5" aria-hidden="true" tabindex="-1"></a>                            <span class="at">logfc.threshold =</span> <span class="fl">0.1</span>,</span>
+<span id="cb34-6"><a href="#cb34-6" aria-hidden="true" tabindex="-1"></a>                            <span class="at">test.use =</span> <span class="st">"wilcox"</span>,</span>
+<span id="cb34-7"><a href="#cb34-7" aria-hidden="true" tabindex="-1"></a>                            <span class="at">min.pct =</span> <span class="fl">0.05</span>,</span>
+<span id="cb34-8"><a href="#cb34-8" aria-hidden="true" tabindex="-1"></a>                            <span class="at">min.diff.pct =</span> <span class="fl">0.1</span>,</span>
+<span id="cb34-9"><a href="#cb34-9" aria-hidden="true" tabindex="-1"></a>                            <span class="at">max.cells.per.ident =</span> <span class="dv">200</span>,</span>
+<span id="cb34-10"><a href="#cb34-10" aria-hidden="true" tabindex="-1"></a>                            <span class="at">return.thresh =</span> <span class="fl">0.05</span>,</span>
+<span id="cb34-11"><a href="#cb34-11" aria-hidden="true" tabindex="-1"></a>                            <span class="at">assay =</span> <span class="st">"RNA"</span>)</span>
+<span id="cb34-12"><a href="#cb34-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb34-13"><a href="#cb34-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Filter for genes that are also present in the ST data</span></span>
+<span id="cb34-14"><a href="#cb34-14" aria-hidden="true" tabindex="-1"></a>markers_sc <span class="ot">&lt;-</span> markers_sc[markers_sc<span class="sc">$</span>gene <span class="sc">%in%</span> <span class="fu">rownames</span>(cortex),]</span>
+<span id="cb34-15"><a href="#cb34-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb34-16"><a href="#cb34-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb34-17"><a href="#cb34-17" aria-hidden="true" tabindex="-1"></a><span class="co"># Select top 20 genes per cluster, select top by first p-value, then absolute diff in pct, then quota of pct.</span></span>
+<span id="cb34-18"><a href="#cb34-18" aria-hidden="true" tabindex="-1"></a>markers_sc<span class="sc">$</span>pct.diff <span class="ot">&lt;-</span> markers_sc<span class="sc">$</span>pct<span class="fl">.1</span> <span class="sc">-</span> markers_sc<span class="sc">$</span>pct<span class="fl">.2</span></span>
+<span id="cb34-19"><a href="#cb34-19" aria-hidden="true" tabindex="-1"></a>markers_sc<span class="sc">$</span>log.pct.diff <span class="ot">&lt;-</span> <span class="fu">log2</span>( (markers_sc<span class="sc">$</span>pct<span class="fl">.1</span><span class="sc">*</span><span class="dv">99</span><span class="sc">+</span><span class="dv">1</span>) <span class="sc">/</span> (markers_sc<span class="sc">$</span>pct<span class="fl">.2</span><span class="sc">*</span><span class="dv">99</span><span class="sc">+</span><span class="dv">1</span>) )</span>
+<span id="cb34-20"><a href="#cb34-20" aria-hidden="true" tabindex="-1"></a>markers_sc <span class="sc">%&gt;%</span> <span class="fu">group_by</span>(cluster)  <span class="sc">%&gt;%</span> <span class="fu">top_n</span>(<span class="sc">-</span><span class="dv">100</span>, p_val) <span class="sc">%&gt;%</span> <span class="fu">top_n</span>(<span class="dv">50</span>, pct.diff) <span class="sc">%&gt;%</span> <span class="fu">top_n</span>(<span class="dv">20</span>, log.pct.diff)<span class="ot">-&gt;</span> top20</span>
+<span id="cb34-21"><a href="#cb34-21" aria-hidden="true" tabindex="-1"></a>m_feats <span class="ot">&lt;-</span> <span class="fu">unique</span>(<span class="fu">as.character</span>(top20<span class="sc">$</span>gene))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="create-expression-sets" class="level3" data-number="6.2">
+<h3 data-number="6.2" class="anchored" data-anchor-id="create-expression-sets"><span class="header-section-number">6.2</span> Create Expression Sets</h3>
+<p>For SCDC both the SC and the ST data need to be in the format of an Expression set with the count matrices as <code>AssayData</code>. We also subset the matrices for the genes we selected in the previous step.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb35"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>eset_SC <span class="ot">&lt;-</span> <span class="fu">ExpressionSet</span>(<span class="at">assayData=</span><span class="fu">as.matrix</span>(allen_reference<span class="sc">@</span>assays<span class="sc">$</span>RNA<span class="sc">@</span>counts[m_feats,]),</span>
+<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a>                         <span class="at">phenoData =</span>  <span class="fu">AnnotatedDataFrame</span>(allen_reference<span class="sc">@</span>meta.data))</span>
+<span id="cb35-3"><a href="#cb35-3" aria-hidden="true" tabindex="-1"></a>eset_ST <span class="ot">&lt;-</span> <span class="fu">ExpressionSet</span>(<span class="at">assayData=</span><span class="fu">as.matrix</span>(cortex<span class="sc">@</span>assays<span class="sc">$</span>Spatial<span class="sc">@</span>counts[m_feats,]),<span class="at">phenoData =</span> <span class="fu">AnnotatedDataFrame</span>(cortex<span class="sc">@</span>meta.data))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="deconvolve" class="level3" data-number="6.3">
+<h3 data-number="6.3" class="anchored" data-anchor-id="deconvolve"><span class="header-section-number">6.3</span> Deconvolve</h3>
+<p>We then run the deconvolution defining the celltype of interest as “subclass” column in the single cell data.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb36"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a>deconvolution_crc <span class="ot">&lt;-</span> SCDC<span class="sc">::</span><span class="fu">SCDC_prop</span>(<span class="at">bulk.eset =</span> eset_ST,</span>
+<span id="cb36-2"><a href="#cb36-2" aria-hidden="true" tabindex="-1"></a>                       <span class="at">sc.eset =</span> eset_SC,</span>
+<span id="cb36-3"><a href="#cb36-3" aria-hidden="true" tabindex="-1"></a>                       <span class="at">ct.varname =</span> <span class="st">"subclass"</span>,</span>
+<span id="cb36-4"><a href="#cb36-4" aria-hidden="true" tabindex="-1"></a>                       <span class="at">ct.sub =</span> <span class="fu">as.character</span>(<span class="fu">unique</span>(eset_SC<span class="sc">$</span>subclass)) )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Now we have a matrix with predicted proportions of each celltypes for each visium spot in <code>prop.est.mvw</code>.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb37"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(deconvolution_crc<span class="sc">$</span>prop.est.mvw)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>                     Lamp5 Sncg Serpinf1          Vip          Sst      Pvalb
+AAACTCGTGATATAAG-1_1     0    0        0 0.000000e+00 0.0003020068 0.00000000
+AAACTGCTGGCTCCAA-1_1     0    0        0 0.000000e+00 0.1544641392 0.07943494
+AAAGGGATGTAGCAAG-1_1     0    0        0 0.000000e+00 0.2742639441 0.00000000
+AAATACCTATAAGCAT-1_1     0    0        0 0.000000e+00 0.0803576731 0.40436150
+AAATCGTGTACCACAA-1_1     0    0        0 0.000000e+00 0.0692640621 0.00000000
+AAATGATTCGATCAGC-1_1     0    0        0 1.705303e-06 0.0169468859 0.08888082
+                           Endo         Peri        L6 CT          L6b
+AAACTCGTGATATAAG-1_1 0.00000000 0.000000e+00 0.0000000000 1.512806e-01
+AAACTGCTGGCTCCAA-1_1 0.02562850 0.000000e+00 0.0280520546 1.959849e-05
+AAAGGGATGTAGCAAG-1_1 0.01131595 0.000000e+00 0.0000000000 0.000000e+00
+AAATACCTATAAGCAT-1_1 0.07365610 1.399958e-05 0.0036921008 0.000000e+00
+AAATCGTGTACCACAA-1_1 0.02785003 5.235782e-06 0.0002147064 2.458057e-01
+AAATGATTCGATCAGC-1_1 0.01403814 2.633453e-02 0.2657130174 0.000000e+00
+                            L6 IT CR    L2/3 IT        L5 PT NP        L4
+AAACTCGTGATATAAG-1_1 0.000000e+00  0 0.00000000 0.0000000000  0 0.0000000
+AAACTGCTGGCTCCAA-1_1 1.699877e-05  0 0.38974934 0.0000000000  0 0.0000000
+AAAGGGATGTAGCAAG-1_1 2.237113e-04  0 0.00000000 0.0000000000  0 0.1814651
+AAATACCTATAAGCAT-1_1 0.000000e+00  0 0.00000000 0.0000793099  0 0.0000000
+AAATCGTGTACCACAA-1_1 2.755082e-05  0 0.31058665 0.0000000000  0 0.0000000
+AAATGATTCGATCAGC-1_1 1.350970e-01  0 0.01172995 0.1013133001  0 0.1530583
+                           Oligo      L5 IT Meis2      Astro  Macrophage VLMC
+AAACTCGTGATATAAG-1_1 0.606350282 0.00000000     0 0.00000000 0.242067127    0
+AAACTGCTGGCTCCAA-1_1 0.070102264 0.00000000     0 0.20493666 0.047592071    0
+AAAGGGATGTAGCAAG-1_1 0.000000000 0.36553725     0 0.15879807 0.008395941    0
+AAATACCTATAAGCAT-1_1 0.090470397 0.00000000     0 0.32968096 0.017682500    0
+AAATCGTGTACCACAA-1_1 0.205850104 0.00000000     0 0.11515601 0.025239945    0
+AAATGATTCGATCAGC-1_1 0.002151596 0.09261913     0 0.08687805 0.005237623    0
+                              SMC
+AAACTCGTGATATAAG-1_1 0.000000e+00
+AAACTGCTGGCTCCAA-1_1 3.440261e-06
+AAAGGGATGTAGCAAG-1_1 0.000000e+00
+AAATACCTATAAGCAT-1_1 5.461144e-06
+AAATCGTGTACCACAA-1_1 0.000000e+00
+AAATGATTCGATCAGC-1_1 0.000000e+00</code></pre>
+</div>
+</div>
+<p>Now we take the deconvolution output and add it to the Seurat object as a new assay.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb39"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a>cortex<span class="sc">@</span>assays[[<span class="st">"SCDC"</span>]] <span class="ot">&lt;-</span> <span class="fu">CreateAssayObject</span>(<span class="at">data =</span> <span class="fu">t</span>(deconvolution_crc<span class="sc">$</span>prop.est.mvw))</span>
+<span id="cb39-2"><a href="#cb39-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb39-3"><a href="#cb39-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Seems to be a bug in SeuratData package that the key is not set and any plotting function etc. will throw an error.</span></span>
+<span id="cb39-4"><a href="#cb39-4" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="fu">length</span>(cortex<span class="sc">@</span>assays<span class="sc">$</span>SCDC<span class="sc">@</span>key) <span class="sc">==</span> <span class="dv">0</span> ){</span>
+<span id="cb39-5"><a href="#cb39-5" aria-hidden="true" tabindex="-1"></a>  cortex<span class="sc">@</span>assays<span class="sc">$</span>SCDC<span class="sc">@</span>key <span class="ot">=</span> <span class="st">"scdc_"</span></span>
+<span id="cb39-6"><a href="#cb39-6" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb40"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a><span class="fu">DefaultAssay</span>(cortex) <span class="ot">&lt;-</span> <span class="st">"SCDC"</span></span>
+<span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a><span class="fu">SpatialFeaturePlot</span>(cortex, <span class="at">features =</span> <span class="fu">c</span>(<span class="st">"L2/3 IT"</span>, <span class="st">"L4"</span>), <span class="at">pt.size.factor =</span> <span class="fl">1.6</span>, <span class="at">ncol =</span> <span class="dv">2</span>, <span class="at">crop =</span> <span class="cn">TRUE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-left">
+<figure class="figure">
+<p><a href="seurat_07_spatial_files/figure-html/unnamed-chunk-32-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-16"><img src="seurat_07_spatial_files/figure-html/unnamed-chunk-32-1.png" class="img-fluid figure-img" width="768"></a></p>
+</figure>
+</div>
+</div>
+</div>
+<p>Based on these prediction scores, we can also predict cell types whose location is spatially restricted. We use the same methods based on marked point processes to define spatially variable features, but use the cell type prediction scores as the “marks” rather than gene expression.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb41"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a>cortex <span class="ot">&lt;-</span> <span class="fu">FindSpatiallyVariableFeatures</span>(cortex, <span class="at">assay =</span> <span class="st">"SCDC"</span>, <span class="at">selection.method =</span> <span class="st">"markvariogram"</span>, </span>
+<span id="cb41-2"><a href="#cb41-2" aria-hidden="true" tabindex="-1"></a>    <span class="at">features =</span> <span class="fu">rownames</span>(cortex), <span class="at">r.metric =</span> <span class="dv">5</span>, <span class="at">slot =</span> <span class="st">"data"</span>)</span>
+<span id="cb41-3"><a href="#cb41-3" aria-hidden="true" tabindex="-1"></a>top.clusters <span class="ot">&lt;-</span> <span class="fu">head</span>(<span class="fu">SpatiallyVariableFeatures</span>(cortex), <span class="dv">4</span>)</span>
+<span id="cb41-4"><a href="#cb41-4" aria-hidden="true" tabindex="-1"></a><span class="fu">SpatialPlot</span>(<span class="at">object =</span> cortex, <span class="at">features =</span> top.clusters, <span class="at">ncol =</span> <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-left">
+<figure class="figure">
+<p><a href="seurat_07_spatial_files/figure-html/unnamed-chunk-33-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-17"><img src="seurat_07_spatial_files/figure-html/unnamed-chunk-33-1.png" class="img-fluid figure-img" width="768"></a></p>
+</figure>
+</div>
+</div>
+</div>
+<p>We can also visualize the scores per cluster in ST data.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb42"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a><span class="fu">VlnPlot</span>(cortex, <span class="at">group.by =</span> <span class="st">"seurat_clusters"</span>, <span class="at">features =</span> top.clusters, <span class="at">pt.size =</span> <span class="dv">0</span>, <span class="at">ncol=</span><span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-left">
+<figure class="figure">
+<p><a href="seurat_07_spatial_files/figure-html/unnamed-chunk-34-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-18"><img src="seurat_07_spatial_files/figure-html/unnamed-chunk-34-1.png" class="img-fluid figure-img" width="672"></a></p>
+</figure>
+</div>
+</div>
+</div>
+<p>Keep in mind that the deconvolution results are just predictions, depending on how well your scRNAseq data covers the celltypes that are present in the ST data and on how parameters, gene selection etc. are tuned you may get different results.</p>
+<div class="callout callout-style-default callout-note no-icon callout-titled" title="Discuss">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon no-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Discuss
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Subset for another region that does not contain cortex cells and check what you get from the label transfer. Suggested region is the right end of the posterial section that you can select like this:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb43"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a><span class="co"># subset for the anterior dataset</span></span>
+<span id="cb43-2"><a href="#cb43-2" aria-hidden="true" tabindex="-1"></a>subregion <span class="ot">&lt;-</span> <span class="fu">subset</span>(brain.integrated, orig.ident <span class="sc">==</span> <span class="st">"posterior1"</span>)</span>
+<span id="cb43-3"><a href="#cb43-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb43-4"><a href="#cb43-4" aria-hidden="true" tabindex="-1"></a><span class="co"># there seems to be an error in the subsetting, so the posterior1 image is not removed, do it manually</span></span>
+<span id="cb43-5"><a href="#cb43-5" aria-hidden="true" tabindex="-1"></a>subregion<span class="sc">@</span>images<span class="sc">$</span>anterior1 <span class="ot">=</span> <span class="cn">NULL</span></span>
+<span id="cb43-6"><a href="#cb43-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb43-7"><a href="#cb43-7" aria-hidden="true" tabindex="-1"></a><span class="co"># subset for a specific region</span></span>
+<span id="cb43-8"><a href="#cb43-8" aria-hidden="true" tabindex="-1"></a>subregion <span class="ot">&lt;-</span> <span class="fu">subset</span>(subregion,  posterior1_imagecol <span class="sc">&gt;</span> <span class="dv">400</span>, <span class="at">invert =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb43-9"><a href="#cb43-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb43-10"><a href="#cb43-10" aria-hidden="true" tabindex="-1"></a>p1 <span class="ot">&lt;-</span> <span class="fu">SpatialDimPlot</span>(subregion, <span class="at">crop =</span> <span class="cn">TRUE</span>, <span class="at">label =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb43-11"><a href="#cb43-11" aria-hidden="true" tabindex="-1"></a>p2 <span class="ot">&lt;-</span> <span class="fu">SpatialDimPlot</span>(subregion, <span class="at">crop =</span> <span class="cn">FALSE</span>, <span class="at">label =</span> <span class="cn">TRUE</span>, <span class="at">pt.size.factor =</span> <span class="dv">1</span>, <span class="at">label.size =</span> <span class="dv">3</span>)</span>
+<span id="cb43-12"><a href="#cb43-12" aria-hidden="true" tabindex="-1"></a>p1 <span class="sc">+</span> p2</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-left">
+<figure class="figure">
+<p><a href="seurat_07_spatial_files/figure-html/unnamed-chunk-35-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-19"><img src="seurat_07_spatial_files/figure-html/unnamed-chunk-35-1.png" class="img-fluid figure-img" width="864"></a></p>
+</figure>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+</section>
+<section id="meta-session" class="level2" data-number="7">
+<h2 data-number="7" class="anchored" data-anchor-id="meta-session"><span class="header-section-number">7</span> Session info</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb44"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>R version 4.2.3 (2023-03-15)
+Platform: x86_64-pc-linux-gnu (64-bit)
+Running under: Ubuntu 22.04.2 LTS
+
+Matrix products: default
+BLAS:   /usr/lib/x86_64-linux-gnu/openblas-pthread/libblas.so.3
+LAPACK: /usr/lib/x86_64-linux-gnu/openblas-pthread/libopenblasp-r0.3.20.so
+
+locale:
+ [1] LC_CTYPE=en_US.UTF-8       LC_NUMERIC=C              
+ [3] LC_TIME=en_US.UTF-8        LC_COLLATE=en_US.UTF-8    
+ [5] LC_MONETARY=en_US.UTF-8    LC_MESSAGES=en_US.UTF-8   
+ [7] LC_PAPER=en_US.UTF-8       LC_NAME=C                 
+ [9] LC_ADDRESS=C               LC_TELEPHONE=C            
+[11] LC_MEASUREMENT=en_US.UTF-8 LC_IDENTIFICATION=C       
+
+attached base packages:
+[1] stats     graphics  grDevices utils     datasets  methods   base     
+
+other attached packages:
+ [1] Biobase_2.58.0            BiocGenerics_0.44.0      
+ [3] SCDC_0.0.0.9000           patchwork_1.1.2          
+ [5] ggplot2_3.4.2             SeuratObject_4.1.3       
+ [7] Seurat_4.3.0.1            stxBrain.SeuratData_0.1.1
+ [9] hcabm40k.SeuratData_3.0.0 bmcite.SeuratData_0.3.0  
+[11] SeuratData_0.2.2          dplyr_1.1.1              
+[13] Matrix_1.6-0             
+
+loaded via a namespace (and not attached):
+  [1] backports_1.4.1        plyr_1.8.8             igraph_1.5.0          
+  [4] lazyeval_0.2.2         sp_2.0-0               splines_4.2.3         
+  [7] listenv_0.9.0          scattermore_1.2        GenomeInfoDb_1.34.9   
+ [10] digest_0.6.33          htmltools_0.5.5        fansi_1.0.4           
+ [13] checkmate_2.2.0        magrittr_2.0.3         memoise_2.0.1         
+ [16] tensor_1.5             cluster_2.1.4          ROCR_1.0-11           
+ [19] limma_3.54.2           Biostrings_2.66.0      globals_0.16.2        
+ [22] matrixStats_1.0.0      spatstat.sparse_3.0-2  colorspace_2.1-0      
+ [25] blob_1.2.4             rappdirs_0.3.3         ggrepel_0.9.3         
+ [28] xfun_0.39              RCurl_1.98-1.12        crayon_1.5.2          
+ [31] jsonlite_1.8.7         progressr_0.13.0       spatstat.data_3.0-1   
+ [34] survival_3.5-3         zoo_1.8-12             glue_1.6.2            
+ [37] polyclip_1.10-4        registry_0.5-1         gtable_0.3.3          
+ [40] zlibbioc_1.44.0        XVector_0.38.0         nnls_1.4              
+ [43] leiden_0.4.3           future.apply_1.11.0    abind_1.4-5           
+ [46] scales_1.2.1           pheatmap_1.0.12        DBI_1.1.3             
+ [49] spatstat.random_3.1-5  miniUI_0.1.1.1         Rcpp_1.0.10           
+ [52] viridisLite_0.4.2      xtable_1.8-4           reticulate_1.30       
+ [55] bit_4.0.5              stats4_4.2.3           htmlwidgets_1.6.2     
+ [58] httr_1.4.6             RColorBrewer_1.1-3     ellipsis_0.3.2        
+ [61] ica_1.0-3              pkgconfig_2.0.3        farver_2.1.1          
+ [64] uwot_0.1.16            deldir_1.0-9           utf8_1.2.3            
+ [67] tidyselect_1.2.0       labeling_0.4.2         rlang_1.1.1           
+ [70] reshape2_1.4.4         later_1.3.1            AnnotationDbi_1.60.2  
+ [73] cachem_1.0.8           munsell_0.5.0          tools_4.2.3           
+ [76] cli_3.6.1              generics_0.1.3         RSQLite_2.3.1         
+ [79] xbioc_0.1.19           ggridges_0.5.4         evaluate_0.21         
+ [82] stringr_1.5.0          fastmap_1.1.1          yaml_2.3.7            
+ [85] goftest_1.2-3          fastmatrix_0.5         knitr_1.43            
+ [88] bit64_4.0.5            fitdistrplus_1.1-11    purrr_1.0.1           
+ [91] RANN_2.6.1             KEGGREST_1.38.0        pbapply_1.7-2         
+ [94] future_1.33.0          nlme_3.1-162           mime_0.12             
+ [97] ggrastr_1.0.2          compiler_4.2.3         rstudioapi_0.14       
+[100] beeswarm_0.4.0         plotly_4.10.2          png_0.1-8             
+[103] spatstat.utils_3.0-3   tibble_3.2.1           stringi_1.7.12        
+[106] lattice_0.20-45        vctrs_0.6.3            pillar_1.9.0          
+[109] lifecycle_1.0.3        BiocManager_1.30.21.1  spatstat.geom_3.2-1   
+[112] lmtest_0.9-40          RcppAnnoy_0.0.21       bitops_1.0-7          
+[115] data.table_1.14.8      cowplot_1.1.1          irlba_2.3.5.1         
+[118] httpuv_1.6.11          R6_2.5.1               promises_1.2.0.1      
+[121] KernSmooth_2.23-20     gridExtra_2.3          IRanges_2.32.0        
+[124] vipor_0.4.5            parallelly_1.36.0      codetools_0.2-19      
+[127] assertthat_0.2.1       MASS_7.3-58.2          pkgmaker_0.32.8       
+[130] withr_2.5.0            sctransform_0.3.5      GenomeInfoDbData_1.2.9
+[133] S4Vectors_0.36.2       parallel_4.2.3         grid_4.2.3            
+[136] tidyr_1.3.0            L1pack_0.41-2          rmarkdown_2.21        
+[139] Rtsne_0.16             spatstat.explore_3.2-1 shiny_1.7.4           
+[142] ggbeeswarm_0.7.2      </code></pre>
+</div>
+</div>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    text: function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  function tippyHover(el, contentFn) {
+    const config = {
+      allowHTML: true,
+      content: contentFn,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start'
+    };
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+<footer class="footer">
+  <div class="nav-footer">
+    <div class="nav-footer-left">2023 <a href="https://nbis.se">NBIS</a> | <a href="https://choosealicense.com/licenses/gpl-3.0/">GPL-3 License</a></div>   
+    <div class="nav-footer-center">
+      &nbsp;
+    </div>
+    <div class="nav-footer-right">Published with <a href="https://quarto.org/">Quarto</a> v1.3.433</div>
+  </div>
+</footer>
+<script>var lightboxQuarto = GLightbox({"closeEffect":"zoom","loop":true,"selector":".lightbox","descPosition":"bottom","openEffect":"zoom"});</script>
+
+
+
+<script src="../../site_libs/quarto-html/zenscroll-min.js"></script>
+</body></html>
