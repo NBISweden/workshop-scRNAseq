@@ -26,14 +26,16 @@ library(Spaniel)
 library(biomaRt)
 library(SingleCellExperiment)
 
-suppressPackageStartupMessages(require(Matrix))
-suppressPackageStartupMessages(require(dplyr))
-suppressPackageStartupMessages(require(scran))
-suppressPackageStartupMessages(require(SingleR))
-suppressPackageStartupMessages(require(scater))
-suppressPackageStartupMessages(require(ggplot2))
-suppressPackageStartupMessages(require(patchwork))
-suppressPackageStartupMessages(require(cowplot))
+suppressPackageStartupMessages({
+  require(Matrix)
+  require(dplyr)
+  require(scran)
+  require(SingleR)
+  require(scater)
+  require(ggplot2)
+  require(patchwork)
+  require(cowplot)
+})
 ```
 
 {{< meta st_prep_2 >}}
@@ -90,13 +92,22 @@ sce@metadata <- lll
 We can further convert the gene ensembl IDs to gene names.
 
 ```{r}
+#| eval: false
 mart <- biomaRt::useMart(biomart="ENSEMBL_MART_ENSEMBL", dataset="mmusculus_gene_ensembl")
 annot <- biomaRt::getBM(attributes = c("ensembl_gene_id", "external_gene_name","gene_biotype"), mart = mart, useCache = F)
+saveRDS(annot, "data/spatial/annot.rds")
+```
 
+```{r}
+#| include: false
+annot <- readRDS("data/spatial/annot.rds")
+```
+
+```{r}
 gene_names <- as.character ( annot[match(rownames(sce),annot[,"ensembl_gene_id"]),"external_gene_name"] )
 gene_names[is.na(gene_names) ] <- ""
 
-sce <- sce[gene_names != "",]
+sce <- sce[gene_names != "", ]
 rownames(sce) <- gene_names[gene_names != ""]
 dim(sce)
 ```
