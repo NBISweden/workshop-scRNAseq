@@ -1,0 +1,1167 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.3.433">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Åsa Björklund &amp; Paulo Czarnewski">
+<meta name="description" content="Reconstructing developmental or differentiation pathways from individual cell gene expression profiles to understand cellular transitions and relationships.">
+
+<title> Trajectory inference using PAGA</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../">
+<link href="../../assets/favicon.png" rel="icon" type="image/png">
+<script src="../../site_libs/quarto-html/quarto.js"></script>
+<script src="../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<script src="../../site_libs/quarto-contrib/glightbox/glightbox.min.js"></script>
+<link href="../../site_libs/quarto-contrib/glightbox/glightbox.min.css" rel="stylesheet">
+<link href="../../site_libs/quarto-contrib/glightbox/lightbox.css" rel="stylesheet">
+<link href="../../site_libs/quarto-contrib/fontawesome6-0.1.0/all.css" rel="stylesheet">
+<link href="../../site_libs/quarto-contrib/fontawesome6-0.1.0/latex-fontsize.css" rel="stylesheet">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 20,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<style>html{ scroll-behavior: smooth; }</style>
+<style>
+
+      .quarto-title-block .quarto-title-banner {
+        background: #E9F2D1;
+      }
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono&amp;family=Nunito:ital,wght@0,400;0,600;1,400;1,600&amp;display=swap" rel="stylesheet">
+    
+<script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" integrity="sha512-c3Nl8+7g4LMSTdrm621y7kf9v3SDPnhxLNhcjFJbKECVnmZHTdo+IRO05sNLTH/D3vA6u1X32ehoLC7WFVdheg==" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js" integrity="sha512-bLT0Qm9VnAYZDflyKcBaQ2gg0hSYNQrJ8RilYldYQ1FxQYoCLtUjuuRuZo+fjqhx/qtq/1itJ0C2ejDxltZVFg==" crossorigin="anonymous"></script>
+<script type="application/javascript">define('jquery', [],function() {return window.jQuery;})</script>
+
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+</head>
+
+<body class="nav-fixed">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg navbar-dark ">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container">
+    <a href="../../index.html" class="navbar-brand navbar-brand-logo">
+    <img src="../../assets/logos/nbis-scilifelab.png" alt="nbis-scilifelab-logo." class="navbar-logo">
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="../../index.html" rel="" target="">
+ <span class="menu-text">Home</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../home_schedule.html" rel="" target="">
+ <span class="menu-text">Schedule</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../home_contents.html" rel="" target="">
+ <span class="menu-text">Contents</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../home_precourse.html" rel="" target="">
+ <span class="menu-text">Precourse</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../home_syllabus.html" rel="" target="">
+ <span class="menu-text">Syllabus</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../home_info.html" rel="" target="">
+ <span class="menu-text">Info</span></a>
+  </li>  
+</ul>
+            <div class="quarto-navbar-tools">
+</div>
+          </div> <!-- /navcollapse -->
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<header id="title-block-header" class="quarto-title-block default page-columns page-full">
+  <div class="quarto-title-banner page-columns page-full">
+    <div class="quarto-title column-body">
+      <h1 class="title"><i class="fa-solid fa-route" aria-label="route"></i> Trajectory inference using PAGA</h1>
+            <p class="subtitle lead"><i class="fa-brands fa-python" aria-label="python"></i> SCANPY TOOLKIT</p>
+                  <div>
+        <div class="description">
+          Reconstructing developmental or differentiation pathways from individual cell gene expression profiles to understand cellular transitions and relationships.
+        </div>
+      </div>
+                </div>
+  </div>
+    
+  
+  <div class="quarto-title-meta">
+
+      <div>
+      <div class="quarto-title-meta-heading">Author</div>
+      <div class="quarto-title-meta-contents">
+               <p>Åsa Björklund &amp; Paulo Czarnewski </p>
+            </div>
+    </div>
+      
+      <div>
+      <div class="quarto-title-meta-heading">Published</div>
+      <div class="quarto-title-meta-contents">
+        <p class="date">11-Nov-2023</p>
+      </div>
+    </div>
+    
+      
+    </div>
+    
+  
+  </header><div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#loading-libraries" id="toc-loading-libraries" class="nav-link active" data-scroll-target="#loading-libraries"><span class="header-section-number">1</span> Loading libraries</a></li>
+  <li><a href="#loading-data" id="toc-loading-data" class="nav-link" data-scroll-target="#loading-data"><span class="header-section-number">2</span> Loading data</a></li>
+  <li><a href="#explore-the-data" id="toc-explore-the-data" class="nav-link" data-scroll-target="#explore-the-data"><span class="header-section-number">3</span> Explore the data</a></li>
+  <li><a href="#rerun-analysis-in-scanpy" id="toc-rerun-analysis-in-scanpy" class="nav-link" data-scroll-target="#rerun-analysis-in-scanpy"><span class="header-section-number">4</span> Rerun analysis in Scanpy</a></li>
+  <li><a href="#run-paga" id="toc-run-paga" class="nav-link" data-scroll-target="#run-paga"><span class="header-section-number">5</span> Run PAGA</a></li>
+  <li><a href="#data-pre-processing-prior-trajectory-inference" id="toc-data-pre-processing-prior-trajectory-inference" class="nav-link" data-scroll-target="#data-pre-processing-prior-trajectory-inference"><span class="header-section-number">6</span> Data pre-processing prior trajectory inference</a></li>
+  <li><a href="#rerun-paga-again-on-the-data" id="toc-rerun-paga-again-on-the-data" class="nav-link" data-scroll-target="#rerun-paga-again-on-the-data"><span class="header-section-number">7</span> Rerun PAGA again on the data</a></li>
+  <li><a href="#recomputing-the-embedding-using-paga-initialization" id="toc-recomputing-the-embedding-using-paga-initialization" class="nav-link" data-scroll-target="#recomputing-the-embedding-using-paga-initialization"><span class="header-section-number">8</span> Recomputing the embedding using PAGA-initialization</a></li>
+  <li><a href="#reconstructing-gene-changes-along-paga-paths-for-a-given-set-of-genes" id="toc-reconstructing-gene-changes-along-paga-paths-for-a-given-set-of-genes" class="nav-link" data-scroll-target="#reconstructing-gene-changes-along-paga-paths-for-a-given-set-of-genes"><span class="header-section-number">9</span> Reconstructing gene changes along PAGA paths for a given set of genes</a></li>
+  <li><a href="#session-info" id="toc-session-info" class="nav-link" data-scroll-target="#session-info"><span class="header-section-number">10</span> Session info</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content quarto-banner-title-block" id="quarto-document-content">
+
+
+
+
+<div class="callout callout-style-default callout-note no-icon callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon no-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Note
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Code chunks run Python commands unless it starts with <code>%%bash</code>, in which case, those chunks run shell commands.</p>
+</div>
+</div>
+<p>Partly following <a href="https://scanpy-tutorials.readthedocs.io/en/latest/paga-paul15.html">this tutorial</a>.</p>
+<section id="loading-libraries" class="level2" data-number="1">
+<h2 data-number="1" class="anchored" data-anchor-id="loading-libraries"><span class="header-section-number">1</span> Loading libraries</h2>
+<div class="cell" data-execution_count="1">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> pl</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> matplotlib <span class="im">import</span> rcParams</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> scanpy <span class="im">as</span> sc</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> scipy</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="co"># verbosity: errors (0), warnings (1), info (2), hints (3)</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>sc.settings.verbosity <span class="op">=</span> <span class="dv">3</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>sc.settings.set_figure_params(dpi<span class="op">=</span><span class="dv">100</span>, frameon<span class="op">=</span><span class="va">False</span>, figsize<span class="op">=</span>(<span class="dv">5</span>, <span class="dv">5</span>), facecolor<span class="op">=</span><span class="st">'white'</span>, color_map <span class="op">=</span> <span class="st">'viridis_r'</span>) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="loading-data" class="level2" data-number="2">
+<h2 data-number="2" class="anchored" data-anchor-id="loading-data"><span class="header-section-number">2</span> Loading data</h2>
+<p>In order to speed up the computations during the exercises, we will be using a subset of a bone marrow dataset (originally containing about 100K cells). The bone marrow is the source of adult immune cells, and contains virtually all differentiation stages of cell from the immune system which later circulate in the blood to all other organs.</p>
+<div class="quarto-figure quarto-figure-left">
+<figure class="figure">
+<p><a href="../figs/hematopoiesis.png" class="lightbox" data-gallery="quarto-lightbox-gallery-2"><img src="../figs/hematopoiesis.png" class="img-fluid figure-img"></a></p>
+</figure>
+</div>
+<p>All the data has been preprocessed with Seurat. The file trajectory_scanpy_filtered.h5ad was converted from the Seurat object using the SeuratDisk package. For more information on how it was done, have a look at the script: convert_to_h5ad.R in the github repo.</p>
+<div class="cell" data-execution_count="2">
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>infile <span class="op">=</span> <span class="st">'data/bone_marrow/trajectory_scanpy_filtered.h5ad'</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>adata <span class="op">=</span> sc.read_h5ad(infile)</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co"># check what is in the object</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>adata</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="25">
+<pre><code>AnnData object with n_obs × n_vars = 5828 × 3585
+    obs: 'orig.ident', 'nCount_RNA', 'nFeature_RNA', 'batches', 'dataset', 'nCount', 'nUMI', 'pMito', 'pRibo', 'pHb', 'pChY', 'pChX', 'pnonXY', 'pPCG', 'pNCG', 'pMito_UMIs', 'pRibo_UMIs', 'pHb_UMIs', 'pChY_UMIs', 'pChX_UMIs', 'pnonXY_UMIs', 'pPCG_UMIs', 'pNCG_UMIs', 'SEL_nCount', 'SEL_nUMI', 'SEL_pMito', 'SEL_pRibo', 'SEL_pHb', 'SEL_pChY', 'SEL_pChX', 'SEL_pnonXY', 'SEL_pPCG', 'SEL_pNCG', 'SEL_pMito_UMIs', 'SEL_pRibo_UMIs', 'SEL_pHb_UMIs', 'SEL_pChY_UMIs', 'SEL_pChX_UMIs', 'SEL_pnonXY_UMIs', 'SEL_pPCG_UMIs', 'SEL_pNCG_UMIs', 'S.Score', 'G2M.Score', 'Phase', 'metadata_clusters', 'clusters', 'outlier', 'subgroups', 'clusters_use'
+    var: 'features'
+    obsm: 'X_harmony', 'X_harmony_Phase', 'X_pca', 'X_umap', 'X_umap3d'
+    varm: 'PCs'</code></pre>
+</div>
+</div>
+<p>Check that the variable names are correct.</p>
+<div class="cell" data-execution_count="3">
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>adata.var</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="26">
+<div>
+
+
+<table class="dataframe table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">features</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">0610040J01Rik</td>
+<td>0610040J01Rik</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">1190007I07Rik</td>
+<td>1190007I07Rik</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">1500009L16Rik</td>
+<td>1500009L16Rik</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">1700012B09Rik</td>
+<td>1700012B09Rik</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">1700020L24Rik</td>
+<td>1700020L24Rik</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">...</td>
+<td>...</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Sqor</td>
+<td>Sqor</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Sting1</td>
+<td>Sting1</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Tent5a</td>
+<td>Tent5a</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Tlcd4</td>
+<td>Tlcd4</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Znrd2</td>
+<td>Znrd2</td>
+</tr>
+</tbody>
+</table>
+
+<p>3585 rows × 1 columns</p>
+</div>
+</div>
+</div>
+<div class="cell" data-execution_count="4">
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># check what you have in the X matrix, should be lognormalized counts.</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(adata.X[:<span class="dv">10</span>,:<span class="dv">10</span>])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>  (0, 4)    0.11622072805743532
+  (0, 8)    0.4800893970571722
+  (1, 8)    0.2478910541698065
+  (1, 9)    0.17188973970230348
+  (2, 1)    0.09413397843954842
+  (2, 7)    0.18016412971724202
+  (3, 1)    0.08438841021254412
+  (3, 4)    0.08438841021254412
+  (3, 7)    0.08438841021254412
+  (3, 8)    0.3648216463668793
+  (4, 1)    0.14198147850903975
+  (4, 8)    0.14198147850903975
+  (5, 1)    0.17953169693896723
+  (5, 8)    0.17953169693896723
+  (5, 9)    0.17953169693896723
+  (6, 4)    0.2319546390006887
+  (6, 8)    0.42010741700351195
+  (7, 1)    0.1775659421407816
+  (7, 8)    0.39593115482156394
+  (7, 9)    0.09271901219711086
+  (8, 1)    0.12089079757716388
+  (8, 8)    0.22873058755480363
+  (9, 1)    0.08915380247493314
+  (9, 4)    0.08915380247493314
+  (9, 8)    0.38270398718590104</code></pre>
+</div>
+</div>
+</section>
+<section id="explore-the-data" class="level2" data-number="3">
+<h2 data-number="3" class="anchored" data-anchor-id="explore-the-data"><span class="header-section-number">3</span> Explore the data</h2>
+<p>There is a umap and clusters provided with the object, first plot some information from the previous analysis onto the umap.</p>
+<div class="cell" data-execution_count="5">
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, color <span class="op">=</span> [<span class="st">'clusters'</span>,<span class="st">'dataset'</span>,<span class="st">'batches'</span>,<span class="st">'Phase'</span>],legend_loc <span class="op">=</span> <span class="st">'on data'</span>, legend_fontsize <span class="op">=</span> <span class="st">'xx-small'</span>, ncols <span class="op">=</span> <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<div class="quarto-figure quarto-figure-left">
+<figure class="figure">
+<p><a href="scanpy_08_trajectory_files/figure-html/cell-6-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-3"><img src="scanpy_08_trajectory_files/figure-html/cell-6-output-1.png" class="img-fluid figure-img"></a></p>
+</figure>
+</div>
+</div>
+</div>
+<p>It is crucial that you performing analysis of a dataset understands what is going on, what are the clusters you see in your data and most importantly How are the clusters related to each other?. Well, let’s explore the data a bit. With the help of this table, write down which cluster numbers in your dataset express these key markers.</p>
+<table class="table">
+<thead>
+<tr class="header">
+<th>Marker</th>
+<th>Cell Type</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Cd34</td>
+<td>HSC progenitor</td>
+</tr>
+<tr class="even">
+<td>Ms4a1</td>
+<td>B cell lineage</td>
+</tr>
+<tr class="odd">
+<td>Cd3e</td>
+<td>T cell lineage</td>
+</tr>
+<tr class="even">
+<td>Ltf</td>
+<td>Granulocyte lineage</td>
+</tr>
+<tr class="odd">
+<td>Cst3</td>
+<td>Monocyte lineage</td>
+</tr>
+<tr class="even">
+<td>Mcpt8</td>
+<td>Mast Cell lineage</td>
+</tr>
+<tr class="odd">
+<td>Alas2</td>
+<td>RBC lineage</td>
+</tr>
+<tr class="even">
+<td>Siglech</td>
+<td>Dendritic cell lineage</td>
+</tr>
+<tr class="odd">
+<td>C1qc</td>
+<td>Macrophage cell lineage</td>
+</tr>
+<tr class="even">
+<td>Pf4</td>
+<td>Megakaryocyte cell lineage</td>
+</tr>
+</tbody>
+</table>
+<div class="cell" data-execution_count="6">
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>markers <span class="op">=</span> [<span class="st">"Cd34"</span>,<span class="st">"Alas2"</span>,<span class="st">"Pf4"</span>,<span class="st">"Mcpt8"</span>,<span class="st">"Ltf"</span>,<span class="st">"Cst3"</span>, <span class="st">"Siglech"</span>, <span class="st">"C1qc"</span>, <span class="st">"Ms4a1"</span>, <span class="st">"Cd3e"</span>, ]</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, color <span class="op">=</span> markers, use_raw <span class="op">=</span> <span class="va">False</span>, ncols <span class="op">=</span> <span class="dv">4</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<div class="quarto-figure quarto-figure-left">
+<figure class="figure">
+<p><a href="scanpy_08_trajectory_files/figure-html/cell-7-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-4"><img src="scanpy_08_trajectory_files/figure-html/cell-7-output-1.png" class="img-fluid figure-img"></a></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="rerun-analysis-in-scanpy" class="level2" data-number="4">
+<h2 data-number="4" class="anchored" data-anchor-id="rerun-analysis-in-scanpy"><span class="header-section-number">4</span> Rerun analysis in Scanpy</h2>
+<p>Redo clustering and umap using the basic Scanpy pipeline. Use the provided “X_harmony_Phase” dimensionality reduction as the staring point.</p>
+<div class="cell" data-execution_count="7">
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># first, store the old umap with a new name so it is not overwritten</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>adata.obsm[<span class="st">'X_umap_old'</span>] <span class="op">=</span> adata.obsm[<span class="st">'X_umap'</span>]</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>sc.pp.neighbors(adata, n_pcs <span class="op">=</span> <span class="dv">30</span>, n_neighbors <span class="op">=</span> <span class="dv">20</span>, use_rep<span class="op">=</span><span class="st">"X_harmony_Phase"</span>)</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>sc.tl.umap(adata, min_dist<span class="op">=</span><span class="fl">0.4</span>, spread<span class="op">=</span><span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell" data-execution_count="8">
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co">#sc.tl.umap(adata, min_dist=0.6, spread=1.5)</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, color <span class="op">=</span> [<span class="st">'clusters'</span>],legend_loc <span class="op">=</span> <span class="st">'on data'</span>, legend_fontsize <span class="op">=</span> <span class="st">'xx-small'</span>, edges <span class="op">=</span> <span class="va">True</span>)</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, color <span class="op">=</span> markers, use_raw <span class="op">=</span> <span class="va">False</span>, ncols <span class="op">=</span> <span class="dv">4</span>)</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Redo clustering as well</span></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>sc.tl.leiden(adata, key_added <span class="op">=</span> <span class="st">"leiden_1.0"</span>, resolution <span class="op">=</span> <span class="fl">1.0</span>) <span class="co"># default resolution in 1.0</span></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>sc.tl.leiden(adata, key_added <span class="op">=</span> <span class="st">"leiden_1.2"</span>, resolution <span class="op">=</span> <span class="fl">1.2</span>) <span class="co"># default resolution in 1.0</span></span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>sc.tl.leiden(adata, key_added <span class="op">=</span> <span class="st">"leiden_1.4"</span>, resolution <span class="op">=</span> <span class="fl">1.4</span>) <span class="co"># default resolution in 1.0</span></span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a><span class="co">#sc.tl.louvain(adata, key_added = "leiden_1.0") # default resolution in 1.0</span></span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, color <span class="op">=</span> [<span class="st">'leiden_1.0'</span>, <span class="st">'leiden_1.2'</span>, <span class="st">'leiden_1.4'</span>,<span class="st">'clusters'</span>],legend_loc <span class="op">=</span> <span class="st">'on data'</span>, legend_fontsize <span class="op">=</span> <span class="st">'xx-small'</span>, ncols <span class="op">=</span><span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<div class="quarto-figure quarto-figure-left">
+<figure class="figure">
+<p><a href="scanpy_08_trajectory_files/figure-html/cell-9-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-5"><img src="scanpy_08_trajectory_files/figure-html/cell-9-output-1.png" class="img-fluid figure-img"></a></p>
+</figure>
+</div>
+</div>
+<div class="cell-output cell-output-display">
+<div class="quarto-figure quarto-figure-left">
+<figure class="figure">
+<p><a href="scanpy_08_trajectory_files/figure-html/cell-9-output-2.png" class="lightbox" data-gallery="quarto-lightbox-gallery-6"><img src="scanpy_08_trajectory_files/figure-html/cell-9-output-2.png" class="img-fluid figure-img"></a></p>
+</figure>
+</div>
+</div>
+<div class="cell-output cell-output-display">
+<div class="quarto-figure quarto-figure-left">
+<figure class="figure">
+<p><a href="scanpy_08_trajectory_files/figure-html/cell-9-output-3.png" class="lightbox" data-gallery="quarto-lightbox-gallery-7"><img src="scanpy_08_trajectory_files/figure-html/cell-9-output-3.png" class="img-fluid figure-img"></a></p>
+</figure>
+</div>
+</div>
+</div>
+<div class="cell" data-execution_count="9">
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Rename clusters with really clear markers, the rest are left unlabelled.</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>annot <span class="op">=</span> pd.DataFrame(adata.obs[<span class="st">'leiden_1.4'</span>].astype(<span class="st">'string'</span>))</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>annot[annot[<span class="st">'leiden_1.4'</span>] <span class="op">==</span> <span class="st">'10'</span>] <span class="op">=</span> <span class="st">'10_megakaryo'</span> <span class="co">#Pf4</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>annot[annot[<span class="st">'leiden_1.4'</span>] <span class="op">==</span> <span class="st">'17'</span>] <span class="op">=</span> <span class="st">'17_macro'</span>  <span class="co">#C1qc</span></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>annot[annot[<span class="st">'leiden_1.4'</span>] <span class="op">==</span> <span class="st">'11'</span>] <span class="op">=</span> <span class="st">'11_eryth'</span> <span class="co">#Alas2</span></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>annot[annot[<span class="st">'leiden_1.4'</span>] <span class="op">==</span> <span class="st">'18'</span>] <span class="op">=</span> <span class="st">'18_dend'</span> <span class="co">#Siglech</span></span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>annot[annot[<span class="st">'leiden_1.4'</span>] <span class="op">==</span> <span class="st">'13'</span>] <span class="op">=</span> <span class="st">'13_mast'</span> <span class="co">#Mcpt8</span></span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>annot[annot[<span class="st">'leiden_1.4'</span>] <span class="op">==</span> <span class="st">'0'</span>] <span class="op">=</span> <span class="st">'0_mono'</span> <span class="co">#Cts3</span></span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>annot[annot[<span class="st">'leiden_1.4'</span>] <span class="op">==</span> <span class="st">'1'</span>] <span class="op">=</span> <span class="st">'1_gran'</span> <span class="co">#Ltf</span></span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>annot[annot[<span class="st">'leiden_1.4'</span>] <span class="op">==</span> <span class="st">'9'</span>] <span class="op">=</span> <span class="st">'9_gran'</span></span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a>annot[annot[<span class="st">'leiden_1.4'</span>] <span class="op">==</span> <span class="st">'14'</span>] <span class="op">=</span> <span class="st">'14_TC'</span> <span class="co">#Cd3e</span></span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a>annot[annot[<span class="st">'leiden_1.4'</span>] <span class="op">==</span> <span class="st">'16'</span>] <span class="op">=</span> <span class="st">'16_BC'</span> <span class="co">#Ms4a1</span></span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a>annot[annot[<span class="st">'leiden_1.4'</span>] <span class="op">==</span> <span class="st">'8'</span>] <span class="op">=</span> <span class="st">'8_progen'</span>  <span class="co"># Cd34</span></span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a>annot[annot[<span class="st">'leiden_1.4'</span>] <span class="op">==</span> <span class="st">'4'</span>] <span class="op">=</span> <span class="st">'4_progen'</span> </span>
+<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a>annot[annot[<span class="st">'leiden_1.4'</span>] <span class="op">==</span> <span class="st">'5'</span>] <span class="op">=</span> <span class="st">'5_progen'</span></span>
+<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a>adata.obs[<span class="st">'annot'</span>]<span class="op">=</span>annot[<span class="st">'leiden_1.4'</span>].astype(<span class="st">'category'</span>)</span>
+<span id="cb11-19"><a href="#cb11-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-20"><a href="#cb11-20" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, color <span class="op">=</span> <span class="st">'annot'</span>,legend_loc <span class="op">=</span> <span class="st">'on data'</span>, legend_fontsize <span class="op">=</span> <span class="st">'xx-small'</span>, ncols <span class="op">=</span><span class="dv">2</span>)</span>
+<span id="cb11-21"><a href="#cb11-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-22"><a href="#cb11-22" aria-hidden="true" tabindex="-1"></a>annot.value_counts()</span>
+<span id="cb11-23"><a href="#cb11-23" aria-hidden="true" tabindex="-1"></a><span class="co">#type(annot)</span></span>
+<span id="cb11-24"><a href="#cb11-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-25"><a href="#cb11-25" aria-hidden="true" tabindex="-1"></a><span class="co"># astype('category')</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<div class="quarto-figure quarto-figure-left">
+<figure class="figure">
+<p><a href="scanpy_08_trajectory_files/figure-html/cell-10-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-8"><img src="scanpy_08_trajectory_files/figure-html/cell-10-output-1.png" class="img-fluid figure-img"></a></p>
+</figure>
+</div>
+</div>
+<div class="cell-output cell-output-display" data-execution_count="32">
+<pre><code>leiden_1.4  
+0_mono          522
+1_gran          477
+2               445
+3               429
+4_progen        406
+5_progen        389
+6               375
+7               373
+8_progen        332
+9_gran          331
+10_megakaryo    304
+11_eryth        278
+12              270
+13_mast         242
+14_TC           163
+15              153
+16_BC           124
+17_macro         99
+18_dend          96
+19               20
+dtype: int64</code></pre>
+</div>
+</div>
+<div class="cell" data-execution_count="10">
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co"># plot onto the Seurat embedding:</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>sc.pl.embedding(adata, basis<span class="op">=</span><span class="st">'X_umap_old'</span>, color <span class="op">=</span> <span class="st">'annot'</span>,legend_loc <span class="op">=</span> <span class="st">'on data'</span>, legend_fontsize <span class="op">=</span> <span class="st">'xx-small'</span>, ncols <span class="op">=</span><span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<div class="quarto-figure quarto-figure-left">
+<figure class="figure">
+<p><a href="scanpy_08_trajectory_files/figure-html/cell-11-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-9"><img src="scanpy_08_trajectory_files/figure-html/cell-11-output-1.png" class="img-fluid figure-img"></a></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="run-paga" class="level2" data-number="5">
+<h2 data-number="5" class="anchored" data-anchor-id="run-paga"><span class="header-section-number">5</span> Run PAGA</h2>
+<p>Use the clusters from leiden clustering with leiden_1.4 and run PAGA. First we create the graph and initialize the positions using the umap.</p>
+<div class="cell" data-execution_count="11">
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="co"># use the umap to initialize the graph layout.</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>sc.tl.draw_graph(adata, init_pos<span class="op">=</span><span class="st">'X_umap'</span>)</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>sc.pl.draw_graph(adata, color<span class="op">=</span><span class="st">'annot'</span>, legend_loc<span class="op">=</span><span class="st">'on data'</span>, legend_fontsize <span class="op">=</span> <span class="st">'xx-small'</span>)</span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>sc.tl.paga(adata, groups<span class="op">=</span><span class="st">'annot'</span>)</span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>sc.pl.paga(adata, color<span class="op">=</span><span class="st">'annot'</span>, edge_width_scale <span class="op">=</span> <span class="fl">0.3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<div class="quarto-figure quarto-figure-left">
+<figure class="figure">
+<p><a href="scanpy_08_trajectory_files/figure-html/cell-12-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-10"><img src="scanpy_08_trajectory_files/figure-html/cell-12-output-1.png" class="img-fluid figure-img"></a></p>
+</figure>
+</div>
+</div>
+<div class="cell-output cell-output-display">
+<div class="quarto-figure quarto-figure-left">
+<figure class="figure">
+<p><a href="scanpy_08_trajectory_files/figure-html/cell-12-output-2.png" class="lightbox" data-gallery="quarto-lightbox-gallery-11"><img src="scanpy_08_trajectory_files/figure-html/cell-12-output-2.png" class="img-fluid figure-img"></a></p>
+</figure>
+</div>
+</div>
+</div>
+<p>As you can see, we have edges between many clusters that we know are are unrelated, so we may need to clean up the data a bit more.</p>
+</section>
+<section id="data-pre-processing-prior-trajectory-inference" class="level2" data-number="6">
+<h2 data-number="6" class="anchored" data-anchor-id="data-pre-processing-prior-trajectory-inference"><span class="header-section-number">6</span> Data pre-processing prior trajectory inference</h2>
+<p>First, lets explore the graph a bit. So we plot the umap with the graph connections on top.</p>
+<div class="cell" data-execution_count="12">
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, edges<span class="op">=</span><span class="va">True</span>, color <span class="op">=</span> <span class="st">'annot'</span>, legend_loc<span class="op">=</span> <span class="st">'on data'</span>, legend_fontsize<span class="op">=</span> <span class="st">'xx-small'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<div class="quarto-figure quarto-figure-left">
+<figure class="figure">
+<p><a href="scanpy_08_trajectory_files/figure-html/cell-13-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-12"><img src="scanpy_08_trajectory_files/figure-html/cell-13-output-1.png" class="img-fluid figure-img"></a></p>
+</figure>
+</div>
+</div>
+</div>
+<p>We have many edges in the graph between unrelated clusters, so lets try with fewer neighbors.</p>
+<div class="cell" data-execution_count="13">
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>sc.pp.neighbors(adata, n_neighbors<span class="op">=</span><span class="dv">5</span>,  use_rep <span class="op">=</span> <span class="st">'X_harmony_Phase'</span>, n_pcs <span class="op">=</span> <span class="dv">30</span>)</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, edges<span class="op">=</span><span class="va">True</span>, color <span class="op">=</span> <span class="st">'annot'</span>, legend_loc<span class="op">=</span> <span class="st">'on data'</span>, legend_fontsize<span class="op">=</span> <span class="st">'xx-small'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<div class="quarto-figure quarto-figure-left">
+<figure class="figure">
+<p><a href="scanpy_08_trajectory_files/figure-html/cell-14-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-13"><img src="scanpy_08_trajectory_files/figure-html/cell-14-output-1.png" class="img-fluid figure-img"></a></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="rerun-paga-again-on-the-data" class="level2" data-number="7">
+<h2 data-number="7" class="anchored" data-anchor-id="rerun-paga-again-on-the-data"><span class="header-section-number">7</span> Rerun PAGA again on the data</h2>
+<div class="cell" data-execution_count="14">
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>sc.tl.draw_graph(adata, init_pos<span class="op">=</span><span class="st">'X_umap'</span>)</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>sc.pl.draw_graph(adata, color<span class="op">=</span><span class="st">'annot'</span>, legend_loc<span class="op">=</span><span class="st">'on data'</span>, legend_fontsize <span class="op">=</span> <span class="st">'xx-small'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<div class="quarto-figure quarto-figure-left">
+<figure class="figure">
+<p><a href="scanpy_08_trajectory_files/figure-html/cell-15-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-14"><img src="scanpy_08_trajectory_files/figure-html/cell-15-output-1.png" class="img-fluid figure-img"></a></p>
+</figure>
+</div>
+</div>
+</div>
+<div class="cell" data-execution_count="15">
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>sc.tl.paga(adata, groups<span class="op">=</span><span class="st">'annot'</span>)</span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>sc.pl.paga(adata, color<span class="op">=</span><span class="st">'annot'</span>, edge_width_scale <span class="op">=</span> <span class="fl">0.3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<div class="quarto-figure quarto-figure-left">
+<figure class="figure">
+<p><a href="scanpy_08_trajectory_files/figure-html/cell-16-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-15"><img src="scanpy_08_trajectory_files/figure-html/cell-16-output-1.png" class="img-fluid figure-img"></a></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="recomputing-the-embedding-using-paga-initialization" class="level2" data-number="8">
+<h2 data-number="8" class="anchored" data-anchor-id="recomputing-the-embedding-using-paga-initialization"><span class="header-section-number">8</span> Recomputing the embedding using PAGA-initialization</h2>
+<p>The following is just as well possible for a UMAP.</p>
+<div class="cell" data-execution_count="16">
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>sc.tl.draw_graph(adata, init_pos<span class="op">=</span><span class="st">'paga'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Now we can see all marker genes also at single-cell resolution in a meaningful layout.</p>
+<div class="cell" data-execution_count="17">
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>sc.pl.draw_graph(adata, color<span class="op">=</span>[<span class="st">'annot'</span>], legend_loc<span class="op">=</span><span class="st">'on data'</span>, legend_fontsize<span class="op">=</span>  <span class="st">'xx-small'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<div class="quarto-figure quarto-figure-left">
+<figure class="figure">
+<p><a href="scanpy_08_trajectory_files/figure-html/cell-18-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-16"><img src="scanpy_08_trajectory_files/figure-html/cell-18-output-1.png" class="img-fluid figure-img"></a></p>
+</figure>
+</div>
+</div>
+</div>
+<p>Compare the 2 graphs</p>
+<div class="cell" data-execution_count="18">
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>sc.pl.paga_compare(</span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>    adata, threshold<span class="op">=</span><span class="fl">0.03</span>, title<span class="op">=</span><span class="st">''</span>, right_margin<span class="op">=</span><span class="fl">0.2</span>, size<span class="op">=</span><span class="dv">10</span>, edge_width_scale<span class="op">=</span><span class="fl">0.5</span>,</span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>    legend_fontsize<span class="op">=</span><span class="dv">12</span>, fontsize<span class="op">=</span><span class="dv">12</span>, frameon<span class="op">=</span><span class="va">False</span>, edges<span class="op">=</span><span class="va">True</span>, save<span class="op">=</span><span class="va">True</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<div class="quarto-figure quarto-figure-left">
+<figure class="figure">
+<p><a href="scanpy_08_trajectory_files/figure-html/cell-19-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-17"><img src="scanpy_08_trajectory_files/figure-html/cell-19-output-1.png" class="img-fluid figure-img"></a></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="reconstructing-gene-changes-along-paga-paths-for-a-given-set-of-genes" class="level2" data-number="9">
+<h2 data-number="9" class="anchored" data-anchor-id="reconstructing-gene-changes-along-paga-paths-for-a-given-set-of-genes"><span class="header-section-number">9</span> Reconstructing gene changes along PAGA paths for a given set of genes</h2>
+<p>Choose a root cell for diffusion pseudotime. We have 3 progenitor clusters, but cluster 5 seems the most clear.</p>
+<div class="cell" data-execution_count="19">
+<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>adata.uns[<span class="st">'iroot'</span>] <span class="op">=</span> np.flatnonzero(adata.obs[<span class="st">'annot'</span>]  <span class="op">==</span> <span class="st">'5_progen'</span>)[<span class="dv">0</span>]</span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>sc.tl.dpt(adata)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Use the full raw data for visualization.</p>
+<div class="cell" data-execution_count="20">
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>sc.pl.draw_graph(adata, color<span class="op">=</span>[<span class="st">'annot'</span>, <span class="st">'dpt_pseudotime'</span>], legend_loc<span class="op">=</span><span class="st">'on data'</span>, legend_fontsize<span class="op">=</span> <span class="st">'x-small'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<div class="quarto-figure quarto-figure-left">
+<figure class="figure">
+<p><a href="scanpy_08_trajectory_files/figure-html/cell-21-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-18"><img src="scanpy_08_trajectory_files/figure-html/cell-21-output-1.png" class="img-fluid figure-img"></a></p>
+</figure>
+</div>
+</div>
+</div>
+<p>By looking at the different know lineages and the layout of the graph we define manually some paths to the graph that corresponds to spcific lineages.</p>
+<div class="cell" data-execution_count="21">
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Define paths</span></span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>paths <span class="op">=</span> [(<span class="st">'erythrocytes'</span>, [<span class="st">'5_progen'</span>, <span class="st">'8_progen'</span>, <span class="st">'6'</span>,<span class="st">'3'</span>,<span class="st">'7'</span>, <span class="st">'11_eryth'</span>]),</span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>          (<span class="st">'lympoid'</span>, [<span class="st">'5_progen'</span>, <span class="st">'12'</span>, <span class="st">'16_BC'</span>, <span class="st">'14_TC'</span>]), </span>
+<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a>          (<span class="st">'granulo'</span>, [<span class="st">'5_progen'</span>, <span class="st">'4_progen'</span>, <span class="st">'2'</span>, <span class="st">'9_gran'</span>, <span class="st">'1_gran'</span>]),</span>
+<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a>          (<span class="st">'mono'</span>, [<span class="st">'5_progen'</span>,<span class="st">'4_progen'</span>,<span class="st">'0_mono'</span>,<span class="st">'18_dend'</span>,<span class="st">'17_macro'</span>])</span>
+<span id="cb24-7"><a href="#cb24-7" aria-hidden="true" tabindex="-1"></a>        ]</span>
+<span id="cb24-8"><a href="#cb24-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-9"><a href="#cb24-9" aria-hidden="true" tabindex="-1"></a>adata.obs[<span class="st">'distance'</span>] <span class="op">=</span> adata.obs[<span class="st">'dpt_pseudotime'</span>]</span>
+<span id="cb24-10"><a href="#cb24-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-11"><a href="#cb24-11" aria-hidden="true" tabindex="-1"></a><span class="op">!</span>mkdir write</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>/usr/bin/mkdir: cannot create directory ‘write’: File exists</code></pre>
+</div>
+</div>
+<p>Then we select some genes that can vary in the lineages and plot onto the paths.</p>
+<div class="cell" data-execution_count="22">
+<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>gene_names <span class="op">=</span> [<span class="st">'Gata2'</span>, <span class="st">'Gata1'</span>, <span class="st">'Klf1'</span>, <span class="st">'Epor'</span>, <span class="st">'Hba-a2'</span>,  <span class="co"># erythroid</span></span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>              <span class="st">'Elane'</span>, <span class="st">'Cebpe'</span>, <span class="st">'Gfi1'</span>,                    <span class="co"># neutrophil</span></span>
+<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a>              <span class="st">'Irf8'</span>, <span class="st">'Csf1r'</span>, <span class="st">'Ctsg'</span>,                     <span class="co"># monocyte</span></span>
+<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a>              <span class="st">'Itga2b'</span>,<span class="st">'Prss34'</span>,<span class="st">'Cma1'</span>,<span class="st">'Procr'</span>,            <span class="co"># Megakaryo,Basophil,Mast,HPC</span></span>
+<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a>              <span class="st">'C1qc'</span>,<span class="st">'Siglech'</span>,<span class="st">'Ms4a1'</span>,<span class="st">'Cd3e'</span>,<span class="st">'Cd34'</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell" data-execution_count="23">
+<div class="sourceCode cell-code" id="cb27"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a><span class="co"># this chunk is broken. fix code and remove eval: false</span></span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a>_, axs <span class="op">=</span> pl.subplots(ncols<span class="op">=</span><span class="dv">4</span>, figsize<span class="op">=</span>(<span class="dv">10</span>, <span class="dv">4</span>), gridspec_kw<span class="op">=</span>{<span class="st">'wspace'</span>: <span class="fl">0.05</span>, <span class="st">'left'</span>: <span class="fl">0.12</span>})</span>
+<span id="cb27-4"><a href="#cb27-4" aria-hidden="true" tabindex="-1"></a>pl.subplots_adjust(left<span class="op">=</span><span class="fl">0.05</span>, right<span class="op">=</span><span class="fl">0.98</span>, top<span class="op">=</span><span class="fl">0.82</span>, bottom<span class="op">=</span><span class="fl">0.2</span>)</span>
+<span id="cb27-5"><a href="#cb27-5" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> ipath, (descr, path) <span class="kw">in</span> <span class="bu">enumerate</span>(paths):</span>
+<span id="cb27-6"><a href="#cb27-6" aria-hidden="true" tabindex="-1"></a>    _, data <span class="op">=</span> sc.pl.paga_path(</span>
+<span id="cb27-7"><a href="#cb27-7" aria-hidden="true" tabindex="-1"></a>        adata, path, gene_names,                         </span>
+<span id="cb27-8"><a href="#cb27-8" aria-hidden="true" tabindex="-1"></a>        show_node_names<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb27-9"><a href="#cb27-9" aria-hidden="true" tabindex="-1"></a>        ax<span class="op">=</span>axs[ipath],</span>
+<span id="cb27-10"><a href="#cb27-10" aria-hidden="true" tabindex="-1"></a>        ytick_fontsize<span class="op">=</span><span class="dv">12</span>,</span>
+<span id="cb27-11"><a href="#cb27-11" aria-hidden="true" tabindex="-1"></a>        left_margin<span class="op">=</span><span class="fl">0.15</span>,</span>
+<span id="cb27-12"><a href="#cb27-12" aria-hidden="true" tabindex="-1"></a>        n_avg<span class="op">=</span><span class="dv">50</span>,</span>
+<span id="cb27-13"><a href="#cb27-13" aria-hidden="true" tabindex="-1"></a>        annotations<span class="op">=</span>[<span class="st">'distance'</span>],</span>
+<span id="cb27-14"><a href="#cb27-14" aria-hidden="true" tabindex="-1"></a>        show_yticks<span class="op">=</span><span class="va">True</span> <span class="cf">if</span> ipath<span class="op">==</span><span class="dv">0</span> <span class="cf">else</span> <span class="va">False</span>,</span>
+<span id="cb27-15"><a href="#cb27-15" aria-hidden="true" tabindex="-1"></a>        show_colorbar<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb27-16"><a href="#cb27-16" aria-hidden="true" tabindex="-1"></a>        color_map<span class="op">=</span><span class="st">'Greys'</span>,</span>
+<span id="cb27-17"><a href="#cb27-17" aria-hidden="true" tabindex="-1"></a>        groups_key<span class="op">=</span><span class="st">'annot'</span>,</span>
+<span id="cb27-18"><a href="#cb27-18" aria-hidden="true" tabindex="-1"></a>        color_maps_annotations<span class="op">=</span>{<span class="st">'distance'</span>: <span class="st">'viridis'</span>},</span>
+<span id="cb27-19"><a href="#cb27-19" aria-hidden="true" tabindex="-1"></a>        title<span class="op">=</span><span class="st">'</span><span class="sc">{}</span><span class="st"> path'</span>.<span class="bu">format</span>(descr),</span>
+<span id="cb27-20"><a href="#cb27-20" aria-hidden="true" tabindex="-1"></a>        return_data<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb27-21"><a href="#cb27-21" aria-hidden="true" tabindex="-1"></a>        use_raw <span class="op">=</span> <span class="va">False</span>,</span>
+<span id="cb27-22"><a href="#cb27-22" aria-hidden="true" tabindex="-1"></a>        show<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb27-23"><a href="#cb27-23" aria-hidden="true" tabindex="-1"></a>    data.to_csv(<span class="st">'./write/paga_path_</span><span class="sc">{}</span><span class="st">.csv'</span>.<span class="bu">format</span>(descr))</span>
+<span id="cb27-24"><a href="#cb27-24" aria-hidden="true" tabindex="-1"></a>pl.savefig(<span class="st">'./figures/paga_path.pdf'</span>)</span>
+<span id="cb27-25"><a href="#cb27-25" aria-hidden="true" tabindex="-1"></a>pl.show()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="callout callout-style-default callout-note no-icon callout-titled" title="Discuss">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon no-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Discuss
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>As you can see, we can manipulate the trajectory quite a bit by selecting different number of neighbors, components etc. to fit with our assumptions on the development of these celltypes.</p>
+<p>Please explore furhter how you can tweak the trajectory. For instance, can you create a PAGA trajectory using the orignial umap from Seurat instead? Hint, you first need to compute the neighbors on the umap.</p>
+</div>
+</div>
+</section>
+<section id="session-info" class="level2" data-number="10">
+<h2 data-number="10" class="anchored" data-anchor-id="session-info"><span class="header-section-number">10</span> Session info</h2>
+<div class="cell" data-execution_count="24">
+<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>sc.logging.print_versions()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>-----
+anndata     0.9.2
+scanpy      1.7.2
+sinfo       0.3.1
+-----
+PIL                         10.0.0
+anndata                     0.9.2
+anyio                       NA
+arrow                       1.3.0
+asttokens                   NA
+attr                        23.1.0
+attrs                       23.1.0
+babel                       2.12.1
+backcall                    0.2.0
+brotli                      1.0.9
+certifi                     2023.07.22
+cffi                        1.16.0
+charset_normalizer          3.2.0
+colorama                    0.4.6
+comm                        0.1.4
+cpuinfo                     NA
+cycler                      0.10.0
+cython_runtime              NA
+dateutil                    2.8.2
+debugpy                     1.8.0
+decorator                   5.1.1
+defusedxml                  0.7.1
+dunamai                     1.18.0
+exceptiongroup              1.1.3
+executing                   1.2.0
+fastjsonschema              NA
+fontTools                   4.43.1
+fqdn                        NA
+get_version                 3.5.4
+h5py                        3.9.0
+idna                        3.4
+igraph                      0.11.2
+importlib_resources         NA
+ipykernel                   6.25.2
+ipywidgets                  8.1.1
+isoduration                 NA
+jedi                        0.19.1
+jinja2                      3.1.2
+joblib                      1.3.0
+json5                       NA
+jsonpointer                 2.4
+jsonschema                  4.19.1
+jsonschema_specifications   NA
+jupyter_events              0.7.0
+jupyter_server              2.7.3
+jupyterlab_server           2.25.0
+kiwisolver                  1.4.5
+legacy_api_wrap             0.0.0
+leidenalg                   0.10.1
+llvmlite                    0.40.1
+louvain                     0.8.1
+markupsafe                  2.1.3
+matplotlib                  3.6.3
+matplotlib_inline           0.1.6
+mpl_toolkits                NA
+natsort                     8.4.0
+nbformat                    5.9.2
+networkx                    3.1
+numba                       0.57.1
+numexpr                     2.8.4
+numpy                       1.24.4
+overrides                   NA
+packaging                   23.1
+pandas                      1.5.3
+parso                       0.8.3
+pexpect                     4.8.0
+pickleshare                 0.7.5
+pkg_resources               NA
+platformdirs                3.10.0
+prometheus_client           NA
+prompt_toolkit              3.0.39
+psutil                      5.9.5
+ptyprocess                  0.7.0
+pure_eval                   0.2.2
+pycparser                   2.21
+pydev_ipython               NA
+pydevconsole                NA
+pydevd                      2.9.5
+pydevd_file_utils           NA
+pydevd_plugins              NA
+pydevd_tracing              NA
+pygments                    2.16.1
+pynndescent                 0.5.10
+pyparsing                   3.0.9
+pythonjsonlogger            NA
+pytz                        2023.3
+referencing                 NA
+requests                    2.31.0
+rfc3339_validator           0.1.4
+rfc3986_validator           0.1.1
+rpds                        NA
+scanpy                      1.7.2
+scipy                       1.10.1
+send2trash                  NA
+setuptools_scm              NA
+sinfo                       0.3.1
+six                         1.16.0
+sklearn                     1.3.1
+sniffio                     1.3.0
+socks                       1.7.1
+stack_data                  0.6.2
+tables                      3.8.0
+texttable                   1.7.0
+threadpoolctl               3.2.0
+tornado                     6.3.3
+tqdm                        4.65.0
+traitlets                   5.11.2
+typing_extensions           NA
+umap                        0.5.4
+uri_template                NA
+urllib3                     2.0.4
+wcwidth                     0.2.8
+webcolors                   1.13
+websocket                   1.6.4
+yaml                        6.0.1
+zipp                        NA
+zmq                         25.1.1
+-----
+IPython             8.12.2
+jupyter_client      8.3.1
+jupyter_core        5.4.0
+jupyterlab          4.0.6
+notebook            7.0.4
+-----
+Python 3.8.18 | packaged by conda-forge | (default, Oct 10 2023, 15:44:36) [GCC 12.3.0]
+Linux-6.4.16-linuxkit-x86_64-with-glibc2.10
+11 logical CPU cores, x86_64
+-----
+Session information updated at 2023-11-11 21:58
+</code></pre>
+</div>
+</div>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    text: function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  function tippyHover(el, contentFn) {
+    const config = {
+      allowHTML: true,
+      content: contentFn,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start'
+    };
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+<footer class="footer">
+  <div class="nav-footer">
+    <div class="nav-footer-left">2023 <a href="https://nbis.se">NBIS</a> | <a href="https://choosealicense.com/licenses/gpl-3.0/">GPL-3 License</a></div>   
+    <div class="nav-footer-center">
+      &nbsp;
+    </div>
+    <div class="nav-footer-right">Published with <a href="https://quarto.org/">Quarto</a> v1.3.433</div>
+  </div>
+</footer>
+<script>var lightboxQuarto = GLightbox({"closeEffect":"zoom","openEffect":"zoom","descPosition":"bottom","selector":".lightbox","loop":true});</script>
+
+
+
+<script src="../../site_libs/quarto-html/zenscroll-min.js"></script>
+</body></html>

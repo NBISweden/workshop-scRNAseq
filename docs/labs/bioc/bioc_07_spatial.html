@@ -193,7 +193,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <div>
       <div class="quarto-title-meta-heading">Published</div>
       <div class="quarto-title-meta-contents">
-        <p class="date">03-Nov-2023</p>
+        <p class="date">11-Nov-2023</p>
       </div>
     </div>
     
@@ -267,14 +267,16 @@ We will use two <strong>Visium</strong> spatial transcriptomics dataset of the m
 <span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(biomaRt)</span>
 <span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(SingleCellExperiment)</span>
 <span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="fu">suppressPackageStartupMessages</span>(<span class="fu">require</span>(Matrix))</span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="fu">suppressPackageStartupMessages</span>(<span class="fu">require</span>(dplyr))</span>
-<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="fu">suppressPackageStartupMessages</span>(<span class="fu">require</span>(scran))</span>
-<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="fu">suppressPackageStartupMessages</span>(<span class="fu">require</span>(SingleR))</span>
-<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="fu">suppressPackageStartupMessages</span>(<span class="fu">require</span>(scater))</span>
-<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="fu">suppressPackageStartupMessages</span>(<span class="fu">require</span>(ggplot2))</span>
-<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="fu">suppressPackageStartupMessages</span>(<span class="fu">require</span>(patchwork))</span>
-<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="fu">suppressPackageStartupMessages</span>(<span class="fu">require</span>(cowplot))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="fu">suppressPackageStartupMessages</span>({</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">require</span>(Matrix)</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">require</span>(dplyr)</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">require</span>(scran)</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">require</span>(SingleR)</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">require</span>(scater)</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">require</span>(ggplot2)</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">require</span>(patchwork)</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">require</span>(cowplot)</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>})</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Load ST data</p>
 <div class="cell">
@@ -333,13 +335,15 @@ Uncompressing data/visium/Anterior/V1_Mouse_Brain_Sagittal_Anterior_spatial.tar.
 <div class="cell">
 <div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>mart <span class="ot">&lt;-</span> biomaRt<span class="sc">::</span><span class="fu">useMart</span>(<span class="at">biomart=</span><span class="st">"ENSEMBL_MART_ENSEMBL"</span>, <span class="at">dataset=</span><span class="st">"mmusculus_gene_ensembl"</span>)</span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>annot <span class="ot">&lt;-</span> biomaRt<span class="sc">::</span><span class="fu">getBM</span>(<span class="at">attributes =</span> <span class="fu">c</span>(<span class="st">"ensembl_gene_id"</span>, <span class="st">"external_gene_name"</span>,<span class="st">"gene_biotype"</span>), <span class="at">mart =</span> mart, <span class="at">useCache =</span> F)</span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>gene_names <span class="ot">&lt;-</span> <span class="fu">as.character</span> ( annot[<span class="fu">match</span>(<span class="fu">rownames</span>(sce),annot[,<span class="st">"ensembl_gene_id"</span>]),<span class="st">"external_gene_name"</span>] )</span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>gene_names[<span class="fu">is.na</span>(gene_names) ] <span class="ot">&lt;-</span> <span class="st">""</span></span>
-<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>sce <span class="ot">&lt;-</span> sce[gene_names <span class="sc">!=</span> <span class="st">""</span>,]</span>
-<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="fu">rownames</span>(sce) <span class="ot">&lt;-</span> gene_names[gene_names <span class="sc">!=</span> <span class="st">""</span>]</span>
-<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a><span class="fu">dim</span>(sce)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(annot, <span class="st">"data/spatial/annot.rds"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>gene_names <span class="ot">&lt;-</span> <span class="fu">as.character</span> ( annot[<span class="fu">match</span>(<span class="fu">rownames</span>(sce),annot[,<span class="st">"ensembl_gene_id"</span>]),<span class="st">"external_gene_name"</span>] )</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>gene_names[<span class="fu">is.na</span>(gene_names) ] <span class="ot">&lt;-</span> <span class="st">""</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>sce <span class="ot">&lt;-</span> sce[gene_names <span class="sc">!=</span> <span class="st">""</span>, ]</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="fu">rownames</span>(sce) <span class="ot">&lt;-</span> gene_names[gene_names <span class="sc">!=</span> <span class="st">""</span>]</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="fu">dim</span>(sce)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] 32053  6050</code></pre>
 </div>
@@ -350,28 +354,28 @@ Uncompressing data/visium/Anterior/V1_Mouse_Brain_Sagittal_Anterior_spatial.tar.
 <p>Similar to scRNA-seq we use statistics on number of counts, number of features and percent mitochondria for quality control.</p>
 <p>Now the counts and feature counts are calculated on the Spatial assay, so they are named <strong>nCount_Spatial</strong> and <strong>nFeature_Spatial</strong>.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Mitochondrial genes</span></span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>mito_genes <span class="ot">&lt;-</span> <span class="fu">rownames</span>(sce)[<span class="fu">grep</span>(<span class="st">"^mt-"</span>,<span class="fu">rownames</span>(sce))]</span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Ribosomal genes</span></span>
-<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>ribo_genes <span class="ot">&lt;-</span> <span class="fu">rownames</span>(sce)[<span class="fu">grep</span>(<span class="st">"^Rp[sl]"</span>,<span class="fu">rownames</span>(sce))]</span>
-<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Hemoglobin genes - includes all genes starting with HB except HBP.</span></span>
-<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>hb_genes <span class="ot">&lt;-</span> <span class="fu">rownames</span>(sce)[<span class="fu">grep</span>(<span class="st">"^Hb[^(p)]"</span>,<span class="fu">rownames</span>(sce))]</span>
-<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>sce <span class="ot">&lt;-</span> <span class="fu">addPerCellQC</span>(sce, <span class="at">flatten =</span> T, <span class="at">subsets =</span> <span class="fu">list</span>(<span class="at">mt=</span>mito_genes, <span class="at">hb=</span>hb_genes, <span class="at">ribo=</span>ribo_genes))</span>
-<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(<span class="fu">colData</span>(sce))</span>
-<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_grid</span>(<span class="fu">plotColData</span>(sce,<span class="at">y =</span> <span class="st">"detected"</span>,<span class="at">x =</span> <span class="st">"Sample"</span>,<span class="at">colour_by =</span> <span class="st">"Sample"</span>),</span>
-<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a>          <span class="fu">plotColData</span>(sce,<span class="at">y =</span> <span class="st">"total"</span>,<span class="at">x =</span> <span class="st">"Sample"</span>,<span class="at">colour_by =</span> <span class="st">"Sample"</span>),</span>
-<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a>          <span class="fu">plotColData</span>(sce,<span class="at">y =</span> <span class="st">"subsets_mt_percent"</span>,<span class="at">x =</span> <span class="st">"Sample"</span>,<span class="at">colour_by =</span> <span class="st">"Sample"</span>),</span>
-<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a>          <span class="fu">plotColData</span>(sce,<span class="at">y =</span> <span class="st">"subsets_ribo_percent"</span>,<span class="at">x =</span> <span class="st">"Sample"</span>,<span class="at">colour_by =</span> <span class="st">"Sample"</span>),</span>
-<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a>          <span class="fu">plotColData</span>(sce,<span class="at">y =</span> <span class="st">"subsets_hb_percent"</span>,<span class="at">x =</span> <span class="st">"Sample"</span>,<span class="at">colour_by =</span> <span class="st">"Sample"</span>),<span class="at">ncol =</span> <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Mitochondrial genes</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>mito_genes <span class="ot">&lt;-</span> <span class="fu">rownames</span>(sce)[<span class="fu">grep</span>(<span class="st">"^mt-"</span>,<span class="fu">rownames</span>(sce))]</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Ribosomal genes</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>ribo_genes <span class="ot">&lt;-</span> <span class="fu">rownames</span>(sce)[<span class="fu">grep</span>(<span class="st">"^Rp[sl]"</span>,<span class="fu">rownames</span>(sce))]</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Hemoglobin genes - includes all genes starting with HB except HBP.</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>hb_genes <span class="ot">&lt;-</span> <span class="fu">rownames</span>(sce)[<span class="fu">grep</span>(<span class="st">"^Hb[^(p)]"</span>,<span class="fu">rownames</span>(sce))]</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>sce <span class="ot">&lt;-</span> <span class="fu">addPerCellQC</span>(sce, <span class="at">flatten =</span> T, <span class="at">subsets =</span> <span class="fu">list</span>(<span class="at">mt=</span>mito_genes, <span class="at">hb=</span>hb_genes, <span class="at">ribo=</span>ribo_genes))</span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(<span class="fu">colData</span>(sce))</span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_grid</span>(<span class="fu">plotColData</span>(sce,<span class="at">y =</span> <span class="st">"detected"</span>,<span class="at">x =</span> <span class="st">"Sample"</span>,<span class="at">colour_by =</span> <span class="st">"Sample"</span>),</span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>          <span class="fu">plotColData</span>(sce,<span class="at">y =</span> <span class="st">"total"</span>,<span class="at">x =</span> <span class="st">"Sample"</span>,<span class="at">colour_by =</span> <span class="st">"Sample"</span>),</span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>          <span class="fu">plotColData</span>(sce,<span class="at">y =</span> <span class="st">"subsets_mt_percent"</span>,<span class="at">x =</span> <span class="st">"Sample"</span>,<span class="at">colour_by =</span> <span class="st">"Sample"</span>),</span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a>          <span class="fu">plotColData</span>(sce,<span class="at">y =</span> <span class="st">"subsets_ribo_percent"</span>,<span class="at">x =</span> <span class="st">"Sample"</span>,<span class="at">colour_by =</span> <span class="st">"Sample"</span>),</span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a>          <span class="fu">plotColData</span>(sce,<span class="at">y =</span> <span class="st">"subsets_hb_percent"</span>,<span class="at">x =</span> <span class="st">"Sample"</span>,<span class="at">colour_by =</span> <span class="st">"Sample"</span>),<span class="at">ncol =</span> <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="bioc_07_spatial_files/figure-html/unnamed-chunk-5-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-2"><img src="bioc_07_spatial_files/figure-html/unnamed-chunk-5-1.png" class="img-fluid figure-img" width="1056"></a></p>
+<p><a href="bioc_07_spatial_files/figure-html/unnamed-chunk-7-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-2"><img src="bioc_07_spatial_files/figure-html/unnamed-chunk-7-1.png" class="img-fluid figure-img" width="1056"></a></p>
 </figure>
 </div>
 </div>
@@ -421,29 +425,29 @@ Uncompressing data/visium/Anterior/V1_Mouse_Brain_Sagittal_Anterior_spatial.tar.
 </div>
 <p>We can also plot the same data onto the tissue section.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>samples <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"Anterior"</span>, <span class="st">"Posterior"</span>)</span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>to_plot <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"detected"</span>,<span class="st">"total"</span>,<span class="st">"subsets_mt_percent"</span>,<span class="st">"subsets_ribo_percent"</span>,<span class="st">"subsets_hb_percent"</span>)</span>
-<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>plist <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
-<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>n<span class="ot">=</span><span class="dv">1</span></span>
-<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span>(j <span class="cf">in</span> to_plot){</span>
-<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span>(i <span class="cf">in</span> samples){</span>
-<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>    temp <span class="ot">&lt;-</span> sce[,sce<span class="sc">$</span>Sample <span class="sc">==</span> i]</span>
-<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>    temp<span class="sc">@</span>metadata <span class="ot">&lt;-</span> temp<span class="sc">@</span>metadata[[i]]</span>
-<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>    plist[[n]]<span class="ot">&lt;-</span><span class="fu">spanielPlot</span>(<span class="at">object =</span> temp,</span>
-<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>        <span class="at">plotType =</span> <span class="st">"Cluster"</span>,</span>
-<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>        <span class="at">clusterRes=</span>j,<span class="at">customTitle =</span> j,</span>
-<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>        <span class="at">techType =</span> <span class="st">"Visium"</span>,</span>
-<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>        <span class="at">ptSizeMax =</span> <span class="dv">1</span>,<span class="at">ptSizeMin =</span> .<span class="dv">1</span>)</span>
-<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a>    n<span class="ot">&lt;-</span>n<span class="sc">+</span><span class="dv">1</span></span>
-<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_grid</span>(<span class="at">ncol=</span><span class="dv">2</span>, <span class="at">plotlist =</span> plist)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>samples <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"Anterior"</span>, <span class="st">"Posterior"</span>)</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>to_plot <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"detected"</span>,<span class="st">"total"</span>,<span class="st">"subsets_mt_percent"</span>,<span class="st">"subsets_ribo_percent"</span>,<span class="st">"subsets_hb_percent"</span>)</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>plist <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>n<span class="ot">=</span><span class="dv">1</span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span>(j <span class="cf">in</span> to_plot){</span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span>(i <span class="cf">in</span> samples){</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>    temp <span class="ot">&lt;-</span> sce[,sce<span class="sc">$</span>Sample <span class="sc">==</span> i]</span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>    temp<span class="sc">@</span>metadata <span class="ot">&lt;-</span> temp<span class="sc">@</span>metadata[[i]]</span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>    plist[[n]]<span class="ot">&lt;-</span><span class="fu">spanielPlot</span>(<span class="at">object =</span> temp,</span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>        <span class="at">plotType =</span> <span class="st">"Cluster"</span>,</span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>        <span class="at">clusterRes=</span>j,<span class="at">customTitle =</span> j,</span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>        <span class="at">techType =</span> <span class="st">"Visium"</span>,</span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>        <span class="at">ptSizeMax =</span> <span class="dv">1</span>,<span class="at">ptSizeMin =</span> .<span class="dv">1</span>)</span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>    n<span class="ot">&lt;-</span>n<span class="sc">+</span><span class="dv">1</span></span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-19"><a href="#cb10-19" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_grid</span>(<span class="at">ncol=</span><span class="dv">2</span>, <span class="at">plotlist =</span> plist)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="bioc_07_spatial_files/figure-html/unnamed-chunk-6-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-3"><img src="bioc_07_spatial_files/figure-html/unnamed-chunk-6-1.png" class="img-fluid figure-img" width="768"></a></p>
+<p><a href="bioc_07_spatial_files/figure-html/unnamed-chunk-8-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-3"><img src="bioc_07_spatial_files/figure-html/unnamed-chunk-8-1.png" class="img-fluid figure-img" width="768"></a></p>
 </figure>
 </div>
 </div>
@@ -454,39 +458,39 @@ But remember, for some tissue types, the amount of genes expressed and proportio
 <h3 data-number="2.1" class="anchored" data-anchor-id="meta-st_qc_filter"><span class="header-section-number">2.1</span> Filter spots</h3>
 <p>Select all spots with less than <strong>25%</strong> mitocondrial reads, less than <strong>20%</strong> hb-reads and <strong>500</strong> detected genes. You must judge for yourself based on your knowledge of the tissue what are appropriate filtering criteria for your dataset.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>sce <span class="ot">&lt;-</span> sce[ , sce<span class="sc">$</span>detected <span class="sc">&gt;</span> <span class="dv">500</span> <span class="sc">&amp;</span></span>
-<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>              sce<span class="sc">$</span>subsets_mt_percent <span class="sc">&lt;</span> <span class="dv">25</span> <span class="sc">&amp;</span></span>
-<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>              sce<span class="sc">$</span>subsets_hb_percent <span class="sc">&lt;</span> <span class="dv">20</span>]</span>
-<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a><span class="fu">dim</span>(sce)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>sce <span class="ot">&lt;-</span> sce[ , sce<span class="sc">$</span>detected <span class="sc">&gt;</span> <span class="dv">500</span> <span class="sc">&amp;</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>              sce<span class="sc">$</span>subsets_mt_percent <span class="sc">&lt;</span> <span class="dv">25</span> <span class="sc">&amp;</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>              sce<span class="sc">$</span>subsets_hb_percent <span class="sc">&lt;</span> <span class="dv">20</span>]</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a><span class="fu">dim</span>(sce)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] 32053  5804</code></pre>
 </div>
 </div>
 <p>And replot onto tissue section:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>samples <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"Anterior"</span>, <span class="st">"Posterior"</span>)</span>
-<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>to_plot <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"detected"</span>,<span class="st">"total"</span>,<span class="st">"subsets_mt_percent"</span>,<span class="st">"subsets_mt_percent"</span>,<span class="st">"subsets_hb_percent"</span>)</span>
-<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>plist <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
-<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>n<span class="ot">=</span><span class="dv">1</span></span>
-<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span>(j <span class="cf">in</span> to_plot){</span>
-<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span>(i <span class="cf">in</span> samples){</span>
-<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>    temp <span class="ot">&lt;-</span> sce[,sce<span class="sc">$</span>Sample <span class="sc">==</span> i]</span>
-<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>    temp<span class="sc">@</span>metadata <span class="ot">&lt;-</span> temp<span class="sc">@</span>metadata[[i]]</span>
-<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>    plist[[n]]<span class="ot">&lt;-</span><span class="fu">spanielPlot</span>(<span class="at">object =</span> temp,</span>
-<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>        <span class="at">plotType =</span> <span class="st">"Cluster"</span>,</span>
-<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>        <span class="at">clusterRes=</span>j,<span class="at">customTitle =</span> j,</span>
-<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>        <span class="at">techType =</span> <span class="st">"Visium"</span>,</span>
-<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a>        <span class="at">ptSizeMax =</span> <span class="dv">1</span>,<span class="at">ptSizeMin =</span> .<span class="dv">1</span>)</span>
-<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a>    n<span class="ot">&lt;-</span>n<span class="sc">+</span><span class="dv">1</span></span>
-<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb12-17"><a href="#cb12-17" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb12-18"><a href="#cb12-18" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb12-19"><a href="#cb12-19" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_grid</span>(<span class="at">ncol=</span><span class="dv">2</span>, <span class="at">plotlist =</span> plist)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>samples <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"Anterior"</span>, <span class="st">"Posterior"</span>)</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>to_plot <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"detected"</span>,<span class="st">"total"</span>,<span class="st">"subsets_mt_percent"</span>,<span class="st">"subsets_mt_percent"</span>,<span class="st">"subsets_hb_percent"</span>)</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>plist <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>n<span class="ot">=</span><span class="dv">1</span></span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span>(j <span class="cf">in</span> to_plot){</span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span>(i <span class="cf">in</span> samples){</span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>    temp <span class="ot">&lt;-</span> sce[,sce<span class="sc">$</span>Sample <span class="sc">==</span> i]</span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>    temp<span class="sc">@</span>metadata <span class="ot">&lt;-</span> temp<span class="sc">@</span>metadata[[i]]</span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>    plist[[n]]<span class="ot">&lt;-</span><span class="fu">spanielPlot</span>(<span class="at">object =</span> temp,</span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a>        <span class="at">plotType =</span> <span class="st">"Cluster"</span>,</span>
+<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a>        <span class="at">clusterRes=</span>j,<span class="at">customTitle =</span> j,</span>
+<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a>        <span class="at">techType =</span> <span class="st">"Visium"</span>,</span>
+<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a>        <span class="at">ptSizeMax =</span> <span class="dv">1</span>,<span class="at">ptSizeMin =</span> .<span class="dv">1</span>)</span>
+<span id="cb13-15"><a href="#cb13-15" aria-hidden="true" tabindex="-1"></a>    n<span class="ot">&lt;-</span>n<span class="sc">+</span><span class="dv">1</span></span>
+<span id="cb13-16"><a href="#cb13-16" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb13-17"><a href="#cb13-17" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb13-18"><a href="#cb13-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-19"><a href="#cb13-19" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_grid</span>(<span class="at">ncol=</span><span class="dv">2</span>, <span class="at">plotlist =</span> plist)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="bioc_07_spatial_files/figure-html/unnamed-chunk-8-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-4"><img src="bioc_07_spatial_files/figure-html/unnamed-chunk-8-1.png" class="img-fluid figure-img" width="768"></a></p>
+<p><a href="bioc_07_spatial_files/figure-html/unnamed-chunk-10-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-4"><img src="bioc_07_spatial_files/figure-html/unnamed-chunk-10-1.png" class="img-fluid figure-img" width="768"></a></p>
 </figure>
 </div>
 </div>
@@ -496,18 +500,18 @@ But remember, for some tissue types, the amount of genes expressed and proportio
 <h3 data-number="2.2" class="anchored" data-anchor-id="meta-st_qc_top"><span class="header-section-number">2.2</span> Top expressed genes</h3>
 <p>As for scRNA-seq data, we will look at what the top expressed genes are.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>C <span class="ot">=</span> <span class="fu">counts</span>(sce)</span>
-<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>C<span class="sc">@</span>x <span class="ot">=</span> C<span class="sc">@</span>x <span class="sc">/</span> <span class="fu">rep.int</span>(<span class="fu">colSums</span>(C), <span class="fu">diff</span>(C<span class="sc">@</span>p))</span>
-<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>most_expressed <span class="ot">&lt;-</span> <span class="fu">order</span>(Matrix<span class="sc">::</span><span class="fu">rowSums</span>( C ),<span class="at">decreasing =</span> T)[<span class="dv">20</span><span class="sc">:</span><span class="dv">1</span>]</span>
-<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a><span class="fu">boxplot</span>( <span class="fu">as.matrix</span>(<span class="fu">t</span>(C[most_expressed,])),<span class="at">cex=</span>.<span class="dv">1</span>, <span class="at">las=</span><span class="dv">1</span>, <span class="at">xlab=</span><span class="st">"% total count per cell"</span>,<span class="at">col=</span>scales<span class="sc">::</span><span class="fu">hue_pal</span>()(<span class="dv">20</span>)[<span class="dv">20</span><span class="sc">:</span><span class="dv">1</span>],<span class="at">horizontal=</span><span class="cn">TRUE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>C <span class="ot">=</span> <span class="fu">counts</span>(sce)</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>C<span class="sc">@</span>x <span class="ot">=</span> C<span class="sc">@</span>x <span class="sc">/</span> <span class="fu">rep.int</span>(<span class="fu">colSums</span>(C), <span class="fu">diff</span>(C<span class="sc">@</span>p))</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>most_expressed <span class="ot">&lt;-</span> <span class="fu">order</span>(Matrix<span class="sc">::</span><span class="fu">rowSums</span>( C ),<span class="at">decreasing =</span> T)[<span class="dv">20</span><span class="sc">:</span><span class="dv">1</span>]</span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a><span class="fu">boxplot</span>( <span class="fu">as.matrix</span>(<span class="fu">t</span>(C[most_expressed,])),<span class="at">cex=</span>.<span class="dv">1</span>, <span class="at">las=</span><span class="dv">1</span>, <span class="at">xlab=</span><span class="st">"% total count per cell"</span>,<span class="at">col=</span>scales<span class="sc">::</span><span class="fu">hue_pal</span>()(<span class="dv">20</span>)[<span class="dv">20</span><span class="sc">:</span><span class="dv">1</span>],<span class="at">horizontal=</span><span class="cn">TRUE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="bioc_07_spatial_files/figure-html/unnamed-chunk-9-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-5"><img src="bioc_07_spatial_files/figure-html/unnamed-chunk-9-1.png" class="img-fluid figure-img" width="576"></a></p>
+<p><a href="bioc_07_spatial_files/figure-html/unnamed-chunk-11-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-5"><img src="bioc_07_spatial_files/figure-html/unnamed-chunk-11-1.png" class="img-fluid figure-img" width="576"></a></p>
 </figure>
 </div>
 </div>
-<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="fu">rm</span>(C)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="fu">rm</span>(C)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>As you can see, the mitochondrial genes are among the top expressed genes. Also the lncRNA gene Bc1 (brain cytoplasmic RNA 1). Also one hemoglobin gene.</p>
 </section>
@@ -515,18 +519,18 @@ But remember, for some tissue types, the amount of genes expressed and proportio
 <h3 data-number="2.3" class="anchored" data-anchor-id="meta-st_qc_filterg"><span class="header-section-number">2.3</span> Filter genes</h3>
 <p>We will remove the <em>Bc1</em> gene, hemoglobin genes (blood contamination) and the mitochondrial genes.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="fu">dim</span>(sce)</span>
-<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Filter Bl1</span></span>
-<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>sce <span class="ot">&lt;-</span> sce[<span class="sc">!</span><span class="fu">grepl</span>(<span class="st">"Bc1"</span>, <span class="fu">rownames</span>(sce)), ]</span>
-<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Filter Mitocondrial</span></span>
-<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>sce <span class="ot">&lt;-</span> sce[<span class="sc">!</span><span class="fu">grepl</span>(<span class="st">"^mt-"</span>, <span class="fu">rownames</span>(sce)), ]</span>
-<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Filter Hemoglobin gene (optional if that is a problem on your data)</span></span>
-<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a>sce <span class="ot">&lt;-</span> sce[<span class="sc">!</span><span class="fu">grepl</span>(<span class="st">"^Hb.*-"</span>, <span class="fu">rownames</span>(sce)), ]</span>
-<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb15-12"><a href="#cb15-12" aria-hidden="true" tabindex="-1"></a><span class="fu">dim</span>(sce)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="fu">dim</span>(sce)</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Filter Bl1</span></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>sce <span class="ot">&lt;-</span> sce[<span class="sc">!</span><span class="fu">grepl</span>(<span class="st">"Bc1"</span>, <span class="fu">rownames</span>(sce)), ]</span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Filter Mitocondrial</span></span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>sce <span class="ot">&lt;-</span> sce[<span class="sc">!</span><span class="fu">grepl</span>(<span class="st">"^mt-"</span>, <span class="fu">rownames</span>(sce)), ]</span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Filter Hemoglobin gene (optional if that is a problem on your data)</span></span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a>sce <span class="ot">&lt;-</span> sce[<span class="sc">!</span><span class="fu">grepl</span>(<span class="st">"^Hb.*-"</span>, <span class="fu">rownames</span>(sce)), ]</span>
+<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-12"><a href="#cb16-12" aria-hidden="true" tabindex="-1"></a><span class="fu">dim</span>(sce)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] 32053  5804
 [1] 32031  5804</code></pre>
@@ -538,35 +542,35 @@ But remember, for some tissue types, the amount of genes expressed and proportio
 <h2 data-number="3" class="anchored" data-anchor-id="meta-st_analysis"><span class="header-section-number">3</span> Analysis</h2>
 <p>We will proceed with the data in a very similar manner to scRNA-seq data.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>sce <span class="ot">&lt;-</span> <span class="fu">computeSumFactors</span>(sce, <span class="at">sizes=</span><span class="fu">c</span>(<span class="dv">20</span>, <span class="dv">40</span>, <span class="dv">60</span>, <span class="dv">80</span>))</span>
-<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>sce <span class="ot">&lt;-</span> <span class="fu">logNormCounts</span>(sce)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>sce <span class="ot">&lt;-</span> <span class="fu">computeSumFactors</span>(sce, <span class="at">sizes=</span><span class="fu">c</span>(<span class="dv">20</span>, <span class="dv">40</span>, <span class="dv">60</span>, <span class="dv">80</span>))</span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>sce <span class="ot">&lt;-</span> <span class="fu">logNormCounts</span>(sce)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Now we can plot gene expression of individual genes, the gene <em>Hpca</em> is a strong hippocampal marker and <em>Ttr</em> is a marker of the choroid plexus.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>samples <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"Anterior"</span>, <span class="st">"Posterior"</span>)</span>
-<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>to_plot <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"Hpca"</span>, <span class="st">"Ttr"</span>)</span>
-<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>plist <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
-<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>n<span class="ot">=</span><span class="dv">1</span></span>
-<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span>(j <span class="cf">in</span> to_plot){</span>
-<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span>(i <span class="cf">in</span> samples){</span>
-<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>    temp <span class="ot">&lt;-</span> sce[,sce<span class="sc">$</span>Sample <span class="sc">==</span> i]</span>
-<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a>    temp<span class="sc">@</span>metadata <span class="ot">&lt;-</span> temp<span class="sc">@</span>metadata[[i]]</span>
-<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a>    plist[[n]]<span class="ot">&lt;-</span><span class="fu">spanielPlot</span>(<span class="at">object =</span> temp,</span>
-<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a>        <span class="at">plotType =</span> <span class="st">"Gene"</span>,</span>
-<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a>        <span class="at">gene=</span>j,</span>
-<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a>        <span class="at">customTitle =</span> j,</span>
-<span id="cb18-14"><a href="#cb18-14" aria-hidden="true" tabindex="-1"></a>        <span class="at">techType =</span> <span class="st">"Visium"</span>,</span>
-<span id="cb18-15"><a href="#cb18-15" aria-hidden="true" tabindex="-1"></a>        <span class="at">ptSizeMax =</span> <span class="dv">1</span>,<span class="at">ptSizeMin =</span> .<span class="dv">1</span>)</span>
-<span id="cb18-16"><a href="#cb18-16" aria-hidden="true" tabindex="-1"></a>    n<span class="ot">&lt;-</span>n<span class="sc">+</span><span class="dv">1</span></span>
-<span id="cb18-17"><a href="#cb18-17" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb18-18"><a href="#cb18-18" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb18-19"><a href="#cb18-19" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb18-20"><a href="#cb18-20" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_grid</span>(<span class="at">ncol=</span><span class="dv">2</span>, <span class="at">plotlist =</span> plist)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>samples <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"Anterior"</span>, <span class="st">"Posterior"</span>)</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>to_plot <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"Hpca"</span>, <span class="st">"Ttr"</span>)</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>plist <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>n<span class="ot">=</span><span class="dv">1</span></span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span>(j <span class="cf">in</span> to_plot){</span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span>(i <span class="cf">in</span> samples){</span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a>    temp <span class="ot">&lt;-</span> sce[,sce<span class="sc">$</span>Sample <span class="sc">==</span> i]</span>
+<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a>    temp<span class="sc">@</span>metadata <span class="ot">&lt;-</span> temp<span class="sc">@</span>metadata[[i]]</span>
+<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a>    plist[[n]]<span class="ot">&lt;-</span><span class="fu">spanielPlot</span>(<span class="at">object =</span> temp,</span>
+<span id="cb19-11"><a href="#cb19-11" aria-hidden="true" tabindex="-1"></a>        <span class="at">plotType =</span> <span class="st">"Gene"</span>,</span>
+<span id="cb19-12"><a href="#cb19-12" aria-hidden="true" tabindex="-1"></a>        <span class="at">gene=</span>j,</span>
+<span id="cb19-13"><a href="#cb19-13" aria-hidden="true" tabindex="-1"></a>        <span class="at">customTitle =</span> j,</span>
+<span id="cb19-14"><a href="#cb19-14" aria-hidden="true" tabindex="-1"></a>        <span class="at">techType =</span> <span class="st">"Visium"</span>,</span>
+<span id="cb19-15"><a href="#cb19-15" aria-hidden="true" tabindex="-1"></a>        <span class="at">ptSizeMax =</span> <span class="dv">1</span>,<span class="at">ptSizeMin =</span> .<span class="dv">1</span>)</span>
+<span id="cb19-16"><a href="#cb19-16" aria-hidden="true" tabindex="-1"></a>    n<span class="ot">&lt;-</span>n<span class="sc">+</span><span class="dv">1</span></span>
+<span id="cb19-17"><a href="#cb19-17" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb19-18"><a href="#cb19-18" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb19-19"><a href="#cb19-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-20"><a href="#cb19-20" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_grid</span>(<span class="at">ncol=</span><span class="dv">2</span>, <span class="at">plotlist =</span> plist)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="bioc_07_spatial_files/figure-html/unnamed-chunk-12-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-6"><img src="bioc_07_spatial_files/figure-html/unnamed-chunk-12-1.png" class="img-fluid figure-img" width="624"></a></p>
+<p><a href="bioc_07_spatial_files/figure-html/unnamed-chunk-14-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-6"><img src="bioc_07_spatial_files/figure-html/unnamed-chunk-14-1.png" class="img-fluid figure-img" width="624"></a></p>
 </figure>
 </div>
 </div>
@@ -576,46 +580,46 @@ But remember, for some tissue types, the amount of genes expressed and proportio
 <p>We can then now run dimensionality reduction and clustering using the same workflow as we use for scRNA-seq analysis.</p>
 <p>But make sure you run it on the <code>SCT</code> assay.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>var.out <span class="ot">&lt;-</span> <span class="fu">modelGeneVar</span>(sce, <span class="at">method=</span><span class="st">"loess"</span>)</span>
-<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>hvgs <span class="ot">=</span> <span class="fu">getTopHVGs</span>(var.out, <span class="at">n=</span><span class="dv">2000</span>)</span>
-<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>sce <span class="ot">&lt;-</span> <span class="fu">runPCA</span>(sce, <span class="at">exprs_values =</span> <span class="st">"logcounts"</span>,</span>
-<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>              <span class="at">subset_row=</span>hvgs,</span>
-<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>              <span class="at">ncomponents =</span> <span class="dv">50</span>,</span>
-<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>              <span class="at">ntop =</span> <span class="dv">100</span>,</span>
-<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>              <span class="at">scale =</span> T)</span>
-<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a>g <span class="ot">&lt;-</span> <span class="fu">buildSNNGraph</span>(sce,<span class="at">k=</span><span class="dv">5</span>,<span class="at">use.dimred=</span><span class="st">"PCA"</span>)</span>
-<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a>sce<span class="sc">$</span>louvain_SNNk5 <span class="ot">&lt;-</span> <span class="fu">factor</span>( igraph<span class="sc">::</span><span class="fu">cluster_louvain</span>(g)<span class="sc">$</span>membership )</span>
-<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a>sce <span class="ot">&lt;-</span> <span class="fu">runUMAP</span>(sce,<span class="at">dimred =</span> <span class="st">"PCA"</span>, <span class="at">n_dimred =</span> <span class="dv">50</span>,   <span class="at">ncomponents =</span> <span class="dv">2</span>,<span class="at">min_dist=</span><span class="fl">0.1</span>,<span class="at">spread=</span>.<span class="dv">3</span>,</span>
-<span id="cb19-11"><a href="#cb19-11" aria-hidden="true" tabindex="-1"></a>               <span class="at">metric=</span><span class="st">"correlation"</span>,<span class="at">name =</span> <span class="st">"UMAP_on_PCA"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>var.out <span class="ot">&lt;-</span> <span class="fu">modelGeneVar</span>(sce, <span class="at">method=</span><span class="st">"loess"</span>)</span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>hvgs <span class="ot">=</span> <span class="fu">getTopHVGs</span>(var.out, <span class="at">n=</span><span class="dv">2000</span>)</span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>sce <span class="ot">&lt;-</span> <span class="fu">runPCA</span>(sce, <span class="at">exprs_values =</span> <span class="st">"logcounts"</span>,</span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>              <span class="at">subset_row=</span>hvgs,</span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>              <span class="at">ncomponents =</span> <span class="dv">50</span>,</span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>              <span class="at">ntop =</span> <span class="dv">100</span>,</span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a>              <span class="at">scale =</span> T)</span>
+<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a>g <span class="ot">&lt;-</span> <span class="fu">buildSNNGraph</span>(sce,<span class="at">k=</span><span class="dv">5</span>,<span class="at">use.dimred=</span><span class="st">"PCA"</span>)</span>
+<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a>sce<span class="sc">$</span>louvain_SNNk5 <span class="ot">&lt;-</span> <span class="fu">factor</span>( igraph<span class="sc">::</span><span class="fu">cluster_louvain</span>(g)<span class="sc">$</span>membership )</span>
+<span id="cb20-10"><a href="#cb20-10" aria-hidden="true" tabindex="-1"></a>sce <span class="ot">&lt;-</span> <span class="fu">runUMAP</span>(sce,<span class="at">dimred =</span> <span class="st">"PCA"</span>, <span class="at">n_dimred =</span> <span class="dv">50</span>,   <span class="at">ncomponents =</span> <span class="dv">2</span>,<span class="at">min_dist=</span><span class="fl">0.1</span>,<span class="at">spread=</span>.<span class="dv">3</span>,</span>
+<span id="cb20-11"><a href="#cb20-11" aria-hidden="true" tabindex="-1"></a>               <span class="at">metric=</span><span class="st">"correlation"</span>,<span class="at">name =</span> <span class="st">"UMAP_on_PCA"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>We can then plot clusters onto umap or onto the tissue section.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>samples <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"Anterior"</span>, <span class="st">"Posterior"</span>)</span>
-<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>to_plot <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"louvain_SNNk5"</span>)</span>
-<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>plist <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
-<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>n<span class="ot">=</span><span class="dv">1</span></span>
-<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span>(j <span class="cf">in</span> to_plot){</span>
-<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span>(i <span class="cf">in</span> samples){</span>
-<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a>    temp <span class="ot">&lt;-</span> sce[,sce<span class="sc">$</span>Sample <span class="sc">==</span> i]</span>
-<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a>    temp<span class="sc">@</span>metadata <span class="ot">&lt;-</span> temp<span class="sc">@</span>metadata[[i]]</span>
-<span id="cb20-10"><a href="#cb20-10" aria-hidden="true" tabindex="-1"></a>    plist[[n]]<span class="ot">&lt;-</span><span class="fu">spanielPlot</span>(<span class="at">object =</span> temp,</span>
-<span id="cb20-11"><a href="#cb20-11" aria-hidden="true" tabindex="-1"></a>        <span class="at">plotType =</span> <span class="st">"Cluster"</span>,<span class="at">clusterRes =</span> j,</span>
-<span id="cb20-12"><a href="#cb20-12" aria-hidden="true" tabindex="-1"></a>        <span class="at">customTitle =</span> j,</span>
-<span id="cb20-13"><a href="#cb20-13" aria-hidden="true" tabindex="-1"></a>        <span class="at">techType =</span> <span class="st">"Visium"</span>,</span>
-<span id="cb20-14"><a href="#cb20-14" aria-hidden="true" tabindex="-1"></a>        <span class="at">ptSizeMax =</span> <span class="dv">1</span>,<span class="at">ptSizeMin =</span> .<span class="dv">1</span>)</span>
-<span id="cb20-15"><a href="#cb20-15" aria-hidden="true" tabindex="-1"></a>    n<span class="ot">&lt;-</span>n<span class="sc">+</span><span class="dv">1</span></span>
-<span id="cb20-16"><a href="#cb20-16" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb20-17"><a href="#cb20-17" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb20-18"><a href="#cb20-18" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb20-19"><a href="#cb20-19" aria-hidden="true" tabindex="-1"></a>plist[[<span class="dv">3</span>]] <span class="ot">&lt;-</span> <span class="fu">plotReducedDim</span>(sce, <span class="at">dimred =</span> <span class="st">"UMAP_on_PCA"</span>, <span class="at">colour_by =</span> <span class="st">"louvain_SNNk5"</span>)</span>
-<span id="cb20-20"><a href="#cb20-20" aria-hidden="true" tabindex="-1"></a>plist[[<span class="dv">4</span>]] <span class="ot">&lt;-</span> <span class="fu">plotReducedDim</span>(sce, <span class="at">dimred =</span> <span class="st">"UMAP_on_PCA"</span>, <span class="at">colour_by =</span> <span class="st">"Sample"</span>)</span>
-<span id="cb20-21"><a href="#cb20-21" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb20-22"><a href="#cb20-22" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_grid</span>(<span class="at">ncol=</span><span class="dv">2</span>, <span class="at">plotlist =</span> plist)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>samples <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"Anterior"</span>, <span class="st">"Posterior"</span>)</span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>to_plot <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"louvain_SNNk5"</span>)</span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>plist <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>n<span class="ot">=</span><span class="dv">1</span></span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span>(j <span class="cf">in</span> to_plot){</span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span>(i <span class="cf">in</span> samples){</span>
+<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a>    temp <span class="ot">&lt;-</span> sce[,sce<span class="sc">$</span>Sample <span class="sc">==</span> i]</span>
+<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a>    temp<span class="sc">@</span>metadata <span class="ot">&lt;-</span> temp<span class="sc">@</span>metadata[[i]]</span>
+<span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a>    plist[[n]]<span class="ot">&lt;-</span><span class="fu">spanielPlot</span>(<span class="at">object =</span> temp,</span>
+<span id="cb21-11"><a href="#cb21-11" aria-hidden="true" tabindex="-1"></a>        <span class="at">plotType =</span> <span class="st">"Cluster"</span>,<span class="at">clusterRes =</span> j,</span>
+<span id="cb21-12"><a href="#cb21-12" aria-hidden="true" tabindex="-1"></a>        <span class="at">customTitle =</span> j,</span>
+<span id="cb21-13"><a href="#cb21-13" aria-hidden="true" tabindex="-1"></a>        <span class="at">techType =</span> <span class="st">"Visium"</span>,</span>
+<span id="cb21-14"><a href="#cb21-14" aria-hidden="true" tabindex="-1"></a>        <span class="at">ptSizeMax =</span> <span class="dv">1</span>,<span class="at">ptSizeMin =</span> .<span class="dv">1</span>)</span>
+<span id="cb21-15"><a href="#cb21-15" aria-hidden="true" tabindex="-1"></a>    n<span class="ot">&lt;-</span>n<span class="sc">+</span><span class="dv">1</span></span>
+<span id="cb21-16"><a href="#cb21-16" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb21-17"><a href="#cb21-17" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb21-18"><a href="#cb21-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-19"><a href="#cb21-19" aria-hidden="true" tabindex="-1"></a>plist[[<span class="dv">3</span>]] <span class="ot">&lt;-</span> <span class="fu">plotReducedDim</span>(sce, <span class="at">dimred =</span> <span class="st">"UMAP_on_PCA"</span>, <span class="at">colour_by =</span> <span class="st">"louvain_SNNk5"</span>)</span>
+<span id="cb21-20"><a href="#cb21-20" aria-hidden="true" tabindex="-1"></a>plist[[<span class="dv">4</span>]] <span class="ot">&lt;-</span> <span class="fu">plotReducedDim</span>(sce, <span class="at">dimred =</span> <span class="st">"UMAP_on_PCA"</span>, <span class="at">colour_by =</span> <span class="st">"Sample"</span>)</span>
+<span id="cb21-21"><a href="#cb21-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-22"><a href="#cb21-22" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_grid</span>(<span class="at">ncol=</span><span class="dv">2</span>, <span class="at">plotlist =</span> plist)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="bioc_07_spatial_files/figure-html/unnamed-chunk-14-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-7"><img src="bioc_07_spatial_files/figure-html/unnamed-chunk-14-1.png" class="img-fluid figure-img" width="864"></a></p>
+<p><a href="bioc_07_spatial_files/figure-html/unnamed-chunk-16-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-7"><img src="bioc_07_spatial_files/figure-html/unnamed-chunk-16-1.png" class="img-fluid figure-img" width="864"></a></p>
 </figure>
 </div>
 </div>
@@ -626,51 +630,51 @@ But remember, for some tissue types, the amount of genes expressed and proportio
 <p>Quite often there are strong batch effects between different ST sections, so it may be a good idea to integrate the data across sections.</p>
 <p>We will do a similar integration as in the Data Integration lab.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>mnn_out <span class="ot">&lt;-</span> batchelor<span class="sc">::</span><span class="fu">fastMNN</span>(sce, <span class="at">subset.row =</span> hvgs, <span class="at">batch =</span> <span class="fu">factor</span>(sce<span class="sc">$</span>Sample), <span class="at">k =</span> <span class="dv">20</span>, <span class="at">d =</span> <span class="dv">50</span>)</span>
-<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a><span class="fu">reducedDim</span>(sce, <span class="st">"MNN"</span>) <span class="ot">&lt;-</span> <span class="fu">reducedDim</span>(mnn_out,<span class="st">"corrected"</span>)</span>
-<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a><span class="fu">rm</span>(mnn_out)</span>
-<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a><span class="fu">gc</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>mnn_out <span class="ot">&lt;-</span> batchelor<span class="sc">::</span><span class="fu">fastMNN</span>(sce, <span class="at">subset.row =</span> hvgs, <span class="at">batch =</span> <span class="fu">factor</span>(sce<span class="sc">$</span>Sample), <span class="at">k =</span> <span class="dv">20</span>, <span class="at">d =</span> <span class="dv">50</span>)</span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a><span class="fu">reducedDim</span>(sce, <span class="st">"MNN"</span>) <span class="ot">&lt;-</span> <span class="fu">reducedDim</span>(mnn_out,<span class="st">"corrected"</span>)</span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a><span class="fu">rm</span>(mnn_out)</span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a><span class="fu">gc</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>            used   (Mb) gc trigger   (Mb)  max used   (Mb)
-Ncells  10374236  554.1   17862084  954.0  17862084  954.0
-Vcells 191981577 1464.8  374059080 2853.9 374055530 2853.9</code></pre>
+Ncells  10342057  552.4   17901068  956.1  17901068  956.1
+Vcells 191815290 1463.5  374059739 2853.9 374058589 2853.9</code></pre>
 </div>
 </div>
 <p>Then we run dimensionality reduction and clustering as before.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>g <span class="ot">&lt;-</span> <span class="fu">buildSNNGraph</span>(sce,<span class="at">k=</span><span class="dv">5</span>,<span class="at">use.dimred=</span><span class="st">"MNN"</span>)</span>
-<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>sce<span class="sc">$</span>louvain_SNNk5 <span class="ot">&lt;-</span> <span class="fu">factor</span>( igraph<span class="sc">::</span><span class="fu">cluster_louvain</span>(g)<span class="sc">$</span>membership )</span>
-<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>sce <span class="ot">&lt;-</span> <span class="fu">runUMAP</span>(sce,<span class="at">dimred =</span> <span class="st">"MNN"</span>, <span class="at">n_dimred =</span> <span class="dv">50</span>,   <span class="at">ncomponents =</span> <span class="dv">2</span>,<span class="at">min_dist=</span><span class="fl">0.1</span>,<span class="at">spread=</span>.<span class="dv">3</span>,</span>
-<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>               <span class="at">metric=</span><span class="st">"correlation"</span>,<span class="at">name =</span> <span class="st">"UMAP_on_MNN"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>g <span class="ot">&lt;-</span> <span class="fu">buildSNNGraph</span>(sce,<span class="at">k=</span><span class="dv">5</span>,<span class="at">use.dimred=</span><span class="st">"MNN"</span>)</span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>sce<span class="sc">$</span>louvain_SNNk5 <span class="ot">&lt;-</span> <span class="fu">factor</span>( igraph<span class="sc">::</span><span class="fu">cluster_louvain</span>(g)<span class="sc">$</span>membership )</span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>sce <span class="ot">&lt;-</span> <span class="fu">runUMAP</span>(sce,<span class="at">dimred =</span> <span class="st">"MNN"</span>, <span class="at">n_dimred =</span> <span class="dv">50</span>,   <span class="at">ncomponents =</span> <span class="dv">2</span>,<span class="at">min_dist=</span><span class="fl">0.1</span>,<span class="at">spread=</span>.<span class="dv">3</span>,</span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>               <span class="at">metric=</span><span class="st">"correlation"</span>,<span class="at">name =</span> <span class="st">"UMAP_on_MNN"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>samples <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"Anterior"</span>, <span class="st">"Posterior"</span>)</span>
-<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>to_plot <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"louvain_SNNk5"</span>)</span>
-<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>plist <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
-<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a>n<span class="ot">=</span><span class="dv">1</span></span>
-<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span>(j <span class="cf">in</span> to_plot){</span>
-<span id="cb24-7"><a href="#cb24-7" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span>(i <span class="cf">in</span> samples){</span>
-<span id="cb24-8"><a href="#cb24-8" aria-hidden="true" tabindex="-1"></a>    temp <span class="ot">&lt;-</span> sce[,sce<span class="sc">$</span>Sample <span class="sc">==</span> i]</span>
-<span id="cb24-9"><a href="#cb24-9" aria-hidden="true" tabindex="-1"></a>    temp<span class="sc">@</span>metadata <span class="ot">&lt;-</span> temp<span class="sc">@</span>metadata[[i]]</span>
-<span id="cb24-10"><a href="#cb24-10" aria-hidden="true" tabindex="-1"></a>    plist[[n]]<span class="ot">&lt;-</span><span class="fu">spanielPlot</span>(<span class="at">object =</span> temp,</span>
-<span id="cb24-11"><a href="#cb24-11" aria-hidden="true" tabindex="-1"></a>        <span class="at">plotType =</span> <span class="st">"Cluster"</span>,<span class="at">clusterRes =</span> j,</span>
-<span id="cb24-12"><a href="#cb24-12" aria-hidden="true" tabindex="-1"></a>        <span class="at">customTitle =</span> j,</span>
-<span id="cb24-13"><a href="#cb24-13" aria-hidden="true" tabindex="-1"></a>        <span class="at">techType =</span> <span class="st">"Visium"</span>,</span>
-<span id="cb24-14"><a href="#cb24-14" aria-hidden="true" tabindex="-1"></a>        <span class="at">ptSizeMax =</span> <span class="dv">1</span>,<span class="at">ptSizeMin =</span> .<span class="dv">1</span>)</span>
-<span id="cb24-15"><a href="#cb24-15" aria-hidden="true" tabindex="-1"></a>    n<span class="ot">&lt;-</span>n<span class="sc">+</span><span class="dv">1</span></span>
-<span id="cb24-16"><a href="#cb24-16" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb24-17"><a href="#cb24-17" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb24-18"><a href="#cb24-18" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb24-19"><a href="#cb24-19" aria-hidden="true" tabindex="-1"></a>plist[[<span class="dv">3</span>]] <span class="ot">&lt;-</span> <span class="fu">plotReducedDim</span>(sce, <span class="at">dimred =</span> <span class="st">"UMAP_on_MNN"</span>, <span class="at">colour_by =</span> <span class="st">"louvain_SNNk5"</span>)</span>
-<span id="cb24-20"><a href="#cb24-20" aria-hidden="true" tabindex="-1"></a>plist[[<span class="dv">4</span>]] <span class="ot">&lt;-</span> <span class="fu">plotReducedDim</span>(sce, <span class="at">dimred =</span> <span class="st">"UMAP_on_MNN"</span>, <span class="at">colour_by =</span> <span class="st">"Sample"</span>)</span>
-<span id="cb24-21"><a href="#cb24-21" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb24-22"><a href="#cb24-22" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_grid</span>(<span class="at">ncol=</span><span class="dv">2</span>, <span class="at">plotlist =</span> plist)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>samples <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"Anterior"</span>, <span class="st">"Posterior"</span>)</span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>to_plot <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"louvain_SNNk5"</span>)</span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a>plist <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
+<span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a>n<span class="ot">=</span><span class="dv">1</span></span>
+<span id="cb25-6"><a href="#cb25-6" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span>(j <span class="cf">in</span> to_plot){</span>
+<span id="cb25-7"><a href="#cb25-7" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span>(i <span class="cf">in</span> samples){</span>
+<span id="cb25-8"><a href="#cb25-8" aria-hidden="true" tabindex="-1"></a>    temp <span class="ot">&lt;-</span> sce[,sce<span class="sc">$</span>Sample <span class="sc">==</span> i]</span>
+<span id="cb25-9"><a href="#cb25-9" aria-hidden="true" tabindex="-1"></a>    temp<span class="sc">@</span>metadata <span class="ot">&lt;-</span> temp<span class="sc">@</span>metadata[[i]]</span>
+<span id="cb25-10"><a href="#cb25-10" aria-hidden="true" tabindex="-1"></a>    plist[[n]]<span class="ot">&lt;-</span><span class="fu">spanielPlot</span>(<span class="at">object =</span> temp,</span>
+<span id="cb25-11"><a href="#cb25-11" aria-hidden="true" tabindex="-1"></a>        <span class="at">plotType =</span> <span class="st">"Cluster"</span>,<span class="at">clusterRes =</span> j,</span>
+<span id="cb25-12"><a href="#cb25-12" aria-hidden="true" tabindex="-1"></a>        <span class="at">customTitle =</span> j,</span>
+<span id="cb25-13"><a href="#cb25-13" aria-hidden="true" tabindex="-1"></a>        <span class="at">techType =</span> <span class="st">"Visium"</span>,</span>
+<span id="cb25-14"><a href="#cb25-14" aria-hidden="true" tabindex="-1"></a>        <span class="at">ptSizeMax =</span> <span class="dv">1</span>,<span class="at">ptSizeMin =</span> .<span class="dv">1</span>)</span>
+<span id="cb25-15"><a href="#cb25-15" aria-hidden="true" tabindex="-1"></a>    n<span class="ot">&lt;-</span>n<span class="sc">+</span><span class="dv">1</span></span>
+<span id="cb25-16"><a href="#cb25-16" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb25-17"><a href="#cb25-17" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb25-18"><a href="#cb25-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-19"><a href="#cb25-19" aria-hidden="true" tabindex="-1"></a>plist[[<span class="dv">3</span>]] <span class="ot">&lt;-</span> <span class="fu">plotReducedDim</span>(sce, <span class="at">dimred =</span> <span class="st">"UMAP_on_MNN"</span>, <span class="at">colour_by =</span> <span class="st">"louvain_SNNk5"</span>)</span>
+<span id="cb25-20"><a href="#cb25-20" aria-hidden="true" tabindex="-1"></a>plist[[<span class="dv">4</span>]] <span class="ot">&lt;-</span> <span class="fu">plotReducedDim</span>(sce, <span class="at">dimred =</span> <span class="st">"UMAP_on_MNN"</span>, <span class="at">colour_by =</span> <span class="st">"Sample"</span>)</span>
+<span id="cb25-21"><a href="#cb25-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-22"><a href="#cb25-22" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_grid</span>(<span class="at">ncol=</span><span class="dv">2</span>, <span class="at">plotlist =</span> plist)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="bioc_07_spatial_files/figure-html/unnamed-chunk-17-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-8"><img src="bioc_07_spatial_files/figure-html/unnamed-chunk-17-1.png" class="img-fluid figure-img" width="864"></a></p>
+<p><a href="bioc_07_spatial_files/figure-html/unnamed-chunk-19-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-8"><img src="bioc_07_spatial_files/figure-html/unnamed-chunk-19-1.png" class="img-fluid figure-img" width="864"></a></p>
 </figure>
 </div>
 </div>
@@ -693,45 +697,45 @@ Discuss
 <h3 data-number="3.3" class="anchored" data-anchor-id="meta-st_analysis_svg"><span class="header-section-number">3.3</span> Spatially Variable Features</h3>
 <p>There are two main workflows to identify molecular features that correlate with spatial location within a tissue. The first is to perform differential expression based on spatially distinct clusters, the other is to find features that have spatial patterning without taking clusters or spatial annotation into account. First, we will do differential expression between clusters just as we did for the scRNAseq data before.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="co"># differential expression between cluster 4 and cluster 6</span></span>
-<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>cell_selection <span class="ot">&lt;-</span> sce[ , sce<span class="sc">$</span>louvain_SNNk5 <span class="sc">%in%</span> <span class="fu">c</span>(<span class="dv">4</span>,<span class="dv">6</span>) ]</span>
-<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>cell_selection<span class="sc">$</span>louvain_SNNk5 <span class="ot">&lt;-</span> <span class="fu">factor</span>(cell_selection<span class="sc">$</span>louvain_SNNk5)</span>
-<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a>markers_genes <span class="ot">&lt;-</span> scran<span class="sc">::</span><span class="fu">findMarkers</span>( <span class="at">x =</span> cell_selection,</span>
-<span id="cb25-6"><a href="#cb25-6" aria-hidden="true" tabindex="-1"></a>                              <span class="at">groups =</span> cell_selection<span class="sc">$</span>louvain_SNNk5,</span>
-<span id="cb25-7"><a href="#cb25-7" aria-hidden="true" tabindex="-1"></a>                              <span class="at">lfc=</span>.<span class="dv">25</span>,</span>
-<span id="cb25-8"><a href="#cb25-8" aria-hidden="true" tabindex="-1"></a>                              <span class="at">pval.type =</span> <span class="st">"all"</span>,</span>
-<span id="cb25-9"><a href="#cb25-9" aria-hidden="true" tabindex="-1"></a>                              <span class="at">direction =</span> <span class="st">"up"</span>)</span>
-<span id="cb25-10"><a href="#cb25-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb25-11"><a href="#cb25-11" aria-hidden="true" tabindex="-1"></a><span class="co">#List of dataFrames with the results for each cluster</span></span>
-<span id="cb25-12"><a href="#cb25-12" aria-hidden="true" tabindex="-1"></a>top5_cell_selection <span class="ot">&lt;-</span> <span class="fu">lapply</span>( <span class="fu">names</span>(markers_genes), <span class="cf">function</span>(x) { temp <span class="ot">&lt;-</span> markers_genes[[x]][<span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">2</span>] ; temp<span class="sc">$</span>gene <span class="ot">&lt;-</span> <span class="fu">rownames</span>(markers_genes[[x]])[<span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>] ; temp<span class="sc">$</span>cluster <span class="ot">&lt;-</span> x ; <span class="fu">return</span>(temp) } )</span>
-<span id="cb25-13"><a href="#cb25-13" aria-hidden="true" tabindex="-1"></a>top5_cell_selection <span class="ot">&lt;-</span> <span class="fu">as_tibble</span>(<span class="fu">do.call</span>(rbind, top5_cell_selection))</span>
-<span id="cb25-14"><a href="#cb25-14" aria-hidden="true" tabindex="-1"></a>top5_cell_selection</span>
-<span id="cb25-15"><a href="#cb25-15" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb25-16"><a href="#cb25-16" aria-hidden="true" tabindex="-1"></a><span class="co"># plot top markers</span></span>
-<span id="cb25-17"><a href="#cb25-17" aria-hidden="true" tabindex="-1"></a>samples <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"Anterior"</span>, <span class="st">"Posterior"</span>)</span>
-<span id="cb25-18"><a href="#cb25-18" aria-hidden="true" tabindex="-1"></a>to_plot <span class="ot">&lt;-</span> top5_cell_selection<span class="sc">$</span>gene[<span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>]</span>
-<span id="cb25-19"><a href="#cb25-19" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb25-20"><a href="#cb25-20" aria-hidden="true" tabindex="-1"></a>plist <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
-<span id="cb25-21"><a href="#cb25-21" aria-hidden="true" tabindex="-1"></a>n<span class="ot">=</span><span class="dv">1</span></span>
-<span id="cb25-22"><a href="#cb25-22" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span>(j <span class="cf">in</span> to_plot){</span>
-<span id="cb25-23"><a href="#cb25-23" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span>(i <span class="cf">in</span> samples){</span>
-<span id="cb25-24"><a href="#cb25-24" aria-hidden="true" tabindex="-1"></a>    temp <span class="ot">&lt;-</span> sce[,sce<span class="sc">$</span>Sample <span class="sc">==</span> i]</span>
-<span id="cb25-25"><a href="#cb25-25" aria-hidden="true" tabindex="-1"></a>    temp<span class="sc">@</span>metadata <span class="ot">&lt;-</span> temp<span class="sc">@</span>metadata[[i]]</span>
-<span id="cb25-26"><a href="#cb25-26" aria-hidden="true" tabindex="-1"></a>    plist[[n]]<span class="ot">&lt;-</span><span class="fu">spanielPlot</span>(<span class="at">object =</span> temp,</span>
-<span id="cb25-27"><a href="#cb25-27" aria-hidden="true" tabindex="-1"></a>        <span class="at">plotType =</span> <span class="st">"Gene"</span>,</span>
-<span id="cb25-28"><a href="#cb25-28" aria-hidden="true" tabindex="-1"></a>        <span class="at">gene=</span>j,</span>
-<span id="cb25-29"><a href="#cb25-29" aria-hidden="true" tabindex="-1"></a>        <span class="at">customTitle =</span> j,</span>
-<span id="cb25-30"><a href="#cb25-30" aria-hidden="true" tabindex="-1"></a>        <span class="at">techType =</span> <span class="st">"Visium"</span>,</span>
-<span id="cb25-31"><a href="#cb25-31" aria-hidden="true" tabindex="-1"></a>        <span class="at">ptSizeMax =</span> <span class="dv">1</span>,<span class="at">ptSizeMin =</span> .<span class="dv">1</span>)</span>
-<span id="cb25-32"><a href="#cb25-32" aria-hidden="true" tabindex="-1"></a>    n<span class="ot">&lt;-</span>n<span class="sc">+</span><span class="dv">1</span></span>
-<span id="cb25-33"><a href="#cb25-33" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb25-34"><a href="#cb25-34" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb25-35"><a href="#cb25-35" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_grid</span>(<span class="at">ncol=</span><span class="dv">2</span>, <span class="at">plotlist =</span> plist)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="co"># differential expression between cluster 4 and cluster 6</span></span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>cell_selection <span class="ot">&lt;-</span> sce[ , sce<span class="sc">$</span>louvain_SNNk5 <span class="sc">%in%</span> <span class="fu">c</span>(<span class="dv">4</span>,<span class="dv">6</span>) ]</span>
+<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a>cell_selection<span class="sc">$</span>louvain_SNNk5 <span class="ot">&lt;-</span> <span class="fu">factor</span>(cell_selection<span class="sc">$</span>louvain_SNNk5)</span>
+<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a>markers_genes <span class="ot">&lt;-</span> scran<span class="sc">::</span><span class="fu">findMarkers</span>( <span class="at">x =</span> cell_selection,</span>
+<span id="cb26-6"><a href="#cb26-6" aria-hidden="true" tabindex="-1"></a>                              <span class="at">groups =</span> cell_selection<span class="sc">$</span>louvain_SNNk5,</span>
+<span id="cb26-7"><a href="#cb26-7" aria-hidden="true" tabindex="-1"></a>                              <span class="at">lfc=</span>.<span class="dv">25</span>,</span>
+<span id="cb26-8"><a href="#cb26-8" aria-hidden="true" tabindex="-1"></a>                              <span class="at">pval.type =</span> <span class="st">"all"</span>,</span>
+<span id="cb26-9"><a href="#cb26-9" aria-hidden="true" tabindex="-1"></a>                              <span class="at">direction =</span> <span class="st">"up"</span>)</span>
+<span id="cb26-10"><a href="#cb26-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-11"><a href="#cb26-11" aria-hidden="true" tabindex="-1"></a><span class="co">#List of dataFrames with the results for each cluster</span></span>
+<span id="cb26-12"><a href="#cb26-12" aria-hidden="true" tabindex="-1"></a>top5_cell_selection <span class="ot">&lt;-</span> <span class="fu">lapply</span>( <span class="fu">names</span>(markers_genes), <span class="cf">function</span>(x) { temp <span class="ot">&lt;-</span> markers_genes[[x]][<span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">2</span>] ; temp<span class="sc">$</span>gene <span class="ot">&lt;-</span> <span class="fu">rownames</span>(markers_genes[[x]])[<span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>] ; temp<span class="sc">$</span>cluster <span class="ot">&lt;-</span> x ; <span class="fu">return</span>(temp) } )</span>
+<span id="cb26-13"><a href="#cb26-13" aria-hidden="true" tabindex="-1"></a>top5_cell_selection <span class="ot">&lt;-</span> <span class="fu">as_tibble</span>(<span class="fu">do.call</span>(rbind, top5_cell_selection))</span>
+<span id="cb26-14"><a href="#cb26-14" aria-hidden="true" tabindex="-1"></a>top5_cell_selection</span>
+<span id="cb26-15"><a href="#cb26-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-16"><a href="#cb26-16" aria-hidden="true" tabindex="-1"></a><span class="co"># plot top markers</span></span>
+<span id="cb26-17"><a href="#cb26-17" aria-hidden="true" tabindex="-1"></a>samples <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"Anterior"</span>, <span class="st">"Posterior"</span>)</span>
+<span id="cb26-18"><a href="#cb26-18" aria-hidden="true" tabindex="-1"></a>to_plot <span class="ot">&lt;-</span> top5_cell_selection<span class="sc">$</span>gene[<span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>]</span>
+<span id="cb26-19"><a href="#cb26-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-20"><a href="#cb26-20" aria-hidden="true" tabindex="-1"></a>plist <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
+<span id="cb26-21"><a href="#cb26-21" aria-hidden="true" tabindex="-1"></a>n<span class="ot">=</span><span class="dv">1</span></span>
+<span id="cb26-22"><a href="#cb26-22" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span>(j <span class="cf">in</span> to_plot){</span>
+<span id="cb26-23"><a href="#cb26-23" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span>(i <span class="cf">in</span> samples){</span>
+<span id="cb26-24"><a href="#cb26-24" aria-hidden="true" tabindex="-1"></a>    temp <span class="ot">&lt;-</span> sce[,sce<span class="sc">$</span>Sample <span class="sc">==</span> i]</span>
+<span id="cb26-25"><a href="#cb26-25" aria-hidden="true" tabindex="-1"></a>    temp<span class="sc">@</span>metadata <span class="ot">&lt;-</span> temp<span class="sc">@</span>metadata[[i]]</span>
+<span id="cb26-26"><a href="#cb26-26" aria-hidden="true" tabindex="-1"></a>    plist[[n]]<span class="ot">&lt;-</span><span class="fu">spanielPlot</span>(<span class="at">object =</span> temp,</span>
+<span id="cb26-27"><a href="#cb26-27" aria-hidden="true" tabindex="-1"></a>        <span class="at">plotType =</span> <span class="st">"Gene"</span>,</span>
+<span id="cb26-28"><a href="#cb26-28" aria-hidden="true" tabindex="-1"></a>        <span class="at">gene=</span>j,</span>
+<span id="cb26-29"><a href="#cb26-29" aria-hidden="true" tabindex="-1"></a>        <span class="at">customTitle =</span> j,</span>
+<span id="cb26-30"><a href="#cb26-30" aria-hidden="true" tabindex="-1"></a>        <span class="at">techType =</span> <span class="st">"Visium"</span>,</span>
+<span id="cb26-31"><a href="#cb26-31" aria-hidden="true" tabindex="-1"></a>        <span class="at">ptSizeMax =</span> <span class="dv">1</span>,<span class="at">ptSizeMin =</span> .<span class="dv">1</span>)</span>
+<span id="cb26-32"><a href="#cb26-32" aria-hidden="true" tabindex="-1"></a>    n<span class="ot">&lt;-</span>n<span class="sc">+</span><span class="dv">1</span></span>
+<span id="cb26-33"><a href="#cb26-33" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb26-34"><a href="#cb26-34" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb26-35"><a href="#cb26-35" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_grid</span>(<span class="at">ncol=</span><span class="dv">2</span>, <span class="at">plotlist =</span> plist)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="bioc_07_spatial_files/figure-html/unnamed-chunk-18-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-9"><img src="bioc_07_spatial_files/figure-html/unnamed-chunk-18-1.png" class="img-fluid figure-img" width="672"></a></p>
+<p><a href="bioc_07_spatial_files/figure-html/unnamed-chunk-20-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-9"><img src="bioc_07_spatial_files/figure-html/unnamed-chunk-20-1.png" class="img-fluid figure-img" width="672"></a></p>
 </figure>
 </div>
 </div>
@@ -762,13 +766,13 @@ Discuss
 <tr class="odd">
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0</td>
-<td style="text-align: left;">Synpr</td>
+<td style="text-align: left;">Pcbp3</td>
 <td style="text-align: left;">4</td>
 </tr>
 <tr class="even">
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0</td>
-<td style="text-align: left;">Pcbp3</td>
+<td style="text-align: left;">Synpr</td>
 <td style="text-align: left;">4</td>
 </tr>
 <tr class="odd">
@@ -798,13 +802,13 @@ Discuss
 <tr class="odd">
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0</td>
-<td style="text-align: left;">Apoe</td>
+<td style="text-align: left;">Igf2</td>
 <td style="text-align: left;">6</td>
 </tr>
 <tr class="even">
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0</td>
-<td style="text-align: left;">Mgp</td>
+<td style="text-align: left;">Apoe</td>
 <td style="text-align: left;">6</td>
 </tr>
 </tbody>
@@ -819,35 +823,35 @@ Discuss
 <p>We can use a scRNA-seq dataset as a reference to predict the proportion of different celltypes in the Visium spots. Keep in mind that it is important to have a reference that contains all the celltypes you expect to find in your spots. Ideally it should be a scRNA-seq reference from the exact same tissue. We will use a reference scRNA-seq dataset of ~14,000 adult mouse cortical cell taxonomy from the Allen Institute, generated with the SMART-Seq2 protocol.</p>
 <p>First dowload the seurat data from: https://www.dropbox.com/s/cuowvm4vrf65pvq/allen_cortex.rds?dl=1 to folder <code>data/spatial/</code> with command:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>webpath <span class="ot">&lt;-</span> <span class="st">"https://www.dropbox.com/s/cuowvm4vrf65pvq/allen_cortex.rds?dl=1"</span></span>
-<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>path <span class="ot">&lt;-</span> <span class="st">"data/spatial/allen_cortex.rds"</span></span>
-<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span>(<span class="sc">!</span><span class="fu">file.exists</span>(path)){  </span>
-<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">dir.create</span>(<span class="st">"data/spatial/"</span>,<span class="at">recursive =</span> T)</span>
-<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">options</span>(<span class="at">timeout=</span><span class="dv">10000</span>)</span>
-<span id="cb26-6"><a href="#cb26-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">download.file</span>( <span class="at">url =</span> webpath , <span class="at">destfile =</span> path)</span>
-<span id="cb26-7"><a href="#cb26-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">options</span>(<span class="at">timeout=</span><span class="dv">60</span>)</span>
-<span id="cb26-8"><a href="#cb26-8" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>webpath <span class="ot">&lt;-</span> <span class="st">"https://www.dropbox.com/s/cuowvm4vrf65pvq/allen_cortex.rds?dl=1"</span></span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>path <span class="ot">&lt;-</span> <span class="st">"data/spatial/allen_cortex.rds"</span></span>
+<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span>(<span class="sc">!</span><span class="fu">file.exists</span>(path)){  </span>
+<span id="cb27-4"><a href="#cb27-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">dir.create</span>(<span class="st">"data/spatial/"</span>,<span class="at">recursive =</span> T)</span>
+<span id="cb27-5"><a href="#cb27-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">options</span>(<span class="at">timeout=</span><span class="dv">10000</span>)</span>
+<span id="cb27-6"><a href="#cb27-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">download.file</span>( <span class="at">url =</span> webpath , <span class="at">destfile =</span> path)</span>
+<span id="cb27-7"><a href="#cb27-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">options</span>(<span class="at">timeout=</span><span class="dv">60</span>)</span>
+<span id="cb27-8"><a href="#cb27-8" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>For speed, and for a more fair comparison of the celltypes, we will subsample all celltypes to a maximum of 200 cells per class (<code>subclass</code>).</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>allen_reference <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="st">"data/spatial/allen_cortex.rds"</span>)</span>
-<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>allen_reference_sce <span class="ot">&lt;-</span> Seurat<span class="sc">::</span><span class="fu">as.SingleCellExperiment</span>(allen_reference)</span>
-<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb27-4"><a href="#cb27-4" aria-hidden="true" tabindex="-1"></a><span class="co"># check number of cells per subclass</span></span>
-<span id="cb27-5"><a href="#cb27-5" aria-hidden="true" tabindex="-1"></a>allen_reference_sce<span class="sc">$</span>subclass <span class="ot">&lt;-</span> <span class="fu">sub</span>(<span class="st">"/"</span>,<span class="st">"_"</span>,<span class="fu">sub</span>(<span class="st">" "</span>,<span class="st">"_"</span>,allen_reference_sce<span class="sc">$</span>subclass))</span>
-<span id="cb27-6"><a href="#cb27-6" aria-hidden="true" tabindex="-1"></a><span class="fu">table</span>(allen_reference_sce<span class="sc">$</span>subclass)</span>
-<span id="cb27-7"><a href="#cb27-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb27-8"><a href="#cb27-8" aria-hidden="true" tabindex="-1"></a><span class="co"># select 20 cells per subclass, fist set subclass ass active.ident</span></span>
-<span id="cb27-9"><a href="#cb27-9" aria-hidden="true" tabindex="-1"></a>subset_cells <span class="ot">&lt;-</span> <span class="fu">lapply</span>(<span class="fu">unique</span>(allen_reference_sce<span class="sc">$</span>subclass),<span class="cf">function</span>(x){</span>
-<span id="cb27-10"><a href="#cb27-10" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span>( <span class="fu">sum</span>(allen_reference_sce<span class="sc">$</span>subclass <span class="sc">==</span> x) <span class="sc">&gt;</span> <span class="dv">20</span> ){</span>
-<span id="cb27-11"><a href="#cb27-11" aria-hidden="true" tabindex="-1"></a>    temp <span class="ot">&lt;-</span> <span class="fu">sample</span>(<span class="fu">colnames</span>(allen_reference_sce)[allen_reference_sce<span class="sc">$</span>subclass <span class="sc">==</span> x],<span class="at">size =</span> <span class="dv">20</span>)</span>
-<span id="cb27-12"><a href="#cb27-12" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">else</span> {</span>
-<span id="cb27-13"><a href="#cb27-13" aria-hidden="true" tabindex="-1"></a>    temp <span class="ot">&lt;-</span> <span class="fu">colnames</span>(allen_reference_sce)[allen_reference_sce<span class="sc">$</span>subclass <span class="sc">==</span> x]</span>
-<span id="cb27-14"><a href="#cb27-14" aria-hidden="true" tabindex="-1"></a>  } })</span>
-<span id="cb27-15"><a href="#cb27-15" aria-hidden="true" tabindex="-1"></a>allen_reference_sce <span class="ot">&lt;-</span> allen_reference_sce[,<span class="fu">unlist</span>(subset_cells)]</span>
-<span id="cb27-16"><a href="#cb27-16" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb27-17"><a href="#cb27-17" aria-hidden="true" tabindex="-1"></a><span class="co"># check again number of cells per subclass</span></span>
-<span id="cb27-18"><a href="#cb27-18" aria-hidden="true" tabindex="-1"></a><span class="fu">table</span>(allen_reference_sce<span class="sc">$</span>subclass)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>allen_reference <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="st">"data/spatial/allen_cortex.rds"</span>)</span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>allen_reference_sce <span class="ot">&lt;-</span> Seurat<span class="sc">::</span><span class="fu">as.SingleCellExperiment</span>(allen_reference)</span>
+<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a><span class="co"># check number of cells per subclass</span></span>
+<span id="cb28-5"><a href="#cb28-5" aria-hidden="true" tabindex="-1"></a>allen_reference_sce<span class="sc">$</span>subclass <span class="ot">&lt;-</span> <span class="fu">sub</span>(<span class="st">"/"</span>,<span class="st">"_"</span>,<span class="fu">sub</span>(<span class="st">" "</span>,<span class="st">"_"</span>,allen_reference_sce<span class="sc">$</span>subclass))</span>
+<span id="cb28-6"><a href="#cb28-6" aria-hidden="true" tabindex="-1"></a><span class="fu">table</span>(allen_reference_sce<span class="sc">$</span>subclass)</span>
+<span id="cb28-7"><a href="#cb28-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb28-8"><a href="#cb28-8" aria-hidden="true" tabindex="-1"></a><span class="co"># select 20 cells per subclass, fist set subclass ass active.ident</span></span>
+<span id="cb28-9"><a href="#cb28-9" aria-hidden="true" tabindex="-1"></a>subset_cells <span class="ot">&lt;-</span> <span class="fu">lapply</span>(<span class="fu">unique</span>(allen_reference_sce<span class="sc">$</span>subclass),<span class="cf">function</span>(x){</span>
+<span id="cb28-10"><a href="#cb28-10" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span>( <span class="fu">sum</span>(allen_reference_sce<span class="sc">$</span>subclass <span class="sc">==</span> x) <span class="sc">&gt;</span> <span class="dv">20</span> ){</span>
+<span id="cb28-11"><a href="#cb28-11" aria-hidden="true" tabindex="-1"></a>    temp <span class="ot">&lt;-</span> <span class="fu">sample</span>(<span class="fu">colnames</span>(allen_reference_sce)[allen_reference_sce<span class="sc">$</span>subclass <span class="sc">==</span> x],<span class="at">size =</span> <span class="dv">20</span>)</span>
+<span id="cb28-12"><a href="#cb28-12" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">else</span> {</span>
+<span id="cb28-13"><a href="#cb28-13" aria-hidden="true" tabindex="-1"></a>    temp <span class="ot">&lt;-</span> <span class="fu">colnames</span>(allen_reference_sce)[allen_reference_sce<span class="sc">$</span>subclass <span class="sc">==</span> x]</span>
+<span id="cb28-14"><a href="#cb28-14" aria-hidden="true" tabindex="-1"></a>  } })</span>
+<span id="cb28-15"><a href="#cb28-15" aria-hidden="true" tabindex="-1"></a>allen_reference_sce <span class="ot">&lt;-</span> allen_reference_sce[,<span class="fu">unlist</span>(subset_cells)]</span>
+<span id="cb28-16"><a href="#cb28-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb28-17"><a href="#cb28-17" aria-hidden="true" tabindex="-1"></a><span class="co"># check again number of cells per subclass</span></span>
+<span id="cb28-18"><a href="#cb28-18" aria-hidden="true" tabindex="-1"></a><span class="fu">table</span>(allen_reference_sce<span class="sc">$</span>subclass)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>
      Astro         CR       Endo    L2_3_IT         L4      L5_IT      L5_PT 
@@ -871,10 +875,10 @@ Discuss
 </div>
 <p>Then run normalization and dimensionality reduction.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>allen_reference_sce <span class="ot">&lt;-</span> <span class="fu">computeSumFactors</span>(allen_reference_sce, <span class="at">sizes=</span><span class="fu">c</span>(<span class="dv">20</span>, <span class="dv">40</span>, <span class="dv">60</span>, <span class="dv">80</span>))</span>
-<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>allen_reference_sce <span class="ot">&lt;-</span> <span class="fu">logNormCounts</span>(allen_reference_sce)</span>
-<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a>allen.var.out <span class="ot">&lt;-</span> <span class="fu">modelGeneVar</span>(allen_reference_sce, <span class="at">method=</span><span class="st">"loess"</span>)</span>
-<span id="cb29-4"><a href="#cb29-4" aria-hidden="true" tabindex="-1"></a>allen.hvgs <span class="ot">=</span> <span class="fu">getTopHVGs</span>(allen.var.out, <span class="at">n=</span><span class="dv">2000</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb30"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>allen_reference_sce <span class="ot">&lt;-</span> <span class="fu">computeSumFactors</span>(allen_reference_sce, <span class="at">sizes=</span><span class="fu">c</span>(<span class="dv">20</span>, <span class="dv">40</span>, <span class="dv">60</span>, <span class="dv">80</span>))</span>
+<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a>allen_reference_sce <span class="ot">&lt;-</span> <span class="fu">logNormCounts</span>(allen_reference_sce)</span>
+<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a>allen.var.out <span class="ot">&lt;-</span> <span class="fu">modelGeneVar</span>(allen_reference_sce, <span class="at">method=</span><span class="st">"loess"</span>)</span>
+<span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a>allen.hvgs <span class="ot">=</span> <span class="fu">getTopHVGs</span>(allen.var.out, <span class="at">n=</span><span class="dv">2000</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 <section id="meta-st_sub" class="level2" data-number="5">
@@ -884,58 +888,58 @@ Discuss
 <h3 data-number="5.1" class="anchored" data-anchor-id="integrate-with-scrnaseq"><span class="header-section-number">5.1</span> Integrate with scRNAseq</h3>
 <p>Here, will use SingleR for prediciting which cell types are present in the dataset. We can first select the anterior part as an example (to speed up predictions).</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb30"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>sce.anterior <span class="ot">&lt;-</span> sce[,sce<span class="sc">$</span>Sample <span class="sc">==</span> <span class="st">"Anterior"</span>]</span>
-<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a>sce.anterior<span class="sc">@</span>metadata <span class="ot">&lt;-</span> sce.anterior<span class="sc">@</span>metadata[[<span class="st">"Anterior"</span>]]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb31"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>sce.anterior <span class="ot">&lt;-</span> sce[,sce<span class="sc">$</span>Sample <span class="sc">==</span> <span class="st">"Anterior"</span>]</span>
+<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>sce.anterior<span class="sc">@</span>metadata <span class="ot">&lt;-</span> sce.anterior<span class="sc">@</span>metadata[[<span class="st">"Anterior"</span>]]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Next, we select the highly variable genes that are present in both datasets.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb31"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Find common highly variable genes</span></span>
-<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>common_hvgs <span class="ot">&lt;-</span> allen.hvgs[allen.hvgs <span class="sc">%in%</span> hvgs]</span>
-<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-4"><a href="#cb31-4" aria-hidden="true" tabindex="-1"></a><span class="co">#Predict cell classes</span></span>
-<span id="cb31-5"><a href="#cb31-5" aria-hidden="true" tabindex="-1"></a>pred.grun <span class="ot">&lt;-</span> <span class="fu">SingleR</span>(<span class="at">test=</span>sce.anterior[common_hvgs,],</span>
-<span id="cb31-6"><a href="#cb31-6" aria-hidden="true" tabindex="-1"></a>                     <span class="at">ref=</span>allen_reference_sce[common_hvgs,],</span>
-<span id="cb31-7"><a href="#cb31-7" aria-hidden="true" tabindex="-1"></a>                     <span class="at">labels=</span>allen_reference_sce<span class="sc">$</span>subclass)</span>
-<span id="cb31-8"><a href="#cb31-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-9"><a href="#cb31-9" aria-hidden="true" tabindex="-1"></a><span class="co">#Transfer the classes to the SCE object</span></span>
-<span id="cb31-10"><a href="#cb31-10" aria-hidden="true" tabindex="-1"></a>sce.anterior<span class="sc">$</span>cell_prediction <span class="ot">&lt;-</span> pred.grun<span class="sc">$</span>labels</span>
-<span id="cb31-11"><a href="#cb31-11" aria-hidden="true" tabindex="-1"></a>sce.anterior<span class="sc">@</span>colData <span class="ot">&lt;-</span> <span class="fu">cbind</span>(sce.anterior<span class="sc">@</span>colData,</span>
-<span id="cb31-12"><a href="#cb31-12" aria-hidden="true" tabindex="-1"></a>                              <span class="fu">as.data.frame.matrix</span>(<span class="fu">table</span>(<span class="fu">list</span>(<span class="dv">1</span><span class="sc">:</span><span class="fu">ncol</span>(sce.anterior),sce.anterior<span class="sc">$</span>cell_prediction))))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb32"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Find common highly variable genes</span></span>
+<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a>common_hvgs <span class="ot">&lt;-</span> allen.hvgs[allen.hvgs <span class="sc">%in%</span> hvgs]</span>
+<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-4"><a href="#cb32-4" aria-hidden="true" tabindex="-1"></a><span class="co">#Predict cell classes</span></span>
+<span id="cb32-5"><a href="#cb32-5" aria-hidden="true" tabindex="-1"></a>pred.grun <span class="ot">&lt;-</span> <span class="fu">SingleR</span>(<span class="at">test=</span>sce.anterior[common_hvgs,],</span>
+<span id="cb32-6"><a href="#cb32-6" aria-hidden="true" tabindex="-1"></a>                     <span class="at">ref=</span>allen_reference_sce[common_hvgs,],</span>
+<span id="cb32-7"><a href="#cb32-7" aria-hidden="true" tabindex="-1"></a>                     <span class="at">labels=</span>allen_reference_sce<span class="sc">$</span>subclass)</span>
+<span id="cb32-8"><a href="#cb32-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-9"><a href="#cb32-9" aria-hidden="true" tabindex="-1"></a><span class="co">#Transfer the classes to the SCE object</span></span>
+<span id="cb32-10"><a href="#cb32-10" aria-hidden="true" tabindex="-1"></a>sce.anterior<span class="sc">$</span>cell_prediction <span class="ot">&lt;-</span> pred.grun<span class="sc">$</span>labels</span>
+<span id="cb32-11"><a href="#cb32-11" aria-hidden="true" tabindex="-1"></a>sce.anterior<span class="sc">@</span>colData <span class="ot">&lt;-</span> <span class="fu">cbind</span>(sce.anterior<span class="sc">@</span>colData,</span>
+<span id="cb32-12"><a href="#cb32-12" aria-hidden="true" tabindex="-1"></a>                              <span class="fu">as.data.frame.matrix</span>(<span class="fu">table</span>(<span class="fu">list</span>(<span class="dv">1</span><span class="sc">:</span><span class="fu">ncol</span>(sce.anterior),sce.anterior<span class="sc">$</span>cell_prediction))))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Then we can plot the predicted cell populations back to tissue.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb32"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Plot cell predictions</span></span>
-<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a><span class="fu">spanielPlot</span>(<span class="at">object =</span> sce.anterior,</span>
-<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a>        <span class="at">plotType =</span> <span class="st">"Cluster"</span>,</span>
-<span id="cb32-4"><a href="#cb32-4" aria-hidden="true" tabindex="-1"></a>        <span class="at">clusterRes =</span> <span class="st">"cell_prediction"</span>,</span>
-<span id="cb32-5"><a href="#cb32-5" aria-hidden="true" tabindex="-1"></a>        <span class="at">customTitle =</span> <span class="st">"cell_prediction"</span>,</span>
-<span id="cb32-6"><a href="#cb32-6" aria-hidden="true" tabindex="-1"></a>        <span class="at">techType =</span> <span class="st">"Visium"</span>,</span>
-<span id="cb32-7"><a href="#cb32-7" aria-hidden="true" tabindex="-1"></a>        <span class="at">ptSizeMax =</span> <span class="dv">1</span>,<span class="at">ptSizeMin =</span> .<span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb33"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Plot cell predictions</span></span>
+<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a><span class="fu">spanielPlot</span>(<span class="at">object =</span> sce.anterior,</span>
+<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a>        <span class="at">plotType =</span> <span class="st">"Cluster"</span>,</span>
+<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a>        <span class="at">clusterRes =</span> <span class="st">"cell_prediction"</span>,</span>
+<span id="cb33-5"><a href="#cb33-5" aria-hidden="true" tabindex="-1"></a>        <span class="at">customTitle =</span> <span class="st">"cell_prediction"</span>,</span>
+<span id="cb33-6"><a href="#cb33-6" aria-hidden="true" tabindex="-1"></a>        <span class="at">techType =</span> <span class="st">"Visium"</span>,</span>
+<span id="cb33-7"><a href="#cb33-7" aria-hidden="true" tabindex="-1"></a>        <span class="at">ptSizeMax =</span> <span class="dv">1</span>,<span class="at">ptSizeMin =</span> .<span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="bioc_07_spatial_files/figure-html/unnamed-chunk-23-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-10"><img src="bioc_07_spatial_files/figure-html/unnamed-chunk-23-1.png" class="img-fluid figure-img" width="528"></a></p>
+<p><a href="bioc_07_spatial_files/figure-html/unnamed-chunk-25-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-10"><img src="bioc_07_spatial_files/figure-html/unnamed-chunk-25-1.png" class="img-fluid figure-img" width="528"></a></p>
 </figure>
 </div>
 </div>
 </div>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb33"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>plist <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
-<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>n<span class="ot">=</span><span class="dv">1</span></span>
-<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span>(i <span class="cf">in</span> <span class="fu">c</span>(<span class="st">"L2_3_IT"</span>,<span class="st">"L4"</span>,<span class="st">"L5_IT"</span>,<span class="st">"L6_IT"</span>)){</span>
-<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a>  plist[[n]] <span class="ot">&lt;-</span> <span class="fu">spanielPlot</span>(<span class="at">object =</span> sce.anterior,</span>
-<span id="cb33-5"><a href="#cb33-5" aria-hidden="true" tabindex="-1"></a>        <span class="at">plotType =</span> <span class="st">"Cluster"</span>,</span>
-<span id="cb33-6"><a href="#cb33-6" aria-hidden="true" tabindex="-1"></a>        <span class="at">clusterRes =</span> i,</span>
-<span id="cb33-7"><a href="#cb33-7" aria-hidden="true" tabindex="-1"></a>        <span class="at">customTitle =</span> i,</span>
-<span id="cb33-8"><a href="#cb33-8" aria-hidden="true" tabindex="-1"></a>        <span class="at">techType =</span> <span class="st">"Visium"</span>,<span class="at">ptSize =</span> .<span class="dv">3</span>,</span>
-<span id="cb33-9"><a href="#cb33-9" aria-hidden="true" tabindex="-1"></a>        <span class="at">ptSizeMax =</span> <span class="dv">1</span>,<span class="at">ptSizeMin =</span> .<span class="dv">1</span>)</span>
-<span id="cb33-10"><a href="#cb33-10" aria-hidden="true" tabindex="-1"></a>  n <span class="ot">&lt;-</span> n<span class="sc">+</span><span class="dv">1</span></span>
-<span id="cb33-11"><a href="#cb33-11" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb33-12"><a href="#cb33-12" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_grid</span>(<span class="at">ncol=</span><span class="dv">2</span>, <span class="at">plotlist =</span> plist)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb34"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a>plist <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
+<span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a>n<span class="ot">=</span><span class="dv">1</span></span>
+<span id="cb34-3"><a href="#cb34-3" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span>(i <span class="cf">in</span> <span class="fu">c</span>(<span class="st">"L2_3_IT"</span>,<span class="st">"L4"</span>,<span class="st">"L5_IT"</span>,<span class="st">"L6_IT"</span>)){</span>
+<span id="cb34-4"><a href="#cb34-4" aria-hidden="true" tabindex="-1"></a>  plist[[n]] <span class="ot">&lt;-</span> <span class="fu">spanielPlot</span>(<span class="at">object =</span> sce.anterior,</span>
+<span id="cb34-5"><a href="#cb34-5" aria-hidden="true" tabindex="-1"></a>        <span class="at">plotType =</span> <span class="st">"Cluster"</span>,</span>
+<span id="cb34-6"><a href="#cb34-6" aria-hidden="true" tabindex="-1"></a>        <span class="at">clusterRes =</span> i,</span>
+<span id="cb34-7"><a href="#cb34-7" aria-hidden="true" tabindex="-1"></a>        <span class="at">customTitle =</span> i,</span>
+<span id="cb34-8"><a href="#cb34-8" aria-hidden="true" tabindex="-1"></a>        <span class="at">techType =</span> <span class="st">"Visium"</span>,<span class="at">ptSize =</span> .<span class="dv">3</span>,</span>
+<span id="cb34-9"><a href="#cb34-9" aria-hidden="true" tabindex="-1"></a>        <span class="at">ptSizeMax =</span> <span class="dv">1</span>,<span class="at">ptSizeMin =</span> .<span class="dv">1</span>)</span>
+<span id="cb34-10"><a href="#cb34-10" aria-hidden="true" tabindex="-1"></a>  n <span class="ot">&lt;-</span> n<span class="sc">+</span><span class="dv">1</span></span>
+<span id="cb34-11"><a href="#cb34-11" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb34-12"><a href="#cb34-12" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_grid</span>(<span class="at">ncol=</span><span class="dv">2</span>, <span class="at">plotlist =</span> plist)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="bioc_07_spatial_files/figure-html/unnamed-chunk-24-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-11"><img src="bioc_07_spatial_files/figure-html/unnamed-chunk-24-1.png" class="img-fluid figure-img" width="864"></a></p>
+<p><a href="bioc_07_spatial_files/figure-html/unnamed-chunk-26-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-11"><img src="bioc_07_spatial_files/figure-html/unnamed-chunk-26-1.png" class="img-fluid figure-img" width="864"></a></p>
 </figure>
 </div>
 </div>
@@ -943,17 +947,17 @@ Discuss
 <p>Keep in mind, that the scores are “just” prediction scores, and do not correspond to proportion of cells that are of a certain celltype or similar. It mainly tell you that gene expression in a certain spot is hihgly similar/dissimilar to gene expression of a celltype. If we look at the scores, we see that some spots got really clear predictions by celltype, while others did not have high scores for any of the celltypes.</p>
 <p>We can also plot the gene expression and add filters together, too:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb34"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a><span class="fu">spanielPlot</span>(<span class="at">object =</span> sce.anterior,</span>
-<span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a>        <span class="at">plotType =</span> <span class="st">"Gene"</span>,</span>
-<span id="cb34-3"><a href="#cb34-3" aria-hidden="true" tabindex="-1"></a>        <span class="at">gene=</span><span class="st">"Wfs1"</span>,</span>
-<span id="cb34-4"><a href="#cb34-4" aria-hidden="true" tabindex="-1"></a>        <span class="at">showFilter =</span> sce.anterior<span class="sc">$</span>L4 ,</span>
-<span id="cb34-5"><a href="#cb34-5" aria-hidden="true" tabindex="-1"></a>        <span class="at">customTitle =</span> <span class="st">""</span>,</span>
-<span id="cb34-6"><a href="#cb34-6" aria-hidden="true" tabindex="-1"></a>        <span class="at">techType =</span> <span class="st">"Visium"</span>,</span>
-<span id="cb34-7"><a href="#cb34-7" aria-hidden="true" tabindex="-1"></a>        <span class="at">ptSize=</span><span class="dv">0</span>,<span class="at">ptSizeMin =</span> <span class="sc">-</span>.<span class="dv">3</span>,<span class="at">ptSizeMax =</span> <span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb35"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a><span class="fu">spanielPlot</span>(<span class="at">object =</span> sce.anterior,</span>
+<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a>        <span class="at">plotType =</span> <span class="st">"Gene"</span>,</span>
+<span id="cb35-3"><a href="#cb35-3" aria-hidden="true" tabindex="-1"></a>        <span class="at">gene=</span><span class="st">"Wfs1"</span>,</span>
+<span id="cb35-4"><a href="#cb35-4" aria-hidden="true" tabindex="-1"></a>        <span class="at">showFilter =</span> sce.anterior<span class="sc">$</span>L4 ,</span>
+<span id="cb35-5"><a href="#cb35-5" aria-hidden="true" tabindex="-1"></a>        <span class="at">customTitle =</span> <span class="st">""</span>,</span>
+<span id="cb35-6"><a href="#cb35-6" aria-hidden="true" tabindex="-1"></a>        <span class="at">techType =</span> <span class="st">"Visium"</span>,</span>
+<span id="cb35-7"><a href="#cb35-7" aria-hidden="true" tabindex="-1"></a>        <span class="at">ptSize=</span><span class="dv">0</span>,<span class="at">ptSizeMin =</span> <span class="sc">-</span>.<span class="dv">3</span>,<span class="at">ptSizeMax =</span> <span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="bioc_07_spatial_files/figure-html/unnamed-chunk-25-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-12"><img src="bioc_07_spatial_files/figure-html/unnamed-chunk-25-1.png" class="img-fluid figure-img" width="624"></a></p>
+<p><a href="bioc_07_spatial_files/figure-html/unnamed-chunk-27-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-12"><img src="bioc_07_spatial_files/figure-html/unnamed-chunk-27-1.png" class="img-fluid figure-img" width="624"></a></p>
 </figure>
 </div>
 </div>
@@ -963,7 +967,7 @@ Discuss
 <section id="meta-session" class="level2" data-number="6">
 <h2 data-number="6" class="anchored" data-anchor-id="meta-session"><span class="header-section-number">6</span> Session info</h2>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb35"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb36"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>R version 4.2.3 (2023-03-15)
 Platform: x86_64-pc-linux-gnu (64-bit)
@@ -1330,7 +1334,7 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
     <div class="nav-footer-right">Published with <a href="https://quarto.org/">Quarto</a> v1.3.433</div>
   </div>
 </footer>
-<script>var lightboxQuarto = GLightbox({"openEffect":"zoom","selector":".lightbox","closeEffect":"zoom","descPosition":"bottom","loop":true});</script>
+<script>var lightboxQuarto = GLightbox({"openEffect":"zoom","descPosition":"bottom","loop":true,"closeEffect":"zoom","selector":".lightbox"});</script>
 
 
 
