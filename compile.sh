@@ -4,8 +4,8 @@
 ##
 ## Description
 ## Evaluates and replaces meta variable shortcuts
-## .qmd files with knitr engine remain as .qmd files
-## .qmd files with jupyter engine is converted to .ipynb
+## .qmd files are converted to .md files
+## .md files with jupyter engine is converted to .ipynb
 ## The following directories are exprected:
 ## labs/seurat, labs/bioc, labs/scanpy
 ##
