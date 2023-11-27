@@ -18,24 +18,55 @@ git commit -m "I did this and that"
 git push origin
 ```
 
-## Rendering
-
-Be in suitable conda environment or use a docker container with all the tools necessary. Then,
-
-- Build the whole website
+## Environment
 
 ```
-quarto render
+# for r labs
+docker pull susrei/workshop-scrnaseq:2023-bioconductor-r4.3.0-conda
+
+# for python labs
+docker pull susrei/workshop-scrnaseq:2023-scanpy-py3.10
 ```
 
-- Build individual files
+## Run labs
+
+- Launch docker container in root of the repo
+
+- To run R labs in RStudio
 
 ```
-quarto render index.qmd
-quarto render labs/seurat/seurat_01_qc.qmd
+docker run --rm -ti --platform=linux/amd64 -p 8787:8787 -e PASSWORD=scrnaseq -v $PWD:/home/rstudio/workdir susrei/workshop-scrnaseq:2023-bioconductor-r4.3.0-conda
 ```
 
-Successfully rendered outputs are moved to `docs` folder.
+- Open in browser: `http://localhost:8787/`, login: rstudio, pass: scrnaseq
+- Navigate to `/home/rstudio/workdir/labs` and open qmd files
+
+- To run Python labs in Jupyter notebook
+
+```
+docker run --rm -ti --platform=linux/amd64 -p 8888:8888 -e PASSWORD=scrnaseq -v $PWD:/home/jovyan/workdir susrei/workshop-scrnaseq:2023-scanpy-py3.10
+```
+
+- Open in browser: `http://127.0.0.1:8888/lab?token=dcd9fae35ec5c3b9ca8b8adf41e4e26df5b17021a23d8b01`
+- Navigate to `/home/jovyan/workdir/compiled/scanpy` and open .ipynb files
+
+## Render
+
+Instructions to render the `.qmd` files to `.html`.
+
+- For R labs
+
+```
+docker run --rm -ti --platform=linux/amd64 -p 8787:8787 -e PASSWORD=scrnaseq -v $PWD:/home/rstudio/workdir susrei/workshop-scrnaseq:2023-bioconductor-r4.3.0-conda quarto render /home/rstudio/workdir/labs/seurat/seurat_01_qc.qmd
+```
+
+- For Python labs
+
+```
+docker run --rm -ti --platform=linux/amd64 -p 8888:8888 -e PASSWORD=scrnaseq -v $PWD:/home/jovyan/workdir susrei/workshop-scrnaseq:2023-scanpy-py3.10 quarto render /home/jovyan/workdir/labs/scanpy/scanpy_01_qc.qmd
+```
+
+- Successfully rendered outputs are moved to `docs` folder and chunks are cached under `_freeze`.
 
 ---
 
