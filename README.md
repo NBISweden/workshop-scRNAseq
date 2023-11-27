@@ -47,7 +47,7 @@ docker run --rm -ti --platform=linux/amd64 -p 8787:8787 -e PASSWORD=scrnaseq -v 
 docker run --rm -ti --platform=linux/amd64 -p 8888:8888 -e PASSWORD=scrnaseq -v $PWD:/home/jovyan/workdir susrei/workshop-scrnaseq:2023-scanpy-py3.10
 ```
 
-- Open in browser: `http://127.0.0.1:8888/lab?token=dcd9fae35ec5c3b9ca8b8adf41e4e26df5b17021a23d8b01`
+- Open in browser: `http://127.0.0.1:8888/lab?token=xxxx` (Use exact token from terminal on launch)
 - Navigate to `/home/jovyan/workdir/compiled/scanpy` and open .ipynb files
 
 ## Render
