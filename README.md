@@ -44,7 +44,7 @@ docker run --rm -ti --platform=linux/amd64 -p 8787:8787 -e PASSWORD=scrnaseq -v 
 - To run Python labs in Jupyter notebook
 
 ```
-docker run --rm -ti --platform=linux/amd64 -p 8888:8888 -e PASSWORD=scrnaseq -v $PWD:/home/jovyan/workdir susrei/workshop-scrnaseq:2023-scanpy-py3.10
+docker run --rm -ti --platform=linux/amd64 -p 8888:8888 -v $PWD:/home/jovyan/workdir susrei/workshop-scrnaseq:2023-scanpy-py3.10
 ```
 
 - Open in browser: `http://127.0.0.1:8888/lab?token=xxxx` (Use exact token from terminal on launch)
@@ -63,7 +63,7 @@ docker run --rm -ti --platform=linux/amd64 -p 8787:8787 -e PASSWORD=scrnaseq -v 
 - For Python labs
 
 ```
-docker run --rm -ti --platform=linux/amd64 -p 8888:8888 -e PASSWORD=scrnaseq -v $PWD:/home/jovyan/workdir susrei/workshop-scrnaseq:2023-scanpy-py3.10 quarto render /home/jovyan/workdir/labs/scanpy/scanpy_01_qc.qmd
+docker run --rm -ti --platform=linux/amd64 -p 8888:8888 -v $PWD:/home/jovyan/workdir susrei/workshop-scrnaseq:2023-scanpy-py3.10 quarto render /home/jovyan/workdir/labs/scanpy/scanpy_01_qc.qmd
 ```
 
 - Successfully rendered outputs are moved to `docs` folder and chunks are cached under `_freeze`.
