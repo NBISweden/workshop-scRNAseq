@@ -77,4 +77,5 @@ for file in "${output_dir}"/labs/scanpy/*.md; do
     quarto convert "$file" --output "${file%.md}.ipynb"
 done
 
-echo "Completed successfully."
+echo "All files compiled successfully."
+exit 0
