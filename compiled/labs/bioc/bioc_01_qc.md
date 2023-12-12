@@ -1,0 +1,561 @@
+---
+description: Quality control of single cell RNA-Seq data. Inspection of
+subtitle:  BIOCONDUCTOR TOOLKIT
+title:  Quality Control
+---
+
+<div>
+
+> **Note**
+>
+> Code chunks run R commands unless otherwise specified.
+
+</div>
+
+## Get data
+
+In this tutorial, we will run all tutorials with a set of 6 PBMC 10x
+datasets from 3 covid-19 patients and 3 healthy controls, the samples
+have been subsampled to 1500 cells per sample. They are part of the
+github repo and if you have cloned the repo they should be available in
+folder: `labs/data/covid_data_GSE149689`. Instructions on how to
+download them can also be found in the Precourse material.
+
+``` {r}
+webpath <- "https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/new_dataset/labs/data/covid_data_GSE149689/sub/"
+
+if(!dir.exists("./data/raw")){
+  dir.create("./data/raw", recursive = T)
+  file_list <- c(
+    "Normal_PBMC_13.h5", "Normal_PBMC_14.h5", "Normal_PBMC_5.h5",
+    "nCoV_PBMC_15.h5", "nCoV_PBMC_17.h5", "nCoV_PBMC_1.h5"
+  )
+  for (i in file_list) {
+    download.file(
+      url = paste0(webpath, i),
+      destfile = paste0("./data/raw/", i)
+    )
+  }
+}
+```
+
+With data in place, now we can start loading libraries we will use in
+this tutorial.
+
+``` {r}
+suppressMessages(require(scater))
+suppressMessages(require(scran))
+suppressMessages(require(cowplot))
+suppressMessages(require(org.Hs.eg.db))
+
+if(!require(DoubletFinder)){
+   remotes::install_github('chris-mcginnis-ucsf/DoubletFinder',upgrade = F, dependencies=F)
+}
+suppressMessages(require(DoubletFinder))
+```
+
+We can first load the data individually by reading directly from HDF5
+file format (.h5).
+
+``` {r}
+cov.15 <- Seurat::Read10X_h5(
+  filename = "data/raw/nCoV_PBMC_15.h5",
+  use.names = T)
+cov.1 <- Seurat::Read10X_h5(
+  filename = "data/raw/nCoV_PBMC_1.h5",
+  use.names = T)
+cov.17 <- Seurat::Read10X_h5(
+  filename = "data/raw/nCoV_PBMC_17.h5",
+  use.names = T)
+
+ctrl.5 <- Seurat::Read10X_h5(
+  filename = "data/raw/Normal_PBMC_5.h5",
+  use.names = T)
+ctrl.13 <- Seurat::Read10X_h5(
+  filename = "data/raw/Normal_PBMC_13.h5",
+  use.names = T)
+ctrl.14 <- Seurat::Read10X_h5(
+  filename = "data/raw/Normal_PBMC_14.h5",
+  use.names = T)
+```
+
+## Collate
+
+We can now load the expression matrices and merge them into a single
+object. Each analysis workflow (Seurat, Scater, Scanpy, etc) has its own
+way of storing data. We will add dataset labels as **cell.ids** just in
+case you have overlapping barcodes between the datasets. After that we
+add a column **Chemistry** in the metadata for plotting later on.
+
+``` {r}
+sce <- SingleCellExperiment( assays = list(counts = cbind(cov.1,cov.15, cov.17, ctrl.5, ctrl.13, ctrl.14)) )
+dim(sce)
+#Adding metadata
+sce@colData$sample <- unlist(sapply(c("cov.1","cov.15","cov.17", "ctrl.5","ctrl.13","ctrl.14"),function(x) rep(x,ncol(get(x)))))
+sce@colData$type <- ifelse(grepl("cov",sce@colData$sample), "Covid","Control")
+```
+
+Once you have created the merged Seurat object, the count matrices and
+individual count matrices and objects are not needed anymore. It is a
+good idea to remove them and run garbage collect to free up some memory.
+
+``` {r}
+# remove all objects that will not be used.
+rm(cov.15, cov.1, cov.17, ctrl.5, ctrl.13, ctrl.14)
+# run garbage collect to free up memory
+gc()
+```
+
+Here is how the count matrix and the metadata look like for every cell.
+
+``` {r }
+head(counts(sce)[,1:10])
+head(sce@colData,10)
+```
+
+## Calculate QC
+
+Having the data in a suitable format, we can start calculating some
+quality metrics. We can for example calculate the percentage of
+mitochondrial and ribosomal genes per cell and add to the metadata. The
+proportion hemoglobin genes can give an indication of red blood cell
+contamination. This will be helpful to visualize them across different
+metadata parameteres (i.e. datasetID and chemistry version). There are
+several ways of doing this. The QC metrics are finally added to the
+metadata table.
+
+Citing from Simple Single Cell workflows (Lun, McCarthy & Marioni,
+2017): High proportions are indicative of poor-quality cells (Islam et
+al. 2014; Ilicic et al. 2016), possibly because of loss of cytoplasmic
+RNA from perforated cells. The reasoning is that mitochondria are larger
+than individual transcript molecules and less likely to escape through
+tears in the cell membrane.
+
+``` {r}
+# Mitochondrial genes
+mito_genes <- rownames(sce)[grep("^MT-",rownames(sce))]
+# Ribosomal genes
+ribo_genes <- rownames(sce)[grep("^RP[SL]",rownames(sce))]
+# Hemoglobin genes - includes all genes starting with HB except HBP.
+hb_genes <- rownames(sce)[grep("^HB[^(P)]",rownames(sce))]
+```
+
+First, let Scran calculate some general qc-stats for genes and cells
+with the function `perCellQCMetrics`. It can also calculate proportion
+of counts for specific gene subsets, so first we need to define which
+genes are mitochondrial, ribosomal and hemoglobin.
+
+``` {r}
+sce <- addPerCellQC(sce, flatten = T, subsets = list(mt=mito_genes, hb=hb_genes, ribo=ribo_genes))
+
+# Way2: Doing it manually
+sce@colData$percent_mito <- Matrix::colSums(counts(sce)[mito_genes, ]) / sce@colData$total
+```
+
+Now you can see that we have additional data in the metadata slot.
+
+``` {r}
+head(colData(sce))
+```
+
+## Plot QC
+
+Now we can plot some of the QC variables as violin plots.
+
+``` {r}
+#| fig-height: 6
+#| fig-width: 10
+
+# total is total UMIs per cell
+# detected is number of detected genes.
+# the different gene subset percentages are listed as subsets_mt_percent etc.
+
+plot_grid(plotColData(sce,y = "detected",x = "sample",colour_by = "sample"),
+          plotColData(sce,y = "total",x = "sample",colour_by = "sample"),
+          plotColData(sce,y = "subsets_mt_percent",x = "sample",colour_by = "sample"),
+          plotColData(sce,y = "subsets_ribo_percent",x = "sample",colour_by = "sample"),
+          plotColData(sce,y = "subsets_hb_percent",x = "sample",colour_by = "sample"),ncol = 3)
+```
+
+As you can see, there is quite some difference in quality for the 4
+datasets, with for instance the covid_15 sample having fewer cells with
+many detected genes and more mitochondrial content. As the ribosomal
+proteins are highly expressed they will make up a larger proportion of
+the transcriptional landscape when fewer of the lowly expressed genes
+are detected. And we can plot the different QC-measures as scatter
+plots.
+
+``` {r}
+#| fig-height: 5
+#| fig-width: 6
+plotColData(sce,x = "total", y = "detected",colour_by = "sample")
+```
+
+<div>
+
+> **Discuss**
+>
+> Plot additional QC stats that we have calculated as scatter plots. How
+> are the different measures correlated? Can you explain why?
+
+</div>
+
+## Filtering
+
+### Detection-based filtering
+
+A standard approach is to filter cells with low amount of reads as well
+as genes that are present in at least a certain amount of cells. Here we
+will only consider cells with at least 200 detected genes and genes need
+to be expressed in at least 3 cells. Please note that those values are
+highly dependent on the library preparation method used.
+
+In Scran, we can use the function `quickPerCellQC` to filter out
+outliers from distributions of qc stats, such as detected genes, gene
+subsets etc. But in this case, we will take one setting at a time and
+run through the steps of filtering cells.
+
+``` {r}
+dim(sce)
+
+selected_c <-  colnames(sce)[sce$detected > 200]
+selected_f <- rownames(sce)[ Matrix::rowSums(counts(sce)) > 3]
+
+sce.filt <- sce[selected_f , selected_c]
+dim(sce.filt)
+```
+
+Extremely high number of detected genes could indicate doublets.
+However, depending on the cell type composition in your sample, you may
+have cells with higher number of genes (and also higher counts) from one
+cell type. In this case, we will run doublet prediction further down, so
+we will skip this step now, but the code below is an example of how it
+can be run:
+
+``` {r}
+# skip for now and run doublet detection instead...
+
+#high.det.v3 <- sce.filt$nFeatures > 4100
+#high.det.v2 <- (sce.filt$nFeatures > 2000) & (sce.filt$sample_id == "v2.1k")
+
+# remove these cells
+#sce.filt <- sce.filt[ , (!high.det.v3) & (!high.det.v2)]
+
+# check number of cells
+#ncol(sce.filt)
+```
+
+Additionally, we can also see which genes contribute the most to such
+reads. We can for instance plot the percentage of counts per gene.
+
+In Scater, you can also use the function `plotHighestExprs()` to plot
+the gene contribution, but the function is quite slow.
+
+``` {r}
+#| fig-height: 7
+#| fig-width: 7
+#Compute the relative expression of each gene per cell
+#Use sparse matrix operations, if your dataset is large, doing matrix devisions the regular way will take a very long time.
+C = counts(sce)
+C@x = C@x / rep.int(colSums(C), diff(C@p))
+most_expressed <- order(Matrix::rowSums( C ),decreasing = T)[20:1]
+boxplot( as.matrix(t(C[most_expressed,])),cex=.1, las=1, xlab="% total count per cell",col=scales::hue_pal()(20)[20:1],horizontal=TRUE)
+
+rm(C)
+
+# also, there is the option of running the function "plotHighestExprs" in the scater package, however, this function takes very long to execute.
+```
+
+As you can see, MALAT1 constitutes up to 30% of the UMIs from a single
+cell and the other top genes are mitochondrial and ribosomal genes. It
+is quite common that nuclear lincRNAs have correlation with quality and
+mitochondrial reads, so high detection of MALAT1 may be a technical
+issue. Let us assemble some information about such genes, which are
+important for quality control and downstream filtering.
+
+### Mito/Ribo filtering
+
+We also have quite a lot of cells with high proportion of mitochondrial
+and low proportion of ribosomal reads. It could be wise to remove those
+cells, if we have enough cells left after filtering. Another option
+would be to either remove all mitochondrial reads from the dataset and
+hope that the remaining genes still have enough biological signal. A
+third option would be to just regress out the `percent_mito` variable
+during scaling. In this case we had as much as 99.7% mitochondrial reads
+in some of the cells, so it is quite unlikely that there is much cell
+type signature left in those. Looking at the plots, make reasonable
+decisions on where to draw the cutoff. In this case, the bulk of the
+cells are below 20% mitochondrial reads and that will be used as a
+cutoff. We will also remove cells with less than 5% ribosomal reads.
+
+``` {r}
+selected_mito <- sce.filt$subsets_mt_percent < 30
+selected_ribo <- sce.filt$subsets_ribo_percent > 5
+
+# and subset the object to only keep those cells
+sce.filt <- sce.filt[, selected_mito & selected_ribo ]
+dim(sce.filt)
+```
+
+As you can see, a large proportion of sample covid_15 is filtered out.
+Also, there is still quite a lot of variation in `percent_mito`, so it
+will have to be dealt with in the data analysis step. We can also notice
+that the `percent_ribo` are also highly variable, but that is expected
+since different cell types have different proportions of ribosomal
+content, according to their function.
+
+### Plot filtered QC
+
+Lets plot the same QC-stats another time.
+
+``` {r}
+#| fig-height: 6
+#| fig-width: 10
+plot_grid(plotColData(sce,y = "detected",x = "sample",colour_by = "sample"),
+          plotColData(sce,y = "total",x = "sample",colour_by = "sample"),
+          plotColData(sce,y = "subsets_mt_percent",x = "sample",colour_by = "sample"),
+          plotColData(sce,y = "subsets_ribo_percent",x = "sample",colour_by = "sample"),
+          plotColData(sce,y = "subsets_hb_percent",x = "sample",colour_by = "sample"),ncol = 3)
+```
+
+### Filter genes
+
+As the level of expression of mitochondrial and MALAT1 genes are judged
+as mainly technical, it can be wise to remove them from the dataset
+before any further analysis.
+
+``` {r}
+dim(sce.filt)
+
+# Filter MALAT1
+sce.filt <- sce.filt[ ! grepl("MALAT1", rownames(sce.filt)), ]
+
+# Filter Mitocondrial
+sce.filt <- sce.filt[ ! grepl("^MT-", rownames(sce.filt)), ]
+
+# Filter Ribossomal gene (optional if that is a problem on your data)
+# sce.filt <- sce.filt[ ! grepl("^RP[SL]", rownames(sce.filt)), ]
+
+# Filter Hemoglobin gene
+sce.filt <- sce.filt[ ! grepl("^HB[^(P)]", rownames(sce.filt)), ]
+
+dim(sce.filt)
+```
+
+## Sample sex
+
+When working with human or animal samples, you should ideally constrain
+you experiments to a single sex to avoid including sex bias in the
+conclusions. However this may not always be possible. By looking at
+reads from chromosomeY (males) and XIST (X-inactive specific transcript)
+expression (mainly female) it is quite easy to determine per sample
+which sex it is. It can also bee a good way to detect if there has been
+any sample mixups, if the sample metadata sex does not agree with the
+computational predictions.
+
+To get chromosome information for all genes, you should ideally parse
+the information from the gtf file that you used in the mapping pipeline
+as it has the exact same annotation version/gene naming. However, it may
+not always be available, as in this case where we have downloaded public
+data. Hence, we will use biomart to fetch chromosome information. As the
+biomart instances quite often are unresponsive, you can try the code
+below, but if it fails, we have the file with gene annotations on github
+[here](https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/labs/misc/genes.table.csv).
+Make sure you put it at the correct location for the path `genes.file`
+to work.
+
+``` {r}
+genes.file = "data/results/genes.table.csv"
+
+if (!file.exists(genes.file)){
+  suppressMessages(require(biomaRt))
+
+  # initialize connection to mart, may take some time if the sites are unresponsive.
+  mart <- useMart("ENSEMBL_MART_ENSEMBL", dataset="hsapiens_gene_ensembl")
+
+  # fetch chromosome info plus some other annotations
+  genes.table <- try(biomaRt::getBM(attributes = c("ensembl_gene_id",
+              "external_gene_name", "description","gene_biotype", "chromosome_name","start_position"),
+              mart = mart, useCache = F))
+
+  if(!dir.exists("data/results")){dir.create("data/results")}
+  if(is.data.frame(genes.table)){write.csv(genes.table, file = genes.file)}
+
+  if (!file.exists(genes.file)){
+  download.file("https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/master/labs/misc/genes.table.csv",destfile = "data/results/genes.table.csv")
+    genes.table = read.csv(genes.file)
+    }
+}else{
+  genes.table = read.csv(genes.file)
+}
+
+genes.table <- genes.table[genes.table$external_gene_name %in% rownames(sce.filt),]
+```
+
+Now that we have the chromosome information, we can calculate per cell
+the proportion of reads that comes from chromosome Y.
+
+``` {r}
+chrY.gene = genes.table$external_gene_name[genes.table$chromosome_name == "Y"]
+sce.filt@colData$pct_chrY  = Matrix::colSums(counts(sce.filt)[chrY.gene,]) / colSums(counts(sce.filt))
+```
+
+Then plot XIST expression vs chrY proportion. As you can see, the
+samples are clearly on either side, even if some cells do not have
+detection of either.
+
+``` {r}
+#| fig-height: 5
+#| fig-width: 5
+
+# as plotColData cannot take an expression vs metadata, we need to add in XIST expression to colData
+sce.filt@colData$XIST = counts(sce.filt)["XIST",] /  colSums(counts(sce.filt)) * 10000
+plotColData(sce.filt,  "XIST",  "pct_chrY")
+```
+
+Plot as violins.
+
+``` {r}
+#| fig-height: 4
+#| fig-width: 10
+
+plot_grid(plotColData(sce.filt, y = "XIST", x = "sample", colour_by = "sample"),
+          plotColData(sce.filt, y = "pct_chrY", x = "sample", colour_by = "sample"),  ncol = 2)
+```
+
+Here, we can see clearly that we have two males and 4 females, can you
+see which samples they are? Do you think this will cause any problems
+for downstream analysis? Discuss with your group: what would be the best
+way to deal with this type of sex bias?
+
+## Cell cycle state
+
+We here perform cell cycle scoring. To score a gene list, the algorithm
+calculates the difference of mean expression of the given list and the
+mean expression of reference genes. To build the reference, the function
+randomly chooses a bunch of genes matching the distribution of the
+expression of the given list. Cell cycle scoring adds three slots in
+data, a score for S phase, a score for G2M phase and the predicted cell
+cycle phase.
+
+``` {r}
+hs.pairs <- readRDS(system.file("exdata", "human_cycle_markers.rds", package="scran"))
+anno <- select(org.Hs.eg.db, keys=rownames(sce.filt), keytype="SYMBOL", column="ENSEMBL")
+ensembl <- anno$ENSEMBL[match(rownames(sce.filt), anno$SYMBOL)]
+
+#Use only genes related to biological process cell cycle to speed up
+#https://www.ebi.ac.uk/QuickGO/term/GO:0007049 = cell cycle (BP,Biological Process)
+GOs <- na.omit(select(org.Hs.eg.db, keys=na.omit(ensembl), keytype="ENSEMBL", column="GO"))
+GOs <- GOs[GOs$GO == "GO:0007049","ENSEMBL"]
+hs.pairs <- lapply(hs.pairs,function(x){ x[rowSums( apply(x, 2, function(i) i %in% GOs)) >= 1,]})
+str(hs.pairs)
+cc.ensembl <- ensembl[ensembl %in% GOs] #This is the fastest (less genes), but less accurate too
+#cc.ensembl <- ensembl[ ensembl %in% unique(unlist(hs.pairs))]
+
+assignments <- cyclone(sce.filt[ensembl %in% cc.ensembl,], hs.pairs, gene.names= ensembl[ ensembl %in% cc.ensembl])
+sce.filt$G1.score <- assignments$scores$G1
+sce.filt$G2M.score <- assignments$scores$G2M
+sce.filt$S.score <- assignments$scores$S
+```
+
+We can now plot a violin plot for the cell cycle scores as well.
+
+``` {r}
+#| fig-height: 4.5
+#| fig-width: 16
+
+plot_grid(plotColData(sce.filt,y = "G2M.score",x = "G1.score",colour_by = "sample"),
+          plotColData(sce.filt,y = "G2M.score",x = "sample",colour_by = "sample"),
+          plotColData(sce.filt,y = "G1.score",x = "sample",colour_by = "sample"),
+          plotColData(sce.filt,y = "S.score",x = "sample",colour_by = "sample"),ncol = 4)
+```
+
+Cyclone predicts most cells as G1, but also quite a lot of cells with
+high S-Phase scores. Compare to results with Seurat and Scanpy and see
+how different predictors will give clearly different results.
+
+## Predict doublets
+
+Doublets/Multiples of cells in the same well/droplet is a common issue
+in scRNAseq protocols. Especially in droplet-based methods with
+overloading of cells. In a typical 10x experiment the proportion of
+doublets is linearly dependent on the amount of loaded cells. As
+indicated from the Chromium user guide, doublet rates are about as
+follows:\
+![](../figs/10x_doublet_rate.png)\
+Most doublet detectors simulates doublets by merging cell counts and
+predicts doublets as cells that have similar embeddings as the simulated
+doublets. Most such packages need an assumption about the
+number/proportion of expected doublets in the dataset. The data you are
+using is subsampled, but the original datasets contained about 5 000
+cells per sample, hence we can assume that they loaded about 9 000 cells
+and should have a doublet rate at about 4%.
+
+<div>
+
+> **Caution**
+>
+> Ideally doublet prediction should be run on each sample separately,
+> especially if your different samples have different proportions of
+> cell types. In this case, the data is subsampled so we have very few
+> cells per sample and all samples are sorted PBMCs so it is okay to run
+> them together.
+
+</div>
+
+There is a method to predict if a cluster consists of mainly doublets
+`findDoubletClusters()`, but we can also predict individual cells based
+on simulations using the function `computeDoubletDensity()` which we
+will do here. Doublet detection will be performed using PCA, so we need
+to first normalize the data and run variable gene detection, as well as
+UMAP for visualization. These steps will be explored in more detail in
+coming exercises.
+
+``` {r}
+sce.filt <- logNormCounts(sce.filt)
+dec <- modelGeneVar(sce.filt, block = sce.filt$sample)
+hvgs = getTopHVGs(dec, n=2000)
+
+sce.filt <- runPCA(sce.filt, subset_row=hvgs)
+
+sce.filt <- runUMAP(sce.filt, pca = 10)
+```
+
+``` {r}
+suppressPackageStartupMessages(require(scDblFinder))
+
+# run computeDoubletDensity with 10 principal components.
+sce.filt <- scDblFinder(sce.filt, dims = 10)
+```
+
+``` {r}
+#| fig-height: 5
+#| fig-width: 14
+plot_grid(plotUMAP(sce.filt, colour_by="scDblFinder.score"),
+          plotUMAP(sce.filt, colour_by="scDblFinder.class"),
+          plotUMAP(sce.filt, colour_by="sample"), ncol = 3)
+```
+
+Now, lets remove all predicted doublets from our data.
+
+``` {r}
+sce.filt = sce.filt[,sce.filt$scDblFinder.score < 2]
+dim(sce.filt)
+```
+
+## Save data
+
+Finally, lets save the QC-filtered data for further analysis. Create
+output directory `results` and save data to that folder. This will be
+used in downstream labs.
+
+``` {r}
+if (!dir.exists("data/results")) dir.create("data/results", showWarnings = F)
+if (!file.exists("data/results/covid_qc.rds")) saveRDS(sce.filt, "data/results/covid_qc.rds")
+```
+
+## Session info
+
+``` {r}
+sessionInfo()
+```

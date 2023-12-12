@@ -1,0 +1,261 @@
+---
+title: "{{< meta dge_title >}}"
+subtitle: "{{< meta subtitle_bioc >}}"
+description: "{{< meta dge_description >}}"
+format: html
+---
+
+::: {.callout-note}
+Code chunks run R commands unless otherwise specified.
+:::
+
+{{< meta dge_1 >}}
+
+{{< meta dge_2 >}}
+
+```{r}
+suppressPackageStartupMessages({
+  library(scater)
+  library(scran)
+  #library(venn)
+  library(cowplot)
+  library(ggplot2)
+  # library(rafalib)
+  library(pheatmap)
+  library(igraph)
+  library(dplyr)
+})
+
+sce <- readRDS("data/results/covid_qc_dr_int_cl.rds")
+```
+
+## {{< meta dge_cmg >}}
+
+{{< meta dge_cmg_1 >}}
+
+```{r}
+#Compute differentiall expression
+markers_genes <- scran::findMarkers(
+  x = sce,
+  groups = as.character(sce$louvain_SNNk15),
+  lfc=.5,
+  pval.type = "all",
+  direction = "up"
+)
+
+#List of dataFrames with the results for each cluster
+markers_genes
+
+#Visualizing the expression of one
+markers_genes[["1"]]
+```
+
+{{< meta dge_cmg_2 >}}
+
+```{r}
+#Colect the top 25 genes for each cluster and put the into a single table
+top25 <- lapply( names(markers_genes), function(x) { temp <- markers_genes[[x]][1:25, 1:2] ; temp$gene <- rownames(markers_genes[[x]])[1:25] ; temp$cluster <- x ; return(temp) } )
+top25 <- as_tibble(do.call(rbind, top25))
+top25$p.value[top25$p.value==0] <- 1e-300
+top25
+```
+
+```{r}
+#| fig-height: 7
+#| fig-width: 8
+
+par(mfrow = c(1, 5), mar = c(4, 6, 3, 1))
+for (i in unique(top25$cluster)) {
+    barplot(sort(setNames(-log10(top25$p.value), top25$gene)[top25$cluster == i], F),
+        horiz = T, las = 1, main = paste0(i, " vs. rest"), border = "white", yaxs = "i", xlab = "-log10FC"
+    )
+    abline(v = c(0, -log10(0.05)), lty = c(1, 2))
+}
+```
+
+{{< meta dge_cmg_3 >}}
+
+```{r}
+#| fig-height: 6
+#| fig-width: 8
+
+as_tibble(top25) %>% group_by(cluster)  %>% top_n(-5, p.value) -> top5
+
+scater::plotHeatmap(sce[, order(sce$louvain_SNNk15)],
+    features = unique(top5$gene),
+    center = T, zlim = c(-3, 3),
+    colour_columns_by = "louvain_SNNk15",
+    show_colnames = F, cluster_cols = F,
+    fontsize_row = 6,
+    color = colorRampPalette(c("purple", "black", "yellow"))(90)
+)
+```
+
+{{< meta dge_cmg_4 >}}
+
+```{r}
+#| fig-height: 12
+#| fig-width: 13
+
+scater::plotExpression(sce, features = unique(top5$gene), x = "louvain_SNNk15", ncol = 5, colour_by = "louvain_SNNk15", scales="free")
+```
+
+## {{< meta dge_cond >}}
+
+{{< meta dge_cond_1 >}}
+
+```{r}
+#| fig-height: 5
+#| fig-width: 5
+
+# Filter cells from that cluster
+cell_selection <- sce[, sce$louvain_SNNk15 == 8]
+
+# Compute differentiall expression
+DGE_cell_selection <- findMarkers(
+    x = cell_selection,
+    groups = cell_selection@colData$type,
+    lfc = .25,
+    pval.type = "all",
+    direction = "any"
+)
+top5_cell_selection <- lapply(names(DGE_cell_selection), function(x) {
+    temp <- DGE_cell_selection[[x]][1:5, 1:2]
+    temp$gene <- rownames(DGE_cell_selection[[x]])[1:5]
+    temp$cluster <- x
+    return(temp)
+})
+top5_cell_selection <- as_tibble(do.call(rbind, top5_cell_selection))
+top5_cell_selection
+```
+
+{{< meta dge_cond_2 >}}
+
+```{r}
+#| fig-height: 4
+#| fig-width: 6
+
+scater::plotExpression(cell_selection, features = unique(top5_cell_selection$gene), x = "type", ncol = 5, colour_by = "type")
+```
+
+#DGE_ALL6.2:
+
+```{r}
+#| fig-height: 8
+#| fig-width: 13
+
+plotlist <- list()
+for (i in unique(top5_cell_selection$gene)) {
+    plotlist[[i]] <- plotReducedDim(sce, dimred = "UMAP_on_MNN", colour_by = i, by_exprs_values = "logcounts") +
+        ggtitle(label = i) + theme(plot.title = element_text(size = 20))
+}
+plot_grid(ncol = 3, plotlist = plotlist)
+```
+
+## {{< meta dge_gsa >}}
+
+### {{< meta dge_gsa_hyper >}}
+
+{{< meta dge_gsa_hyper_1 >}}
+
+```{r}
+# Load additional packages
+library(enrichR)
+
+# Check available databases to perform enrichment (then choose one)
+enrichR::listEnrichrDbs()
+
+# Perform enrichment
+top_DGE <- DGE_cell_selection$Covid[ (DGE_cell_selection$Covid$p.value < 0.01) & (abs(DGE_cell_selection$Covid[,grep("logFC.C",colnames(DGE_cell_selection$Covid))])>0.25), ]
+
+enrich_results <- enrichr(
+ genes     = rownames(top_DGE),
+ databases = "GO_Biological_Process_2017b" )[[1]]
+```
+
+{{< meta dge_gsa_hyper_2 >}}
+
+```{r}
+par(mfrow = c(1, 1), mar = c(3, 25, 2, 1))
+barplot(
+    height = -log10(enrich_results$P.value)[10:1],
+    names.arg = enrich_results$Term[10:1],
+    horiz = TRUE,
+    las = 1,
+    border = FALSE,
+    cex.names = .6
+)
+abline(v = c(-log10(0.05)), lty = 2)
+abline(v = 0, lty = 1)
+```
+
+## {{< meta dge_gsea >}}
+
+{{< meta dge_gsea_1 >}}
+
+```{r}
+#| fig-height: 5
+#| fig-width: 5
+
+# Create a gene rank based on the gene expression fold change
+gene_rank <- setNames(DGE_cell_selection$Covid[, grep("logFC.C", colnames(DGE_cell_selection$Covid))], casefold(rownames(DGE_cell_selection$Covid), upper = T))
+```
+
+{{< meta dge_gsea_2 >}}
+
+```{r}
+#| fig-height: 5
+#| fig-width: 5
+
+library(msigdbr)
+
+# Download gene sets
+msigdbgmt <- msigdbr::msigdbr("Homo sapiens")
+msigdbgmt <- as.data.frame(msigdbgmt)
+
+# List available gene sets
+unique(msigdbgmt$gs_subcat)
+
+# Subset which gene set you want to use.
+msigdbgmt_subset <- msigdbgmt[msigdbgmt$gs_subcat == "CP:WIKIPATHWAYS", ]
+gmt <- lapply(unique(msigdbgmt_subset$gs_name), function(x) {
+    msigdbgmt_subset[msigdbgmt_subset$gs_name == x, "gene_symbol"]
+})
+names(gmt) <- unique(paste0(msigdbgmt_subset$gs_name, "_", msigdbgmt_subset$gs_exact_source))
+```
+
+{{< meta dge_gsea_3 >}}
+
+```{r}
+#| fig-height: 5
+#| fig-width: 12
+
+library(fgsea)
+
+# Perform enrichemnt analysis
+fgseaRes <- fgsea(pathways = gmt, stats = gene_rank, minSize = 15, maxSize = 500, nperm = 10000)
+fgseaRes <- fgseaRes[order(fgseaRes$NES, decreasing = T), ]
+
+# Filter the results table to show only the top 10 UP or DOWN regulated processes (optional)
+top10_UP <- fgseaRes$pathway[1:10]
+
+# Nice summary table (shown as a plot)
+dev.off()
+plotGseaTable(gmt[top10_UP], gene_rank, fgseaRes, gseaParam = 0.5)
+```
+
+:::{.callout-note title="Discuss"}
+{{< meta dge_gsea_4 >}}
+:::
+
+{{< meta dge_save >}}
+
+```{r}
+saveRDS(sce,"data/results/covid_qc_dr_int_cl_dge.rds")
+```
+
+## {{< meta session >}}
+
+```{r}
+sessionInfo()
+```

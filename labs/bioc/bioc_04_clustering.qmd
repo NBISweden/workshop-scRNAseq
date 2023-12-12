@@ -1,0 +1,217 @@
+---
+title: "{{< meta clust_title >}}"
+subtitle: "{{< meta subtitle_bioc >}}"
+description: "{{< meta clust_description >}}"
+format: html
+---
+
+::: {.callout-note}
+Code chunks run R commands unless otherwise specified.
+:::
+
+{{< meta clust_1 >}}
+
+{{< meta clust_2 >}}
+
+```{r}
+suppressPackageStartupMessages({
+  library(scater)
+  library(scran)
+  library(cowplot)
+  library(ggplot2)
+  library(rafalib)
+  library(pheatmap)
+  library(igraph)
+})
+
+sce <- readRDS("data/results/covid_qc_dr_int.rds")
+```
+
+## {{< meta clust_graphclust >}}
+
+{{< meta clust_graphclust_1 >}}
+
+### {{< meta clust_graphclust_knn >}}
+
+{{< meta clust_graphclust_knn_1 >}}
+
+```{r}
+#These 2 lines are for demonstration purposes only
+g <- buildKNNGraph(sce,k=30,use.dimred="MNN")
+reducedDim(sce,"KNN") <- igraph::as_adjacency_matrix(g)
+
+#These 2 lines are the most recommended
+g <- buildSNNGraph(sce,k=30,use.dimred="MNN")
+reducedDim(sce,"SNN")  <- as_adjacency_matrix(g, attr = "weight")
+```
+
+{{< meta clust_graphclust_knn_2 >}}
+
+```{r}
+#| fig-height: 6
+#| fig-width: 6
+
+#plot the KNN graph
+pheatmap(reducedDim(sce,"KNN")[1:200,1:200],
+         col=c("white","black"),border_color = "grey90",
+         legend = F,cluster_rows = F,cluster_cols = F,fontsize = 2)
+
+#or the SNN graph
+pheatmap(reducedDim(sce,"SNN")[1:200,1:200],
+        col = colorRampPalette(c("white","yellow","red","black"))(20),
+        border_color = "grey90",
+         legend = T,cluster_rows = F,cluster_cols = F,fontsize = 2)
+```
+
+As you can see, the way Scran computes the SNN graph is different to Seurat. It gives edges to all cells that shares a neighbor, but weights the edges by how similar the neighbors are. Hence, the SNN graph has more edges than the KNN graph.
+
+### {{< meta clust_graphclust_graph >}}
+
+{{< meta clust_graphclust_graph_1 >}}
+
+```{r}
+#| fig-height: 3
+#| fig-width: 12
+
+g <- buildSNNGraph(sce,k=5,use.dimred="MNN")
+sce$louvain_SNNk5 <- factor( cluster_louvain(g)$membership )
+
+g <- buildSNNGraph(sce,k=10,use.dimred="MNN")
+sce$louvain_SNNk10 <- factor( cluster_louvain(g)$membership )
+
+g <- buildSNNGraph(sce,k=15,use.dimred="MNN")
+sce$louvain_SNNk15 <- factor( cluster_louvain(g)$membership )
+
+plot_grid(ncol = 3,
+  plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = "louvain_SNNk5")+
+    ggplot2::ggtitle(label ="louvain_SNNk5"),
+  plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = "louvain_SNNk10")+
+    ggplot2::ggtitle(label ="louvain_SNNk10"),
+  plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = "louvain_SNNk15")+
+    ggplot2::ggtitle(label ="louvain_SNNk15")
+)
+```
+
+{{< meta clust_graphclust_graph_2 >}}
+
+```{r}
+#| fig-height: 8
+#| fig-width: 8
+
+suppressPackageStartupMessages(library(clustree))
+clustree(sce, prefix = "louvain_SNNk")
+```
+
+## {{< meta clust_kmean >}}
+
+{{< meta clust_kmean_1 >}}
+
+```{r}
+#| fig-height: 3
+#| fig-width: 10
+
+sce$kmeans_5 <- factor( kmeans(x = reducedDim(sce,"MNN"),centers = 5)$cluster )
+sce$kmeans_10 <- factor(kmeans(x = reducedDim(sce,"MNN"),centers = 10)$cluster)
+sce$kmeans_15 <- factor(kmeans(x = reducedDim(sce,"MNN"),centers = 15)$cluster)
+
+plot_grid(ncol = 3,
+  plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = "kmeans_5")+
+    ggplot2::ggtitle(label ="KMeans5"),
+  plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = "kmeans_10")+
+    ggplot2::ggtitle(label ="KMeans10"),
+  plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = "kmeans_15")+
+    ggplot2::ggtitle(label ="KMeans15")
+)
+```
+
+```{r}
+#| fig-height: 8
+#| fig-width: 8
+
+clustree(sce, prefix = "kmeans_")
+```
+
+## {{< meta clust_hier >}}
+
+### {{< meta clust_hier_dist >}}
+
+{{< meta clust_hier_dist_1 >}}
+
+```{r}
+d <- dist( reducedDim(sce,"MNN"),  method="euclidean")
+```
+
+{{< meta clust_hier_dist_2 >}}
+
+```{r}
+#Compute sample correlations
+sample_cor <- cor( Matrix::t(reducedDim(sce,"MNN")) )
+
+#Transform the scale from correlations
+sample_cor <- (1 - sample_cor) / 2
+
+#Convert it to a distance object
+d2 <- as.dist(sample_cor)
+```
+
+### {{< meta clust_hier_clust >}}
+
+{{< meta clust_hier_clust_1 >}}
+
+```{r}
+#euclidean
+h_euclidean <- hclust(d, method="ward.D2")
+
+#correlation
+h_correlation <- hclust(d2, method="ward.D2")
+```
+
+{{< meta clust_hier_clust_2 >}}
+
+```{r}
+#| fig-height: 8
+#| fig-width: 13
+
+#euclidean distance
+sce$hc_euclidean_5 <- factor( cutree(h_euclidean,k = 5) )
+sce$hc_euclidean_10 <- factor( cutree(h_euclidean,k = 10) )
+sce$hc_euclidean_15 <- factor( cutree(h_euclidean,k = 15) )
+
+#correlation distance
+sce$hc_corelation_5 <- factor( cutree(h_correlation,k = 5) )
+sce$hc_corelation_10 <- factor( cutree(h_correlation,k = 10) )
+sce$hc_corelation_15 <- factor( cutree(h_correlation,k = 15) )
+
+
+plot_grid(ncol = 3,
+  plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = "hc_euclidean_5")+
+    ggplot2::ggtitle(label ="HC_euclidean_5"),
+  plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = "hc_euclidean_10")+
+    ggplot2::ggtitle(label ="HC_euclidean_10"),
+  plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = "hc_euclidean_15")+
+    ggplot2::ggtitle(label ="HC_euclidean_15"),
+
+  plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = "hc_corelation_5")+
+    ggplot2::ggtitle(label ="HC_correlation_5"),
+  plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = "hc_corelation_10")+
+    ggplot2::ggtitle(label ="HC_correlation_10"),
+  plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = "hc_corelation_15")+
+    ggplot2::ggtitle(label ="HC_correlation_15")
+)
+```
+
+{{< meta clust_save >}}
+
+```{r}
+saveRDS(sce,"data/results/covid_qc_dr_int_cl.rds")
+```
+
+:::{.callout-note title="Discuss"}
+{{< meta clust_3 >}}
+:::
+
+## {{< meta session >}}
+
+```{r}
+sessionInfo()
+```

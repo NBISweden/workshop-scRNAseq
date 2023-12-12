@@ -1,0 +1,413 @@
+# COMMON ------------------------------------------------------------------------------------------------ #
+
+subtitle_seurat: "{{< fa brands r-project >}} SEURAT TOOLKIT"
+subtitle_bioc: "{{< fa brands r-project >}} BIOCONDUCTOR TOOLKIT"
+subtitle_scanpy: "{{< fa brands python >}} SCANPY TOOLKIT"
+session: "Session info"
+
+# QC ---------------------------------------------------------------------------------------------------- #
+
+qc_title: "{{< fa clipboard-list >}} Quality Control"
+qc_description: "Quality control of single cell RNA-Seq data. Inspection of QC metrics including number of UMIs, number of genes expressed, mitochondrial and ribosomal expression, sex and cell cycle state."
+
+# get data
+qc_data: "Get data"
+qc_data_1: "In this tutorial, we will run all tutorials with a set of 6 PBMC 10x datasets from 3 covid-19 patients and 3 healthy controls, the samples have been subsampled to 1500 cells per sample. They are part of the github repo and if you have cloned the repo they should be available in folder: `labs/data/covid_data_GSE149689`. Instructions on how to download them can also be found in the Precourse material."
+qc_data_2: "With data in place, now we can start loading libraries we will use in this tutorial."
+qc_data_3: "We can first load the data individually by reading directly from HDF5 file format (.h5)."
+
+# collate
+qc_collate: "Collate"
+qc_collate_1: "We can now load the expression matrices and merge them into a single object. Each analysis workflow (Seurat, Scater, Scanpy, etc) has its own way of storing data. We will add dataset labels as **cell.ids** just in case you have overlapping barcodes between the datasets. After that we add a column **Chemistry** in the metadata for plotting later on."
+qc_collate_2: "Once you have created the merged Seurat object, the count matrices and individual count matrices and objects are not needed anymore. It is a good idea to remove them and run garbage collect to free up some memory."
+qc_collate_3: "Here is how the count matrix and the metadata look like for every cell."
+
+# calculate qc
+qc_calqc: "Calculate QC"
+qc_calqc_1: "Having the data in a suitable format, we can start calculating some quality metrics. We can for example calculate the percentage of mitochondrial and ribosomal genes per cell and add to the metadata. The proportion hemoglobin genes can give an indication of red blood cell contamination. This will be helpful to visualize them across different metadata parameteres (i.e. datasetID and chemistry version). There are several ways of doing this. The QC metrics are finally added to the metadata table."
+qc_calqc_2: "Citing from Simple Single Cell workflows (Lun, McCarthy & Marioni, 2017): High proportions are indicative of poor-quality cells (Islam et al. 2014; Ilicic et al. 2016), possibly because of loss of cytoplasmic RNA from perforated cells. The reasoning is that mitochondria are larger than individual transcript molecules and less likely to escape through tears in the cell membrane."
+qc_calqc_3: "Now you can see that we have additional data in the metadata slot."
+
+# plot qc
+qc_plotqc: "Plot QC"
+qc_plotqc_1: "Now we can plot some of the QC variables as violin plots."
+qc_plotqc_2: "As you can see, there is quite some difference in quality for the 4 datasets, with for instance the covid_15 sample having fewer cells with many detected genes and more mitochondrial content. As the ribosomal proteins are highly expressed they will make up a larger proportion of the transcriptional landscape when fewer of the lowly expressed genes are detected. And we can plot the different QC-measures as scatter plots."
+qc_plotqc_3: "Plot additional QC stats that we have calculated as scatter plots. How are the different measures correlated? Can you explain why?"
+
+# filtering
+qc_filter: "Filtering"
+qc_filter_detect: "Detection-based filtering"
+qc_filter_detect_1: "A standard approach is to filter cells with low amount of reads as well as genes that are present in at least a certain amount of cells. Here we will only consider cells with at least 200 detected genes and genes need to be expressed in at least 3 cells. Please note that those values are highly dependent on the library preparation method used."
+qc_filter_detect_3: "Extremely high number of detected genes could indicate doublets. However, depending on the cell type composition in your sample, you may have cells with higher number of genes (and also higher counts) from one cell type. In this case, we will run doublet prediction further down, so we will skip this step now, but the code below is an example of how it can be run:"
+qc_filter_detect_4: "Additionally, we can also see which genes contribute the most to such reads. We can for instance plot the percentage of counts per gene."
+qc_filter_detect_5: "As you can see, MALAT1 constitutes up to 30% of the UMIs from a single cell and the other top genes are mitochondrial and ribosomal genes. It is quite common that nuclear lincRNAs have correlation with quality and mitochondrial reads, so high detection of MALAT1 may be a technical issue. Let us assemble some information about such genes, which are important for quality control and downstream filtering."
+
+qc_filter_mr: "Mito/Ribo filtering"
+qc_filter_mr_1: |
+  We also have quite a lot of cells with high proportion of mitochondrial and low proportion of ribosomal reads. It could be wise to remove those cells, if we have enough cells left after filtering.
+  Another option would be to either remove all mitochondrial reads from the dataset and hope that the remaining genes still have enough biological signal.
+  A third option would be to just regress out the `percent_mito` variable during scaling. In this case we had as much as 99.7% mitochondrial reads in some of the cells, so it is quite unlikely that there is much cell type signature left in those.
+  Looking at the plots, make reasonable decisions on where to draw the cutoff. In this case, the bulk of the cells are below 20% mitochondrial reads and that will be used as a cutoff. We will also remove cells with less than 5% ribosomal reads.
+qc_filter_mr_2: "As you can see, a large proportion of sample covid_15 is filtered out. Also, there is still quite a lot of variation in `percent_mito`, so it will have to be dealt with in the data analysis step. We can also notice that the `percent_ribo` are also highly variable, but that is expected since different cell types have different proportions of ribosomal content, according to their function."
+
+qc_filter_plot: "Plot filtered QC"
+qc_filter_plot_1: "Lets plot the same QC-stats another time."
+
+qc_filter_genes: "Filter genes"
+qc_filter_genes_1: "As the level of expression of mitochondrial and MALAT1 genes are judged as mainly technical, it can be wise to remove them from the dataset before any further analysis."
+
+# sex
+qc_sex: "Sample sex"
+qc_sex_1: "When working with human or animal samples, you should ideally constrain you experiments to a single sex to avoid including sex bias in the conclusions. However this may not always be possible. By looking at reads from chromosomeY (males) and XIST (X-inactive specific transcript) expression (mainly female) it is quite easy to determine per sample which sex it is. It can also bee a good way to detect if there has been any sample mixups, if the sample metadata sex does not agree with the computational predictions."
+qc_sex_2: "To get chromosome information for all genes, you should ideally parse the information from the gtf file that you used in the mapping pipeline as it has the exact same annotation version/gene naming. However, it may not always be available, as in this case where we have downloaded public data. Hence, we will use biomart to fetch chromosome information. As the biomart instances quite often are unresponsive, you can try the code below, but if it fails, we have the file with gene annotations on github [here](https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/labs/misc/genes.table.csv). Make sure you put it at the correct location for the path `genes.file` to work."
+qc_sex_3: "Now that we have the chromosome information, we can calculate per cell the proportion of reads that comes from chromosome Y."
+qc_sex_4: "Then plot XIST expression vs chrY proportion. As you can see, the samples are clearly on either side, even if some cells do not have detection of either."
+qc_sex_5: "Plot as violins."
+qc_sex_6: "Here, we can see clearly that we have two males and 4 females, can you see which samples they are? Do you think this will cause any problems for downstream analysis? Discuss with your group: what would be the best way to deal with this type of sex bias?"
+
+# cellcycle
+qc_cellcycle: "Cell cycle state"
+qc_cellcycle_1: "We here perform cell cycle scoring. To score a gene list, the algorithm calculates the difference of mean expression of the given list and the mean expression of reference genes. To build the reference, the function randomly chooses a bunch of genes matching the distribution of the expression of the given list. Cell cycle scoring adds three slots in data, a score for S phase, a score for G2M phase and the predicted cell cycle phase."
+qc_cellcycle_2: "We can now plot a violin plot for the cell cycle scores as well."
+qc_cellcycle_3: "In this case it looks like we only have a few cycling cells in the datasets."
+
+# doublet
+qc_doublet: "Predict doublets"
+qc_doublet_1: |
+  Doublets/Multiples of cells in the same well/droplet is a common issue in scRNAseq protocols. Especially in droplet-based methods with overloading of cells. In a typical 10x experiment the proportion of doublets is linearly dependent on the amount of loaded cells. As  indicated from the Chromium user guide, doublet rates are about as follows:
+  
+  ![](../figs/10x_doublet_rate.png)
+  
+  Most doublet detectors simulates doublets by merging cell counts and predicts doublets as cells that have similar embeddings as the simulated doublets. Most such packages need an assumption about the number/proportion of expected doublets in the dataset. The data you are using is subsampled, but the original datasets contained about 5 000 cells per sample, hence we can assume that they loaded about 9 000 cells and should have a doublet rate at about 4%.
+
+qc_doublet_2: "Ideally doublet prediction should be run on each sample separately, especially if your different samples have different proportions of cell types. In this case, the data is subsampled so we have very few cells per sample and all samples are sorted PBMCs so it is okay to run them together."
+qc_doublet_3: "We should expect that two cells have more detected genes than a single cell, lets check if our predicted doublets also have more detected genes in general."
+qc_doublet_4: "Now, lets remove all predicted doublets from our data."
+
+# save data
+qc_save: "Save data"
+qc_save_1: "Finally, lets save the QC-filtered data for further analysis. Create output directory `results` and save data to that folder. This will be used in downstream labs."
+
+# DIMRED ------------------------------------------------------------------------------------------------ #
+
+dimred_title: "{{< fa brands hubspot >}} Dimensionality Reduction"
+dimred_description: "Reduce high-dimensional gene expression data from individual cells into a lower-dimensional space for visualization. This lab explores PCA, tSNE and UMAP."
+
+# prep
+dimred_prep: "Data preparation"
+dimred_prep_1: "First, let's load all necessary libraries and the QC-filtered dataset from the previous step."
+
+# feature selection
+dimred_fs: "Feature selection"
+dimred_fs_2: "Next, we first need to define which features/genes are important in our dataset to distinguish cell types. For this purpose, we need to find genes that are highly variable across cells, which in turn will also provide a good separation of the cell clusters."
+
+# z-score transformation
+dimred_zs: "Z-score transformation"
+dimred_zs_1: "Now that the data is prepared, we now proceed with PCA. Since each gene has a different expression level, it means that genes with higher expression values will naturally have higher variation that will be captured by PCA. This means that we need to somehow give each gene a similar weight when performing PCA (see below). The common practice is to center and scale each gene before performing PCA. This exact scaling is called Z-score normalization it is very useful for PCA, clustering and plotting heatmaps. Additionally, we can use regression to remove any unwanted sources of variation from the dataset, such as `cell cycle`, `sequencing depth`, `percent mitochondria`. This is achieved by doing a generalized linear regression using these parameters as co-variates in the model. Then the residuals of the model are taken as the *regressed data*. Although perhaps not in the best way, batch effect regression can also be done here. By default variables are scaled in the PCA step and is not done separately. But it could be achieved by running the commands below:"
+
+# pca
+dimred_pca: "PCA"
+dimred_pca_1: "Performing PCA has many useful applications and interpretations, which much depends on the data used. In the case of life sciences, we want to segregate samples based on gene expression patterns in the data."
+dimred_pca_2: "We then plot the first principal components."
+dimred_pca_3: "To identify which genes (Seurat) or metadata parameters (Scater/Scran) contribute the most to each PC, one can retrieve the loading matrix information. Unfortunately, this is not implemented in Scater/Scran, so you will need to compute PCA using `logcounts`."
+dimred_pca_4: "We can also plot the amount of variance explained by each PC."
+dimred_pca_5: "Based on this plot, we can see that the top 8 PCs retain a lot of information, while other PCs contain progressively less. However, it is still advisable to use more PCs since they might contain information about rare cell types (such as platelets and DCs in this dataset)"
+
+# tsne
+dimred_tsne: "tSNE"
+dimred_tsne_1: "We can now run [BH-tSNE](https://arxiv.org/abs/1301.3342)."
+dimred_tsne_2: "We can now plot the tSNE colored per dataset. We can clearly see the effect of batches present in the dataset."
+
+# umap
+dimred_umap: "UMAP"
+dimred_umap_1: "We can now run [UMAP](https://arxiv.org/abs/1802.03426) for cell embeddings."
+dimred_umap_2: "UMAP is plotted colored per dataset. Although less distinct as in the tSNE, we still see quite an effect of the different batches in the data. UMAP is not limited by the number of dimensions the data can be reduced into (unlike tSNE). We can simply reduce the dimensions altering the `n.components` parameter."
+dimred_umap_3: "We can now plot PCA, UMAP and tSNE side by side for comparison. Here, we can conclude that our dataset contains a batch effect that needs to be corrected before proceeding to clustering and differential gene expression analysis."
+dimred_umap_4: "We have now done Variable gene selection, PCA and UMAP with the settings we chose. Test a few different ways of selecting variable genes, number of PCs for UMAP and check how it influences your embedding."
+
+dimred_zsg: "Z-scores & DR graphs"
+dimred_zsg_1: "Although running a second dimensionality reduction (i.e tSNE or UMAP) on PCA would be a standard approach (because it allows higher computation efficiency), the options are actually limitless. Below we will show a couple of other common options such as running directly on the scaled data (z-scores) (which was used for PCA) or on a graph built from scaled data. We will show from now on only UMAP, but the same applies for tSNE."
+
+dimred_zsg_zs: "UMAP from z-scores"
+dimred_zsg_zs_1: "To run tSNE or UMAP on the scaled data, one first needs to select the number of variables to use. This is because including dimensions that do contribute to the separation of your cell types will in the end mask those differences. Another reason for it is because running with all genes/features also will take longer or might be computationally unfeasible. Therefore we will use the scaled data of the highly variable genes."
+
+dimred_zsg_g: "UMAP from graph"
+dimred_zsg_g_1: "To run tSNE or UMAP on the a graph, we first need to build a graph from the data. In fact, both tSNE and UMAP first build a graph from the data using a specified distance matrix and then optimize the embedding. Since a graph is just a matrix containing distances from cell to cell and as such, you can run either UMAP or tSNE using any other distance metric desired. Euclidean and Correlation are usually the most commonly used."
+dimred_zsg_g_2: "We can now plot the UMAP comparing both on PCA vs ScaledSata vs Graph."
+
+dimred_plotgenes: "Genes of interest"
+dimred_plotgenes_1: "Let's plot some marker genes for different cell types onto the embedding."
+dimred_plotgenes_2: "Select some of your dimensionality reductions and plot some of the QC stats that were calculated in the previous lab. Can you see if some of the separation in your data is driven by quality of the cells?"
+
+# save data
+dimred_save: "Save data"
+dimred_save_1: "We can finally save the object for use in future steps."
+
+# INTEGRATION -------------------------------------------------------------------------------------------- #
+
+int_title: "{{< fa diagram-project >}} Data Integration"
+int_description: "Combining and harmonizing samples or datasets from different batches such as experiments or conditions to enable meaningful cross-sample comparisons."
+
+int_1: |
+  In this tutorial we will look at different ways of integrating multiple single cell RNA-seq datasets. We will explore two different methods to correct for batch effects across datasets. We will also look at a quantitative measure to assess the quality of the integrated data. Seurat uses the data integration method presented in Comprehensive Integration of Single Cell Data, while Scran and Scanpy use a mutual Nearest neighbour method (MNN). Below you can find a list of the most recent methods for single data integration:
+
+# data prep
+int_prep: "Data preparation"
+int_prep_1: "Let's first load necessary libraries and the data saved in the previous lab."
+int_prep_2: "We split the combined object into a list, with each dataset as an element. We perform standard preprocessing (log-normalization), and identify variable features individually for each dataset based on a variance stabilizing transformation (**vst**)."
+
+# scanorama
+int_scanorama: "Scanorama"
+int_scanorama_1: "Try out [Scanorama](https://github.com/brianhie/scanorama) for data integration as well. First we need to create individual AnnData objects from each of the datasets."
+
+int_plot: "We can now plot the unintegrated and the integrated space reduced dimensions."
+int_save: "Let's save the integrated data for further analysis."
+
+# CLUSTERING ------------------------------------------------------------------------#
+
+clust_title: "{{< fa circle-nodes >}} Clustering"
+clust_description: "Grouping individual cells with similar gene expression profiles to uncover distinct cell populations and their functional characteristics."
+
+clust_1: "In this tutorial we will continue the analysis of the integrated dataset. We will use the integrated PCA to perform the clustering. First we will construct a $k$-nearest neighbor graph in order to perform a clustering on the graph. We will also show how to perform hierarchical clustering and k-means clustering on PCA space."
+clust_2: "Let's first load all necessary libraries and also the integrated dataset from the previous step."
+
+# graph clustering
+clust_graphclust: "Graph clustering"
+clust_graphclust_1: |
+  The procedure of clustering on a Graph can be generalized as 3 main steps:
+  1) Build a kNN graph from the data
+  2) Prune spurious connections from kNN graph (optional step). This is a SNN graph.
+  3) Find groups of cells that maximizes the connections within the group compared other groups.
+
+clust_graphclust_knn: "Building kNN / SNN graph"
+clust_graphclust_knn_1: "The first step into graph clustering is to construct a k-nn graph, in case you don't have one. For this, we will use the PCA space. Thus, as done for dimensionality reduction, we will use ony the top *N* PCA dimensions for this purpose (the same used for computing UMAP / tSNE)."
+clust_graphclust_knn_2: We can take a look at the kNN graph. It is a matrix where every connection between cells is represented as $1$s. This is called a **unweighted** graph (default in Seurat). Some cell connections can however have more importance than others, in that case the scale of the graph from $0$ to a maximum distance. Usually, the smaller the distance, the closer two points are, and stronger is their connection. This is called a **weighted** graph. Both weighted and unweighted graphs are suitable for clustering, but clustering on unweighted graphs is faster for large datasets (> 100k cells).
+
+clust_graphclust_graph: "Clustering on a graph"
+clust_graphclust_graph_1: "Once the graph is built, we can now perform graph clustering. The clustering is done respective to a resolution which can be interpreted as how coarse you want your cluster to be. Higher resolution means higher number of clusters."
+clust_graphclust_graph_2: "We can now use the `clustree` package to visualize how cells are distributed between clusters depending on resolution."
+
+# kmeans clustering
+clust_kmean: "K-means clustering"
+clust_kmean_1: "K-means is a generic clustering algorithm that has been used in many application areas. In R, it can be applied via the kmeans function. Typically, it is applied to a reduced dimension representation of the expression data (most often PCA, because of the interpretability of the low-dimensional distances). We need to define the number of clusters in advance. Since the results depend on the initialization of the cluster centers, it is typically recommended to run K-means with multiple starting configurations (via the nstart argument)."
+
+# hierarchical clustering
+clust_hier: "Hierarchical clustering"
+clust_hier_dist: "Defining distance between cells"
+clust_hier_dist_1: "The base R `stats` package already contains a function `dist` that calculates distances between all pairs of samples. Since we want to compute distances between samples, rather than among genes, we need to transpose the data before applying it to the `dist` function. This can be done by simply adding the transpose function `t()` to the data. The distance methods available  in `dist` are: 'euclidean', 'maximum', 'manhattan', 'canberra', 'binary' or 'minkowski'."
+clust_hier_dist_2: |
+  As you might have realized, correlation is not a method implemented in the `dist()` function. However, we can create our own distances and transform them to a distance object. We can first compute sample correlations using the `cor` function.
+
+  As you already know, correlation range from -1 to 1, where 1 indicates that two samples are closest, -1 indicates that two samples are the furthest and 0 is somewhat in between. This, however, creates a problem in defining distances because a distance of 0 indicates that two samples are closest, 1 indicates that two samples are the furthest and distance of -1 is not meaningful. We thus need to transform the correlations to a positive scale (a.k.a. **adjacency**):
+
+  \[adj = \frac{1- cor}{2}\]
+
+  Once we transformed the correlations to a 0-1 scale, we can simply convert it to a distance object using `as.dist` function. The transformation does not need to have a maximum of 1, but it is more intuitive to have it at 1, rather than at any other number.
+
+clust_hier_clust: "Clustering cells"
+clust_hier_clust_1: "After having calculated the distances between samples calculated, we can now proceed with the hierarchical clustering per-se. We will use the function `hclust` for this purpose, in which we can simply run it with the distance objects created above. The methods available are: 'ward.D', 'ward.D2', 'single', 'complete', 'average', 'mcquitty', 'median' or 'centroid'. It is possible to plot the dendrogram for all cells, but this is very time consuming and we will omit for this tutorial."
+clust_hier_clust_2: "Once your dendrogram is created, the next step is to define which samples belong to a particular cluster. After identifying the dendrogram, we can now literally cut the tree at a fixed threshold (with `cutree`) at different levels to define the clusters. We can either define the number of clusters or decide on a height. We can simply try different clustering levels."
+
+clust_save: "Finally, lets save the clustered data for further analysis."
+
+clust_3: |
+  By now you should know how to plot different features onto your data. Take the QC metrics that were calculated in the first exercise, that should be stored in your data object, and plot it as violin plots per cluster using the clustering method of your choice. For example, plot number of UMIS, detected genes, percent mitochondrial reads.
+  Then, check carefully if there is any bias in how your data is separated due to quality metrics. Could it be explained biologically, or could you have technical bias there?
+
+#   K-means + Hierachical clustering   #
+#CLUST_TITLE5:### K-means + Hierachical clustering
+
+#   Testing Clustering robusteness   #
+#CLUST_TITLE6:### Testing Clustering robusteness
+
+# DIFFERENTIAL GENE EXPRESSION ---------------------------------------------------------------#
+
+dge_title: "{{< fa chart-simple >}} Differential gene expression"
+dge_description: "Identify genes that are significantly over or under-expressed between conditions in specific cell populations."
+
+dge_1: "In this tutorial we will cover about Differetial gene expression, which comprises an extensive range of topics and methods. In single cell, differential expresison can have multiple functionalities such as of identifying marker genes for cell populations, as well as differentially regulated genes across conditions (healthy vs control). We will also exercise on how to account the batch information in your test."
+dge_2: "We can first load the data from the clustering session. Moreover, we can already decide which clustering resolution to use. First let's define using the `louvain` clustering to identifying differentially expressed genes."
+
+# cell marker genes
+dge_cmg: "Cell marker genes"
+dge_cmg_1: "Let us first compute a ranking for the highly differential genes in each cluster. There are many different tests and parameters to be chosen that can be used to refine your results. When looking for marker genes, we want genes that are positivelly expressed in a cell type and possibly not expressed in the others."
+dge_cmg_2: "We can now select the top 25 up regulated genes for plotting."
+dge_cmg_3: "We can visualize them as a heatmap. Here we are selecting the top 5."
+dge_cmg_4: "We can also plot a violin plot for each gene."
+
+# dge across conditions
+dge_cond: DGE across conditions
+dge_cond_1: |
+  The second way of computing differential expression is to answer which genes are differentially expressed within a cluster. For example, in our case we have libraries comming from patients and controls and we would like to know which genes are influenced the most in a particular cell type.
+  For this end, we will first subset our data for the desired cell cluster, then change the cell identities to the variable of comparison (which now in our case is the "type", e.g. Covid/Ctrl).
+dge_cond_2: We can now plot the expression across the "type".
+
+#DGE_ALL6.3:1) Are the differentially expressed genes across `type` different for each cluster, or are they all the same genes? Change the cluster to use above and check.
+#DGE_ALL6.3:2) How would you visualize the results from the previous question?
+
+# gsa
+dge_gsa: "Gene Set Analysis (GSA)"
+dge_gsa_hyper: "Hypergeometric enrichment test"
+dge_gsa_hyper_1: "Having a defined list of differentially expressed genes, you can now look for their combined function using hypergeometric test."
+dge_gsa_hyper_2: |
+  Some databases of interest:
+
+  - `GO_Biological_Process_2017b`
+  - `KEGG_2019_Human`
+  - `KEGG_2019_Mouse`
+  - `WikiPathways_2019_Human`
+  - `WikiPathways_2019_Mouse`
+
+  You visualize your results using a simple barplot, for example:
+
+# gsea
+dge_gsea: "Gene Set Enrichment Analysis (GSEA)"
+dge_gsea_1: "Besides the enrichment using hypergeometric test, we can also perform gene set enrichment analysis (GSEA), which scores ranked genes list (usually based on fold changes) and computes permutation test to check if a particular gene set is more present in the Up-regulated genes, among the DOWN_regulated genes or not differentially regulated."
+dge_gsea_2: "Once our list of genes are sorted, we can proceed with the enrichment itself. We can use the package to get gene set from the Molecular Signature Database (MSigDB) and select KEGG pathways as an example."
+dge_gsea_3: "Next, we will be using the GSEA. This will result in a table containing information for several pathways. We can then sort and filter those pathways to visualize only the top ones. You can select/filter them by either `p-value` or normalized enrichment score (`NES`)."
+dge_gsea_4: |
+  - Which KEGG pathways are upregulated in this cluster?
+  - Which KEGG pathways are dowregulated in this cluster?
+
+  Change the pathway source to another gene set (e.g. "CP:WIKIPATHWAYS" or "CP:REACTOME" or "CP:BIOCARTA" or "GO:BP") and check the if you get similar results?
+dge_save: "Finally, lets save the integrated data for further analysis."
+
+# CELLTYPE ---------------------------------------------------------------------------#
+
+ct_title: "{{< fa bacterium >}} Celltype prediction"
+ct_description: "Assignment of cell identities based on gene expression patterns using reference data."
+
+ct_1: |
+  Celltype prediction can either be performed on indiviudal cells where each cell gets a predicted celltype label, or on the level of clusters. All methods are based on similarity to other datasets, single cell or sorted bulk RNAseq, or uses known marker genes for each celltype.
+
+  We will select one sample from the Covid data, `ctrl_13` and predict celltype by cell on that sample.
+
+  Some methods will predict a celltype to each cell based on what it is most similar to even if the celltype of that cell is not included in the reference. Other methods include an uncertainty so that cells with low similarity scores will be unclassified.
+
+  There are multiple different methods to predict celltypes, here we will just cover a few of those. 
+ct_2: "Here we will use a reference PBMC dataset from the `scPred` package which is provided as a Seurat object with counts. And we will test classification based on the `scPred` and `scMap` methods. Finally we will use gene set enrichment predict celltype based on the DEGs of each cluster."
+
+# read data
+ct_read: "Read data"
+ct_read_1: "First, lets load required libraries"
+ct_read_2: "Let's read in the saved Covid-19 data object from the clustering step."
+ct_read_3: "Subset one patient."
+
+# prepare reference data
+ct_ref: "Reference data"
+ct_ref_1: "Load the reference dataset with annotated labels."
+ct_ref_2: "Rerun analysis pipeline. Run normalization, feature selection and dimensionality reduction"
+ct_ref_3: "Run all steps of the analysis for the ctrl sample as well. Use the clustering from the integration lab with resolution 0.5."
+
+# scpred
+ct_scpred: scPred
+ct_scpred_1: "scPred will train a classifier based on all principal components. First, `getFeatureSpace` will create a scPred object stored in the `@misc` slot where it extracts the PCs that best separates the different celltypes. Then `trainModel` will do the actual training for each celltype."
+ct_scpred_2: "We can then print how well the training worked for the different celltypes by printing the number of PCs used for each, the ROC value and Sensitivity/Specificity. Which celltypes do you think are harder to classify based on this dataset?"
+ct_scpred_3: |
+  You can optimize parameters for each dataset by chaning parameters and testing different types of models, see more at: https://powellgenomicslab.github.io/scPred/articles/introduction.html. But for now, we will continue with this model.
+  Now, lets predict celltypes on our data, where scPred will align the two datasets with Harmony and then perform classification.
+ct_scpred_4: "Now plot how many	cells of each celltypes	can be found in	each cluster."
+
+ct_compare: "Compare results"
+ct_compare_1: "Now we will compare the output of the two methods using the convenient function in scPred `crossTab` that prints the overlap between two metadata slots."
+
+ct_gsea: "GSEA with celltype markers"
+ct_gsea_1: |
+  Another option, where celltype can be classified on cluster level is to use gene set enrichment among the DEGs with known markers for different celltypes. Similar to how we did functional enrichment for the DEGs in the Differential expression exercise. 
+  There are some resources for celltype gene sets that can be used. Such as [CellMarker](http://bio-bigdata.hrbmu.edu.cn/CellMarker/), [PanglaoDB](https://panglaodb.se/) or celltype gene sets at [MSigDB](https://www.gsea-msigdb.org/gsea/msigdb/index.jsp).
+  We can also look at overlap between DEGs in a reference dataset and the dataset you are analysing. 
+
+ct_gsea_deg: "DEG overlap"
+ct_gsea_deg_1: "First, lets extract top DEGs for our Covid-19 dataset and the reference dataset. When we run differential expression for our dataset, we want to report as many genes as possible, hence we set the cutoffs quite lenient."
+ct_gsea_deg_2: "Now we can run GSEA for the DEGs from our dataset and check for enrichment of top DEGs in the reference dataset."
+ct_gsea_deg_3: |
+  Selecing top significant overlap per cluster, we can now rename the clusters according to the predicted labels. OBS! Be aware that if you have some clusters that have non-significant p-values for all the gene sets, the cluster label will not be very reliable. Also, the gene sets you are using may not cover all the celltypes you have in your dataset and hence predictions may just be the most similar celltype.
+  Also, some of the clusters have very similar p-values to multiple celltypes, for instance the ncMono and cMono celltypes are equally good for some clusters.
+ct_gsea_deg_4: "Compare to results with the other celltype prediction methods in the ctrl_13 sample."
+
+ct_gsea_annot: "With annotated gene sets"
+ct_gsea_annot_1: "Read in the gene lists and do some filtering."
+ct_gsea_annot_2: "Do you think that the methods overlap well? Where do you see the most inconsistencies?"
+ct_gsea_annot_3: "In this case we do not have any ground truth, and we cannot say which method performs best. You should keep in mind, that any celltype classification method is just a prediction, and you still need to use your common sense and knowledge of the biological system to judge if the results make sense."
+
+ct_save: "Finally, lets save the data with predictions."
+
+# SPATIAL --------------------------------------------------------------------------------#
+
+st_title: "{{< fa microscope >}} Spatial Transcriptomics"
+st_description: "Combining single-cell gene expression data with spatial information to reveal the spatial distribution of gene activity within tissues."
+
+st_1: |
+  Spatial transcriptomic data with the Visium platform is in many ways similar to scRNAseq data. It contains UMI counts for 5-20 cells instead of single cells, but is still quite sparse in the same way as scRNAseq data is, but with the additional information about spatial location in the tissue.
+
+  Here we will first run quality control in a similar manner to scRNAseq data, then QC filtering, dimensionality reduction, integration and clustering. Then we will use scRNAseq data from mouse cortex to run LabelTransfer to predict celltypes in the Visium spots.
+
+  We will use two **Visium** spatial transcriptomics dataset of the mouse brain (Sagittal), which are publicly available from the [10x genomics website](https://support.10xgenomics.com/spatial-gene-expression/datasets/). Note, that these dataset have already been filtered for spots that does not overlap with the tissue.
+
+# preparation
+st_prep: "Preparation"
+st_prep_1: "Load packages"
+st_prep_2: "Load ST data"
+
+# quality control
+st_qc: "Quality control"
+st_qc_1: "Similar to scRNA-seq we use statistics on number of counts, number of features and percent mitochondria for quality control. "
+st_qc_2: "We can also plot the same data onto the tissue section."
+st_qc_3: |
+  As you can see, the spots with low number of counts/features and high mitochondrial content are mainly towards the edges of the tissue. It is quite likely that these regions are damaged tissue. You may also see regions within a tissue with low quality if you have tears or folds in your section. 
+  
+  But remember, for some tissue types, the amount of genes expressed and proportion mitochondria may also be a biological features, so bear in mind what tissue you are working on and what these features mean.
+
+st_qc_filter: "Filter spots"
+st_qc_filter_1: "Select all spots with less than **25%** mitocondrial reads, less than **20%** hb-reads and **500** detected genes. You must judge for yourself based on your knowledge of the tissue what are appropriate filtering criteria for your dataset."
+
+st_qc_top: "Top expressed genes"
+st_qc_top_1: "As for scRNA-seq data, we will look at what the top expressed genes are."
+st_qc_top_2: "As you can see, the mitochondrial genes are among the top expressed genes. Also the lncRNA gene Bc1 (brain cytoplasmic RNA 1). Also one hemoglobin gene."
+
+st_qc_filterg: "Filter genes"
+st_qc_filterg_1: "We will remove the *Bc1* gene, hemoglobin genes (blood contamination) and the mitochondrial genes."
+
+# analysis
+st_analysis: "Analysis"
+st_analysis_1: "We will proceed with the data in a very similar manner to scRNA-seq data."
+st_analysis_2: "Now we can plot gene expression of individual genes, the gene *Hpca* is a strong hippocampal marker and *Ttr* is a marker of the choroid plexus."
+
+st_analysis_dimred: "Dimensionality reduction and clustering"
+st_analysis_dimred_1: "We can then now run dimensionality reduction and clustering using the same workflow as we use for scRNA-seq analysis. "
+st_analysis_dimred_2: "We can then plot clusters onto umap or onto the tissue section."
+
+st_analysis_int: "Integration"
+st_analysis_int_1: "Quite often there are strong batch effects between different ST sections, so it may be a good idea to integrate the data across sections."
+st_analysis_int_2: "Then we run dimensionality reduction and clustering as before."
+st_analysis_int_3: "Do you see any differences between the integrated and non-integrated clustering? Judge for yourself, which of the clusterings do you think looks best? As a reference, you can compare to brain regions in the [Allen brain atlas](https://mouse.brain-map.org/experiment/thumbnails/100042147?image_type=atlas)."
+
+st_analysis_svg: "Spatially Variable Features"
+st_analysis_svg_1: |
+  There are two main workflows to identify molecular features that correlate with spatial location within a tissue. The first is to perform differential expression based on spatially distinct clusters, the other is to find features that have spatial patterning without taking clusters or spatial annotation into account. 
+  First, we will do differential expression between clusters just as we did for the scRNAseq data before.
+
+# single cell data
+st_ss: "Single cell data"
+st_ss_1: "We can use a scRNA-seq dataset as a reference to predict the proportion of different celltypes in the Visium spots. Keep in mind that it is important to have a reference that contains all the celltypes you expect to find in your spots. Ideally it should be a scRNA-seq reference from the exact same tissue. We will use a reference scRNA-seq dataset of ~14,000 adult mouse cortical cell taxonomy from the Allen Institute, generated with the SMART-Seq2 protocol."
+st_ss_2: "For speed, and for a more fair comparison of the celltypes, we will subsample all celltypes to a maximum of 200 cells per class (`subclass`)."
+
+# subset st
+st_sub: "Subset ST for cortex"
+st_sub_1: "Since the scRNAseq dataset was generated from the mouse cortex, we will subset the visium dataset in order to select mainly the spots part of the cortex. Note that the integration can also be performed on the whole brain slice, but it would give rise to false positive cell type assignments and therefore it should be interpreted with more care."
+
+# deconvolution
+st_deconv: "Deconvolution"
+st_deconv_1: "Deconvolution is a method to estimate the abundance (or proportion) of different celltypes in a bulkRNAseq dataset using a single cell reference. As the Visium data can be seen as a small bulk, we can both use methods for traditional bulkRNAseq as well as methods especially developed for Visium data. Some methods for deconvolution are DWLS, cell2location, Tangram, Stereoscope, RCTD, SCDC and many more."
+
+st_deconv_genes: "Select genes for deconvolution"
+st_deconv_genes_1: |
+  Most deconvolution methods does a prior gene selection and there are different options that are used:
+  - Use variable genes in the SC data.
+  - Use variable genes in both SC and ST data
+  - DE genes between clusters in the SC data.
+  
+  In this case we will use top DE genes per cluster, so first we have to run DGE detection on the scRNAseq data.
+
+st_2: "Keep in mind that the deconvolution results are just predictions, depending on how well your scRNAseq data covers the celltypes that are present in the ST data and on how parameters, gene selection etc. are tuned you may get different results."
+st_3: "Subset for another region that does not contain cortex cells and check what you get from the label transfer. Suggested region is the right end of the posterial section that you can select like this:"

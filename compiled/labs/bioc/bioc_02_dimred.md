@@ -1,0 +1,335 @@
+---
+description: Reduce high-dimensional gene expression data from
+subtitle:  BIOCONDUCTOR TOOLKIT
+title:  Dimensionality Reduction
+---
+
+<div>
+
+> **Note**
+>
+> Code chunks run R commands unless otherwise specified.
+
+</div>
+
+## Data preparation
+
+First, let's load all necessary libraries and the QC-filtered dataset
+from the previous step.
+
+``` {r}
+suppressPackageStartupMessages({
+  library(scater)
+  library(scran)
+  library(cowplot)
+  library(ggplot2)
+  library(rafalib)
+  library(umap)
+})
+
+sce <- readRDS("data/results/covid_qc.rds")
+```
+
+## Feature selection
+
+Next, we first need to define which features/genes are important in our
+dataset to distinguish cell types. For this purpose, we need to find
+genes that are highly variable across cells, which in turn will also
+provide a good separation of the cell clusters.
+
+``` {r}
+#| fig-height: 4
+#| fig-width: 8
+
+sce <- computeSumFactors(sce, sizes=c(20, 40, 60, 80))
+sce <- logNormCounts(sce)
+var.out <- modelGeneVar(sce, method="loess")
+hvgs = getTopHVGs(var.out, n=2000)
+
+mypar(1,2)
+#plot mean over TOTAL variance
+# Visualizing the fit:
+fit.var <- metadata(var.out)
+plot(fit.var$mean, fit.var$var, xlab="Mean of log-expression",
+    ylab="Variance of log-expression")
+curve(fit.var$trend(x), col="dodgerblue", add=TRUE, lwd=2)
+
+#Select 1000 top variable genes
+hvg.out <- getTopHVGs(var.out, n=1000)
+
+# highligt those cells in the plot
+cutoff <- rownames(var.out) %in% hvg.out
+points(fit.var$mean[cutoff], fit.var$var[cutoff], col="red", pch=16,cex=.6)
+
+#plot mean over BIOLOGICAL variance
+plot(var.out$mean, var.out$bio, pch=16, cex=0.4, xlab="Mean log-expression", ylab="Variance of log-expression")
+lines(c(min(var.out$mean),max(var.out$mean)), c(0,0), col="dodgerblue", lwd=2)
+points(var.out$mean[cutoff], var.out$bio[cutoff], col="red", pch=16,cex=.6)
+```
+
+## Z-score transformation
+
+Now that the data is prepared, we now proceed with PCA. Since each gene
+has a different expression level, it means that genes with higher
+expression values will naturally have higher variation that will be
+captured by PCA. This means that we need to somehow give each gene a
+similar weight when performing PCA (see below). The common practice is
+to center and scale each gene before performing PCA. This exact scaling
+is called Z-score normalization it is very useful for PCA, clustering
+and plotting heatmaps. Additionally, we can use regression to remove any
+unwanted sources of variation from the dataset, such as `cell cycle`,
+`sequencing depth`, `percent mitochondria`. This is achieved by doing a
+generalized linear regression using these parameters as co-variates in
+the model. Then the residuals of the model are taken as the *regressed
+data*. Although perhaps not in the best way, batch effect regression can
+also be done here. By default variables are scaled in the PCA step and
+is not done separately. But it could be achieved by running the commands
+below:
+
+However, unlike the Seurat, this step is implemented inside the PCA
+function below. Here we will show you how to add the scaledData back to
+the object.
+
+``` {r}
+# sce@assays$data@listData$scaled.data <- apply(exprs(sce)[rownames(hvg.out),,drop=FALSE],2,function(x) scale(x,T,T))
+# rownames(sce@assays$data@listData$scaled.data) <- rownames(hvg.out)
+```
+
+## PCA
+
+Performing PCA has many useful applications and interpretations, which
+much depends on the data used. In the case of life sciences, we want to
+segregate samples based on gene expression patterns in the data.
+
+We use the `logcounts` and then set `scale_features` to TRUE in order to
+scale each gene.
+
+``` {r}
+#runPCA and specify the variable genes to use for dim reduction with subset_row
+sce <- runPCA(sce, exprs_values = "logcounts", ncomponents = 50, subset_row = hvg.out, scale = TRUE)
+```
+
+We then plot the first principal components.
+
+``` {r}
+#| fig-height: 4
+#| fig-width: 13
+
+plot_grid(ncol = 3,
+  plotReducedDim(sce,dimred = "PCA",colour_by = "sample",ncomponents = 1:2,point_size = 0.6),
+  plotReducedDim(sce,dimred = "PCA",colour_by = "sample",ncomponents = 3:4,point_size = 0.6),
+  plotReducedDim(sce,dimred = "PCA",colour_by = "sample",ncomponents = 5:6,point_size = 0.6)
+)
+```
+
+To identify which genes (Seurat) or metadata parameters (Scater/Scran)
+contribute the most to each PC, one can retrieve the loading matrix
+information. Unfortunately, this is not implemented in Scater/Scran, so
+you will need to compute PCA using `logcounts`.
+
+``` {r}
+#| fig-height: 4
+#| fig-width: 16
+
+plot_grid(ncol = 2, plotExplanatoryPCs(sce))
+```
+
+We can also plot the amount of variance explained by each PC.
+
+``` {r}
+#| fig-height: 4
+#| fig-width: 4
+
+mypar()
+plot(attr(reducedDim(sce,"PCA"),"percentVar")[1:50]*100,type="l",ylab="% variance",xlab="Principal component #")
+points(attr(reducedDim(sce,"PCA"),"percentVar")[1:50]*100,pch=21,bg="grey",cex=.5)
+```
+
+Based on this plot, we can see that the top 8 PCs retain a lot of
+information, while other PCs contain progressively less. However, it is
+still advisable to use more PCs since they might contain information
+about rare cell types (such as platelets and DCs in this dataset)
+
+## tSNE
+
+We can now run [BH-tSNE](https://arxiv.org/abs/1301.3342).
+
+``` {r}
+set.seed(42)
+sce <- runTSNE(sce, dimred = "PCA", n_dimred = 30, perplexity = 30,name = "tSNE_on_PCA")
+```
+
+We can now plot the tSNE colored per dataset. We can clearly see the
+effect of batches present in the dataset.
+
+``` {r}
+#| fig-height: 5
+#| fig-width: 7
+
+plot_grid(ncol = 3,plotReducedDim(sce,dimred = "tSNE_on_PCA",colour_by = "sample"))
+```
+
+## UMAP
+
+We can now run [UMAP](https://arxiv.org/abs/1802.03426) for cell
+embeddings.
+
+``` {r}
+sce <- runUMAP(sce,dimred = "PCA", n_dimred = 30,   ncomponents = 2,name = "UMAP_on_PCA")
+#see ?umap and ?runUMAP for more info
+```
+
+UMAP is plotted colored per dataset. Although less distinct as in the
+tSNE, we still see quite an effect of the different batches in the data.
+UMAP is not limited by the number of dimensions the data can be reduced
+into (unlike tSNE). We can simply reduce the dimensions altering the
+`n.components` parameter.
+
+``` {r}
+sce <- runUMAP(sce,dimred = "PCA", n_dimred = 30,   ncomponents = 10, name = "UMAP10_on_PCA")
+#see ?umap and ?runUMAP for more info
+```
+
+We can now plot PCA, UMAP and tSNE side by side for comparison. Here, we
+can conclude that our dataset contains a batch effect that needs to be
+corrected before proceeding to clustering and differential gene
+expression analysis.
+
+``` {r}
+#| fig-height: 4.5
+#| fig-width: 15
+
+plot_grid(ncol = 3,
+  plotReducedDim(sce,dimred = "UMAP_on_PCA",colour_by = "sample")+
+    ggplot2::ggtitle(label ="UMAP_on_PCA"),
+  plotReducedDim(sce,dimred = "UMAP10_on_PCA",colour_by = "sample",ncomponents = 1:2)+
+    ggplot2::ggtitle(label ="UMAP10_on_PCA"),
+  plotReducedDim(sce,dimred = "UMAP10_on_PCA",colour_by = "sample",ncomponents = 3:4)+
+    ggplot2::ggtitle(label ="UMAP10_on_PCA")
+)
+```
+
+<div>
+
+> **Discuss**
+>
+> We have now done Variable gene selection, PCA and UMAP with the
+> settings we chose. Test a few different ways of selecting variable
+> genes, number of PCs for UMAP and check how it influences your
+> embedding.
+
+</div>
+
+## Z-scores & DR graphs
+
+Although running a second dimensionality reduction (i.e tSNE or UMAP) on
+PCA would be a standard approach (because it allows higher computation
+efficiency), the options are actually limitless. Below we will show a
+couple of other common options such as running directly on the scaled
+data (z-scores) (which was used for PCA) or on a graph built from scaled
+data. We will show from now on only UMAP, but the same applies for tSNE.
+
+### UMAP from z-scores
+
+To run tSNE or UMAP on the scaled data, one first needs to select the
+number of variables to use. This is because including dimensions that do
+contribute to the separation of your cell types will in the end mask
+those differences. Another reason for it is because running with all
+genes/features also will take longer or might be computationally
+unfeasible. Therefore we will use the scaled data of the highly variable
+genes.
+
+``` {r}
+sce <- runUMAP(sce, exprs_values='logcounts',name = "UMAP_on_ScaleData")
+```
+
+### UMAP from graph
+
+To run tSNE or UMAP on the a graph, we first need to build a graph from
+the data. In fact, both tSNE and UMAP first build a graph from the data
+using a specified distance matrix and then optimize the embedding. Since
+a graph is just a matrix containing distances from cell to cell and as
+such, you can run either UMAP or tSNE using any other distance metric
+desired. Euclidean and Correlation are usually the most commonly used.
+
+``` {r}
+#Build Graph
+nn <- RANN::nn2(reducedDim(sce,"PCA"),k = 30)
+names(nn) <- c("idx","dist")
+g <- buildKNNGraph(sce, k=30, use.dimred="PCA")
+reducedDim(sce,"KNN") <- igraph::as_adjacency_matrix(g)
+
+#Run UMAP and rename it for comparisson
+# temp <- umap::umap.defaults
+try(reducedDim(sce,"UMAP_on_Graph") <- NULL)
+reducedDim(sce,"UMAP_on_Graph") <- uwot::umap(X=NULL, n_components = 2, nn_method=nn)
+```
+
+We can now plot the UMAP comparing both on PCA vs ScaledSata vs Graph.
+
+``` {r}
+#| fig-height: 4.5
+#| fig-width: 15
+
+plot_grid(ncol = 3,
+  plotReducedDim(sce, dimred = "UMAP_on_PCA", colour_by = "sample")+
+    ggplot2::ggtitle(label ="UMAP_on_PCA"),
+  plotReducedDim(sce, dimred = "UMAP_on_ScaleData", colour_by = "sample")+
+    ggplot2::ggtitle(label ="UMAP_on_ScaleData"),
+  plotReducedDim(sce, dimred = "UMAP_on_Graph", colour_by = "sample")+
+    ggplot2::ggtitle(label ="UMAP_on_Graph")
+)
+```
+
+## Genes of interest
+
+Let's plot some marker genes for different cell types onto the
+embedding.
+
+  Markers                    Cell Type
+  -------------------------- -------------------
+  CD3E                       T cells
+  CD3E CD4                   CD4+ T cells
+  CD3E CD8A                  CD8+ T cells
+  GNLY, NKG7                 NK cells
+  MS4A1                      B cells
+  CD14, LYZ, CST3, MS4A7     CD14+ Monocytes
+  FCGR3A, LYZ, CST3, MS4A7   FCGR3A+ Monocytes
+  FCER1A, CST3               DCs
+
+``` {r}
+#| fig-height: 16
+#| fig-width: 12
+
+plotlist <- list()
+for(i in c("CD3E","CD4","CD8A","NKG7","GNLY","MS4A1","CD14","LYZ","MS4A7","FCGR3A","CST3","FCER1A")){
+  plotlist[[i]] <- plotReducedDim(sce,dimred = "UMAP_on_PCA",colour_by = i,by_exprs_values = "logcounts") +
+  scale_fill_gradientn(colours = colorRampPalette(c("grey90","orange3","firebrick","firebrick","red","red" ))(10)) +
+  ggtitle(label = i)+ theme(plot.title = element_text(size=20)) }
+plot_grid(ncol=3, plotlist = plotlist)
+```
+
+<div>
+
+> **Discuss**
+>
+> Select some of your dimensionality reductions and plot some of the QC
+> stats that were calculated in the previous lab. Can you see if some of
+> the separation in your data is driven by quality of the cells?
+
+</div>
+
+## Save data
+
+We can finally save the object for use in future steps.
+
+``` {r}
+path <- "data/results/covid_qc_dm.rds"
+if(!file.exists(path)) saveRDS(sce,path)
+```
+
+## Session info
+
+``` {r}
+sessionInfo()
+```

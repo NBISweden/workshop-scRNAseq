@@ -1,0 +1,691 @@
+---
+description: Identify genes that are significantly over or
+subtitle:  SEURAT TOOLKIT
+title:  Differential gene expression
+---
+
+<div>
+
+> **Note**
+>
+> Code chunks run R commands unless otherwise specified.
+
+</div>
+
+In this tutorial we will cover about Differetial gene expression, which
+comprises an extensive range of topics and methods. In single cell,
+differential expresison can have multiple functionalities such as of
+identifying marker genes for cell populations, as well as differentially
+regulated genes across conditions (healthy vs control). We will also
+exercise on how to account the batch information in your test.
+
+We can first load the data from the clustering session. Moreover, we can
+already decide which clustering resolution to use. First let's define
+using the `louvain` clustering to identifying differentially expressed
+genes.
+
+``` {r}
+suppressPackageStartupMessages({
+  library(Seurat)
+  library(dplyr)
+  library(cowplot)
+  library(ggplot2)
+  library(pheatmap)
+  library(enrichR)
+  library(rafalib)
+  library(Matrix)
+  library(edgeR)
+  library(MAST)
+})
+
+alldata <- readRDS("data/results/covid_qc_dr_int_cl.rds")
+```
+
+``` {r}
+#| fig-height: 5
+#| fig-width: 12
+
+#Set the identity as louvain with resolution 0.5
+sel.clust = "CCA_snn_res.0.5"
+
+alldata <- SetIdent(alldata, value = sel.clust)
+table(alldata@active.ident)
+```
+
+``` {r}
+#| fig-height: 5
+#| fig-width: 12
+
+# plot this clustering
+plot_grid(ncol = 3,
+  DimPlot(alldata, label = T) + NoAxes(),
+  DimPlot(alldata, group.by = "orig.ident") + NoAxes(),
+  DimPlot(alldata, group.by = "type") + NoAxes() )
+```
+
+## Cell marker genes
+
+Let us first compute a ranking for the highly differential genes in each
+cluster. There are many different tests and parameters to be chosen that
+can be used to refine your results. When looking for marker genes, we
+want genes that are positivelly expressed in a cell type and possibly
+not expressed in the others.
+
+``` {r}
+#Compute differentiall expression
+markers_genes <- FindAllMarkers(
+    alldata,
+    log2FC.threshold = 0.2,
+    test.use = "wilcox",
+    min.pct = 0.1,
+    min.diff.pct = 0.2,
+    only.pos = TRUE,
+    max.cells.per.ident = 50,
+    assay = "RNA"
+)
+```
+
+We can now select the top 25 up regulated genes for plotting.
+
+``` {r}
+markers_genes %>% group_by(cluster)  %>% top_n(-25, p_val_adj) -> top25
+top25
+```
+
+``` {r}
+mypar(2,5,mar=c(4,6,3,1))
+for(i in unique(top25$cluster)){
+  barplot( sort( setNames(top25$avg_log2FC, top25$gene) [top25$cluster == i], F),
+           horiz = T,las=1 ,main=paste0(i," vs. rest"),border = "white", yaxs="i" )
+  abline(v=c(0,0.25),lty=c(1,2))
+}
+```
+
+We can visualize them as a heatmap. Here we are selecting the top 5.
+
+``` {r}
+#| fig-height: 8
+#| fig-width: 8
+
+markers_genes %>% group_by(cluster)  %>% top_n(-5, p_val_adj) -> top5
+
+# create a scale.data slot for the selected genes
+alldata <- ScaleData(alldata, features = as.character(unique(top5$gene)), assay = "RNA")
+DoHeatmap(alldata, features = as.character(unique(top5$gene)),group.by = sel.clust, assay = "RNA")
+```
+
+Another way is by representing the overal group expression and detection
+rates in a dot-plot.
+
+``` {r}
+#| fig-height: 8
+#| fig-width: 6
+
+DotPlot(alldata, features = rev(as.character(unique(top5$gene))),group.by = sel.clust,assay = "RNA")+coord_flip()
+```
+
+We can also plot a violin plot for each gene.
+
+``` {r}
+#| fig-height: 10
+#| fig-width: 10
+
+# take top 3 genes per cluster/
+top5 %>% group_by(cluster)  %>% top_n(-3, p_val) -> top3
+
+# set pt.size to zero if you do not want all the points to hide the violin shapes, or to a small value like 0.1
+VlnPlot(alldata, features = as.character(unique(top3$gene)), ncol = 5, group.by = sel.clust, assay = "RNA", pt.size = 0)
+```
+
+<div>
+
+> **Discuss**
+>
+> Take a screen shot of those results and re-run the same code above
+> with another test: "wilcox" (Wilcoxon Rank Sum test), "bimod"
+> (Likelihood-ratio test), "roc" (Identifies 'markers' of gene
+> expression using ROC analysis),"t" (Student's t-test),"negbinom"
+> (negative binomial generalized linear model),"poisson" (poisson
+> generalized linear model), "LR" (logistic regression), "MAST" (hurdle
+> model), "DESeq2" (negative binomial distribution).
+
+</div>
+
+## DGE across conditions
+
+The second way of computing differential expression is to answer which
+genes are differentially expressed within a cluster. For example, in our
+case we have libraries comming from patients and controls and we would
+like to know which genes are influenced the most in a particular cell
+type. For this end, we will first subset our data for the desired cell
+cluster, then change the cell identities to the variable of comparison
+(which now in our case is the "type", e.g. Covid/Ctrl).
+
+``` {r}
+# select all cells in cluster 1
+cell_selection <- subset(alldata, cells = colnames(alldata)[ alldata@meta.data[,sel.clust] == 2])
+cell_selection <- SetIdent(cell_selection, value = "type")
+#Compute differentiall expression
+DGE_cell_selection <- FindAllMarkers(cell_selection,
+                               log2FC.threshold = 0.2,
+                               test.use = "wilcox",
+                               min.pct = 0.1,
+                               min.diff.pct = 0.2,
+                               only.pos = TRUE,
+                               max.cells.per.ident = 50,
+                               assay = "RNA")
+```
+
+We can now plot the expression across the "type".
+
+``` {r}
+#| fig-height: 6
+#| fig-width: 8
+
+DGE_cell_selection %>% group_by(cluster)  %>% top_n(-5, p_val) -> top5_cell_selection
+VlnPlot(cell_selection, features = as.character(unique(top5_cell_selection$gene)), ncol = 5,group.by = "type",assay = "RNA", pt.size = .1)
+```
+
+We can also plot these genes across all clusters, but split by "type",
+to check if the genes are also up/downregulated in other celltypes.
+
+``` {r}
+#| fig-height: 6
+#| fig-width: 16
+
+VlnPlot(alldata, features = as.character(unique(top5_cell_selection$gene)),
+        ncol = 5, split.by = "type",assay = "RNA", pt.size = 0)
+```
+
+As you can see, we hwve many sex chromosome related genes among the top
+DE genes. And if you remember from the QC lab, we have inbalanced sex
+distribution among our subjects, so this may not be related to covid at
+all.
+
+### Remove sex chromosome genes
+
+To remove some of the bias due to inbalanced sex in the subjects we can
+remove the sex chromosome related genes.
+
+``` {r}
+gene.info = read.csv("data/results/genes.table.csv") #was created in the QC exercise
+
+auto.genes = gene.info$external_gene_name[!(gene.info$chromosome_name %in% c("X", "Y"))]
+
+cell_selection@active.assay = "RNA"
+keep.genes = intersect(rownames(cell_selection), auto.genes)
+cell_selection = cell_selection[keep.genes,]
+
+# then renormalize the data
+cell_selection = NormalizeData(cell_selection)
+```
+
+Rerun differential expression:
+
+``` {r}
+#| fig-height: 6
+#| fig-width: 10
+
+#Compute differentiall expression
+DGE_cell_selection <- FindMarkers(cell_selection, ident.1 = "Covid", ident.2 = "Ctrl",
+                       logfc.threshold = 0.2, test.use = "wilcox",  min.pct = 0.1,
+                       min.diff.pct = 0.2, assay = "RNA")
+
+# Define as Covid or Ctrl in the df and add a gene column
+DGE_cell_selection$direction = ifelse(DGE_cell_selection$avg_log2FC > 0, "Covid", "Ctrl")
+DGE_cell_selection$gene = rownames(DGE_cell_selection)
+
+
+DGE_cell_selection %>%
+    group_by(direction) %>%
+    top_n(-5, p_val) %>%
+    arrange(direction) -> top5_cell_selection
+
+VlnPlot(cell_selection, features = as.character(unique(top5_cell_selection$gene)),
+        ncol = 5,group.by = "type",assay = "RNA", pt.size = .1)
+```
+
+We can also plot these genes across all clusters, but split by "type",
+to check if the genes are also up/downregulated in other
+celltypes/clusters.
+
+``` {r}
+#| fig-height: 6
+#| fig-width: 15
+
+VlnPlot(alldata, features = as.character(unique(top5_cell_selection$gene)),
+        ncol = 5, split.by = "type",assay = "RNA", pt.size = 0)
+```
+
+## Patient Batch effects
+
+When we are testing for Covid vs Control we are running a DGE test for 3
+vs 3 individuals. That will be very sensitive to sample differences
+unless we find a way to control for it. So first, lets check how the top
+DGEs are expressed across the individuals:
+
+``` {r}
+#| fig-height: 6
+#| fig-width: 15
+
+VlnPlot(cell_selection, group.by = "orig.ident", features =  as.character(unique(top5_cell_selection$gene)), ncol = 5, assay = "RNA", pt.size = 0)
+```
+
+As you can see, many of the genes detected as DGE in Covid are unique to
+one or 2 patients.
+
+We can examine more genes with a DotPlot:
+
+``` {r}
+#| fig-height: 7
+#| fig-width: 7
+
+DGE_cell_selection %>%
+    group_by(direction) %>%
+    top_n(-20, p_val) -> top20_cell_selection
+DotPlot(cell_selection, features = rev(as.character(unique(top20_cell_selection$gene))), group.by = "orig.ident",    assay = "RNA") + coord_flip()
+```
+
+As you can see, most of the DGEs are driven by the `covid_17` patient.
+
+But it is also the sample with the highest number of cells:
+
+``` {r}
+table(cell_selection$orig.ident)
+```
+
+## Subsample
+
+So one obvious thing to consider is an equal amount of cells per
+individual so that the DGE results are not dominated by a single sample.
+
+So we will use the `downsample` option in the Seurat function
+`WhichCells` to select 30 cells per cluster:
+
+``` {r}
+cell_selection <- SetIdent(cell_selection, value = "orig.ident")
+sub_data <- subset(cell_selection, cells = WhichCells(cell_selection, downsample = 30))
+
+table(sub_data$orig.ident)
+```
+
+And now we run DGE analysis again:
+
+``` {r}
+#| fig-height: 6
+#| fig-width: 8
+
+sub_data <- SetIdent(sub_data, value = "type")
+
+#Compute differentiall expression
+DGE_sub <- FindMarkers(sub_data, ident.1 = "Covid", ident.2 = "Ctrl",
+                       logfc.threshold = 0.2, test.use = "wilcox",  min.pct = 0.1,
+                       min.diff.pct = 0.2, assay = "RNA")
+
+# Define as Covid or Ctrl in the df and add a gene column
+DGE_sub$direction = ifelse(DGE_sub$avg_log2FC > 0, "Covid", "Ctrl")
+DGE_sub$gene = rownames(DGE_sub)
+
+
+DGE_sub %>%
+    group_by(direction) %>%
+    top_n(-5, p_val) %>%
+    arrange(direction) -> top5_sub
+
+VlnPlot(sub_data, features = as.character(unique(top5_sub$gene)),
+        ncol = 5,group.by = "type",assay = "RNA", pt.size = .1)
+```
+
+Plot as dotplot, but in the full dataset:
+
+``` {r}
+#| fig-height: 8
+#| fig-width: 8
+
+DGE_sub %>%
+    group_by(direction) %>%
+    top_n(-20, p_val) -> top20_sub
+DotPlot(cell_selection, features = rev(as.character(unique(top20_sub$gene))), group.by = "orig.ident", assay = "RNA") +
+  coord_flip()
+```
+
+It looks much better now. But if we look per patient you can see that we
+still have some genes that are dominated by a single patient.
+
+Why do you think this is?
+
+## Pseudobulk
+
+One option is to treat the samples as pseudobulks and do differential
+expression for the 3 patients vs 3 controls. You do lose some
+information about cell variability within each patient, but instead you
+gain the advantage of mainly looking for effects that are seen in
+multiple patients.
+
+However, having only 3 patients is probably too low, with many more
+patients it will work better to run pseudobulk analysis.
+
+For a fair comparison we should have equal number of cells per sample
+when we create the pseudobulk, so we will use the subsampled object.
+
+``` {r}
+# get the count matrix for all cells
+DGE_DATA <- sub_data@assays$RNA@counts
+
+# Compute pseudobulk
+mm <- Matrix::sparse.model.matrix(~0 + sub_data$orig.ident)
+pseudobulk <- DGE_DATA %*% mm
+```
+
+Then run edgeR:
+
+``` {r}
+# define the groups
+bulk.labels = c("Covid", "Covid", "Covid", "Ctrl", "Ctrl", "Ctrl")
+
+dge.list <- DGEList(counts = pseudobulk, group = factor(bulk.labels))
+keep <- filterByExpr(dge.list)
+dge.list <- dge.list[keep, , keep.lib.sizes = FALSE]
+
+dge.list <- calcNormFactors(dge.list)
+design = model.matrix(~bulk.labels)
+
+dge.list <- estimateDisp(dge.list, design)
+
+fit <- glmQLFit(dge.list, design)
+qlf <- glmQLFTest(fit, coef = 2)
+topTags(qlf)
+```
+
+As you can see, we have very few significant genes, actually only 2 with
+FDR \< 0.1. Since we only have 3 vs 3 samples, we should not expect too
+many genes with this method.
+
+Again as dotplot including all genes with FDR \< 1:
+
+``` {r}
+#| fig-height: 6
+#| fig-width: 6
+
+res.edgeR <- topTags(qlf, 100)$table
+res.edgeR$dir = ifelse(res.edgeR$logFC > 0, "Covid", "Ctrl")
+res.edgeR$gene = rownames(res.edgeR)
+
+res.edgeR %>%
+    group_by(dir) %>%
+    top_n(-10, PValue) %>%
+    arrange(dir) -> top.edgeR
+
+DotPlot(cell_selection, features = as.character(unique(top.edgeR$gene)), group.by = "orig.ident",
+    assay = "RNA") + coord_flip() + ggtitle("EdgeR pseudobulk") + RotatedAxis()
+```
+
+As you can see, even if we get few genes detected the seem to make sense
+across all the patients.
+
+## MAST random effect
+
+MAST has the option to add a random effect for the patient when running
+DGE analysis. It is quite slow, even with this small dataset, so it may
+not be practical for a larger dataset unless you have access to a
+compute cluster.
+
+We will run MAST with and without patient info as random effect and
+compare the results
+
+First, filter genes in part to speed up the process but also to avoid
+too many warnings in the model fitting step of MAST. We will keep genes
+that are expressed with at least 2 reads in 2 covid patients or 2
+controls.
+
+``` {r}
+# select genes that are expressed in at least 2 patients or 2 ctrls with > 2 reads.
+nPatient = sapply(unique(cell_selection$orig.ident), function(x) rowSums(cell_selection@assays$RNA@counts[, cell_selection$orig.ident
+== x] > 2))
+nCovid = rowSums(nPatient[,1:3]>2)
+nCtrl = rowSums(nPatient[,4:6]>2)
+
+sel = nCovid >= 2 | nCtrl >= 2
+cell_selection_sub = cell_selection[sel, ]
+```
+
+Set up the MAST object.
+
+``` {r}
+# create the feature data
+fData <- data.frame(primerid = rownames(cell_selection_sub))
+m = cell_selection_sub@meta.data
+m$wellKey = rownames(m)
+
+# make sure type and orig.ident are factors
+m$orig.ident = factor(m$orig.ident)
+m$type = factor(m$type)
+
+sca <- MAST::FromMatrix(exprsArray = as.matrix(x = cell_selection_sub@assays$RNA@data),
+    check_sanity = FALSE, cData = m, fData = fData)
+```
+
+First, run the regular MAST analysis without random effects
+
+``` {r}
+# takes a while to run, so save a file to tmpdir in case you have to rerun the code
+tmpdir = "tmp_dge"
+dir.create(tmpdir, showWarnings = F)
+
+tmpfile1 = file.path(tmpdir, "mast_bayesglm_cl1.Rds")
+if (file.exists(tmpfile1)) {
+    fcHurdle1 = readRDS(tmpfile1)
+} else {
+    zlmCond <- suppressMessages(MAST::zlm(~type, sca, method = "bayesglm", ebayes = T))
+    summaryCond <- suppressMessages(MAST::summary(zlmCond, doLRT = "typeCtrl"))
+    summaryDt <- summaryCond$datatable
+    fcHurdle <- merge(summaryDt[summaryDt$contrast == "typeCtrl" & summaryDt$component ==
+        "logFC", c(1, 7, 5, 6, 8)], summaryDt[summaryDt$contrast == "typeCtrl" &
+        summaryDt$component == "H", c(1, 4)], by = "primerid")
+    fcHurdle1 <- stats::na.omit(as.data.frame(fcHurdle))
+    saveRDS(fcHurdle1, tmpfile1)
+}
+```
+
+Then run MAST with glmer and random effect.
+
+``` {r}
+library(lme4)
+
+tmpfile2 = file.path(tmpdir, "mast_glme_cl1.Rds")
+if (file.exists(tmpfile2)) {
+    fcHurdle2 = readRDS(tmpfile2)
+} else {
+    zlmCond <- suppressMessages(MAST::zlm(~type + (1 | orig.ident), sca, method = "glmer",
+        ebayes = F, strictConvergence = FALSE))
+
+    summaryCond <- suppressMessages(MAST::summary(zlmCond, doLRT = "typeCtrl"))
+    summaryDt <- summaryCond$datatable
+    fcHurdle <- merge(summaryDt[summaryDt$contrast == "typeCtrl" & summaryDt$component ==
+        "logFC", c(1, 7, 5, 6, 8)], summaryDt[summaryDt$contrast == "typeCtrl" &
+        summaryDt$component == "H", c(1, 4)], by = "primerid")
+    fcHurdle2 <- stats::na.omit(as.data.frame(fcHurdle))
+    saveRDS(fcHurdle2, tmpfile2)
+}
+```
+
+Top genes with normal MAST:
+
+``` {r}
+top1 = head(fcHurdle1[order(fcHurdle1$`Pr(>Chisq)`), ], 10)
+top1
+
+fcHurdle1$pval = fcHurdle1$`Pr(>Chisq)`
+fcHurdle1$dir = ifelse(fcHurdle1$z > 0, "up", "down")
+fcHurdle1 %>%
+    group_by(dir) %>%
+    top_n(-10, pval) %>%
+    arrange(z) -> mastN
+
+mastN = mastN$primerid
+```
+
+Top genes with random effect:
+
+``` {r}
+top2 = head(fcHurdle2[order(fcHurdle2$`Pr(>Chisq)`), ], 10)
+top2
+
+fcHurdle2$pval = fcHurdle2$`Pr(>Chisq)`
+fcHurdle2$dir = ifelse(fcHurdle2$z > 0, "up", "down")
+fcHurdle2 %>%
+    group_by(dir) %>%
+    top_n(-10, pval) %>%
+    arrange(z) -> mastR
+
+mastR = mastR$primerid
+```
+
+As you can see, we have lower significance for the genes with the random
+effect added.
+
+Dotplot for top10 genes in each direction:
+
+``` {r}
+#| fig-height: 6
+#| fig-width: 14
+
+p1 = DotPlot(cell_selection, features = mastN, group.by = "orig.ident", assay = "RNA") +
+    coord_flip() + RotatedAxis() + ggtitle("Regular MAST")
+
+p2 = DotPlot(cell_selection, features = mastR, group.by = "orig.ident", assay = "RNA") +
+    coord_flip() + RotatedAxis() + ggtitle("With random effect")
+
+p1 + p2
+```
+
+## Gene Set Analysis (GSA)
+
+### Hypergeometric enrichment test
+
+Having a defined list of differentially expressed genes, you can now
+look for their combined function using hypergeometric test.
+
+``` {r}
+# Load additional packages
+library(enrichR)
+
+# Check available databases to perform enrichment (then choose one)
+enrichR::listEnrichrDbs()
+
+# Perform enrichment
+enrich_results <- enrichr(
+ genes     = DGE_cell_selection$gene[DGE_cell_selection$avg_log2FC > 0],
+ databases = "GO_Biological_Process_2017b" )[[1]]
+```
+
+Some databases of interest:\
+`GO_Biological_Process_2017b``KEGG_2019_Human``KEGG_2019_Mouse``WikiPathways_2019_Human``WikiPathways_2019_Mouse`\
+You visualize your results using a simple barplot, for example:
+
+``` {r}
+par(mfrow=c(1,1),mar = c(3, 25, 2, 1))
+barplot( height    = -log10(enrich_results$P.value)[10:1],
+        names.arg = enrich_results$Term[10:1],
+        horiz     = TRUE,
+        las       = 1,
+        border    = FALSE,
+        cex.names = .6 )
+abline(v = c(-log10(0.05)), lty = 2)
+abline(v = 0, lty = 1)
+```
+
+## Gene Set Enrichment Analysis (GSEA)
+
+Besides the enrichment using hypergeometric test, we can also perform
+gene set enrichment analysis (GSEA), which scores ranked genes list
+(usually based on fold changes) and computes permutation test to check
+if a particular gene set is more present in the Up-regulated genes,
+among the DOWN_regulated genes or not differentially regulated.
+
+``` {r}
+cell_selection = SetIdent(cell_selection, value = "type")
+
+DGE_cell_selection2 <- FindMarkers(
+    cell_selection,
+    ident.1 = "Covid",
+    log2FC.threshold = -Inf,
+    test.use = "wilcox",
+    min.pct = 0.1,
+    min.diff.pct = 0,
+    only.pos = FALSE,
+    max.cells.per.ident = 50,
+    assay = "RNA"
+)
+
+# Create a gene rank based on the gene expression fold change
+gene_rank <- setNames( DGE_cell_selection2$avg_log2FC, casefold(rownames(DGE_cell_selection2),upper=T) )
+```
+
+Once our list of genes are sorted, we can proceed with the enrichment
+itself. We can use the package to get gene set from the Molecular
+Signature Database (MSigDB) and select KEGG pathways as an example.
+
+``` {r}
+library(msigdbr)
+
+#Download gene sets
+msigdbgmt <- msigdbr::msigdbr("Homo sapiens")
+msigdbgmt <- as.data.frame(msigdbgmt)
+
+#List available gene sets
+unique(msigdbgmt$gs_subcat)
+
+#Subset which gene set you want to use.
+msigdbgmt_subset <- msigdbgmt[msigdbgmt$gs_subcat == "CP:WIKIPATHWAYS",]
+gmt <- lapply( unique(msigdbgmt_subset$gs_name),function(x){msigdbgmt_subset [msigdbgmt_subset$gs_name == x ,"gene_symbol"]} )
+names(gmt) <- unique(paste0(msigdbgmt_subset$gs_name,"_",msigdbgmt_subset$gs_exact_source))
+```
+
+Next, we will be using the GSEA. This will result in a table containing
+information for several pathways. We can then sort and filter those
+pathways to visualize only the top ones. You can select/filter them by
+either `p-value` or normalized enrichment score (`NES`).
+
+``` {r}
+#| fig-height: 5
+#| fig-width: 12
+
+library(fgsea)
+
+# Perform enrichemnt analysis
+fgseaRes <- fgsea( pathways=gmt, stats=gene_rank, minSize=15, maxSize=500)
+fgseaRes <- fgseaRes[ order(fgseaRes$pval, decreasing = T) ,]
+
+# Filter the results table to show only the top 10 UP or DOWN regulated processes (optional)
+top10_UP <- fgseaRes$pathway [1:10]
+
+# Nice summary table (shown as a plot)
+plotGseaTable(gmt[top10_UP], gene_rank, fgseaRes, gseaParam = 0.5)
+```
+
+<div>
+
+> **Discuss**
+>
+> Which KEGG pathways are upregulated in this cluster?Which KEGG
+> pathways are dowregulated in this cluster?\
+> Change the pathway source to another gene set (e.g. "CP:WIKIPATHWAYS"
+> or "CP:REACTOME" or "CP:BIOCARTA" or "GO:BP") and check the if you get
+> similar results?
+
+</div>
+
+Finally, lets save the integrated data for further analysis.
+
+``` {r}
+# saveRDS(alldata, "data/3pbmc_qc_dr_int_cl_dge.rds")
+# save the list of DGE results to a file.
+write.csv(markers_genes, file = "data/3pbmc_qc_dr_int_cl_dge.csv")
+```
+
+## Session info
+
+``` {r}
+sessionInfo()
+```

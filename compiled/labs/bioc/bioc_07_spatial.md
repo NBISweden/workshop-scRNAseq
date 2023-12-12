@@ -1,0 +1,640 @@
+---
+description: Combining single-cell gene expression data with spatial
+subtitle:  BIOCONDUCTOR TOOLKIT
+title:  Spatial Transcriptomics
+---
+
+<div>
+
+> **Note**
+>
+> Code chunks run R commands unless otherwise specified.
+
+</div>
+
+Spatial transcriptomic data with the Visium platform is in many ways
+similar to scRNAseq data. It contains UMI counts for 5-20 cells instead
+of single cells, but is still quite sparse in the same way as scRNAseq
+data is, but with the additional information about spatial location in
+the tissue.\
+Here we will first run quality control in a similar manner to scRNAseq
+data, then QC filtering, dimensionality reduction, integration and
+clustering. Then we will use scRNAseq data from mouse cortex to run
+LabelTransfer to predict celltypes in the Visium spots.\
+We will use two **Visium** spatial transcriptomics dataset of the mouse
+brain (Sagittal), which are publicly available from the [10x genomics
+website](https://support.10xgenomics.com/spatial-gene-expression/datasets/).
+Note, that these dataset have already been filtered for spots that does
+not overlap with the tissue.
+
+## Preparation
+
+Load packages
+
+``` {r}
+# BiocManager::install('DropletUtils',update = F)
+# BiocManager::install("Spaniel",update = F)
+# remotes::install_github("RachelQueen1/Spaniel", ref = "Development" ,upgrade = F,dependencies = F)
+# remotes::install_github("renozao/xbioc")
+# remotes::install_github("meichendong/SCDC")
+
+library(Spaniel)
+library(biomaRt)
+library(SingleCellExperiment)
+
+suppressPackageStartupMessages({
+  require(Matrix)
+  require(dplyr)
+  require(scran)
+  require(SingleR)
+  require(scater)
+  require(ggplot2)
+  require(patchwork)
+  require(cowplot)
+})
+```
+
+Load ST data
+
+``` {r}
+webpath <- "https://cf.10xgenomics.com/samples/spatial-exp/1.1.0/V1_Mouse_Brain_Sagittal_Posterior/"
+path <- "data/visium/Posterior"
+if (!dir.exists(path)) dir.create(path, recursive = T)
+file_list <- c(
+    "V1_Mouse_Brain_Sagittal_Posterior_filtered_feature_bc_matrix.tar.gz",
+    "V1_Mouse_Brain_Sagittal_Posterior_spatial.tar.gz"
+)
+for (i in file_list) {
+    if (!file.exists(file.path(path, i))) {
+      cat(paste0("Downloading ", paste0(webpath, i), " to ", file.path(path, i), "\n"))
+      download.file(url = paste0(webpath, i), destfile = file.path(path, i))
+    }
+    cat(paste0("Uncompressing ", file.path(path, i), "\n"))
+    system(paste0("tar -xvzf ", file.path(path, i), " -C ",path))
+}
+
+webpath <- "https://cf.10xgenomics.com/samples/spatial-exp/1.1.0/V1_Mouse_Brain_Sagittal_Anterior/"
+path <- "data/visium/Anterior"
+if (!dir.exists(path)) dir.create(path, recursive = T)
+file_list <- c(
+    "V1_Mouse_Brain_Sagittal_Anterior_filtered_feature_bc_matrix.tar.gz",
+    "V1_Mouse_Brain_Sagittal_Anterior_spatial.tar.gz"
+)
+for (i in file_list) {
+    if (!file.exists(file.path(path, i))) {
+        cat(paste0("Downloading ", paste0(webpath, i), " to ", file.path(path, i), "\n"))
+        download.file(url = paste0(webpath, i), destfile = file.path(path, i))
+    }
+    cat(paste0("Uncompressing ", file.path(path, i), "\n"))
+    system(paste0("tar -xvzf ", file.path(path, i), " -C ", path))
+}
+```
+
+Merge the objects into one SCE object.
+
+``` {r}
+sce.a <- Spaniel::createVisiumSCE(tenXDir="data/visium/Anterior", resolution="Low")
+sce.p <- Spaniel::createVisiumSCE(tenXDir="data/visium/Posterior", resolution="Low")
+sce <- cbind(sce.a, sce.p)
+
+sce$Sample <- sub( ".*[/]" , "" ,  sub("/filtered_feature_bc_matrix" , "", sce$Sample ))
+
+lll <- list(sce.a , sce.p)
+lll <- lapply( lll, function(x) x@metadata )
+names(lll) <- c("Anterior","Posterior")
+sce@metadata <- lll
+```
+
+We can further convert the gene ensembl IDs to gene names.
+
+``` {r}
+#| eval: false
+mart <- biomaRt::useMart(biomart="ENSEMBL_MART_ENSEMBL", dataset="mmusculus_gene_ensembl")
+annot <- biomaRt::getBM(attributes = c("ensembl_gene_id", "external_gene_name","gene_biotype"), mart = mart, useCache = F)
+saveRDS(annot, "data/spatial/annot.rds")
+```
+
+``` {r}
+#| include: false
+annot <- readRDS("data/spatial/annot.rds")
+```
+
+``` {r}
+gene_names <- as.character ( annot[match(rownames(sce),annot[,"ensembl_gene_id"]),"external_gene_name"] )
+gene_names[is.na(gene_names) ] <- ""
+
+sce <- sce[gene_names != "", ]
+rownames(sce) <- gene_names[gene_names != ""]
+dim(sce)
+```
+
+## Quality control
+
+Similar to scRNA-seq we use statistics on number of counts, number of
+features and percent mitochondria for quality control.
+
+Now the counts and feature counts are calculated on the Spatial assay,
+so they are named **nCount_Spatial** and **nFeature_Spatial**.
+
+``` {r}
+#| fig-height: 7
+#| fig-width: 11
+
+# Mitochondrial genes
+mito_genes <- rownames(sce)[grep("^mt-",rownames(sce))]
+
+# Ribosomal genes
+ribo_genes <- rownames(sce)[grep("^Rp[sl]",rownames(sce))]
+
+# Hemoglobin genes - includes all genes starting with HB except HBP.
+hb_genes <- rownames(sce)[grep("^Hb[^(p)]",rownames(sce))]
+
+sce <- addPerCellQC(sce, flatten = T, subsets = list(mt=mito_genes, hb=hb_genes, ribo=ribo_genes))
+
+head(colData(sce))
+
+plot_grid(plotColData(sce,y = "detected",x = "Sample",colour_by = "Sample"),
+          plotColData(sce,y = "total",x = "Sample",colour_by = "Sample"),
+          plotColData(sce,y = "subsets_mt_percent",x = "Sample",colour_by = "Sample"),
+          plotColData(sce,y = "subsets_ribo_percent",x = "Sample",colour_by = "Sample"),
+          plotColData(sce,y = "subsets_hb_percent",x = "Sample",colour_by = "Sample"),ncol = 3)
+```
+
+We can also plot the same data onto the tissue section.
+
+``` {r}
+#| fig-height: 15
+#| fig-width: 8
+
+samples <- c("Anterior", "Posterior")
+to_plot <- c("detected","total","subsets_mt_percent","subsets_ribo_percent","subsets_hb_percent")
+
+plist <- list()
+n=1
+for(j in to_plot){
+  for(i in samples){
+    temp <- sce[,sce$Sample == i]
+    temp@metadata <- temp@metadata[[i]]
+    plist[[n]]<-spanielPlot(object = temp,
+        plotType = "Cluster",
+        clusterRes=j,customTitle = j,
+        techType = "Visium",
+        ptSizeMax = 1,ptSizeMin = .1)
+    n<-n+1
+  }
+}
+
+plot_grid(ncol=2, plotlist = plist)
+```
+
+As you can see, the spots with low number of counts/features and high
+mitochondrial content are mainly towards the edges of the tissue. It is
+quite likely that these regions are damaged tissue. You may also see
+regions within a tissue with low quality if you have tears or folds in
+your section.\
+But remember, for some tissue types, the amount of genes expressed and
+proportion mitochondria may also be a biological features, so bear in
+mind what tissue you are working on and what these features mean.
+
+### Filter spots
+
+Select all spots with less than **25%** mitocondrial reads, less than
+**20%** hb-reads and **500** detected genes. You must judge for yourself
+based on your knowledge of the tissue what are appropriate filtering
+criteria for your dataset.
+
+``` {r}
+sce <- sce[ , sce$detected > 500 &
+              sce$subsets_mt_percent < 25 &
+              sce$subsets_hb_percent < 20]
+dim(sce)
+```
+
+And replot onto tissue section:
+
+``` {r}
+#| fig-height: 15
+#| fig-width: 8
+
+samples <- c("Anterior", "Posterior")
+to_plot <- c("detected","total","subsets_mt_percent","subsets_mt_percent","subsets_hb_percent")
+
+plist <- list()
+n=1
+for(j in to_plot){
+  for(i in samples){
+    temp <- sce[,sce$Sample == i]
+    temp@metadata <- temp@metadata[[i]]
+    plist[[n]]<-spanielPlot(object = temp,
+        plotType = "Cluster",
+        clusterRes=j,customTitle = j,
+        techType = "Visium",
+        ptSizeMax = 1,ptSizeMin = .1)
+    n<-n+1
+  }
+}
+
+plot_grid(ncol=2, plotlist = plist)
+```
+
+### Top expressed genes
+
+As for scRNA-seq data, we will look at what the top expressed genes are.
+
+``` {r}
+#| fig-height: 6
+#| fig-width: 6
+
+C = counts(sce)
+C@x = C@x / rep.int(colSums(C), diff(C@p))
+most_expressed <- order(Matrix::rowSums( C ),decreasing = T)[20:1]
+boxplot( as.matrix(t(C[most_expressed,])),cex=.1, las=1, xlab="% total count per cell",col=scales::hue_pal()(20)[20:1],horizontal=TRUE)
+rm(C)
+```
+
+As you can see, the mitochondrial genes are among the top expressed
+genes. Also the lncRNA gene Bc1 (brain cytoplasmic RNA 1). Also one
+hemoglobin gene.
+
+### Filter genes
+
+We will remove the *Bc1* gene, hemoglobin genes (blood contamination)
+and the mitochondrial genes.
+
+``` {r}
+dim(sce)
+
+# Filter Bl1
+sce <- sce[!grepl("Bc1", rownames(sce)), ]
+
+# Filter Mitocondrial
+sce <- sce[!grepl("^mt-", rownames(sce)), ]
+
+# Filter Hemoglobin gene (optional if that is a problem on your data)
+sce <- sce[!grepl("^Hb.*-", rownames(sce)), ]
+
+dim(sce)
+```
+
+## Analysis
+
+We will proceed with the data in a very similar manner to scRNA-seq
+data.
+
+``` {r}
+sce <- computeSumFactors(sce, sizes=c(20, 40, 60, 80))
+sce <- logNormCounts(sce)
+```
+
+Now we can plot gene expression of individual genes, the gene *Hpca* is
+a strong hippocampal marker and *Ttr* is a marker of the choroid plexus.
+
+``` {r}
+#| fig-height: 6
+#| fig-width: 6.5
+
+samples <- c("Anterior", "Posterior")
+to_plot <- c("Hpca", "Ttr")
+
+plist <- list()
+n=1
+for(j in to_plot){
+  for(i in samples){
+    temp <- sce[,sce$Sample == i]
+    temp@metadata <- temp@metadata[[i]]
+    plist[[n]]<-spanielPlot(object = temp,
+        plotType = "Gene",
+        gene=j,
+        customTitle = j,
+        techType = "Visium",
+        ptSizeMax = 1,ptSizeMin = .1)
+    n<-n+1
+  }
+}
+
+plot_grid(ncol=2, plotlist = plist)
+```
+
+### Dimensionality reduction and clustering
+
+We can then now run dimensionality reduction and clustering using the
+same workflow as we use for scRNA-seq analysis.
+
+But make sure you run it on the `SCT` assay.
+
+``` {r}
+var.out <- modelGeneVar(sce, method="loess")
+hvgs = getTopHVGs(var.out, n=2000)
+sce <- runPCA(sce, exprs_values = "logcounts",
+              subset_row=hvgs,
+              ncomponents = 50,
+              ntop = 100,
+              scale = T)
+g <- buildSNNGraph(sce,k=5,use.dimred="PCA")
+sce$louvain_SNNk5 <- factor( igraph::cluster_louvain(g)$membership )
+sce <- runUMAP(sce,dimred = "PCA", n_dimred = 50,   ncomponents = 2,min_dist=0.1,spread=.3,
+               metric="correlation",name = "UMAP_on_PCA")
+```
+
+We can then plot clusters onto umap or onto the tissue section.
+
+``` {r}
+#| fig-height: 8
+#| fig-width: 9
+
+samples <- c("Anterior", "Posterior")
+to_plot <- c("louvain_SNNk5")
+
+plist <- list()
+n=1
+for(j in to_plot){
+  for(i in samples){
+    temp <- sce[,sce$Sample == i]
+    temp@metadata <- temp@metadata[[i]]
+    plist[[n]]<-spanielPlot(object = temp,
+        plotType = "Cluster",clusterRes = j,
+        customTitle = j,
+        techType = "Visium",
+        ptSizeMax = 1,ptSizeMin = .1)
+    n<-n+1
+  }
+}
+
+plist[[3]] <- plotReducedDim(sce, dimred = "UMAP_on_PCA", colour_by = "louvain_SNNk5")
+plist[[4]] <- plotReducedDim(sce, dimred = "UMAP_on_PCA", colour_by = "Sample")
+
+plot_grid(ncol=2, plotlist = plist)
+```
+
+### Integration
+
+Quite often there are strong batch effects between different ST
+sections, so it may be a good idea to integrate the data across
+sections.
+
+We will do a similar integration as in the Data Integration lab.
+
+``` {r}
+mnn_out <- batchelor::fastMNN(sce, subset.row = hvgs, batch = factor(sce$Sample), k = 20, d = 50)
+
+reducedDim(sce, "MNN") <- reducedDim(mnn_out,"corrected")
+rm(mnn_out)
+gc()
+```
+
+Then we run dimensionality reduction and clustering as before.
+
+``` {r}
+g <- buildSNNGraph(sce,k=5,use.dimred="MNN")
+sce$louvain_SNNk5 <- factor( igraph::cluster_louvain(g)$membership )
+sce <- runUMAP(sce,dimred = "MNN", n_dimred = 50,   ncomponents = 2,min_dist=0.1,spread=.3,
+               metric="correlation",name = "UMAP_on_MNN")
+```
+
+``` {r}
+#| fig-height: 8
+#| fig-width: 9
+
+samples <- c("Anterior", "Posterior")
+to_plot <- c("louvain_SNNk5")
+
+plist <- list()
+n=1
+for(j in to_plot){
+  for(i in samples){
+    temp <- sce[,sce$Sample == i]
+    temp@metadata <- temp@metadata[[i]]
+    plist[[n]]<-spanielPlot(object = temp,
+        plotType = "Cluster",clusterRes = j,
+        customTitle = j,
+        techType = "Visium",
+        ptSizeMax = 1,ptSizeMin = .1)
+    n<-n+1
+  }
+}
+
+plist[[3]] <- plotReducedDim(sce, dimred = "UMAP_on_MNN", colour_by = "louvain_SNNk5")
+plist[[4]] <- plotReducedDim(sce, dimred = "UMAP_on_MNN", colour_by = "Sample")
+
+plot_grid(ncol=2, plotlist = plist)
+```
+
+<div>
+
+> **Discuss**
+>
+> Do you see any differences between the integrated and non-integrated
+> clustering? Judge for yourself, which of the clusterings do you think
+> looks best? As a reference, you can compare to brain regions in the
+> [Allen brain
+> atlas](https://mouse.brain-map.org/experiment/thumbnails/100042147?image_type=atlas).
+
+</div>
+
+### Spatially Variable Features
+
+There are two main workflows to identify molecular features that
+correlate with spatial location within a tissue. The first is to perform
+differential expression based on spatially distinct clusters, the other
+is to find features that have spatial patterning without taking clusters
+or spatial annotation into account. First, we will do differential
+expression between clusters just as we did for the scRNAseq data before.
+
+``` {r}
+#| fig-height: 15
+#| fig-width: 7
+
+# differential expression between cluster 4 and cluster 6
+cell_selection <- sce[ , sce$louvain_SNNk5 %in% c(4,6) ]
+cell_selection$louvain_SNNk5 <- factor(cell_selection$louvain_SNNk5)
+
+markers_genes <- scran::findMarkers( x = cell_selection,
+                              groups = cell_selection$louvain_SNNk5,
+                              lfc=.25,
+                              pval.type = "all",
+                              direction = "up")
+
+#List of dataFrames with the results for each cluster
+top5_cell_selection <- lapply( names(markers_genes), function(x) { temp <- markers_genes[[x]][1:5, 1:2] ; temp$gene <- rownames(markers_genes[[x]])[1:5] ; temp$cluster <- x ; return(temp) } )
+top5_cell_selection <- as_tibble(do.call(rbind, top5_cell_selection))
+top5_cell_selection
+
+# plot top markers
+samples <- c("Anterior", "Posterior")
+to_plot <- top5_cell_selection$gene[1:5]
+
+plist <- list()
+n=1
+for(j in to_plot){
+  for(i in samples){
+    temp <- sce[,sce$Sample == i]
+    temp@metadata <- temp@metadata[[i]]
+    plist[[n]]<-spanielPlot(object = temp,
+        plotType = "Gene",
+        gene=j,
+        customTitle = j,
+        techType = "Visium",
+        ptSizeMax = 1,ptSizeMin = .1)
+    n<-n+1
+  }
+}
+plot_grid(ncol=2, plotlist = plist)
+```
+
+## Single cell data
+
+We can use a scRNA-seq dataset as a reference to predict the proportion
+of different celltypes in the Visium spots. Keep in mind that it is
+important to have a reference that contains all the celltypes you expect
+to find in your spots. Ideally it should be a scRNA-seq reference from
+the exact same tissue. We will use a reference scRNA-seq dataset of
+\~14,000 adult mouse cortical cell taxonomy from the Allen Institute,
+generated with the SMART-Seq2 protocol.
+
+First dowload the seurat data from:
+https://www.dropbox.com/s/cuowvm4vrf65pvq/allen_cortex.rds?dl=1 to
+folder `data/spatial/` with command:
+
+``` {r}
+webpath <- "https://www.dropbox.com/s/cuowvm4vrf65pvq/allen_cortex.rds?dl=1"
+path <- "data/spatial/allen_cortex.rds"
+if(!file.exists(path)){  
+  dir.create("data/spatial/",recursive = T)
+  options(timeout=10000)
+  download.file( url = webpath , destfile = path)
+  options(timeout=60)
+}
+```
+
+For speed, and for a more fair comparison of the celltypes, we will
+subsample all celltypes to a maximum of 200 cells per class
+(`subclass`).
+
+``` {r subset_sc}
+allen_reference <- readRDS("data/spatial/allen_cortex.rds")
+allen_reference_sce <- Seurat::as.SingleCellExperiment(allen_reference)
+
+# check number of cells per subclass
+allen_reference_sce$subclass <- sub("/","_",sub(" ","_",allen_reference_sce$subclass))
+table(allen_reference_sce$subclass)
+
+# select 20 cells per subclass, fist set subclass ass active.ident
+subset_cells <- lapply(unique(allen_reference_sce$subclass),function(x){
+  if( sum(allen_reference_sce$subclass == x) > 20 ){
+    temp <- sample(colnames(allen_reference_sce)[allen_reference_sce$subclass == x],size = 20)
+  } else {
+    temp <- colnames(allen_reference_sce)[allen_reference_sce$subclass == x]
+  } })
+allen_reference_sce <- allen_reference_sce[,unlist(subset_cells)]
+
+# check again number of cells per subclass
+table(allen_reference_sce$subclass)
+```
+
+Then run normalization and dimensionality reduction.
+
+``` {r}
+allen_reference_sce <- computeSumFactors(allen_reference_sce, sizes=c(20, 40, 60, 80))
+allen_reference_sce <- logNormCounts(allen_reference_sce)
+allen.var.out <- modelGeneVar(allen_reference_sce, method="loess")
+allen.hvgs = getTopHVGs(allen.var.out, n=2000)
+```
+
+## Subset ST for cortex
+
+Since the scRNAseq dataset was generated from the mouse cortex, we will
+subset the visium dataset in order to select mainly the spots part of
+the cortex. Note that the integration can also be performed on the whole
+brain slice, but it would give rise to false positive cell type
+assignments and therefore it should be interpreted with more care.
+
+### Integrate with scRNAseq
+
+Here, will use SingleR for prediciting which cell types are present in
+the dataset. We can first select the anterior part as an example (to
+speed up predictions).
+
+``` {r}
+sce.anterior <- sce[,sce$Sample == "Anterior"]
+sce.anterior@metadata <- sce.anterior@metadata[["Anterior"]]
+```
+
+Next, we select the highly variable genes that are present in both
+datasets.
+
+``` {r}
+#Find common highly variable genes
+common_hvgs <- allen.hvgs[allen.hvgs %in% hvgs]
+
+#Predict cell classes
+pred.grun <- SingleR(test=sce.anterior[common_hvgs,],
+                     ref=allen_reference_sce[common_hvgs,],
+                     labels=allen_reference_sce$subclass)
+
+#Transfer the classes to the SCE object
+sce.anterior$cell_prediction <- pred.grun$labels
+sce.anterior@colData <- cbind(sce.anterior@colData,
+                              as.data.frame.matrix(table(list(1:ncol(sce.anterior),sce.anterior$cell_prediction))))
+```
+
+Then we can plot the predicted cell populations back to tissue.
+
+``` {r}
+#| fig-height: 5
+#| fig-width: 5.5
+
+#Plot cell predictions
+spanielPlot(object = sce.anterior,
+        plotType = "Cluster",
+        clusterRes = "cell_prediction",
+        customTitle = "cell_prediction",
+        techType = "Visium",
+        ptSizeMax = 1,ptSizeMin = .1)
+```
+
+``` {r}
+#| fig-height: 8
+#| fig-width: 9
+
+plist <- list()
+n=1
+for(i in c("L2_3_IT","L4","L5_IT","L6_IT")){
+  plist[[n]] <- spanielPlot(object = sce.anterior,
+        plotType = "Cluster",
+        clusterRes = i,
+        customTitle = i,
+        techType = "Visium",ptSize = .3,
+        ptSizeMax = 1,ptSizeMin = .1)
+  n <- n+1
+}
+plot_grid(ncol=2, plotlist = plist)
+```
+
+Keep in mind, that the scores are "just" prediction scores, and do not
+correspond to proportion of cells that are of a certain celltype or
+similar. It mainly tell you that gene expression in a certain spot is
+hihgly similar/dissimilar to gene expression of a celltype. If we look
+at the scores, we see that some spots got really clear predictions by
+celltype, while others did not have high scores for any of the
+celltypes.
+
+We can also plot the gene expression and add filters together, too:
+
+``` {r}
+#| fig-height: 6
+#| fig-width: 6.5
+
+spanielPlot(object = sce.anterior,
+        plotType = "Gene",
+        gene="Wfs1",
+        showFilter = sce.anterior$L4 ,
+        customTitle = "",
+        techType = "Visium",
+        ptSize=0,ptSizeMin = -.3,ptSizeMax = 1)
+```
+
+## Session info
+
+``` {r}
+sessionInfo()
+```
