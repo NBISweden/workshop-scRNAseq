@@ -14,6 +14,10 @@ Code chunks run R commands unless otherwise specified.
 {{< meta dimred_prep_1 >}}
 
 ```{r}
+#Activate conda environment to get the correct python path
+reticulate::use_condaenv("seurat", conda = "/opt/conda/bin/conda")
+reticulate::py_discover_config()
+
 suppressPackageStartupMessages({
   library(Seurat)
   library(cowplot)
@@ -125,10 +129,11 @@ alldata <- RunUMAP(alldata, reduction = "pca", dims = 1:30,
 #see ?RunUMAP for more info
 ```
 
-Another usefullness of UMAP is that it is not limitted by the number of dimensions the data cen be reduced into (unlike tSNE). We can simply reduce the dimentions altering the `n.components` parameter.
+Another usefullness of UMAP is that it is not limitted by the number of dimensions the data cen be reduced into (unlike tSNE). We can simply reduce the dimentions altering the `n.components` parameter. So here we will create an UMAP with 10 dimensions.
+
+In Seurat we can add in additional reductions, by default they are named "pca", "umap", "tsne" etc. depending on the function you run. Here we will specify an alternative name for the umap with the `reduction.name` parameter. 
 
 ```{r}
-# we can add in additional reductions, by defulat they are named "pca", "umap", "tsne" etc. But we can specify alternative names with reduction.name
 
 alldata <- RunUMAP(alldata, reduction.name = "UMAP10_on_PCA",
                    reduction = "pca", 
@@ -204,10 +209,12 @@ alldata <- FindNeighbors(alldata,
                          k.param = 20,
                          features = alldata@assays$RNA@var.features)
 
-#Run UMAP on a graph
-library(reticulate)
-reticulate::use_condaenv("sspy")
-alldata <- RunUMAP(alldata, reduction.name = "UMAP_on_Graph", umap.method = "umap-learn", graph = "RNA_snn", assay = "RNA" )
+alldata <- RunUMAP(alldata, 
+                   reduction.name = "UMAP_on_Graph", 
+                   umap.method = "umap-learn", 
+                   graph = "RNA_snn", 
+                   n.epochs = 200,
+                   assay = "RNA" )
 ```
 
 {{< meta dimred_zsg_g_2 >}}
