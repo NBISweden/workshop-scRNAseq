@@ -1,34 +1,56 @@
-
 ---
-title: "{{< meta st_title >}}"
-subtitle: "{{< meta subtitle_scanpy >}}"
-description: "{{< meta st_description >}}"
-format: html
-engine: jupyter
+description: Combining single-cell gene expression data with spatial
+subtitle:  SCANPY TOOLKIT
+title:  Spatial Transcriptomics
 ---
 
-::: {.callout-note}
-Code chunks run Python commands unless it starts with `%%bash`, in which case, those chunks run shell commands.
-:::
+<div>
+
+> **Note**
+>
+> Code chunks run Python commands unless it starts with `%%bash`, in
+> which case, those chunks run shell commands.
+
+</div>
 
 Adapted from tutorials by Giovanni Palla
 (https://scanpy-tutorials.readthedocs.io/en/latest/spatial/integration-scanorama.html)
 and Carlos Talavera-López
 (https://docs.scvi-tools.org/en/latest/tutorials/notebooks/stereoscope_heart_LV_tutorial.html)
 
-:::{.callout-caution}
-For this tutorial you must create and use a new conda environment
-python_spatial. The recipe can be found at:
-https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/master/labs/environment_python_spatial.yml
-:::
+<div>
 
-{{< meta st_1 >}}
+> **Caution**
+>
+> For this tutorial you must create and use a new conda environment
+> python_spatial. The recipe can be found at:
+> https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/master/labs/environment_python_spatial.yml
 
-## {{< meta st_prep >}}
+</div>
 
-{{< meta st_prep_1 >}}
+Spatial transcriptomic data with the Visium platform is in many ways
+similar to scRNAseq data. It contains UMI counts for 5-20 cells instead
+of single cells, but is still quite sparse in the same way as scRNAseq
+data is, but with the additional information about spatial location in
+the tissue.\
+Here we will first run quality control in a similar manner to scRNAseq
+data, then QC filtering, dimensionality reduction, integration and
+clustering. Then we will use scRNAseq data from mouse cortex to run
+LabelTransfer to predict celltypes in the Visium spots.\
+We will use two **Visium** spatial transcriptomics dataset of the mouse
+brain (Sagittal), which are publicly available from the [10x genomics
+website](https://support.10xgenomics.com/spatial-gene-expression/datasets/).
+Note, that these dataset have already been filtered for spots that does
+not overlap with the tissue.
 
-```{python}
+## Preparation
+
+Load packages
+
+``` {python}
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
+
 import scanpy as sc
 import anndata as an
 import pandas as pd
@@ -37,23 +59,23 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import seaborn as sns
 import scanorama
-import warnings
-
-warnings.simplefilter(action="ignore", category=Warning)
 
 #sc.logging.print_versions() # gives errror!!
 sc.set_figure_params(facecolor="white", figsize=(8, 8))
 sc.settings.verbosity = 3
 ```
 
-{{< meta st_prep_2 >}}
+Load ST data
 
-The function `datasets.visium_sge()` downloads the dataset from 10x genomics and returns an AnnData object that contains counts, images and spatial coordinates. We will calculate standards QC metrics with
+The function `datasets.visium_sge()` downloads the dataset from 10x
+genomics and returns an AnnData object that contains counts, images and
+spatial coordinates. We will calculate standards QC metrics with
 `pp.calculate_qc_metrics()` and visualize them.
 
-When using your own Visium data, use Scanpy's read_visium() function to import it.
+When using your own Visium data, use Scanpy's read_visium() function to
+import it.
 
-```{python}
+``` {python}
 adata_anterior = sc.datasets.visium_sge(
     sample_id="V1_Mouse_Brain_Sagittal_Anterior"
 )
@@ -61,14 +83,16 @@ adata_posterior = sc.datasets.visium_sge(
     sample_id="V1_Mouse_Brain_Sagittal_Posterior"
 )
 ```
-```{python}
+
+``` {python}
 adata_anterior.var_names_make_unique()
 adata_posterior.var_names_make_unique()
 ```
 
-To make sure that both images are included in the merged object, use uns_merge="unique".
+To make sure that both images are included in the merged object, use
+uns_merge="unique".
 
-```{python}
+``` {python}
 # merge into one dataset
 library_names = ["V1_Mouse_Brain_Sagittal_Anterior", "V1_Mouse_Brain_Sagittal_Posterior"]
 
@@ -82,13 +106,15 @@ adata = adata_anterior.concatenate(
 adata
 ```
 
-As you can see, we now have the slot spatial in obsm, which contains the spatial information from the Visium platform.
+As you can see, we now have the slot spatial in obsm, which contains the
+spatial information from the Visium platform.
 
-## {{< meta st_qc >}}
+## Quality control
 
-{{< meta st_qc_1 >}}
+Similar to scRNA-seq we use statistics on number of counts, number of
+features and percent mitochondria for quality control.
 
-```{python}
+``` {python}
 # add info on mitochondrial and hemoglobin genes to the objects.
 adata.var['mt'] = adata.var_names.str.startswith('mt-') 
 adata.var['hb'] = adata.var_names.str.contains(("^Hb.*-"))
@@ -98,23 +124,34 @@ sc.pp.calculate_qc_metrics(adata, qc_vars=['mt','hb'], percent_top=None, log1p=F
 sc.pl.violin(adata, ['n_genes_by_counts', 'total_counts', 'pct_counts_mt', 'pct_counts_hb'], jitter=0.4, groupby = 'library_id', rotation= 45)
 ```
 
-{{< meta st_qc_2 >}}
+We can also plot the same data onto the tissue section.
 
-In scanpy, this is a bit tricky when you have multiple sections, as you would have to subset and plot them separately.
+In scanpy, this is a bit tricky when you have multiple sections, as you
+would have to subset and plot them separately.
 
-```{python}
+``` {python}
 # need to plot the two sections separately and specify the library_id
 for library in library_names:
     sc.pl.spatial(adata[adata.obs.library_id == library,:], library_id=library, color = ["total_counts", "n_genes_by_counts",'pct_counts_mt', 'pct_counts_hb'])
 ```
 
-{{< meta st_qc_3 >}}
+As you can see, the spots with low number of counts/features and high
+mitochondrial content are mainly towards the edges of the tissue. It is
+quite likely that these regions are damaged tissue. You may also see
+regions within a tissue with low quality if you have tears or folds in
+your section.\
+But remember, for some tissue types, the amount of genes expressed and
+proportion mitochondria may also be a biological features, so bear in
+mind what tissue you are working on and what these features mean.
 
-### {{< meta st_qc_filter >}}
+### Filter spots
 
-{{< meta st_qc_filter_1 >}}
+Select all spots with less than **25%** mitocondrial reads, less than
+**20%** hb-reads and **500** detected genes. You must judge for yourself
+based on your knowledge of the tissue what are appropriate filtering
+criteria for your dataset.
 
-```{python}
+``` {python}
 keep = (adata.obs['pct_counts_hb'] < 20) & (adata.obs['pct_counts_mt'] < 25) & (adata.obs['n_genes_by_counts'] > 1000)
 print(sum(keep))
 
@@ -123,26 +160,29 @@ adata = adata[keep,:]
 
 And replot onto tissue sections.
 
-```{python}
+``` {python}
 for library in library_names:
     sc.pl.spatial(adata[adata.obs.library_id == library,:], library_id=library, color = ["total_counts", "n_genes_by_counts",'pct_counts_mt', 'pct_counts_hb'])
 ```
 
-### {{< meta st_qc_top >}}
+### Top expressed genes
 
-{{< meta st_qc_top_1 >}}
+As for scRNA-seq data, we will look at what the top expressed genes are.
 
-```{python}
+``` {python}
 sc.pl.highest_expr_genes(adata, n_top=20)
 ```
 
-{{< meta st_qc_top_2 >}}
+As you can see, the mitochondrial genes are among the top expressed
+genes. Also the lncRNA gene Bc1 (brain cytoplasmic RNA 1). Also one
+hemoglobin gene.
 
-### {{< meta st_qc_filterg >}}
+### Filter genes
 
-{{< meta st_qc_filterg_1 >}}
+We will remove the *Bc1* gene, hemoglobin genes (blood contamination)
+and the mitochondrial genes.
 
-```{python}
+``` {python}
 mito_genes = adata.var_names.str.startswith('mt-')
 hb_genes = adata.var_names.str.contains('^Hb.*-')
 
@@ -156,13 +196,17 @@ adata = adata[:,keep]
 print(adata.n_obs, adata.n_vars)
 ```
 
-## {{< meta st_analysis >}}
+## Analysis
 
-{{< meta st_analysis_1 >}}
+We will proceed with the data in a very similar manner to scRNA-seq
+data.
 
-As we have two sections, we will select variable genes with batch_key="library_id" and then take the union of variable genes for further analysis. The idea is to avoid including batch specific genes in the analysis.
+As we have two sections, we will select variable genes with
+batch_key="library_id" and then take the union of variable genes for
+further analysis. The idea is to avoid including batch specific genes in
+the analysis.
 
-```{python}
+``` {python}
 # save the counts to a separate object for later, we need the normalized counts in raw for DEG dete
 counts_adata = adata.copy()
 
@@ -179,34 +223,37 @@ adata = adata[:,adata.var.highly_variable_nbatches > 0]
 sc.pp.scale(adata)
 ```
 
-{{< meta st_analysis_2 >}}
+Now we can plot gene expression of individual genes, the gene *Hpca* is
+a strong hippocampal marker and *Ttr* is a marker of the choroid plexus.
 
-```{python}
+``` {python}
 for library in library_names:
     sc.pl.spatial(adata[adata.obs.library_id == library,:], library_id=library, color = ["Ttr", "Hpca"])
 ```
 
-### {{< meta st_analysis_dimred >}}
+### Dimensionality reduction and clustering
 
-{{< meta st_analysis_dimred_1 >}}
+We can then now run dimensionality reduction and clustering using the
+same workflow as we use for scRNA-seq analysis.
 
-```{python}
+``` {python}
 sc.pp.neighbors(adata)
 sc.tl.umap(adata)
 sc.tl.leiden(adata, key_added="clusters")
 ```
 
-{{< meta st_analysis_dimred_2 >}}
+We can then plot clusters onto umap or onto the tissue section.
 
-```{python}
+``` {python}
 sc.pl.umap(
     adata, color=["clusters", "library_id"], palette=sc.pl.palettes.default_20
 )
 ```
 
-As we are plotting the two sections separately, we need to make sure that they get the same colors by fetching cluster colors from a dict.
+As we are plotting the two sections separately, we need to make sure
+that they get the same colors by fetching cluster colors from a dict.
 
-```{python}
+``` {python}
 clusters_colors = dict(
     zip([str(i) for i in range(len(adata.obs.clusters.cat.categories))], adata.uns["clusters_colors"])
 )
@@ -236,13 +283,16 @@ for i, library in enumerate(
 plt.tight_layout()
 ```
 
-### {{< meta st_analysis_int >}}
+### Integration
 
-{{< meta st_analysis_int_1 >}}
+Quite often there are strong batch effects between different ST
+sections, so it may be a good idea to integrate the data across
+sections.
 
-We will do a similar integration as in the Data Integration lab, here we will use Scanorama for integration.
+We will do a similar integration as in the Data Integration lab, here we
+will use Scanorama for integration.
 
-```{python}
+``` {python}
 adatas = {}
 for batch in library_names:
     adatas[batch] = adata[adata.obs['library_id'] == batch,]
@@ -250,7 +300,7 @@ for batch in library_names:
 adatas 
 ```
 
-```{python}
+``` {python}
 import scanorama
 
 #convert to list of AnnData objects
@@ -272,9 +322,9 @@ adata.obsm["Scanorama"] = all_s
 adata
 ```
 
-{{< meta st_analysis_int_2 >}}
+Then we run dimensionality reduction and clustering as before.
 
-```{python}
+``` {python}
 sc.pp.neighbors(adata, use_rep="Scanorama")
 sc.tl.umap(adata)
 sc.tl.leiden(adata, key_added="clusters")
@@ -284,9 +334,10 @@ sc.pl.umap(
 )
 ```
 
-As we have new clusters, we again need to make a new dict for cluster colors
+As we have new clusters, we again need to make a new dict for cluster
+colors
 
-```{python}
+``` {python}
 clusters_colors = dict(
     zip([str(i) for i in range(len(adata.obs.clusters.cat.categories))], adata.uns["clusters_colors"])
 )
@@ -316,22 +367,35 @@ for i, library in enumerate(
 plt.tight_layout()
 ```
 
-:::{.callout-note title="Discuss"}
-{{< meta st_analysis_int_3 >}}
-:::
+<div>
 
-### {{< meta st_analysis_svg >}}
+> **Discuss**
+>
+> Do you see any differences between the integrated and non-integrated
+> clustering? Judge for yourself, which of the clusterings do you think
+> looks best? As a reference, you can compare to brain regions in the
+> [Allen brain
+> atlas](https://mouse.brain-map.org/experiment/thumbnails/100042147?image_type=atlas).
 
-{{< meta st_analysis_svg_1 >}}
+</div>
 
-```{python}
+### Spatially Variable Features
+
+There are two main workflows to identify molecular features that
+correlate with spatial location within a tissue. The first is to perform
+differential expression based on spatially distinct clusters, the other
+is to find features that have spatial patterning without taking clusters
+or spatial annotation into account. First, we will do differential
+expression between clusters just as we did for the scRNAseq data before.
+
+``` {python}
 # run t-test 
 sc.tl.rank_genes_groups(adata, "clusters", method="wilcoxon")
 # plot as heatmap for cluster5 genes
 sc.pl.rank_genes_groups_heatmap(adata, groups="5", n_genes=10, groupby="clusters")
 ```
 
-```{python}
+``` {python}
 # plot onto spatial location
 top_genes = sc.get.rank_genes_groups_df(adata, group='5',log2fc_min=0)['names'][:3]
 
@@ -339,13 +403,17 @@ for library in ["V1_Mouse_Brain_Sagittal_Anterior", "V1_Mouse_Brain_Sagittal_Pos
     sc.pl.spatial(adata[adata.obs.library_id == library,:], library_id=library, color = top_genes)
 ```
 
-Spatial transcriptomics allows researchers to investigate how gene expression trends varies in space, thus identifying spatial patterns of gene expression. For this purpose there are multiple methods, such as SpatailDE, SPARK, Trendsceek, HMRF and Splotch.
+Spatial transcriptomics allows researchers to investigate how gene
+expression trends varies in space, thus identifying spatial patterns of
+gene expression. For this purpose there are multiple methods, such as
+SpatailDE, SPARK, Trendsceek, HMRF and Splotch.
 
-We use SpatialDE Svensson et al., a Gaussian process-based statistical framework that aims to identify spatially variable genes.
+We use SpatialDE Svensson et al., a Gaussian process-based statistical
+framework that aims to identify spatially variable genes.
 
 OBS! Takes a long time to run, so skip this step for now!
 
-```{python}
+``` {python}
 #| eval: false
 
 import SpatialDE
@@ -364,13 +432,20 @@ adata.write_h5ad('./data/spatial/adata_processed_sc-1.h5ad')
 results.sort_values("qval").head(10)
 ```
 
-## {{< meta st_ss >}}
+## Single cell data
 
-{{< meta st_ss_1 >}}
+We can use a scRNA-seq dataset as a reference to predict the proportion
+of different celltypes in the Visium spots. Keep in mind that it is
+important to have a reference that contains all the celltypes you expect
+to find in your spots. Ideally it should be a scRNA-seq reference from
+the exact same tissue. We will use a reference scRNA-seq dataset of
+\~14,000 adult mouse cortical cell taxonomy from the Allen Institute,
+generated with the SMART-Seq2 protocol.
 
-Conveniently, you can also download the pre-processed dataset in h5ad format from here. Here with bash code:
+Conveniently, you can also download the pre-processed dataset in h5ad
+format from here. Here with bash code:
 
-```{python}
+``` {python}
 #| eval: false
 %%bash
 
@@ -386,19 +461,21 @@ else
 fi
 ```
 
-```{python}
+``` {python}
 adata_cortex=sc.read_h5ad("data/spatial/adata_processed_sc-1.h5ad")
 
 sc.pl.umap(adata_cortex, color="cell_subclass", legend_loc = 'on data')
 ```
 
-```{python}
+``` {python}
 adata_cortex.obs.cell_subclass.value_counts()
 ```
 
-{{< meta st_ss_2 >}}
+For speed, and for a more fair comparison of the celltypes, we will
+subsample all celltypes to a maximum of 200 cells per class
+(`subclass`).
 
-```{python}
+``` {python}
 target_cells = 200
 
 adatas2 = [adata_cortex[adata_cortex.obs.cell_subclass == clust] for clust in adata_cortex.obs.cell_subclass.cat.categories]
@@ -412,23 +489,28 @@ adata_cortex = adatas2[0].concatenate(*adatas2[1:])
 adata_cortex.obs.cell_subclass.value_counts()
 ```
 
-```{python}
+``` {python}
 sc.pl.umap(
     adata_cortex, color=["cell_class", "cell_subclass","donor_genotype","dissected_region"], palette=sc.pl.palettes.default_20
 )
 ```
 
-```{python}
+``` {python}
 sc.pl.umap(adata_cortex, color="cell_subclass", legend_loc = 'on data')
 ```
 
-## {{< meta st_sub >}}
+## Subset ST for cortex
 
-{{< meta st_sub_1 >}}
+Since the scRNAseq dataset was generated from the mouse cortex, we will
+subset the visium dataset in order to select mainly the spots part of
+the cortex. Note that the integration can also be performed on the whole
+brain slice, but it would give rise to false positive cell type
+assignments and therefore it should be interpreted with more care.
 
-For deconvolution we will need the counts data, so we will subset from the counts_adata object that we created earlier.
+For deconvolution we will need the counts data, so we will subset from
+the counts_adata object that we created earlier.
 
-```{python}
+``` {python}
 lib_a = "V1_Mouse_Brain_Sagittal_Anterior"
 
 counts_adata.obs['clusters'] = adata.obs.clusters
@@ -452,29 +534,41 @@ sc.pl.spatial(
 )
 ```
 
-## {{< meta st_deconv >}}
+## Deconvolution
 
-{{< meta st_deconv_1 >}}
+Deconvolution is a method to estimate the abundance (or proportion) of
+different celltypes in a bulkRNAseq dataset using a single cell
+reference. As the Visium data can be seen as a small bulk, we can both
+use methods for traditional bulkRNAseq as well as methods especially
+developed for Visium data. Some methods for deconvolution are DWLS,
+cell2location, Tangram, Stereoscope, RCTD, SCDC and many more.
 
-Here, we will use deconvolution with Stereoscope implemented in the SCVI-tools package. To read more about Stereoscope please check out this github page (https://github.com/almaan/stereoscope)
+Here, we will use deconvolution with Stereoscope implemented in the
+SCVI-tools package. To read more about Stereoscope please check out this
+github page (https://github.com/almaan/stereoscope)
 
-### {{< meta st_deconv_genes >}}
+### Select genes for deconvolution
 
-{{< meta st_deconv_genes_1 >}}
+Most deconvolution methods does a prior gene selection and there are
+different options that are used: - Use variable genes in the SC data. -
+Use variable genes in both SC and ST data - DE genes between clusters in
+the SC data.\
+In this case we will use top DE genes per cluster, so first we have to
+run DGE detection on the scRNAseq data.
 
-```{python}
+``` {python}
 sc.tl.rank_genes_groups(adata_cortex, 'cell_subclass', method = "t-test", n_genes=100)
 sc.pl.rank_genes_groups_dotplot(adata_cortex, n_genes=3)
 ```
 
-```{python}
+``` {python}
 sc.tl.filter_rank_genes_groups(adata_cortex, min_fold_change=1)
 
 genes = sc.get.rank_genes_groups_df(adata_cortex, group = None)
 genes
 ```
 
-```{python}
+``` {python}
 deg = genes.names.unique().tolist()
 print(len(deg))
 # check that the genes are also present in the ST data
@@ -487,11 +581,14 @@ Train the model
 
 First, train the model using scRNAseq data.
 
-Stereoscope requires the data to be in counts, earlier in this tutorial we saved the spatial counts in a separate object counts_adata.
+Stereoscope requires the data to be in counts, earlier in this tutorial
+we saved the spatial counts in a separate object counts_adata.
 
-However, the single cell dataset that we dowloaded only has the lognormalized data in the adata.X slot, hence we will have to recalculate the count matrix.
+However, the single cell dataset that we dowloaded only has the
+lognormalized data in the adata.X slot, hence we will have to
+recalculate the count matrix.
 
-```{python}
+``` {python}
 # first do exponent and subtract pseudocount
 E = np.exp(adata_cortex.X)-1
 n = np.sum(E,1)
@@ -509,9 +606,10 @@ sc_adata = adata_cortex.copy()
 sc_adata.X = C
 ```
 
-Setup the anndata, the implementation requires the counts matrix to be in the "counts" layer as a copy.
+Setup the anndata, the implementation requires the counts matrix to be
+in the "counts" layer as a copy.
 
-```{python}
+``` {python}
 import scvi
 #from scvi.data import register_tensor_from_anndata
 from scvi.external import RNAStereoscope, SpatialStereoscope
@@ -540,9 +638,10 @@ else:
 
 Predict propritions on the spatial data
 
-First create a new st object with the correct genes and counts as a layer.
+First create a new st object with the correct genes and counts as a
+layer.
 
-```{python}
+``` {python}
 st_adata = adata_anterior_subset.copy()
 
 st_adata.layers["counts"] = st_adata.X.copy()
@@ -563,7 +662,7 @@ else:
 
 Get the results from the model, also put them in the .obs slot.
 
-```{python}
+``` {python}
 st_adata.obsm["deconvolution"] = spatial_model.get_proportions()
 
 # also copy to the obsm data frame
@@ -571,9 +670,11 @@ for ct in st_adata.obsm["deconvolution"].columns:
     st_adata.obs[ct] = st_adata.obsm["deconvolution"][ct]
 ```
 
-We are then able to explore how cell types in the scRNA-seq dataset are predicted onto the visium dataset. Let's first visualize the neurons cortical layers.
+We are then able to explore how cell types in the scRNA-seq dataset are
+predicted onto the visium dataset. Let's first visualize the neurons
+cortical layers.
 
-```{python}
+``` {python}
 sc.pl.spatial(
     st_adata,
     img_key="hires",
@@ -586,46 +687,54 @@ sc.pl.spatial(
 
 We can go ahead an visualize astrocytes and oligodendrocytes as well.
 
-```{python}
+``` {python}
 sc.pl.spatial(
     st_adata, img_key="hires", color=["Oligo", "Astro"], size=1.5, library_id = lib_a
 )
 ```
 
-{{< meta st_2 >}}
+Keep in mind that the deconvolution results are just predictions,
+depending on how well your scRNAseq data covers the celltypes that are
+present in the ST data and on how parameters, gene selection etc. are
+tuned you may get different results.
 
-```{python}
+``` {python}
 sc.pl.violin(st_adata, ["L2/3 IT", "L6 CT","Oligo","Astro"],
             jitter=0.4, groupby = 'clusters', rotation= 45)
 ```
 
 #ST_ALL14:
 
-:::{.callout-note title="Discuss"}
-{{< meta st_3 >}}
+<div>
 
-```{python}
-lib_p = "V1_Mouse_Brain_Sagittal_Posterior"
+> **Discuss**
+>
+> Subset for another region that does not contain cortex cells and check
+> what you get from the label transfer. Suggested region is the right
+> end of the posterial section that you can select like this:
+>
+> ``` {python}
+> lib_p = "V1_Mouse_Brain_Sagittal_Posterior"
+>
+> adata_subregion = adata[
+>     (adata.obs.library_id == lib_p) 
+>     & (adata.obsm["spatial"][:, 0] > 6500),
+>     :,
+> ].copy()
+>
+> sc.pl.spatial(
+>     adata_subregion,
+>     img_key="hires",
+>     library_id = lib_p,
+>     color=['n_genes_by_counts'],
+>     size=1.5
+> )
+> ```
 
-adata_subregion = adata[
-    (adata.obs.library_id == lib_p) 
-    & (adata.obsm["spatial"][:, 0] > 6500),
-    :,
-].copy()
+</div>
 
-sc.pl.spatial(
-    adata_subregion,
-    img_key="hires",
-    library_id = lib_p,
-    color=['n_genes_by_counts'],
-    size=1.5
-)
-```
+## Session info
 
-:::
-
-## {{< meta session >}}
-
-```{python}
+``` {python}
 sc.logging.print_versions()
 ```

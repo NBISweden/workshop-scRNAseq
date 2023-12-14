@@ -1,20 +1,24 @@
 ---
-title: "{{< fa route >}} Trajectory inference using PAGA"
-subtitle: "{{< meta subtitle_scanpy >}}"
-description: "Reconstructing developmental or differentiation pathways from individual cell gene expression profiles to understand cellular transitions and relationships."
-format: html
-engine: jupyter
+description: Reconstructing developmental or differentiation pathways
+subtitle:  SCANPY TOOLKIT
+title:  Trajectory inference using PAGA
 ---
 
-::: {.callout-note}
-Code chunks run Python commands unless it starts with `%%bash`, in which case, those chunks run shell commands.
-:::
+<div>
 
-Partly following [this tutorial](https://scanpy-tutorials.readthedocs.io/en/latest/paga-paul15.html).
+> **Note**
+>
+> Code chunks run Python commands unless it starts with `%%bash`, in
+> which case, those chunks run shell commands.
+
+</div>
+
+Partly following [this
+tutorial](https://scanpy-tutorials.readthedocs.io/en/latest/paga-paul15.html).
 
 ## Loading libraries
 
-```{python}
+``` {python}
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as pl
@@ -24,9 +28,6 @@ import scanpy as sc
 import scipy
 import numpy as np
 import matplotlib.pyplot as plt
-import warnings
-
-warnings.simplefilter(action="ignore", category=Warning)
 
 # verbosity: errors (0), warnings (1), info (2), hints (3)
 sc.settings.verbosity = 3
@@ -35,16 +36,20 @@ sc.settings.set_figure_params(dpi=100, frameon=False, figsize=(5, 5), facecolor=
 
 ## Loading data
 
-In order to speed up the computations during the exercises, we will be using a subset of a bone marrow dataset (originally containing about
-100K cells). The bone marrow is the source of adult immune cells, and contains virtually all differentiation stages of cell from the immune
+In order to speed up the computations during the exercises, we will be
+using a subset of a bone marrow dataset (originally containing about
+100K cells). The bone marrow is the source of adult immune cells, and
+contains virtually all differentiation stages of cell from the immune
 system which later circulate in the blood to all other organs.
 
 ![](../figs/hematopoiesis.png)
 
-All the data has been preprocessed with Seurat. The file trajectory_scanpy_filtered.h5ad was converted from the Seurat object
-using the SeuratDisk package. For more information on how it was done, have a look at the script: convert_to_h5ad.R in the github repo.
+All the data has been preprocessed with Seurat. The file
+trajectory_scanpy_filtered.h5ad was converted from the Seurat object
+using the SeuratDisk package. For more information on how it was done,
+have a look at the script: convert_to_h5ad.R in the github repo.
 
-```{python}
+``` {python}
 infile = 'data/bone_marrow/trajectory_scanpy_filtered.h5ad'
 adata = sc.read_h5ad(infile)
 
@@ -54,51 +59,55 @@ adata
 
 Check that the variable names are correct.
 
-```{python}
+``` {python}
 adata.var
 ```
 
-```{python}
+``` {python}
 # check what you have in the X matrix, should be lognormalized counts.
 print(adata.X[:10,:10])
 ```
 
 ## Explore the data
 
-There is a umap and clusters provided with the object, first plot some information from the previous analysis onto the umap.
+There is a umap and clusters provided with the object, first plot some
+information from the previous analysis onto the umap.
 
-```{python}
+``` {python}
 sc.pl.umap(adata, color = ['clusters','dataset','batches','Phase'],legend_loc = 'on data', legend_fontsize = 'xx-small', ncols = 2)
 ```
 
-It is crucial that you performing analysis of a dataset understands what is going on, what are the clusters you see in your data and most
-importantly How are the clusters related to each other?. Well, let’s explore the data a bit. With the help of this table, write down which
+It is crucial that you performing analysis of a dataset understands what
+is going on, what are the clusters you see in your data and most
+importantly How are the clusters related to each other?. Well, let's
+explore the data a bit. With the help of this table, write down which
 cluster numbers in your dataset express these key markers.
 
-|Marker  |Cell Type|
-|--------|----------------------------|
-|Cd34    |HSC progenitor|
-|Ms4a1   |B cell lineage|
-|Cd3e    |T cell lineage|
-|Ltf     |Granulocyte lineage|
-|Cst3    |Monocyte lineage|
-|Mcpt8   |Mast Cell lineage|
-|Alas2   |RBC lineage|
-|Siglech |Dendritic cell lineage|
-|C1qc    |Macrophage cell lineage|
-|Pf4     |Megakaryocyte cell lineage|
+  Marker    Cell Type
+  --------- ----------------------------
+  Cd34      HSC progenitor
+  Ms4a1     B cell lineage
+  Cd3e      T cell lineage
+  Ltf       Granulocyte lineage
+  Cst3      Monocyte lineage
+  Mcpt8     Mast Cell lineage
+  Alas2     RBC lineage
+  Siglech   Dendritic cell lineage
+  C1qc      Macrophage cell lineage
+  Pf4       Megakaryocyte cell lineage
 
-```{python}
+``` {python}
 markers = ["Cd34","Alas2","Pf4","Mcpt8","Ltf","Cst3", "Siglech", "C1qc", "Ms4a1", "Cd3e", ]
 sc.pl.umap(adata, color = markers, use_raw = False, ncols = 4)
 ```
 
 ## Rerun analysis in Scanpy
 
-Redo clustering and umap using the basic Scanpy pipeline. Use the provided "X_harmony_Phase" dimensionality reduction as the staring
+Redo clustering and umap using the basic Scanpy pipeline. Use the
+provided "X_harmony_Phase" dimensionality reduction as the staring
 point.
 
-```{python}
+``` {python}
 # first, store the old umap with a new name so it is not overwritten
 adata.obsm['X_umap_old'] = adata.obsm['X_umap']
 
@@ -106,7 +115,7 @@ sc.pp.neighbors(adata, n_pcs = 30, n_neighbors = 20, use_rep="X_harmony_Phase")
 sc.tl.umap(adata, min_dist=0.4, spread=3)
 ```
 
-```{python}
+``` {python}
 #sc.tl.umap(adata, min_dist=0.6, spread=1.5)
 sc.pl.umap(adata, color = ['clusters'],legend_loc = 'on data', legend_fontsize = 'xx-small', edges = True)
 
@@ -121,7 +130,7 @@ sc.tl.leiden(adata, key_added = "leiden_1.4", resolution = 1.4) # default resolu
 sc.pl.umap(adata, color = ['leiden_1.0', 'leiden_1.2', 'leiden_1.4','clusters'],legend_loc = 'on data', legend_fontsize = 'xx-small', ncols =2)
 ```
 
-```{python}
+``` {python}
 #Rename clusters with really clear markers, the rest are left unlabelled.
 
 annot = pd.DataFrame(adata.obs['leiden_1.4'].astype('string'))
@@ -149,16 +158,17 @@ annot.value_counts()
 # astype('category')
 ```
 
-```{python}
+``` {python}
 # plot onto the Seurat embedding:
 sc.pl.embedding(adata, basis='X_umap_old', color = 'annot',legend_loc = 'on data', legend_fontsize = 'xx-small', ncols =2)
 ```
 
 ## Run PAGA
 
-Use the clusters from leiden clustering with leiden_1.4 and run PAGA. First we create the graph and initialize the positions using the umap.
+Use the clusters from leiden clustering with leiden_1.4 and run PAGA.
+First we create the graph and initialize the positions using the umap.
 
-```{python}
+``` {python}
 # use the umap to initialize the graph layout.
 sc.tl.draw_graph(adata, init_pos='X_umap')
 sc.pl.draw_graph(adata, color='annot', legend_loc='on data', legend_fontsize = 'xx-small')
@@ -166,31 +176,34 @@ sc.tl.paga(adata, groups='annot')
 sc.pl.paga(adata, color='annot', edge_width_scale = 0.3)
 ```
 
-As you can see, we have edges between many clusters that we know are are unrelated, so we may need to clean up the data a bit more.
+As you can see, we have edges between many clusters that we know are are
+unrelated, so we may need to clean up the data a bit more.
 
 ## Data pre-processing prior trajectory inference
 
-First, lets explore the graph a bit. So we plot the umap with the graph connections on top.
+First, lets explore the graph a bit. So we plot the umap with the graph
+connections on top.
 
-```{python}
+``` {python}
 sc.pl.umap(adata, edges=True, color = 'annot', legend_loc= 'on data', legend_fontsize= 'xx-small')
 ```
 
-We have many edges in the graph between unrelated clusters, so lets try with fewer neighbors.
+We have many edges in the graph between unrelated clusters, so lets try
+with fewer neighbors.
 
-```{python}
+``` {python}
 sc.pp.neighbors(adata, n_neighbors=5,  use_rep = 'X_harmony_Phase', n_pcs = 30)
 sc.pl.umap(adata, edges=True, color = 'annot', legend_loc= 'on data', legend_fontsize= 'xx-small')
 ```
 
 ## Rerun PAGA again on the data
 
-```{python}
+``` {python}
 sc.tl.draw_graph(adata, init_pos='X_umap')
 sc.pl.draw_graph(adata, color='annot', legend_loc='on data', legend_fontsize = 'xx-small')
 ```
 
-```{python}
+``` {python}
 sc.tl.paga(adata, groups='annot')
 sc.pl.paga(adata, color='annot', edge_width_scale = 0.3)
 ```
@@ -199,19 +212,20 @@ sc.pl.paga(adata, color='annot', edge_width_scale = 0.3)
 
 The following is just as well possible for a UMAP.
 
-```{python}
+``` {python}
 sc.tl.draw_graph(adata, init_pos='paga')
 ```
 
-Now we can see all marker genes also at single-cell resolution in a meaningful layout.
+Now we can see all marker genes also at single-cell resolution in a
+meaningful layout.
 
-```{python}
+``` {python}
 sc.pl.draw_graph(adata, color=['annot'], legend_loc='on data', legend_fontsize=  'xx-small')
 ```
 
 Compare the 2 graphs
 
-```{python}
+``` {python}
 sc.pl.paga_compare(
     adata, threshold=0.03, title='', right_margin=0.2, size=10, edge_width_scale=0.5,
     legend_fontsize=12, fontsize=12, frameon=False, edges=True, save=True)
@@ -219,9 +233,10 @@ sc.pl.paga_compare(
 
 ## Reconstructing gene changes along PAGA paths for a given set of genes
 
-Choose a root cell for diffusion pseudotime. We have 3 progenitor clusters, but cluster 5 seems the most clear.
+Choose a root cell for diffusion pseudotime. We have 3 progenitor
+clusters, but cluster 5 seems the most clear.
 
-```{python}
+``` {python}
 adata.uns['iroot'] = np.flatnonzero(adata.obs['annot']  == '5_progen')[0]
 
 sc.tl.dpt(adata)
@@ -229,14 +244,15 @@ sc.tl.dpt(adata)
 
 Use the full raw data for visualization.
 
-```{python}
+``` {python}
 sc.pl.draw_graph(adata, color=['annot', 'dpt_pseudotime'], legend_loc='on data', legend_fontsize= 'x-small')
 ```
 
-By looking at the different know lineages and the layout of the graph we define manually some paths to the graph that corresponds to spcific
+By looking at the different know lineages and the layout of the graph we
+define manually some paths to the graph that corresponds to spcific
 lineages.
 
-```{python}
+``` {python}
 # Define paths
 
 paths = [('erythrocytes', ['5_progen', '8_progen', '6','3','7', '11_eryth']),
@@ -250,9 +266,10 @@ adata.obs['distance'] = adata.obs['dpt_pseudotime']
 !mkdir write
 ```
 
-Then we select some genes that can vary in the lineages and plot onto the paths.
+Then we select some genes that can vary in the lineages and plot onto
+the paths.
 
-```{python}
+``` {python}
 gene_names = ['Gata2', 'Gata1', 'Klf1', 'Epor', 'Hba-a2',  # erythroid
               'Elane', 'Cebpe', 'Gfi1',                    # neutrophil
               'Irf8', 'Csf1r', 'Ctsg',                     # monocyte
@@ -260,7 +277,7 @@ gene_names = ['Gata2', 'Gata1', 'Klf1', 'Epor', 'Hba-a2',  # erythroid
               'C1qc','Siglech','Ms4a1','Cd3e','Cd34']
 ```
 
-```{python}
+``` {python}
 #| eval: false
 # this chunk is broken. fix code and remove eval: false
 
@@ -289,16 +306,22 @@ pl.savefig('./figures/paga_path.pdf')
 pl.show()
 ```
 
-:::{.callout-note title="Discuss"}
-As you can see, we can manipulate the trajectory quite a bit by selecting different number of neighbors, components etc. to fit with our
-assumptions on the development of these celltypes.
+<div>
 
-Please explore furhter how you can tweak the trajectory. For instance, can you create a PAGA trajectory using the orignial umap from Seurat
-instead? Hint, you first need to compute the neighbors on the umap.
-:::
+> **Discuss**
+>
+> As you can see, we can manipulate the trajectory quite a bit by
+> selecting different number of neighbors, components etc. to fit with
+> our assumptions on the development of these celltypes.
+>
+> Please explore furhter how you can tweak the trajectory. For instance,
+> can you create a PAGA trajectory using the orignial umap from Seurat
+> instead? Hint, you first need to compute the neighbors on the umap.
+
+</div>
 
 ## Session info
 
-```{python}
+``` {python}
 sc.logging.print_versions()
 ```

@@ -1,28 +1,45 @@
 ---
-title: "{{< meta int_title >}}"
-subtitle: "{{< meta subtitle_bioc >}}"
-description: "{{< meta int_description >}}"
-format: html
+description: Combining and harmonizing samples or datasets from
+subtitle:  BIOCONDUCTOR TOOLKIT
+title:  Data Integration
 ---
 
-::: {.callout-note}
-Code chunks run R commands unless otherwise specified.
-:::
+<div>
 
-{{< meta int_1 >}}
+> **Note**
+>
+> Code chunks run R commands unless otherwise specified.
 
-|Markdown | Language | Library | Ref|
-|:---|:---|:---|:---|
-|CCA | R | Seurat | [Cell](https://www.sciencedirect.com/science/article/pii/S0092867419305598?via%3Dihub)|
-|MNN | R/Python | Scater/Scanpy | [Nat. Biotech.](https://www.nature.com/articles/nbt.4091)|
-|Conos | R | conos | [Nat. Methods](https://www.nature.com/articles/s41592-019-0466-z?error=cookies_not_supported&code=5680289b-6edb-40ad-9934-415dac4fdb2f)|
-|Scanorama | Python | scanorama | [Nat. Biotech.](https://www.nature.com/articles/s41587-019-0113-3)|
+</div>
 
-## {{< meta int_prep >}}
+In this tutorial we will look at different ways of integrating multiple
+single cell RNA-seq datasets. We will explore two different methods to
+correct for batch effects across datasets. We will also look at a
+quantitative measure to assess the quality of the integrated data.
+Seurat uses the data integration method presented in Comprehensive
+Integration of Single Cell Data, while Scran and Scanpy use a mutual
+Nearest neighbour method (MNN). Below you can find a list of the most
+recent methods for single data integration:
 
-{{< meta int_prep_1 >}}
+  -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+  Markdown          Language          Library           Ref
+  ----------------- ----------------- ----------------- -----------------------------------------------------------------------------------------------------------------------------------
+  CCA               R                 Seurat            [Cell](https://www.sciencedirect.com/science/article/pii/S0092867419305598?via%3Dihub)
 
-```{r}
+  MNN               R/Python          Scater/Scanpy     [Nat. Biotech.](https://www.nature.com/articles/nbt.4091)
+
+  Conos             R                 conos             [Nat.
+                                                        Methods](https://www.nature.com/articles/s41592-019-0466-z?error=cookies_not_supported&code=5680289b-6edb-40ad-9934-415dac4fdb2f)
+
+  Scanorama         Python            scanorama         [Nat. Biotech.](https://www.nature.com/articles/s41587-019-0113-3)
+  -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## Data preparation
+
+Let's first load necessary libraries and the data saved in the previous
+lab.
+
+``` {r}
 suppressPackageStartupMessages({
   library(scater)
   library(scran)
@@ -36,9 +53,12 @@ sce <- readRDS("data/results/covid_qc_dm.rds")
 print(reducedDims(sce))
 ```
 
-{{< meta int_prep_2 >}}
+We split the combined object into a list, with each dataset as an
+element. We perform standard preprocessing (log-normalization), and
+identify variable features individually for each dataset based on a
+variance stabilizing transformation (**vst**).
 
-```{r}
+``` {r}
 #| fig-height: 4
 #| fig-width: 8
 
@@ -65,17 +85,31 @@ pheatmap::pheatmap(t(overlap*1),cluster_rows = F, color = c("grey90","grey20"))
 
 ## MNN
 
-The mutual nearest neighbors (MNN) approach within the scran package utilizes a novel approach to adjust for batch effects. The `fastMNN()` function returns a representation of the data with reduced dimensionality, which can be used in a similar fashion to other lower-dimensional representations such as PCA. In particular, this representation can be used for downstream methods such as clustering. The BNPARAM can be used to specify the specific nearest neighbors method to use from the BiocNeighbors package. Here we make use of the [Annoy library](https://github.com/spotify/annoy) via the `BiocNeighbors::AnnoyParam()` argument. We save the reduced-dimension MNN representation into the reducedDims slot of our sce object.
+The mutual nearest neighbors (MNN) approach within the scran package
+utilizes a novel approach to adjust for batch effects. The `fastMNN()`
+function returns a representation of the data with reduced
+dimensionality, which can be used in a similar fashion to other
+lower-dimensional representations such as PCA. In particular, this
+representation can be used for downstream methods such as clustering.
+The BNPARAM can be used to specify the specific nearest neighbors method
+to use from the BiocNeighbors package. Here we make use of the [Annoy
+library](https://github.com/spotify/annoy) via the
+`BiocNeighbors::AnnoyParam()` argument. We save the reduced-dimension
+MNN representation into the reducedDims slot of our sce object.
 
-```{r}
+``` {r}
 mnn_out <- batchelor::fastMNN(sce,subset.row = unique(unlist(hvgs_per_dataset)), batch = factor(sce$sample), k = 20, d = 50)
 ```
 
-:::{.callout-caution}
-`fastMNN()` does not produce a batch-corrected expression matrix.
-:::
+<div>
 
-```{r}
+> **Caution**
+>
+> `fastMNN()` does not produce a batch-corrected expression matrix.
+
+</div>
+
+``` {r}
 mnn_out <- t(reducedDim(mnn_out,"corrected"))
 colnames(mnn_out) <- unlist(lapply(sce.list,function(x){colnames(x)}))
 mnn_out <- mnn_out[,colnames(sce)]
@@ -83,23 +117,27 @@ rownames(mnn_out) <- paste0("dim",1:50)
 reducedDim(sce, "MNN") <- t(mnn_out)
 ```
 
-We can observe that a new assay slot is now created under the name `MNN`.
+We can observe that a new assay slot is now created under the name
+`MNN`.
 
-```{r}
+``` {r}
 reducedDims(sce)
 ```
 
-Thus, the result from `fastMNN()` should solely be treated as a reduced dimensionality representation, suitable for direct plotting, TSNE/UMAP, clustering, and trajectory analysis that relies on such results.
+Thus, the result from `fastMNN()` should solely be treated as a reduced
+dimensionality representation, suitable for direct plotting, TSNE/UMAP,
+clustering, and trajectory analysis that relies on such results.
 
-```{r}
+``` {r}
 set.seed(42)
 sce <- runTSNE(sce, dimred = "MNN", n_dimred = 50, perplexity = 30,name = "tSNE_on_MNN")
 sce <- runUMAP(sce,dimred = "MNN", n_dimred = 50, ncomponents = 2,name = "UMAP_on_MNN")
 ```
 
-{{< meta int_plot >}}
+We can now plot the unintegrated and the integrated space reduced
+dimensions.
 
-```{r}
+``` {r}
 #| fig-height: 8
 #| fig-width: 14
 
@@ -114,20 +152,21 @@ plot_grid(ncol = 3,
 )
 ```
 
-{{< meta dimred_plotgenes_1 >}}
+Let's plot some marker genes for different cell types onto the
+embedding.
 
-|Markers|Cell Type|
-|:---|:---|
-|CD3E|T cells|
-|CD3E CD4|CD4+ T cells|
-|CD3E CD8A|CD8+ T cells|
-|GNLY, NKG7|NK cells|
-|MS4A1|B cells|
-|CD14, LYZ, CST3, MS4A7|CD14+ Monocytes|
-|FCGR3A, LYZ, CST3, MS4A7|FCGR3A+  Monocytes|
-|FCER1A, CST3|DCs|
+  Markers                    Cell Type
+  -------------------------- -------------------
+  CD3E                       T cells
+  CD3E CD4                   CD4+ T cells
+  CD3E CD8A                  CD8+ T cells
+  GNLY, NKG7                 NK cells
+  MS4A1                      B cells
+  CD14, LYZ, CST3, MS4A7     CD14+ Monocytes
+  FCGR3A, LYZ, CST3, MS4A7   FCGR3A+ Monocytes
+  FCER1A, CST3               DCs
 
-```{r}
+``` {r}
 #| fig-height: 16
 #| fig-width: 13
 
@@ -143,7 +182,7 @@ INTEG_R1:
 
 INTEG_R2:
 
-```{r}
+``` {r}
 #| fig-height: 5
 #| fig-width: 14
 
@@ -166,7 +205,7 @@ INTEG_R3:
 
 INTEG_R4:
 
-```{r}
+``` {r}
 #| fig-height: 5
 #| fig-width: 15
 
@@ -184,14 +223,12 @@ lapply(scelist,dim)
 
 INTEG_R5:
 
-```{r}
+``` {r}
 #| fig-height: 5
 #| fig-width: 15
 
 library(reticulate)
-use_virtualenv("/opt/venv/scanorama")
-py_discover_config()
-
+reticulate::use_condaenv("sspy")
 scanorama <- import("scanorama")
 
 integrated.data <- scanorama$integrate(datasets_full = scelist, genes_list = genelist )
@@ -212,7 +249,7 @@ sce <- runUMAP(sce, dimred = "Scanorama_PCA", n_dimred = 50, ncomponents = 2, na
 
 INTEG_R6:
 
-```{r}
+``` {r}
 #| fig-height: 8
 #| fig-width: 10
 
@@ -234,14 +271,14 @@ gridExtra::grid.arrange(
 
 INTEG_R7:
 
-{{< meta int_save >}}
+Let's save the integrated data for further analysis.
 
-```{r}
+``` {r}
 saveRDS(sce,"data/results/covid_qc_dr_int.rds")
 ```
 
-## {{< meta session >}}
+## Session info
 
-```{r}
+``` {r}
 sessionInfo()
 ```

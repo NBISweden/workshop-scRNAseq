@@ -71,15 +71,11 @@ find "${output_dir}" -type f -name "*.md" -print0 | while IFS= read -r -d '' fil
     slim_yaml "$file"
 done
 
-# converting md files to ipynb
+# converting scanpy md files to ipynb
 echo "Converting scanpy .md files to .ipynb ..."
-quarto convert "${output_dir}/labs/scanpy/scanpy_01_qc.md" --output "${output_dir}/labs/scanpy/scanpy_01_qc.ipynb"
-quarto convert "${output_dir}/labs/scanpy/scanpy_02_dimred.md" --output "${output_dir}/labs/scanpy/scanpy_02_dimred.ipynb"
-quarto convert "${output_dir}/labs/scanpy/scanpy_03_integration.md" --output "${output_dir}/labs/scanpy/scanpy_03_integration.ipynb"
-quarto convert "${output_dir}/labs/scanpy/scanpy_04_clustering.md" --output "${output_dir}/labs/scanpy/scanpy_04_clustering.ipynb"
-quarto convert "${output_dir}/labs/scanpy/scanpy_05_dge.md" --output "${output_dir}/labs/scanpy/scanpy_05_dge.ipynb"
-quarto convert "${output_dir}/labs/scanpy/scanpy_06_celltyping.md" --output "${output_dir}/labs/scanpy/scanpy_06_celltyping.ipynb"
-quarto convert "${output_dir}/labs/scanpy/scanpy_07_spatial.md" --output "${output_dir}/labs/scanpy/scanpy_07_spatial.ipynb"
-quarto convert "${output_dir}/labs/scanpy/scanpy_08_trajectory.md" --output "${output_dir}/labs/scanpy/scanpy_08_trajectory.ipynb"
+for file in "${output_dir}"/labs/scanpy/*.md; do
+    quarto convert "$file" --output "${file%.md}.ipynb"
+done
 
-echo "Completed successfully."
+echo "All files compiled successfully."
+exit 0

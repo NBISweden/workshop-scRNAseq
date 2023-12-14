@@ -1,16 +1,30 @@
 ---
-title: "{{< meta ct_title >}}"
-subtitle: "{{< meta subtitle_scanpy >}}"
-description: "{{< meta ct_description >}}"
-format: html
-engine: jupyter
+description: Assignment of cell identities based on gene expression
+subtitle:  SCANPY TOOLKIT
+title:  Celltype prediction
 ---
 
-::: {.callout-note}
-Code chunks run Python commands unless it starts with `%%bash`, in which case, those chunks run shell commands.
-:::
+<div>
 
-{{< meta ct_1 >}}
+> **Note**
+>
+> Code chunks run Python commands unless it starts with `%%bash`, in
+> which case, those chunks run shell commands.
+
+</div>
+
+Celltype prediction can either be performed on indiviudal cells where
+each cell gets a predicted celltype label, or on the level of clusters.
+All methods are based on similarity to other datasets, single cell or
+sorted bulk RNAseq, or uses known marker genes for each celltype.\
+We will select one sample from the Covid data, `ctrl_13` and predict
+celltype by cell on that sample.\
+Some methods will predict a celltype to each cell based on what it is
+most similar to even if the celltype of that cell is not included in the
+reference. Other methods include an uncertainty so that cells with low
+similarity scores will be unclassified.\
+There are multiple different methods to predict celltypes, here we will
+just cover a few of those.
 
 Here we will use a reference PBMC dataset that we get from scanpy
 datasets and classify celltypes based on two methods:
@@ -20,25 +34,22 @@ datasets and classify celltypes based on two methods:
 -   Using ingest to project the data onto the reference data and
     transfer labels.
 
-{{< meta ct_read_1 >}}
+First, lets load required libraries
 
-```{python}
+``` {python}
 import numpy as np
 import pandas as pd
 import scanpy as sc
 import matplotlib.pyplot as plt
-import warnings
-
-warnings.simplefilter(action="ignore", category=Warning)
 
 # verbosity: errors (0), warnings (1), info (2), hints (3)
 sc.settings.verbosity = 2             
 sc.settings.set_figure_params(dpi=80)
 ```
 
-{{< meta ct_read_2 >}}
+Let's read in the saved Covid-19 data object from the clustering step.
 
-```{python}
+``` {python}
 adata = sc.read_h5ad('./data/results/scanpy_clustered_covid.h5ad')
 adata.uns['log1p']['base']=None
 
@@ -46,24 +57,25 @@ print(adata.shape)
 print(adata.raw.shape)
 ```
 
-{{< meta ct_read_3 >}}
+Subset one patient.
 
-```{python}
+``` {python}
 adata = adata[adata.obs["sample"] == "ctrl_13",:]
 print(adata.shape)
 ```
 
-```{python}
+``` {python}
 sc.pl.umap(
     adata, color=["louvain_0.6"], palette=sc.pl.palettes.default_20
 )
 ```
 
-## {{< meta ct_ref >}}
+## Reference data
 
-Load the reference data from `scanpy.datasets`. It is the annotated and processed pbmc3k dataset from 10x.
+Load the reference data from `scanpy.datasets`. It is the annotated and
+processed pbmc3k dataset from 10x.
 
-```{python}
+``` {python}
 adata_ref = sc.datasets.pbmc3k_processed() 
 
 adata_ref.obs['sample']='pbmc3k'
@@ -72,13 +84,14 @@ print(adata_ref.shape)
 adata_ref.obs
 ```
 
-```{python}
+``` {python}
 sc.pl.umap(adata_ref, color='louvain')
 ```
 
-Make sure we have the same genes in both datset by taking the intersection
+Make sure we have the same genes in both datset by taking the
+intersection
 
-```{python}
+``` {python}
 print(adata_ref.shape[1])
 print(adata.shape[1])
 var_names = adata_ref.var_names.intersection(adata.var_names)
@@ -88,16 +101,17 @@ adata_ref = adata_ref[:, var_names]
 adata = adata[:, var_names]
 ```
 
-First we need to rerun pca and umap with the same gene set for both datasets.
+First we need to rerun pca and umap with the same gene set for both
+datasets.
 
-```{python}
+``` {python}
 sc.pp.pca(adata_ref)
 sc.pp.neighbors(adata_ref)
 sc.tl.umap(adata_ref)
 sc.pl.umap(adata_ref, color='louvain')
 ```
 
-```{python}
+``` {python}
 sc.pp.pca(adata)
 sc.pp.neighbors(adata)
 sc.tl.umap(adata)
@@ -106,7 +120,7 @@ sc.pl.umap(adata, color='louvain_0.6')
 
 ## Integrate with scanorama
 
-```{python}
+``` {python}
 import scanorama
 
 #subset the individual dataset to the same variable genes as in MNN-correct.
@@ -121,7 +135,7 @@ adatas = list(alldata.values())
 scanorama.integrate_scanpy(adatas, dimred = 50)
 ```
 
-```{python}
+``` {python}
 # add in sample info
 adata_ref.obs['sample']='pbmc3k'
 
@@ -132,21 +146,23 @@ embedding = np.concatenate([ad.obsm['X_scanorama'] for ad in adatas], axis=0)
 adata_merged.obsm['Scanorama'] = embedding
 ```
 
-```{python}
+``` {python}
 #run  umap.
 sc.pp.neighbors(adata_merged, n_pcs =50, use_rep = "Scanorama")
 sc.tl.umap(adata_merged)
 ```
 
-```{python}
+``` {python}
 sc.pl.umap(adata_merged, color=["sample","louvain"])
 ```
 
 ### Label transfer
 
-Using the function in the Spatial tutorial at the scanpy website we will calculate normalized cosine distances between the two datasets and tranfer labels to the celltype with the highest scores.
+Using the function in the Spatial tutorial at the scanpy website we will
+calculate normalized cosine distances between the two datasets and
+tranfer labels to the celltype with the highest scores.
 
-```{python}
+``` {python}
 from sklearn.metrics.pairwise import cosine_distances
 
 distances = 1 - cosine_distances(
@@ -178,11 +194,9 @@ adata.obs['predicted'] = class_def
 sc.pl.umap(adata, color="predicted")
 ```
 
-```{python}
+``` {python}
 # add to merged object.
-adata_merged.obs["predicted"] = pd.concat(
-    [class_def, adata_ref.obs["louvain"]], axis=0
-).tolist()
+adata_merged.obs['predicted'] = class_def.append(adata_ref.obs['louvain']).tolist()
 
 sc.pl.umap(adata_merged, color=["sample","louvain",'predicted'])
 #plot only ctrl cells.
@@ -191,10 +205,11 @@ sc.pl.umap(adata_merged[adata_merged.obs['sample']=='ctrl'], color='predicted')
 
 ## Ingest
 
-Another method for celltype prediction is Ingest, for more information, please look at
+Another method for celltype prediction is Ingest, for more information,
+please look at
 https://scanpy-tutorials.readthedocs.io/en/latest/integrating-data-using-ingest.html
 
-```{python}
+``` {python}
 sc.tl.ingest(adata, adata_ref, obs='louvain')
 sc.pl.umap(adata, color=['louvain','louvain_0.6'], wspace=0.5)
 ```
@@ -204,32 +219,39 @@ sc.pl.umap(adata, color=['louvain','louvain_0.6'], wspace=0.5)
 The predictions from ingest is stored in the column 'louvain' while we
 named the label transfer with scanorama as 'predicted'
 
-```{python}
+``` {python}
 sc.pl.umap(adata, color=['louvain','predicted'], wspace=0.5)
 ```
 
-As you can see, the main celltypes are the same, but dendritic cells are mainly predicted to cluster 8 by ingest and the proportions of the different celltypes are different.
+As you can see, the main celltypes are the same, but dendritic cells are
+mainly predicted to cluster 8 by ingest and the proportions of the
+different celltypes are different.
 
-The only way to make sure which method you trust is to look at what genes the different celltypes express and use your biological knowledge to make decisions.
+The only way to make sure which method you trust is to look at what
+genes the different celltypes express and use your biological knowledge
+to make decisions.
 
 ## Gene set analysis
 
-Another way of predicting celltypes is to use the differentially expressed genes per cluster and compare to lists of known cell marker genes. This requires a list of genes that you trust and that is relevant
+Another way of predicting celltypes is to use the differentially
+expressed genes per cluster and compare to lists of known cell marker
+genes. This requires a list of genes that you trust and that is relevant
 for the tissue you are working on.
 
-You can either run it with a marker list from the ontology or a list of your choice as in the example below.
+You can either run it with a marker list from the ontology or a list of
+your choice as in the example below.
 
-```{python}
+``` {python}
 df = pd.read_table('./data/cellmarker/Human_cell_markers.txt')
 df
 ```
 
-```{python}
+``` {python}
 # Filter for number of genes per celltype
 print(df.shape)
 ```
 
-```{python}
+``` {python}
 df['nG'] = df.geneSymbol.str.split(",").str.len()
 
 df = df[df['nG'] > 5]
@@ -238,7 +260,7 @@ d = df[df['cancerType'] == "Normal"]
 print(df.shape)
 ```
 
-```{python}
+``` {python}
 df.index = df.cellName
 gene_dict = df.geneSymbol.str.split(",").to_dict()
 
@@ -246,7 +268,7 @@ gene_dict = df.geneSymbol.str.split(",").to_dict()
 sc.tl.rank_genes_groups(adata, 'louvain_0.6', method='wilcoxon', key_added = "wilcoxon")
 ```
 
-```{python}
+``` {python}
 # do gene set overlap to the groups in the gene list and top 300 DEGs.
 
 import gseapy
@@ -271,25 +293,30 @@ for cl in adata.obs['louvain_0.6'].cat.categories.tolist():
         pred[cl] = enr_res.results["Term"][0]
 ```
 
-
-```{python}
+``` {python}
 # prediction per cluster
 pred
 ```
 
-```{python}
+``` {python}
 prediction = [pred[x] for x in adata.obs['louvain_0.6']]
 adata.obs["GS_overlap_pred"] = prediction
 
 sc.pl.umap(adata, color='GS_overlap_pred')
 ```
 
-:::{.callout-note title="Discuss"}
-As you can see, it agrees to some extent with the predictions from label transfer and ingest, but there are clear differences, which do you think looks better?
-:::
+<div>
 
-## {{< meta session >}}
+> **Discuss**
+>
+> As you can see, it agrees to some extent with the predictions from
+> label transfer and ingest, but there are clear differences, which do
+> you think looks better?
 
-```{python}
+</div>
+
+## Session info
+
+``` {python}
 sc.logging.print_versions()
 ```
