@@ -16,17 +16,24 @@ Code chunks run R commands unless otherwise specified.
 |CCA | R | Seurat | [Cell](https://www.sciencedirect.com/science/article/pii/S0092867419305598?via%3Dihub)|
 |MNN | R/Python | Scater/Scanpy | [Nat. Biotech.](https://www.nature.com/articles/nbt.4091)|
 |Conos | R | conos | [Nat. Methods](https://www.nature.com/articles/s41592-019-0466-z?error=cookies_not_supported&code=5680289b-6edb-40ad-9934-415dac4fdb2f)|
+|Conos | R | Harmony | [Nat. Methods](https://www.nature.com/articles/s41592-019-0619-0)|
 |Scanorama | Python | scanorama | [Nat. Biotech.](https://www.nature.com/articles/s41587-019-0113-3)|
+
 
 ## {{< meta int_prep >}}
 
 {{< meta int_prep_1 >}}
 
 ```{r}
+# Activate scanorama Python venv
+reticulate::use_virtualenv("/opt/venv/scanorama")
+reticulate::py_discover_config()
+
 suppressPackageStartupMessages({
   library(Seurat)
   library(cowplot)
   library(ggplot2)
+  library(reticulate)
 })
 
 alldata <- readRDS("data/results/covid_qc_dr.rds")
@@ -46,8 +53,24 @@ for (i in 1:length(alldata.list)) {
     alldata.list[[i]] <- FindVariableFeatures(alldata.list[[i]], selection.method = "vst", nfeatures = 2000,verbose = FALSE)
 }
 
+# get the variable genes from all the datasets.
 hvgs_per_dataset <- lapply(alldata.list, function(x) { x@assays$RNA@var.features })
-# venn::venn(hvgs_per_dataset,opacity = .4,zcolor = scales::hue_pal()(3),cexsn = 1,cexil = 1,lwd=1,col="white",frame=F,borders = NA)
+
+# also add in the variable genes that was selected on the whole dataset
+hvgs_per_dataset$all = VariableFeatures(alldata)
+
+temp <- unique(unlist(hvgs_per_dataset))
+overlap <- sapply( hvgs_per_dataset , function(x) { temp %in% x } )
+pheatmap::pheatmap(t(overlap*1),cluster_rows = F ,
+                   color = c("grey90","grey20"))
+```
+As you can see, there are a lot of genes that are variable in just one dataset. There are also some genes in the gene set that was selected using all the data that are not variable in any of the individual datasets. These are most likely genes driven by batch effects. 
+
+A better way to select features for integration is to combine the information on variable genes across the dataset. This can be done with the function `SelectIntegrationFeatures` that combines the ranks of the variable features in the different datasets.
+
+```{r}
+hvgs_all = SelectIntegrationFeatures(alldata.list)
+hvgs_per_dataset$all_ranks = hvgs_all
 
 temp <- unique(unlist(hvgs_per_dataset))
 overlap <- sapply( hvgs_per_dataset , function(x) { temp %in% x } )
@@ -55,12 +78,14 @@ pheatmap::pheatmap(t(overlap*1),cluster_rows = F ,
                    color = c("grey90","grey20"))
 ```
 
+For all downstream integration we will use this set of genes. 
+
 ## CCA
 
-We identify anchors using the FindIntegrationAnchors function, which takes a list of Seurat objects as input.
+We identify anchors using the `FindIntegrationAnchors` function, which takes a list of Seurat objects as input.
 
 ```{r}
-alldata.anchors <- FindIntegrationAnchors(object.list = alldata.list, dims = 1:30,reduction = "cca")
+alldata.anchors <- FindIntegrationAnchors(object.list = alldata.list, dims = 1:30,reduction = "cca", anchor.features = hvgs_all)
 ```
 
 We then pass these anchors to the IntegrateData function, which returns a Seurat object.
@@ -69,7 +94,7 @@ We then pass these anchors to the IntegrateData function, which returns a Seurat
 alldata.int <- IntegrateData(anchorset = alldata.anchors, dims = 1:30, new.assay.name = "CCA")
 ```
 
-We can observe that a new assay slot is now created under the name `CCA`.
+We can observe that a new assay slot is now created under the name `CCA`. If you do not specify the assay name the default will be `integrated`. 
 
 ```{r}
 names(alldata.int@assays)
@@ -79,6 +104,8 @@ alldata.int@active.assay
 ```
 
 After running IntegrateData, the Seurat object will contain a new Assay with the integrated (or **batch-corrected**) expression matrix. Note that the original (uncorrected values) are still stored in the object in the “RNA” assay, so you can switch back and forth. We can then use this new integrated matrix for downstream analysis and visualization. Here we scale the integrated data, run PCA, and visualize the results with UMAP and TSNE. The integrated datasets cluster by cell type, instead of by technology.
+
+As `CCA` is the `active.assay` now the functions will by default run on the data in that assay. But you could also specify in each of the functions to run them in a specific assay with the parameter `assay = "CCA"`.
 
 ```{r}
 #Run Dimensionality reduction on integrated space
@@ -105,6 +132,22 @@ plot_grid(ncol = 3,
 )
 ```
 
+### Clean memory
+
+Again we have a lot of large objects in the memory. We have the original data `alldata` but also the integrated data in `alldata.int`.  We also have the split objects in `alldata.list` and the anchors in `alldata.anchors`. In principle we only need the integrated object for now, but we will also keep the list for running Scanorama further down in the tutorial.
+
+We also want to keep is the orignial umap for visualization purposes, so we copy it over to the integrated object.
+
+```{r}
+alldata.int@reductions$umap_raw = alldata@reductions$umap
+
+# remove all objects that will not be used.
+rm(alldata,  alldata.anchors)
+# run garbage collect to free up memory
+gc()
+```
+
+
 {{< meta dimred_plotgenes_1 >}}
 
 |Markers|Cell Type|
@@ -125,10 +168,26 @@ plot_grid(ncol = 3,
 myfeatures <- c("CD3E","CD4","CD8A","NKG7","GNLY","MS4A1","CD14","LYZ","MS4A7","FCGR3A","CST3","FCER1A")
 plot_list <- list()
 for(i in myfeatures){
-  plot_list[[i]] <- FeaturePlot(alldata, reduction = "umap",dims = 1:2,
+  plot_list[[i]] <- FeaturePlot(alldata.int, reduction = "umap",dims = 1:2,
             features = i,ncol = 3,order = T) + NoLegend() + NoAxes() + NoGrid() }
 plot_grid(ncol=3, plotlist = plot_list)
 ```
+## Harmony
+
+An alternative method for integration is Harmony, for more details on the method, please se their paper  [Nat. Methods](https://www.nature.com/articles/s41592-019-0619-0). 
+
+This method runs the integration on a dimensionality reduction, in most applications the PCA. So first, we will rerun scaling and PCA with the same set of genes that were used for the CCA integration.
+
+OBS! Make sure to revert back to the `RNA` assay.
+
+```{r}
+alldata.int@active.assay = "RNA"
+VariableFeatures(alldata.int) = hvgs_all
+alldata.int = ScaleData(alldata.int, vars.to.regress = c("percent_mito", "nFeature_RNA"))
+alldata.int = RunPCA(alldata.int, reduction.name = "pca_harmony")
+```
+
+Now we are ready to run Harmony.
 
 ```{r}
 #| fig-height: 10
@@ -136,48 +195,53 @@ plot_grid(ncol=3, plotlist = plot_list)
 
 library(harmony)
 
-alldata.harmony <- RunHarmony(
-  alldata,
+alldata.int <- RunHarmony(
+  alldata.int,
   group.by.vars = "orig.ident",
-  reduction.use = "pca",
+  reduction.use = "pca_harmony",
   dims.use = 1:50,
   assay.use = "RNA")
-
-#Here we use all PCs computed from Harmony for UMAP calculation
-alldata.int[["harmony"]] <- alldata.harmony[["harmony"]]
-alldata.int <- RunUMAP(alldata.int, dims = 1:50, reduction = "harmony", reduction.name = "umap_harmony")
 ```
+Harmony will create another reduction slot in your seurat object with the name "harmony", so now we can use that reduction instead of PCA to run UMAP.
 
 ```{r}
+alldata.int <- RunUMAP(alldata.int, dims = 1:50, reduction = "harmony", reduction.name = "umap_harmony")
+
+DimPlot(alldata.int, reduction = "umap_harmony", group.by = "orig.ident") + NoAxes() + ggtitle("Harmony UMAP")
+```
+
+## Scanorama
+
+Another integration method is Scanorama (see [Nat. Biotech.](https://www.nature.com/articles/s41587-019-0113-3)). This method is implemented in python, but we can run it through the Reticulate package.
+
+
+```{r}
+#| eval: false
 #| fig-height: 5
 #| fig-width: 16
-
-hvgs <- unique(unlist(hvgs_per_dataset))
 
 assaylist <- list()
 genelist <- list()
 for(i in 1:length(alldata.list)) {
-  assaylist[[i]] <- t(as.matrix(GetAssayData(alldata.list[[i]], "data")[hvgs,]))
-  genelist[[i]] <- hvgs
+  assaylist[[i]] <- t(as.matrix(GetAssayData(alldata.list[[i]], "data")[hvgs_all,]))
+  genelist[[i]] <- hvgs_all
 }
 
 lapply(assaylist,dim)
 ```
 
 ```{r}
+#| eval: false
 #| fig-height: 5
 #| fig-width: 16
 
 # Activate scanorama Python venv
-library(reticulate)
-use_virtualenv("/opt/venv/scanorama")
-py_discover_config()
-
-scanorama <- import("scanorama")
+scanorama <- reticulate::import("scanorama")
 
 integrated.data <- scanorama$integrate(datasets_full = assaylist,
                                        genes_list = genelist )
 
+# Now we create a new dim reduction object in the format that Seurat uses
 intdimred <- do.call(rbind, integrated.data[[1]])
 colnames(intdimred) <- paste0("PC_", 1:100)
 rownames(intdimred) <- colnames(alldata.int)
@@ -185,24 +249,35 @@ rownames(intdimred) <- colnames(alldata.int)
 # Add standard deviations in order to draw Elbow Plots in Seurat
 stdevs <- apply(intdimred, MARGIN = 2, FUN = sd)
 
+# Create a new dim red object.
 alldata.int[["scanorama"]] <- CreateDimReducObject(
   embeddings = intdimred,
   stdev      = stdevs,
   key        = "PC_",
   assay      = "RNA")
+```
+
+```{r}
+#| eval: false
 
 #Here we use all PCs computed from Scanorama for UMAP calculation
 alldata.int <- RunUMAP(alldata.int, dims = 1:100, reduction = "scanorama",reduction.name = "umap_scanorama")
+
+DimPlot(alldata.int, reduction = "umap_scanorama", group.by = "orig.ident") + NoAxes() + ggtitle("Harmony UMAP")
 ```
+
+## Overview all methods
+
+Now we will plot UMAPS with all three integration methods side by side. 
 
 ```{r}
 #| fig-height: 8
 #| fig-width: 9
 
-p1 <- DimPlot(alldata, reduction = "umap", group.by = "orig.ident")+ggtitle("UMAP raw_data")
+p1 <- DimPlot(alldata.int, reduction = "umap_raw", group.by = "orig.ident")+ggtitle("UMAP raw_data")
 p2 <- DimPlot(alldata.int, reduction = "umap", group.by = "orig.ident")+ggtitle("UMAP CCA")
 p3 <- DimPlot(alldata.int, reduction = "umap_harmony", group.by = "orig.ident")+ggtitle("UMAP Harmony")
-p4 <- DimPlot(alldata.int, reduction = "umap_scanorama", group.by = "orig.ident")+ggtitle("UMAP Scanorama")
+#p4 <- DimPlot(alldata.int, reduction = "umap_scanorama", group.by = "orig.ident")+ggtitle("UMAP Scanorama")
 leg <- get_legend(p1)
 
 gridExtra::grid.arrange(
@@ -210,16 +285,28 @@ gridExtra::grid.arrange(
     p1 + NoLegend() + NoAxes(),
     p2 + NoLegend() + NoAxes(),
     p3 + NoLegend() + NoAxes(),
-    p4 + NoLegend() + NoAxes(), nrow=2),
+    #p4 + NoLegend() + NoAxes(), 
+    nrow=2),
   leg, ncol=2,widths=c(8,2)
 )
 ```
+
+
+::: {.callout-note title="Discuss"}
+{{< meta int_conclusion >}}
+:::
+
 
 {{< meta int_save >}}
 
 ```{r}
 saveRDS(alldata.int,"data/results/covid_qc_dr_int.rds")
 ```
+
+
+## Extra task
+
+You have now done the Seurat integration with CCA which is quite slow. There are other options in the `FindIntegrationAnchors` function. Try rerunning the integration with `rpca` and/or `rlsi` and create a new UMAP. Compare the results.
 
 ## {{< meta session >}}
 
