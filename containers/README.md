@@ -13,7 +13,7 @@ Here we use three different toolkits, namely `Seurat` (R/RStudio), `Bioconductor
 The different images are differentiated by the following `registry/username/image:tag` convention:
 
 ```
-ghcr.io/NBISweden/workshop-scRNAseq:<YEAR>-<TOOLKIT>-<LANGUAGE-VERSION>
+ghcr.io/nbisweden/workshop-scrnaseq:<YEAR>-<TOOLKIT>-<LANGUAGE-VERSION>
 ```
 
 Each image contains the required packages so that, for each toolkit, the following analysis steps can be performed:
@@ -95,8 +95,8 @@ For the Python based image, you can install packages using `mamba`, `pip`, or `c
 ### R Based Images
 
 ```bash
-docker pull ghcr.io/NBISweden/workshop-scRNAseq:<TAG>
-docker run --rm -ti -p 8787:8787 -e PASSWORD=scrnaseq -v /path/to/workdir:/home/rstudio/workdir ghcr.io/NBISweden/workshop-scRNAseq:<TAG>
+docker pull ghcr.io/nbisweden/workshop-scrnaseq:<TAG>
+docker run --rm -ti -p 8787:8787 -e PASSWORD=scrnaseq -v /path/to/workdir:/home/rstudio/workdir ghcr.io/nbisweden/workshop-scrnaseq:<TAG>
 ```
 
 In the browser, go to [localhost:8787](localhost:8787).  
@@ -107,8 +107,8 @@ Use the following credentials to log in to the RStudio Server:
 ### Python Based Image
 
 ```bash
-docker pull ghcr.io/NBISweden/workshop-scRNAseq:<TAG>
-docker run --rm -ti -p 8888:8888 -v /path/to/workdir:/home/jovyan/workshop-scRNAseq ghcr.io/NBISweden/workshop-scRNAseq:<TAG>
+docker pull ghcr.io/nbisweden/workshop-scrnaseq:<TAG>
+docker run --rm -ti -p 8888:8888 -v /path/to/workdir:/home/jovyan/workshop-scRNAseq ghcr.io/nbisweden/workshop-scrnaseq:<TAG>
 ```
 
 In the browser, go to [localhost:8888](localhost:8888).
