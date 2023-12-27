@@ -8,9 +8,9 @@
 set -e
 
 ## define docker images
-docker_seurat="susrei/workshop-scrnaseq:2023-seurat-r4.3.0-conda-231204"
-docker_bioc="susrei/workshop-scrnaseq:2023-bioconductor-r4.3.0-conda-231204"
-docker_scanpy="susrei/workshop-scrnaseq:2023-scanpy-py3.10"
+docker_seurat="ghcr.io/nbisweden/workshop-scrnaseq:2023-seurat-r4.3.0"
+docker_bioc="ghcr.io/nbisweden/workshop-scrnaseq:2023-bioconductor-r4.3.0"
+docker_scanpy="ghcr.io/nbisweden/workshop-scrnaseq:2023-scanpy-py3.10"
 
 # check if in the root of the repo
 if [ ! -f "_quarto.yml" ]; then
