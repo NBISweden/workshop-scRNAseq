@@ -2,11 +2,14 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.3.433">
+<meta name="generator" content="quarto-1.3.353">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
-<meta name="author" content="Åsa Björklund &amp; Paulo Czarnewski">
+<meta name="author" content="Åsa Björklund">
+<meta name="author" content="Paulo Czarnewski">
+<meta name="author" content="Susanne Reinsbach">
+<meta name="author" content="Roy Francis">
 <meta name="description" content="Reduce high-dimensional gene expression data from individual cells into a lower-dimensional space for visualization. This lab explores PCA, tSNE and UMAP.">
 
 <title> Dimensionality Reduction</title>
@@ -97,21 +100,23 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     "search-more-matches-text": "more matches in this document",
     "search-clear-button-title": "Clear",
     "search-detached-cancel-button-title": "Cancel",
-    "search-submit-button-title": "Submit",
-    "search-label": "Search"
+    "search-submit-button-title": "Submit"
   }
 }</script>
 <style>html{ scroll-behavior: smooth; }</style>
 <style>
 
       .quarto-title-block .quarto-title-banner {
-        background: #E9F2D1;
+        background-image: url(../../assets/images/banner.jpg);
+background-size: cover;
       }
 </style>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono&amp;family=Nunito:ital,wght@0,400;0,600;1,400;1,600&amp;display=swap" rel="stylesheet">
-    
+<link href="https://fonts.googleapis.com/css2?family=Fira+Mono&amp;family=Nunito:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&amp;display=swap" rel="stylesheet">
+
+<link href="../../site_libs/pagedtable-1.1/css/pagedtable.css" rel="stylesheet">
+<script src="../../site_libs/pagedtable-1.1/js/pagedtable.js"></script>
 
   <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
   <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
@@ -171,7 +176,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <div class="quarto-title-banner page-columns page-full">
     <div class="quarto-title column-body">
       <h1 class="title"><i class="fa-brands fa-hubspot" aria-label="hubspot"></i> Dimensionality Reduction</h1>
-            <p class="subtitle lead"><i class="fa-brands fa-r-project" aria-label="r-project"></i> SEURAT TOOLKIT</p>
+            <p class="subtitle lead"><i class="fa-brands fa-r-project" aria-label="r-project"></i> Seurat Toolkit</p>
                   <div>
         <div class="description">
           Reduce high-dimensional gene expression data from individual cells into a lower-dimensional space for visualization. This lab explores PCA, tSNE and UMAP.
@@ -184,16 +189,19 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <div class="quarto-title-meta">
 
       <div>
-      <div class="quarto-title-meta-heading">Author</div>
+      <div class="quarto-title-meta-heading">Authors</div>
       <div class="quarto-title-meta-contents">
-               <p>Åsa Björklund &amp; Paulo Czarnewski </p>
+               <p>Åsa Björklund </p>
+               <p>Paulo Czarnewski </p>
+               <p>Susanne Reinsbach </p>
+               <p>Roy Francis </p>
             </div>
     </div>
       
       <div>
       <div class="quarto-title-meta-heading">Published</div>
       <div class="quarto-title-meta-contents">
-        <p class="date">02-Nov-2023</p>
+        <p class="date">03-Jan-2024</p>
       </div>
     </div>
     
@@ -232,10 +240,11 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 
 
-<div class="callout callout-style-default callout-note no-icon callout-titled">
+
+<div class="callout callout-style-default callout-note callout-titled">
 <div class="callout-header d-flex align-content-center">
 <div class="callout-icon-container">
-<i class="callout-icon no-icon"></i>
+<i class="callout-icon"></i>
 </div>
 <div class="callout-title-container flex-fill">
 Note
@@ -249,24 +258,37 @@ Note
 <h2 data-number="1" class="anchored" data-anchor-id="meta-dimred_prep"><span class="header-section-number">1</span> Data preparation</h2>
 <p>First, let’s load all necessary libraries and the QC-filtered dataset from the previous step.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">suppressPackageStartupMessages</span>({</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">library</span>(Seurat)</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">library</span>(cowplot)</span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">library</span>(ggplot2)</span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">library</span>(scran)</span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>})</span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>alldata <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="st">"data/results/seurat_covid_qc.rds"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Activate conda environment to get the correct python path</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>reticulate<span class="sc">::</span><span class="fu">use_condaenv</span>(<span class="st">"seurat"</span>, <span class="at">conda =</span> <span class="st">"/opt/conda/bin/conda"</span>)</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>reticulate<span class="sc">::</span><span class="fu">py_discover_config</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>python:         /opt/conda/envs/seurat/bin/python
+libpython:      /opt/conda/envs/seurat/lib/libpython3.8.so
+pythonhome:     /opt/conda/envs/seurat:/opt/conda/envs/seurat
+version:        3.8.18 | packaged by conda-forge | (default, Dec 23 2023, 17:21:28)  [GCC 12.3.0]
+numpy:          /opt/conda/envs/seurat/lib/python3.8/site-packages/numpy
+numpy_version:  1.24.4
+
+NOTE: Python version was forced by use_python function</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">suppressPackageStartupMessages</span>({</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">library</span>(Seurat)</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">library</span>(cowplot)</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">library</span>(ggplot2)</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">library</span>(scran)</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>alldata <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="st">"data/results/seurat_covid_qc.rds"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 <section id="meta-dimred_fs" class="level2" data-number="2">
 <h2 data-number="2" class="anchored" data-anchor-id="meta-dimred_fs"><span class="header-section-number">2</span> Feature selection</h2>
 <p>Next, we first need to define which features/genes are important in our dataset to distinguish cell types. For this purpose, we need to find genes that are highly variable across cells, which in turn will also provide a good separation of the cell clusters.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">suppressWarnings</span>(<span class="fu">suppressMessages</span>(alldata <span class="ot">&lt;-</span> <span class="fu">FindVariableFeatures</span>(alldata, <span class="at">selection.method =</span> <span class="st">"vst"</span>, <span class="at">nfeatures =</span> <span class="dv">2000</span> ,<span class="at">verbose =</span> <span class="cn">FALSE</span>,<span class="at">assay =</span> <span class="st">"RNA"</span>)))</span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>top20 <span class="ot">&lt;-</span> <span class="fu">head</span>(<span class="fu">VariableFeatures</span>(alldata), <span class="dv">20</span>)</span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="fu">LabelPoints</span>(<span class="at">plot =</span> <span class="fu">VariableFeaturePlot</span>(alldata), <span class="at">points =</span> top20, <span class="at">repel =</span> <span class="cn">TRUE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">suppressWarnings</span>(<span class="fu">suppressMessages</span>(alldata <span class="ot">&lt;-</span> <span class="fu">FindVariableFeatures</span>(alldata, <span class="at">selection.method =</span> <span class="st">"vst"</span>, <span class="at">nfeatures =</span> <span class="dv">2000</span> ,<span class="at">verbose =</span> <span class="cn">FALSE</span>,<span class="at">assay =</span> <span class="st">"RNA"</span>)))</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>top20 <span class="ot">&lt;-</span> <span class="fu">head</span>(<span class="fu">VariableFeatures</span>(alldata), <span class="dv">20</span>)</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="fu">LabelPoints</span>(<span class="at">plot =</span> <span class="fu">VariableFeaturePlot</span>(alldata), <span class="at">points =</span> top20, <span class="at">repel =</span> <span class="cn">TRUE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
@@ -280,7 +302,7 @@ Note
 <h2 data-number="3" class="anchored" data-anchor-id="meta-dimred_zs"><span class="header-section-number">3</span> Z-score transformation</h2>
 <p>Now that the data is prepared, we now proceed with PCA. Since each gene has a different expression level, it means that genes with higher expression values will naturally have higher variation that will be captured by PCA. This means that we need to somehow give each gene a similar weight when performing PCA (see below). The common practice is to center and scale each gene before performing PCA. This exact scaling is called Z-score normalization it is very useful for PCA, clustering and plotting heatmaps. Additionally, we can use regression to remove any unwanted sources of variation from the dataset, such as <code>cell cycle</code>, <code>sequencing depth</code>, <code>percent mitochondria</code>. This is achieved by doing a generalized linear regression using these parameters as co-variates in the model. Then the residuals of the model are taken as the <em>regressed data</em>. Although perhaps not in the best way, batch effect regression can also be done here. By default variables are scaled in the PCA step and is not done separately. But it could be achieved by running the commands below:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>alldata <span class="ot">&lt;-</span> <span class="fu">ScaleData</span>(alldata, <span class="at">vars.to.regress =</span> <span class="fu">c</span>(<span class="st">"percent_mito"</span>, <span class="st">"nFeature_RNA"</span>), <span class="at">assay =</span> <span class="st">"RNA"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>alldata <span class="ot">&lt;-</span> <span class="fu">ScaleData</span>(alldata, <span class="at">vars.to.regress =</span> <span class="fu">c</span>(<span class="st">"percent_mito"</span>, <span class="st">"nFeature_RNA"</span>), <span class="at">assay =</span> <span class="st">"RNA"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 <section id="meta-dimred_pca" class="level2" data-number="4">
@@ -288,15 +310,15 @@ Note
 <p>Performing PCA has many useful applications and interpretations, which much depends on the data used. In the case of life sciences, we want to segregate samples based on gene expression patterns in the data.</p>
 <p>To run PCA you can use the function <code>RunPCA()</code>.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>alldata <span class="ot">&lt;-</span> <span class="fu">RunPCA</span>(alldata, <span class="at">npcs =</span> <span class="dv">50</span>, <span class="at">verbose =</span> F)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>alldata <span class="ot">&lt;-</span> <span class="fu">RunPCA</span>(alldata, <span class="at">npcs =</span> <span class="dv">50</span>, <span class="at">verbose =</span> F)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>We then plot the first principal components.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_grid</span>(<span class="at">ncol =</span> <span class="dv">3</span>,</span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"pca"</span>, <span class="at">group.by =</span> <span class="st">"orig.ident"</span>,<span class="at">dims =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">2</span>),</span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"pca"</span>, <span class="at">group.by =</span> <span class="st">"orig.ident"</span>,<span class="at">dims =</span> <span class="dv">3</span><span class="sc">:</span><span class="dv">4</span>),</span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"pca"</span>, <span class="at">group.by =</span> <span class="st">"orig.ident"</span>,<span class="at">dims =</span> <span class="dv">5</span><span class="sc">:</span><span class="dv">6</span>)</span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_grid</span>(<span class="at">ncol =</span> <span class="dv">3</span>,</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"pca"</span>, <span class="at">group.by =</span> <span class="st">"orig.ident"</span>,<span class="at">dims =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">2</span>),</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"pca"</span>, <span class="at">group.by =</span> <span class="st">"orig.ident"</span>,<span class="at">dims =</span> <span class="dv">3</span><span class="sc">:</span><span class="dv">4</span>),</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"pca"</span>, <span class="at">group.by =</span> <span class="st">"orig.ident"</span>,<span class="at">dims =</span> <span class="dv">5</span><span class="sc">:</span><span class="dv">6</span>)</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
@@ -307,7 +329,7 @@ Note
 </div>
 <p>To identify which genes (Seurat) or metadata parameters (Scater/Scran) contribute the most to each PC, one can retrieve the loading matrix information. Unfortunately, this is not implemented in Scater/Scran, so you will need to compute PCA using <code>logcounts</code>.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">VizDimLoadings</span>(alldata, <span class="at">dims =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>, <span class="at">reduction =</span> <span class="st">"pca"</span>,<span class="at">ncol =</span> <span class="dv">5</span>,<span class="at">balanced =</span> T)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">VizDimLoadings</span>(alldata, <span class="at">dims =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>, <span class="at">reduction =</span> <span class="st">"pca"</span>,<span class="at">ncol =</span> <span class="dv">5</span>,<span class="at">balanced =</span> T)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
@@ -318,7 +340,7 @@ Note
 </div>
 <p>We can also plot the amount of variance explained by each PC.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ElbowPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"pca"</span>,<span class="at">ndims =</span> <span class="dv">50</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ElbowPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"pca"</span>,<span class="at">ndims =</span> <span class="dv">50</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
@@ -333,17 +355,17 @@ Note
 <h2 data-number="5" class="anchored" data-anchor-id="meta-dimred_tsne"><span class="header-section-number">5</span> tSNE</h2>
 <p>We can now run <a href="https://arxiv.org/abs/1301.3342">BH-tSNE</a>.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>alldata <span class="ot">&lt;-</span> <span class="fu">RunTSNE</span>(alldata, <span class="at">reduction =</span> <span class="st">"pca"</span>, <span class="at">dims =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">30</span>, </span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>                   <span class="at">perplexity=</span><span class="dv">30</span>,</span>
-<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>                   <span class="at">max_iter=</span><span class="dv">1000</span>,</span>
-<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>                   <span class="at">theta=</span><span class="fl">0.5</span>,</span>
-<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>                   <span class="at">eta=</span><span class="dv">200</span>,</span>
-<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>                   <span class="at">num_threads=</span><span class="dv">0</span> )</span>
-<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a><span class="co">#see ?Rtsne and ?RunTSNE for more info</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>alldata <span class="ot">&lt;-</span> <span class="fu">RunTSNE</span>(alldata, <span class="at">reduction =</span> <span class="st">"pca"</span>, <span class="at">dims =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">30</span>, </span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>                   <span class="at">perplexity=</span><span class="dv">30</span>,</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>                   <span class="at">max_iter=</span><span class="dv">1000</span>,</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>                   <span class="at">theta=</span><span class="fl">0.5</span>,</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>                   <span class="at">eta=</span><span class="dv">200</span>,</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>                   <span class="at">num_threads=</span><span class="dv">0</span> )</span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a><span class="co">#see ?Rtsne and ?RunTSNE for more info</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>We can now plot the tSNE colored per dataset. We can clearly see the effect of batches present in the dataset.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"tsne"</span>, <span class="at">group.by =</span> <span class="st">"orig.ident"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"tsne"</span>, <span class="at">group.by =</span> <span class="st">"orig.ident"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
@@ -357,37 +379,36 @@ Note
 <h2 data-number="6" class="anchored" data-anchor-id="meta-dimred_umap"><span class="header-section-number">6</span> UMAP</h2>
 <p>We can now run <a href="https://arxiv.org/abs/1802.03426">UMAP</a> for cell embeddings.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>alldata <span class="ot">&lt;-</span> <span class="fu">RunUMAP</span>(alldata, <span class="at">reduction =</span> <span class="st">"pca"</span>, <span class="at">dims =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">30</span>,</span>
-<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>                   <span class="at">n.components=</span><span class="dv">2</span>,</span>
-<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>                   <span class="at">n.neighbors=</span><span class="dv">30</span>,</span>
-<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>                   <span class="at">n.epochs=</span><span class="dv">200</span>,</span>
-<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>                   <span class="at">min.dist=</span><span class="fl">0.3</span>,</span>
-<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>                   <span class="at">learning.rate=</span><span class="dv">1</span>,</span>
-<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>                   <span class="at">spread=</span><span class="dv">1</span> )</span>
-<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a><span class="co">#see ?RunUMAP for more info</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>alldata <span class="ot">&lt;-</span> <span class="fu">RunUMAP</span>(alldata, <span class="at">reduction =</span> <span class="st">"pca"</span>, <span class="at">dims =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">30</span>,</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>                   <span class="at">n.components=</span><span class="dv">2</span>,</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>                   <span class="at">n.neighbors=</span><span class="dv">30</span>,</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>                   <span class="at">n.epochs=</span><span class="dv">200</span>,</span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>                   <span class="at">min.dist=</span><span class="fl">0.3</span>,</span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>                   <span class="at">learning.rate=</span><span class="dv">1</span>,</span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>                   <span class="at">spread=</span><span class="dv">1</span> )</span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a><span class="co">#see ?RunUMAP for more info</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>Another usefullness of UMAP is that it is not limitted by the number of dimensions the data cen be reduced into (unlike tSNE). We can simply reduce the dimentions altering the <code>n.components</code> parameter.</p>
+<p>Another usefullness of UMAP is that it is not limitted by the number of dimensions the data cen be reduced into (unlike tSNE). We can simply reduce the dimentions altering the <code>n.components</code> parameter. So here we will create an UMAP with 10 dimensions.</p>
+<p>In Seurat we can add in additional reductions, by default they are named “pca”, “umap”, “tsne” etc. depending on the function you run. Here we will specify an alternative name for the umap with the <code>reduction.name</code> parameter.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co"># we can add in additional reductions, by defulat they are named "pca", "umap", "tsne" etc. But we can specify alternative names with reduction.name</span></span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>alldata <span class="ot">&lt;-</span> <span class="fu">RunUMAP</span>(alldata, <span class="at">reduction.name =</span> <span class="st">"UMAP10_on_PCA"</span>,</span>
-<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>                   <span class="at">reduction =</span> <span class="st">"pca"</span>, </span>
-<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>                   <span class="at">dims =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">30</span>,</span>
-<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>                   <span class="at">n.components=</span><span class="dv">10</span>,</span>
-<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>                   <span class="at">n.neighbors=</span><span class="dv">30</span>,</span>
-<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>                   <span class="at">n.epochs=</span><span class="dv">200</span>,</span>
-<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>                   <span class="at">min.dist=</span><span class="fl">0.3</span>,</span>
-<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>                   <span class="at">learning.rate=</span><span class="dv">1</span>,</span>
-<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>                   <span class="at">spread=</span><span class="dv">1</span> )</span>
-<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a><span class="co">#see ?RunUMAP for more info</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>alldata <span class="ot">&lt;-</span> <span class="fu">RunUMAP</span>(alldata, <span class="at">reduction.name =</span> <span class="st">"UMAP10_on_PCA"</span>,</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>                   <span class="at">reduction =</span> <span class="st">"pca"</span>, </span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>                   <span class="at">dims =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">30</span>,</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>                   <span class="at">n.components=</span><span class="dv">10</span>,</span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>                   <span class="at">n.neighbors=</span><span class="dv">30</span>,</span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>                   <span class="at">n.epochs=</span><span class="dv">200</span>,</span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>                   <span class="at">min.dist=</span><span class="fl">0.3</span>,</span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>                   <span class="at">learning.rate=</span><span class="dv">1</span>,</span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>                   <span class="at">spread=</span><span class="dv">1</span> )</span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a><span class="co">#see ?RunUMAP for more info</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>UMAP is plotted colored per dataset. Although less distinct as in the tSNE, we still see quite an effect of the different batches in the data. UMAP is not limited by the number of dimensions the data can be reduced into (unlike tSNE). We can simply reduce the dimensions altering the <code>n.components</code> parameter.</p>
+<p>UMAP is plotted colored per dataset. Although less distinct as in the tSNE, we still see quite an effect of the different batches in the data.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_grid</span>(<span class="at">ncol =</span> <span class="dv">3</span>,</span>
-<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"umap"</span>, <span class="at">group.by =</span> <span class="st">"orig.ident"</span>)<span class="sc">+</span> ggplot2<span class="sc">::</span><span class="fu">ggtitle</span>(<span class="at">label =</span><span class="st">"UMAP_on_PCA"</span>),</span>
-<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"UMAP10_on_PCA"</span>, <span class="at">group.by =</span> <span class="st">"orig.ident"</span>,<span class="at">dims =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">2</span>)<span class="sc">+</span> ggplot2<span class="sc">::</span><span class="fu">ggtitle</span>(<span class="at">label =</span><span class="st">"UMAP10_on_PCA"</span>),</span>
-<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"UMAP10_on_PCA"</span>, <span class="at">group.by =</span> <span class="st">"orig.ident"</span>,<span class="at">dims =</span> <span class="dv">3</span><span class="sc">:</span><span class="dv">4</span>)<span class="sc">+</span> ggplot2<span class="sc">::</span><span class="fu">ggtitle</span>(<span class="at">label =</span><span class="st">"UMAP10_on_PCA"</span>)</span>
-<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_grid</span>(<span class="at">ncol =</span> <span class="dv">3</span>,</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"umap"</span>, <span class="at">group.by =</span> <span class="st">"orig.ident"</span>)<span class="sc">+</span> ggplot2<span class="sc">::</span><span class="fu">ggtitle</span>(<span class="at">label =</span><span class="st">"UMAP_on_PCA"</span>),</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"UMAP10_on_PCA"</span>, <span class="at">group.by =</span> <span class="st">"orig.ident"</span>,<span class="at">dims =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">2</span>)<span class="sc">+</span> ggplot2<span class="sc">::</span><span class="fu">ggtitle</span>(<span class="at">label =</span><span class="st">"UMAP10_on_PCA"</span>),</span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"UMAP10_on_PCA"</span>, <span class="at">group.by =</span> <span class="st">"orig.ident"</span>,<span class="at">dims =</span> <span class="dv">3</span><span class="sc">:</span><span class="dv">4</span>)<span class="sc">+</span> ggplot2<span class="sc">::</span><span class="fu">ggtitle</span>(<span class="at">label =</span><span class="st">"UMAP10_on_PCA"</span>)</span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
@@ -396,13 +417,13 @@ Note
 </div>
 </div>
 </div>
-<p>We can now plot PCA, UMAP and tSNE side by side for comparison. Here, we can conclude that our dataset contains a batch effect that needs to be corrected before proceeding to clustering and differential gene expression analysis.</p>
+<p>We can now plot PCA, UMAP and tSNE side by side for comparison. Have a look at the UMAP and tSNE, what similarities/differences do you see, can you explain the differences based on what you learned during the lecture? Also, we can conclude from the dimensionality reductions that our dataset contains a batch effect that needs to be corrected before proceeding to clustering and differential gene expression analysis.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_grid</span>(<span class="at">ncol =</span> <span class="dv">3</span>,</span>
-<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"pca"</span>, <span class="at">group.by =</span> <span class="st">"orig.ident"</span>),</span>
-<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"tsne"</span>, <span class="at">group.by =</span> <span class="st">"orig.ident"</span>),</span>
-<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"umap"</span>, <span class="at">group.by =</span> <span class="st">"orig.ident"</span>)</span>
-<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_grid</span>(<span class="at">ncol =</span> <span class="dv">3</span>,</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"pca"</span>, <span class="at">group.by =</span> <span class="st">"orig.ident"</span>),</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"tsne"</span>, <span class="at">group.by =</span> <span class="st">"orig.ident"</span>),</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"umap"</span>, <span class="at">group.by =</span> <span class="st">"orig.ident"</span>)</span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
@@ -411,17 +432,17 @@ Note
 </div>
 </div>
 </div>
-<div class="callout callout-style-default callout-note no-icon callout-titled" title="Discuss">
+<div class="callout callout-style-default callout-note callout-titled" title="Discuss">
 <div class="callout-header d-flex align-content-center">
 <div class="callout-icon-container">
-<i class="callout-icon no-icon"></i>
+<i class="callout-icon"></i>
 </div>
 <div class="callout-title-container flex-fill">
 Discuss
 </div>
 </div>
 <div class="callout-body-container callout-body">
-<p>We have now done Variable gene selection, PCA and UMAP with the settings we chose. Test a few different ways of selecting variable genes, number of PCs for UMAP and check how it influences your embedding.</p>
+<p>We have now done Variable gene selection, PCA and UMAP with the settings we selected for you. Test a few different ways of selecting variable genes, number of PCs for UMAP and check how it influences your embedding.</p>
 </div>
 </div>
 </section>
@@ -432,48 +453,50 @@ Discuss
 <h3 data-number="7.1" class="anchored" data-anchor-id="meta-dimred_zsg_zs"><span class="header-section-number">7.1</span> UMAP from z-scores</h3>
 <p>To run tSNE or UMAP on the scaled data, one first needs to select the number of variables to use. This is because including dimensions that do contribute to the separation of your cell types will in the end mask those differences. Another reason for it is because running with all genes/features also will take longer or might be computationally unfeasible. Therefore we will use the scaled data of the highly variable genes.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>alldata <span class="ot">&lt;-</span> <span class="fu">RunUMAP</span>(alldata, <span class="at">reduction.name =</span> <span class="st">"UMAP_on_ScaleData"</span>,</span>
-<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>                   <span class="at">features =</span> alldata<span class="sc">@</span>assays<span class="sc">$</span>RNA<span class="sc">@</span>var.features,</span>
-<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>                   <span class="at">assay =</span> <span class="st">"RNA"</span>,</span>
-<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>                   <span class="at">n.components=</span><span class="dv">2</span>,</span>
-<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>                   <span class="at">n.neighbors=</span><span class="dv">30</span>,</span>
-<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>                   <span class="at">n.epochs=</span><span class="dv">200</span>,</span>
-<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>                   <span class="at">min.dist=</span><span class="fl">0.3</span>,</span>
-<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>                   <span class="at">learning.rate=</span><span class="dv">1</span>,</span>
-<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>                   <span class="at">spread=</span><span class="dv">1</span> )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>alldata <span class="ot">&lt;-</span> <span class="fu">RunUMAP</span>(alldata, <span class="at">reduction.name =</span> <span class="st">"UMAP_on_ScaleData"</span>,</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>                   <span class="at">features =</span> alldata<span class="sc">@</span>assays<span class="sc">$</span>RNA<span class="sc">@</span>var.features,</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>                   <span class="at">assay =</span> <span class="st">"RNA"</span>,</span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>                   <span class="at">n.components=</span><span class="dv">2</span>,</span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>                   <span class="at">n.neighbors=</span><span class="dv">30</span>,</span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>                   <span class="at">n.epochs=</span><span class="dv">200</span>,</span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>                   <span class="at">min.dist=</span><span class="fl">0.3</span>,</span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>                   <span class="at">learning.rate=</span><span class="dv">1</span>,</span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>                   <span class="at">spread=</span><span class="dv">1</span> )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 <section id="meta-dimred_zsg_g" class="level3" data-number="7.2">
 <h3 data-number="7.2" class="anchored" data-anchor-id="meta-dimred_zsg_g"><span class="header-section-number">7.2</span> UMAP from graph</h3>
 <p>To run tSNE or UMAP on the a graph, we first need to build a graph from the data. In fact, both tSNE and UMAP first build a graph from the data using a specified distance matrix and then optimize the embedding. Since a graph is just a matrix containing distances from cell to cell and as such, you can run either UMAP or tSNE using any other distance metric desired. Euclidean and Correlation are usually the most commonly used.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Build Graph</span></span>
-<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>alldata <span class="ot">&lt;-</span> <span class="fu">FindNeighbors</span>(alldata,</span>
-<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>                         <span class="at">reduction =</span> <span class="st">"pca"</span>,</span>
-<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>                         <span class="at">assay =</span> <span class="st">"RNA"</span>,</span>
-<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>                         <span class="at">k.param =</span> <span class="dv">20</span>,</span>
-<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>                         <span class="at">features =</span> alldata<span class="sc">@</span>assays<span class="sc">$</span>RNA<span class="sc">@</span>var.features)</span>
-<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a><span class="co">#Run UMAP on a graph</span></span>
-<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(reticulate)</span>
-<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a>reticulate<span class="sc">::</span><span class="fu">use_condaenv</span>(<span class="st">"sspy"</span>)</span>
-<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a>alldata <span class="ot">&lt;-</span> <span class="fu">RunUMAP</span>(alldata, <span class="at">reduction.name =</span> <span class="st">"UMAP_on_Graph"</span>, <span class="at">umap.method =</span> <span class="st">"umap-learn"</span>, <span class="at">graph =</span> <span class="st">"RNA_snn"</span>, <span class="at">assay =</span> <span class="st">"RNA"</span> )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Build Graph</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>alldata <span class="ot">&lt;-</span> <span class="fu">FindNeighbors</span>(alldata,</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>                         <span class="at">reduction =</span> <span class="st">"pca"</span>,</span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>                         <span class="at">assay =</span> <span class="st">"RNA"</span>,</span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>                         <span class="at">k.param =</span> <span class="dv">20</span>,</span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>                         <span class="at">features =</span> alldata<span class="sc">@</span>assays<span class="sc">$</span>RNA<span class="sc">@</span>var.features)</span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a>alldata <span class="ot">&lt;-</span> <span class="fu">RunUMAP</span>(alldata, </span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a>                   <span class="at">reduction.name =</span> <span class="st">"UMAP_on_Graph"</span>, </span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a>                   <span class="at">umap.method =</span> <span class="st">"umap-learn"</span>, </span>
+<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a>                   <span class="at">graph =</span> <span class="st">"RNA_snn"</span>, </span>
+<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a>                   <span class="at">n.epochs =</span> <span class="dv">200</span>,</span>
+<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a>                   <span class="at">assay =</span> <span class="st">"RNA"</span> )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>We can now plot the UMAP comparing both on PCA vs ScaledSata vs Graph.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>p1 <span class="ot">&lt;-</span> <span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"umap"</span>, <span class="at">group.by =</span> <span class="st">"orig.ident"</span>)<span class="sc">+</span> ggplot2<span class="sc">::</span><span class="fu">ggtitle</span>(<span class="at">label =</span><span class="st">"UMAP_on_PCA"</span>)</span>
-<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>p2 <span class="ot">&lt;-</span> <span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"UMAP_on_ScaleData"</span>, <span class="at">group.by =</span> <span class="st">"orig.ident"</span>)<span class="sc">+</span> ggplot2<span class="sc">::</span><span class="fu">ggtitle</span>(<span class="at">label =</span><span class="st">"UMAP_on_ScaleData"</span>)</span>
-<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>p3 <span class="ot">&lt;-</span> <span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"UMAP_on_Graph"</span>, <span class="at">group.by =</span> <span class="st">"orig.ident"</span>)<span class="sc">+</span> ggplot2<span class="sc">::</span><span class="fu">ggtitle</span>(<span class="at">label =</span><span class="st">"UMAP_on_Graph"</span>)</span>
-<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>leg <span class="ot">&lt;-</span> <span class="fu">get_legend</span>(p1)</span>
-<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>gridExtra<span class="sc">::</span><span class="fu">grid.arrange</span>(</span>
-<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>  gridExtra<span class="sc">::</span><span class="fu">arrangeGrob</span>(</span>
-<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>    p1 <span class="sc">+</span> <span class="fu">NoLegend</span>() <span class="sc">+</span> <span class="fu">NoAxes</span>(),</span>
-<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>    p2 <span class="sc">+</span> <span class="fu">NoLegend</span>() <span class="sc">+</span> <span class="fu">NoAxes</span>(),</span>
-<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a>    p3 <span class="sc">+</span> <span class="fu">NoLegend</span>() <span class="sc">+</span> <span class="fu">NoAxes</span>(), </span>
-<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a>    leg,<span class="at">nrow=</span><span class="dv">2</span>),</span>
-<span id="cb16-12"><a href="#cb16-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">ncol=</span><span class="dv">1</span>,<span class="at">widths=</span><span class="fu">c</span>(<span class="dv">1</span>)</span>
-<span id="cb16-13"><a href="#cb16-13" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>p1 <span class="ot">&lt;-</span> <span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"umap"</span>, <span class="at">group.by =</span> <span class="st">"orig.ident"</span>)<span class="sc">+</span> ggplot2<span class="sc">::</span><span class="fu">ggtitle</span>(<span class="at">label =</span><span class="st">"UMAP_on_PCA"</span>)</span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>p2 <span class="ot">&lt;-</span> <span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"UMAP_on_ScaleData"</span>, <span class="at">group.by =</span> <span class="st">"orig.ident"</span>)<span class="sc">+</span> ggplot2<span class="sc">::</span><span class="fu">ggtitle</span>(<span class="at">label =</span><span class="st">"UMAP_on_ScaleData"</span>)</span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>p3 <span class="ot">&lt;-</span> <span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"UMAP_on_Graph"</span>, <span class="at">group.by =</span> <span class="st">"orig.ident"</span>)<span class="sc">+</span> ggplot2<span class="sc">::</span><span class="fu">ggtitle</span>(<span class="at">label =</span><span class="st">"UMAP_on_Graph"</span>)</span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>leg <span class="ot">&lt;-</span> <span class="fu">get_legend</span>(p1)</span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>gridExtra<span class="sc">::</span><span class="fu">grid.arrange</span>(</span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>  gridExtra<span class="sc">::</span><span class="fu">arrangeGrob</span>(</span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>    p1 <span class="sc">+</span> <span class="fu">NoLegend</span>() <span class="sc">+</span> <span class="fu">NoAxes</span>(),</span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a>    p2 <span class="sc">+</span> <span class="fu">NoLegend</span>() <span class="sc">+</span> <span class="fu">NoAxes</span>(),</span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a>    p3 <span class="sc">+</span> <span class="fu">NoLegend</span>() <span class="sc">+</span> <span class="fu">NoAxes</span>(), </span>
+<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a>    leg,<span class="at">nrow=</span><span class="dv">2</span>),</span>
+<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">ncol=</span><span class="dv">1</span>,<span class="at">widths=</span><span class="fu">c</span>(<span class="dv">1</span>)</span>
+<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
@@ -530,12 +553,12 @@ Discuss
 </tbody>
 </table>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>myfeatures <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"CD3E"</span>,<span class="st">"CD4"</span>,<span class="st">"CD8A"</span>,<span class="st">"NKG7"</span>,<span class="st">"GNLY"</span>,<span class="st">"MS4A1"</span>,<span class="st">"CD14"</span>,<span class="st">"LYZ"</span>,<span class="st">"MS4A7"</span>,<span class="st">"FCGR3A"</span>,<span class="st">"CST3"</span>,<span class="st">"FCER1A"</span>)</span>
-<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>plot_list <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
-<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span>(i <span class="cf">in</span> myfeatures){</span>
-<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>  plot_list[[i]] <span class="ot">&lt;-</span> <span class="fu">FeaturePlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"umap"</span>,<span class="at">dims =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">2</span>,</span>
-<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>            <span class="at">features =</span> i,<span class="at">ncol =</span> <span class="dv">3</span>,<span class="at">order =</span> T) <span class="sc">+</span> <span class="fu">NoLegend</span>() <span class="sc">+</span> <span class="fu">NoAxes</span>() <span class="sc">+</span> <span class="fu">NoGrid</span>() }</span>
-<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_grid</span>(<span class="at">ncol=</span><span class="dv">3</span>, <span class="at">plotlist =</span> plot_list)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>myfeatures <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"CD3E"</span>,<span class="st">"CD4"</span>,<span class="st">"CD8A"</span>,<span class="st">"NKG7"</span>,<span class="st">"GNLY"</span>,<span class="st">"MS4A1"</span>,<span class="st">"CD14"</span>,<span class="st">"LYZ"</span>,<span class="st">"MS4A7"</span>,<span class="st">"FCGR3A"</span>,<span class="st">"CST3"</span>,<span class="st">"FCER1A"</span>)</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>plot_list <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span>(i <span class="cf">in</span> myfeatures){</span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>  plot_list[[i]] <span class="ot">&lt;-</span> <span class="fu">FeaturePlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"umap"</span>,<span class="at">dims =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">2</span>,</span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>            <span class="at">features =</span> i,<span class="at">ncol =</span> <span class="dv">3</span>,<span class="at">order =</span> T) <span class="sc">+</span> <span class="fu">NoLegend</span>() <span class="sc">+</span> <span class="fu">NoAxes</span>() <span class="sc">+</span> <span class="fu">NoGrid</span>() }</span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_grid</span>(<span class="at">ncol=</span><span class="dv">3</span>, <span class="at">plotlist =</span> plot_list)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
@@ -544,10 +567,10 @@ Discuss
 </div>
 </div>
 </div>
-<div class="callout callout-style-default callout-note no-icon callout-titled" title="Discuss">
+<div class="callout callout-style-default callout-note callout-titled" title="Discuss">
 <div class="callout-header d-flex align-content-center">
 <div class="callout-icon-container">
-<i class="callout-icon no-icon"></i>
+<i class="callout-icon"></i>
 </div>
 <div class="callout-title-container flex-fill">
 Discuss
@@ -562,22 +585,26 @@ Discuss
 <h2 data-number="9" class="anchored" data-anchor-id="meta-dimred_save"><span class="header-section-number">9</span> Save data</h2>
 <p>We can finally save the object for use in future steps.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>path <span class="ot">&lt;-</span> <span class="st">"data/results/covid_qc_dr.rds"</span></span>
-<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span>(<span class="sc">!</span><span class="fu">file.exists</span>(path)) <span class="fu">saveRDS</span>(alldata,path)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>path <span class="ot">&lt;-</span> <span class="st">"data/results/covid_qc_dr.rds"</span></span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span>(<span class="sc">!</span><span class="fu">file.exists</span>(path)) <span class="fu">saveRDS</span>(alldata,path)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 <section id="meta-session" class="level2" data-number="10">
 <h2 data-number="10" class="anchored" data-anchor-id="meta-session"><span class="header-section-number">10</span> Session info</h2>
+<details>
+<summary>
+Click here
+</summary>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>R version 4.2.3 (2023-03-15)
+<pre><code>R version 4.3.0 (2023-04-21)
 Platform: x86_64-pc-linux-gnu (64-bit)
-Running under: Ubuntu 22.04.2 LTS
+Running under: Ubuntu 22.04.3 LTS
 
 Matrix products: default
-BLAS:   /usr/lib/x86_64-linux-gnu/openblas-pthread/libblas.so.3
-LAPACK: /usr/lib/x86_64-linux-gnu/openblas-pthread/libopenblasp-r0.3.20.so
+BLAS:   /usr/lib/x86_64-linux-gnu/openblas-pthread/libblas.so.3 
+LAPACK: /usr/lib/x86_64-linux-gnu/openblas-pthread/libopenblasp-r0.3.20.so;  LAPACK version 3.10.0
 
 locale:
  [1] LC_CTYPE=en_US.UTF-8       LC_NUMERIC=C              
@@ -587,89 +614,93 @@ locale:
  [9] LC_ADDRESS=C               LC_TELEPHONE=C            
 [11] LC_MEASUREMENT=en_US.UTF-8 LC_IDENTIFICATION=C       
 
+time zone: Etc/UTC
+tzcode source: system (glibc)
+
 attached base packages:
 [1] stats4    stats     graphics  grDevices utils     datasets  methods  
 [8] base     
 
 other attached packages:
- [1] reticulate_1.30             scran_1.26.2               
- [3] scuttle_1.8.4               SingleCellExperiment_1.20.1
- [5] SummarizedExperiment_1.28.0 Biobase_2.58.0             
- [7] GenomicRanges_1.50.2        GenomeInfoDb_1.34.9        
- [9] IRanges_2.32.0              S4Vectors_0.36.2           
-[11] BiocGenerics_0.44.0         MatrixGenerics_1.10.0      
-[13] matrixStats_1.0.0           ggplot2_3.4.2              
-[15] cowplot_1.1.1               SeuratObject_4.1.3         
-[17] Seurat_4.3.0.1             
+ [1] scran_1.30.0                scuttle_1.12.0             
+ [3] SingleCellExperiment_1.24.0 SummarizedExperiment_1.32.0
+ [5] Biobase_2.62.0              GenomicRanges_1.54.1       
+ [7] GenomeInfoDb_1.38.2         IRanges_2.36.0             
+ [9] S4Vectors_0.40.2            BiocGenerics_0.48.1        
+[11] MatrixGenerics_1.14.0       matrixStats_1.0.0          
+[13] ggplot2_3.4.2               cowplot_1.1.1              
+[15] SeuratObject_4.1.3          Seurat_4.3.0               
 
 loaded via a namespace (and not attached):
-  [1] plyr_1.8.8                igraph_1.5.0             
-  [3] lazyeval_0.2.2            sp_2.0-0                 
-  [5] splines_4.2.3             BiocParallel_1.32.6      
-  [7] listenv_0.9.0             scattermore_1.2          
-  [9] digest_0.6.33             htmltools_0.5.5          
- [11] fansi_1.0.4               magrittr_2.0.3           
- [13] ScaledMatrix_1.6.0        tensor_1.5               
- [15] cluster_2.1.4             ROCR_1.0-11              
- [17] limma_3.54.2              globals_0.16.2           
- [19] spatstat.sparse_3.0-2     colorspace_2.1-0         
- [21] rappdirs_0.3.3            ggrepel_0.9.3            
- [23] xfun_0.39                 dplyr_1.1.1              
- [25] RCurl_1.98-1.12           jsonlite_1.8.7           
- [27] progressr_0.13.0          spatstat.data_3.0-1      
- [29] survival_3.5-3            zoo_1.8-12               
- [31] glue_1.6.2                polyclip_1.10-4          
- [33] gtable_0.3.3              zlibbioc_1.44.0          
- [35] XVector_0.38.0            leiden_0.4.3             
- [37] DelayedArray_0.24.0       BiocSingular_1.14.0      
- [39] future.apply_1.11.0       abind_1.4-5              
- [41] scales_1.2.1              edgeR_3.40.2             
- [43] spatstat.random_3.1-5     miniUI_0.1.1.1           
- [45] Rcpp_1.0.10               viridisLite_0.4.2        
- [47] xtable_1.8-4              dqrng_0.3.0              
- [49] rsvd_1.0.5                metapod_1.6.0            
- [51] htmlwidgets_1.6.2         httr_1.4.6               
- [53] RColorBrewer_1.1-3        ellipsis_0.3.2           
- [55] ica_1.0-3                 farver_2.1.1             
- [57] pkgconfig_2.0.3           uwot_0.1.16              
- [59] deldir_1.0-9              here_1.0.1               
- [61] locfit_1.5-9.8            utf8_1.2.3               
- [63] labeling_0.4.2            tidyselect_1.2.0         
- [65] rlang_1.1.1               reshape2_1.4.4           
- [67] later_1.3.1               munsell_0.5.0            
- [69] tools_4.2.3               cli_3.6.1                
- [71] generics_0.1.3            ggridges_0.5.4           
- [73] evaluate_0.21             stringr_1.5.0            
- [75] fastmap_1.1.1             yaml_2.3.7               
- [77] goftest_1.2-3             knitr_1.43               
- [79] fitdistrplus_1.1-11       purrr_1.0.1              
- [81] RANN_2.6.1                pbapply_1.7-2            
- [83] future_1.33.0             nlme_3.1-162             
- [85] sparseMatrixStats_1.10.0  mime_0.12                
- [87] compiler_4.2.3            rstudioapi_0.14          
- [89] plotly_4.10.2             png_0.1-8                
- [91] spatstat.utils_3.0-3      statmod_1.5.0            
- [93] tibble_3.2.1              stringi_1.7.12           
- [95] lattice_0.20-45           bluster_1.8.0            
- [97] Matrix_1.6-0              vctrs_0.6.3              
- [99] pillar_1.9.0              lifecycle_1.0.3          
-[101] spatstat.geom_3.2-1       lmtest_0.9-40            
-[103] RcppAnnoy_0.0.21          BiocNeighbors_1.16.0     
-[105] data.table_1.14.8         bitops_1.0-7             
-[107] irlba_2.3.5.1             httpuv_1.6.11            
-[109] patchwork_1.1.2           R6_2.5.1                 
-[111] promises_1.2.0.1          KernSmooth_2.23-20       
-[113] gridExtra_2.3             parallelly_1.36.0        
-[115] codetools_0.2-19          MASS_7.3-58.2            
-[117] rprojroot_2.0.3           withr_2.5.0              
-[119] sctransform_0.3.5         GenomeInfoDbData_1.2.9   
-[121] parallel_4.2.3            grid_4.2.3               
-[123] beachmat_2.14.2           tidyr_1.3.0              
-[125] rmarkdown_2.21            DelayedMatrixStats_1.20.0
-[127] Rtsne_0.16                spatstat.explore_3.2-1   
-[129] shiny_1.7.4              </code></pre>
+  [1] RColorBrewer_1.1-3        rstudioapi_0.14          
+  [3] jsonlite_1.8.5            magrittr_2.0.3           
+  [5] spatstat.utils_3.0-3      farver_2.1.1             
+  [7] rmarkdown_2.22            zlibbioc_1.48.0          
+  [9] vctrs_0.6.2               ROCR_1.0-11              
+ [11] DelayedMatrixStats_1.24.0 spatstat.explore_3.2-1   
+ [13] RCurl_1.98-1.12           S4Arrays_1.2.0           
+ [15] htmltools_0.5.5           BiocNeighbors_1.20.1     
+ [17] SparseArray_1.2.3         sctransform_0.3.5        
+ [19] parallelly_1.36.0         KernSmooth_2.23-20       
+ [21] htmlwidgets_1.6.2         ica_1.0-3                
+ [23] plyr_1.8.8                plotly_4.10.2            
+ [25] zoo_1.8-12                igraph_1.4.3             
+ [27] mime_0.12                 lifecycle_1.0.3          
+ [29] pkgconfig_2.0.3           rsvd_1.0.5               
+ [31] Matrix_1.5-4              R6_2.5.1                 
+ [33] fastmap_1.1.1             GenomeInfoDbData_1.2.11  
+ [35] fitdistrplus_1.1-11       future_1.32.0            
+ [37] shiny_1.7.4               digest_0.6.31            
+ [39] colorspace_2.1-0          patchwork_1.1.2          
+ [41] rprojroot_2.0.3           tensor_1.5               
+ [43] dqrng_0.3.0               irlba_2.3.5.1            
+ [45] beachmat_2.18.0           labeling_0.4.2           
+ [47] progressr_0.13.0          fansi_1.0.4              
+ [49] spatstat.sparse_3.0-1     httr_1.4.6               
+ [51] polyclip_1.10-4           abind_1.4-5              
+ [53] compiler_4.3.0            here_1.0.1               
+ [55] withr_2.5.0               BiocParallel_1.36.0      
+ [57] MASS_7.3-58.4             DelayedArray_0.28.0      
+ [59] bluster_1.12.0            tools_4.3.0              
+ [61] lmtest_0.9-40             httpuv_1.6.11            
+ [63] future.apply_1.11.0       goftest_1.2-3            
+ [65] glue_1.6.2                nlme_3.1-162             
+ [67] promises_1.2.0.1          grid_4.3.0               
+ [69] Rtsne_0.16                cluster_2.1.4            
+ [71] reshape2_1.4.4            generics_0.1.3           
+ [73] gtable_0.3.3              spatstat.data_3.0-1      
+ [75] tidyr_1.3.0               data.table_1.14.8        
+ [77] metapod_1.10.1            ScaledMatrix_1.10.0      
+ [79] BiocSingular_1.18.0       sp_1.6-1                 
+ [81] utf8_1.2.3                XVector_0.42.0           
+ [83] spatstat.geom_3.2-1       RcppAnnoy_0.0.20         
+ [85] ggrepel_0.9.3             RANN_2.6.1               
+ [87] pillar_1.9.0              stringr_1.5.0            
+ [89] limma_3.58.1              later_1.3.1              
+ [91] splines_4.3.0             dplyr_1.1.2              
+ [93] lattice_0.21-8            survival_3.5-5           
+ [95] deldir_1.0-9              tidyselect_1.2.0         
+ [97] locfit_1.5-9.8            miniUI_0.1.1.1           
+ [99] pbapply_1.7-0             knitr_1.43               
+[101] gridExtra_2.3             edgeR_4.0.3              
+[103] scattermore_1.2           xfun_0.39                
+[105] statmod_1.5.0             stringi_1.7.12           
+[107] lazyeval_0.2.2            yaml_2.3.7               
+[109] evaluate_0.21             codetools_0.2-19         
+[111] tibble_3.2.1              cli_3.6.1                
+[113] uwot_0.1.14               xtable_1.8-4             
+[115] reticulate_1.30           munsell_0.5.0            
+[117] Rcpp_1.0.10               globals_0.16.2           
+[119] spatstat.random_3.1-5     png_0.1-8                
+[121] parallel_4.3.0            ellipsis_0.3.2           
+[123] sparseMatrixStats_1.14.0  bitops_1.0-7             
+[125] listenv_0.9.0             viridisLite_0.4.2        
+[127] scales_1.2.1              ggridges_0.5.4           
+[129] crayon_1.5.2              leiden_0.4.3             
+[131] purrr_1.0.1               rlang_1.1.1              </code></pre>
 </div>
 </div>
+</details>
 
 
 </section>
@@ -911,14 +942,14 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
 </div> <!-- /content -->
 <footer class="footer">
   <div class="nav-footer">
-    <div class="nav-footer-left">2023 <a href="https://nbis.se">NBIS</a> | <a href="https://choosealicense.com/licenses/gpl-3.0/">GPL-3 License</a></div>   
+    <div class="nav-footer-left">2024 <a href="https://nbis.se">NBIS</a> | <a href="https://choosealicense.com/licenses/gpl-3.0/">GPL-3 License</a></div>   
     <div class="nav-footer-center">
       &nbsp;
     </div>
-    <div class="nav-footer-right">Published with <a href="https://quarto.org/">Quarto</a> v1.3.433</div>
+    <div class="nav-footer-right">Published with <a href="https://quarto.org/">Quarto</a> v1.3.353</div>
   </div>
 </footer>
-<script>var lightboxQuarto = GLightbox({"descPosition":"bottom","selector":".lightbox","openEffect":"zoom","loop":true,"closeEffect":"zoom"});</script>
+<script>var lightboxQuarto = GLightbox({"selector":".lightbox","loop":true,"descPosition":"bottom","openEffect":"zoom","closeEffect":"zoom"});</script>
 
 
 

@@ -2,11 +2,14 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.3.433">
+<meta name="generator" content="quarto-1.3.450">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
-<meta name="author" content="Åsa Björklund &amp; Paulo Czarnewski">
+<meta name="author" content="Åsa Björklund">
+<meta name="author" content="Paulo Czarnewski">
+<meta name="author" content="Susanne Reinsbach">
+<meta name="author" content="Roy Francis">
 <meta name="description" content="Combining and harmonizing samples or datasets from different batches such as experiments or conditions to enable meaningful cross-sample comparisons.">
 
 <title> Data Integration</title>
@@ -105,13 +108,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <style>
 
       .quarto-title-block .quarto-title-banner {
-        background: #E9F2D1;
+        background-image: url(../../assets/images/banner.jpg);
+background-size: cover;
       }
 </style>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono&amp;family=Nunito:ital,wght@0,400;0,600;1,400;1,600&amp;display=swap" rel="stylesheet">
-    
+<link href="https://fonts.googleapis.com/css2?family=Fira+Mono&amp;family=Nunito:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&amp;display=swap" rel="stylesheet">
 
   <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
   <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
@@ -171,7 +174,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <div class="quarto-title-banner page-columns page-full">
     <div class="quarto-title column-body">
       <h1 class="title"><i class="fa-solid fa-diagram-project" aria-label="diagram-project"></i> Data Integration</h1>
-            <p class="subtitle lead"><i class="fa-brands fa-python" aria-label="python"></i> SCANPY TOOLKIT</p>
+            <p class="subtitle lead"><i class="fa-brands fa-python" aria-label="python"></i> Scanpy Toolkit</p>
                   <div>
         <div class="description">
           Combining and harmonizing samples or datasets from different batches such as experiments or conditions to enable meaningful cross-sample comparisons.
@@ -184,16 +187,19 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <div class="quarto-title-meta">
 
       <div>
-      <div class="quarto-title-meta-heading">Author</div>
+      <div class="quarto-title-meta-heading">Authors</div>
       <div class="quarto-title-meta-contents">
-               <p>Åsa Björklund &amp; Paulo Czarnewski </p>
+               <p>Åsa Björklund </p>
+               <p>Paulo Czarnewski </p>
+               <p>Susanne Reinsbach </p>
+               <p>Roy Francis </p>
             </div>
     </div>
       
       <div>
       <div class="quarto-title-meta-heading">Published</div>
       <div class="quarto-title-meta-contents">
-        <p class="date">03-Nov-2023</p>
+        <p class="date">03-Jan-2024</p>
       </div>
     </div>
     
@@ -225,10 +231,11 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 
 
-<div class="callout callout-style-default callout-note no-icon callout-titled">
+
+<div class="callout callout-style-default callout-note callout-titled">
 <div class="callout-header d-flex align-content-center">
 <div class="callout-icon-container">
-<i class="callout-icon no-icon"></i>
+<i class="callout-icon"></i>
 </div>
 <div class="callout-title-container flex-fill">
 Note
@@ -238,7 +245,7 @@ Note
 <p>Code chunks run Python commands unless it starts with <code>%%bash</code>, in which case, those chunks run shell commands.</p>
 </div>
 </div>
-<p>In this tutorial we will look at different ways of integrating multiple single cell RNA-seq datasets. We will explore two different methods to correct for batch effects across datasets. We will also look at a quantitative measure to assess the quality of the integrated data. Seurat uses the data integration method presented in Comprehensive Integration of Single Cell Data, while Scran and Scanpy use a mutual Nearest neighbour method (MNN). Below you can find a list of the most recent methods for single data integration:</p>
+<p>In this tutorial we will look at different ways of integrating multiple single cell RNA-seq datasets. We will explore a few different methods to correct for batch effects across datasets. Seurat uses the data integration method presented in Comprehensive Integration of Single Cell Data, while Scran and Scanpy use a mutual Nearest neighbour method (MNN). Below you can find a list of some methods for single data integration:</p>
 <table class="table">
 <thead>
 <tr class="header">
@@ -283,12 +290,15 @@ Note
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> scanpy <span class="im">as</span> sc</span>
 <span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co"># verbosity: errors (0), warnings (1), info (2), hints (3)</span></span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>sc.settings.verbosity <span class="op">=</span> <span class="dv">3</span>             </span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> warnings</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>warnings.simplefilter(action<span class="op">=</span><span class="st">'ignore'</span>, category<span class="op">=</span><span class="pp">Warning</span>)</span>
 <span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>sc.settings.set_figure_params(dpi<span class="op">=</span><span class="dv">80</span>)</span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="op">%</span>matplotlib inline</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co"># verbosity: errors (0), warnings (1), info (2), hints (3)</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>sc.settings.verbosity <span class="op">=</span> <span class="dv">3</span>             </span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>sc.settings.set_figure_params(dpi<span class="op">=</span><span class="dv">80</span>)</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="op">%</span>matplotlib inline</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Create individual <strong>adata</strong> objects per batch.</p>
 <div class="cell" data-execution_count="2">
@@ -337,8 +347,16 @@ Note
 <span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>var_genes_batch <span class="op">=</span> adata2.var.highly_variable_nbatches <span class="op">&gt;</span> <span class="dv">0</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>Highly variable genes intersection: 147
+<pre><code>extracting highly variable genes
+    finished (0:00:02)
+--&gt; added
+    'highly_variable', boolean vector (adata.var)
+    'means', float vector (adata.var)
+    'dispersions', float vector (adata.var)
+    'dispersions_norm', float vector (adata.var)
+Highly variable genes intersection: 147
 Number of batches where gene is variable:
+highly_variable_nbatches
 0    8103
 1    4754
 2    3154
@@ -346,7 +364,7 @@ Number of batches where gene is variable:
 4     705
 5     251
 6     147
-Name: highly_variable_nbatches, dtype: int64</code></pre>
+Name: count, dtype: int64</code></pre>
 </div>
 </div>
 <p>Compare overlap of variable genes with batches or with all data.</p>
@@ -384,16 +402,30 @@ Overlap batch instersection and all: 147</code></pre>
 <span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a><span class="co"># then run umap on the integrated space</span></span>
 <span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>sc.tl.umap(adata2)</span>
 <span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>sc.tl.tsne(adata2)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>computing batch balanced neighbors
+    finished: added to `.uns['neighbors']`
+    `.obsp['distances']`, distances for each pair of neighbors
+    `.obsp['connectivities']`, weighted adjacency matrix (0:00:02)
+computing UMAP
+    finished: added
+    'X_umap', UMAP coordinates (adata.obsm) (0:00:09)
+computing tSNE
+    using 'X_pca' with n_pcs = 50
+    using sklearn.manifold.TSNE
+    finished: added
+    'X_tsne', tSNE coordinates (adata.obsm) (0:00:11)</code></pre>
+</div>
 </div>
 <p>We can now plot the unintegrated and the integrated space reduced dimensions.</p>
 <div class="cell" data-execution_count="9">
-<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>fig, axs <span class="op">=</span> plt.subplots(<span class="dv">2</span>, <span class="dv">2</span>, figsize<span class="op">=</span>(<span class="dv">10</span>,<span class="dv">8</span>),constrained_layout<span class="op">=</span><span class="va">True</span>)</span>
-<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>sc.pl.tsne(adata2, color<span class="op">=</span><span class="st">"sample"</span>, title<span class="op">=</span><span class="st">"BBKNN Corrected tsne"</span>, ax<span class="op">=</span>axs[<span class="dv">0</span>,<span class="dv">0</span>], show<span class="op">=</span><span class="va">False</span>)</span>
-<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>sc.pl.tsne(adata, color<span class="op">=</span><span class="st">"sample"</span>, title<span class="op">=</span><span class="st">"Uncorrected tsne"</span>, ax<span class="op">=</span>axs[<span class="dv">0</span>,<span class="dv">1</span>], show<span class="op">=</span><span class="va">False</span>)</span>
-<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata2, color<span class="op">=</span><span class="st">"sample"</span>, title<span class="op">=</span><span class="st">"BBKNN Corrected umap"</span>, ax<span class="op">=</span>axs[<span class="dv">1</span>,<span class="dv">0</span>], show<span class="op">=</span><span class="va">False</span>)</span>
-<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, color<span class="op">=</span><span class="st">"sample"</span>, title<span class="op">=</span><span class="st">"Uncorrected umap"</span>, ax<span class="op">=</span>axs[<span class="dv">1</span>,<span class="dv">1</span>], show<span class="op">=</span><span class="va">False</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>fig, axs <span class="op">=</span> plt.subplots(<span class="dv">2</span>, <span class="dv">2</span>, figsize<span class="op">=</span>(<span class="dv">10</span>,<span class="dv">8</span>),constrained_layout<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>sc.pl.tsne(adata2, color<span class="op">=</span><span class="st">"sample"</span>, title<span class="op">=</span><span class="st">"BBKNN Corrected tsne"</span>, ax<span class="op">=</span>axs[<span class="dv">0</span>,<span class="dv">0</span>], show<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>sc.pl.tsne(adata, color<span class="op">=</span><span class="st">"sample"</span>, title<span class="op">=</span><span class="st">"Uncorrected tsne"</span>, ax<span class="op">=</span>axs[<span class="dv">0</span>,<span class="dv">1</span>], show<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata2, color<span class="op">=</span><span class="st">"sample"</span>, title<span class="op">=</span><span class="st">"BBKNN Corrected umap"</span>, ax<span class="op">=</span>axs[<span class="dv">1</span>,<span class="dv">0</span>], show<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, color<span class="op">=</span><span class="st">"sample"</span>, title<span class="op">=</span><span class="st">"Uncorrected umap"</span>, ax<span class="op">=</span>axs[<span class="dv">1</span>,<span class="dv">1</span>], show<span class="op">=</span><span class="va">False</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="9">
-<pre><code>&lt;AxesSubplot: title={'center': 'Uncorrected umap'}, xlabel='UMAP1', ylabel='UMAP2'&gt;</code></pre>
+<pre><code>&lt;Axes: title={'center': 'Uncorrected umap'}, xlabel='UMAP1', ylabel='UMAP2'&gt;</code></pre>
 </div>
 <div class="cell-output cell-output-display">
 <div class="quarto-figure quarto-figure-left">
@@ -405,40 +437,77 @@ Overlap batch instersection and all: 147</code></pre>
 </div>
 <p>Let’s save the integrated data for further analysis.</p>
 <div class="cell" data-execution_count="10">
-<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>save_file <span class="op">=</span> <span class="st">'./data/results/scanpy_bbknn_corrected_covid.h5ad'</span></span>
-<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>adata2.write_h5ad(save_file)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>save_file <span class="op">=</span> <span class="st">'./data/results/scanpy_bbknn_corrected_covid.h5ad'</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>adata2.write_h5ad(save_file)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 <section id="combat" class="level2" data-number="4">
 <h2 data-number="4" class="anchored" data-anchor-id="combat"><span class="header-section-number">4</span> Combat</h2>
 <p>Batch correction can also be performed with combat. Note that ComBat batch correction requires a dense matrix format as input (which is already the case in this example).</p>
 <div class="cell" data-execution_count="11">
-<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="co"># create a new object with lognormalized counts</span></span>
-<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>adata_combat <span class="op">=</span> sc.AnnData(X<span class="op">=</span>adata.raw.X, var<span class="op">=</span>adata.raw.var, obs <span class="op">=</span> adata.obs)</span>
-<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a><span class="co"># first store the raw data </span></span>
-<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>adata_combat.raw <span class="op">=</span> adata_combat</span>
-<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a><span class="co"># run combat</span></span>
-<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>sc.pp.combat(adata_combat, key<span class="op">=</span><span class="st">'sample'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="co"># create a new object with lognormalized counts</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>adata_combat <span class="op">=</span> sc.AnnData(X<span class="op">=</span>adata.raw.X, var<span class="op">=</span>adata.raw.var, obs <span class="op">=</span> adata.obs)</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a><span class="co"># first store the raw data </span></span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>adata_combat.raw <span class="op">=</span> adata_combat</span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a><span class="co"># run combat</span></span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a>sc.pp.combat(adata_combat, key<span class="op">=</span><span class="st">'sample'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>Found 25 genes with zero variance.</code></pre>
+<pre><code>Standardizing Data across genes.
+
+Found 6 batches
+
+Found 0 numerical variables:
+    
+
+Found 25 genes with zero variance.
+Fitting L/S model and finding priors
+
+Finding parametric adjustments
+
+Adjusting data
+</code></pre>
 </div>
 </div>
 <p>Then we run the regular steps of dimensionality reduction on the combat corrected data. Variable gene selection, pca and umap with combat data.</p>
 <div class="cell" data-execution_count="12">
-<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>sc.pp.highly_variable_genes(adata_combat)</span>
-<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"Highly variable genes: </span><span class="sc">%d</span><span class="st">"</span><span class="op">%</span><span class="bu">sum</span>(adata_combat.var.highly_variable))</span>
-<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>sc.pl.highly_variable_genes(adata_combat)</span>
-<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>sc.pp.pca(adata_combat, n_comps<span class="op">=</span><span class="dv">30</span>, use_highly_variable<span class="op">=</span><span class="va">True</span>, svd_solver<span class="op">=</span><span class="st">'arpack'</span>)</span>
-<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a>sc.pp.neighbors(adata_combat)</span>
-<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a>sc.tl.umap(adata_combat)</span>
-<span id="cb20-10"><a href="#cb20-10" aria-hidden="true" tabindex="-1"></a>sc.tl.tsne(adata_combat)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>sc.pp.highly_variable_genes(adata_combat)</span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"Highly variable genes: </span><span class="sc">%d</span><span class="st">"</span><span class="op">%</span><span class="bu">sum</span>(adata_combat.var.highly_variable))</span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>sc.pl.highly_variable_genes(adata_combat)</span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>sc.pp.pca(adata_combat, n_comps<span class="op">=</span><span class="dv">30</span>, use_highly_variable<span class="op">=</span><span class="va">True</span>, svd_solver<span class="op">=</span><span class="st">'arpack'</span>)</span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>sc.pp.neighbors(adata_combat)</span>
+<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a>sc.tl.umap(adata_combat)</span>
+<span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a>sc.tl.tsne(adata_combat)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>Highly variable genes: 3915</code></pre>
+<pre><code>extracting highly variable genes
+    finished (0:00:01)
+--&gt; added
+    'highly_variable', boolean vector (adata.var)
+    'means', float vector (adata.var)
+    'dispersions', float vector (adata.var)
+    'dispersions_norm', float vector (adata.var)
+Highly variable genes: 3915
+computing PCA
+    on highly variable genes
+    with n_comps=30
+    finished (0:00:01)
+computing neighbors
+    using 'X_pca' with n_pcs = 30
+    finished: added to `.uns['neighbors']`
+    `.obsp['distances']`, distances for each pair of neighbors
+    `.obsp['connectivities']`, weighted adjacency matrix (0:00:00)
+computing UMAP
+    finished: added
+    'X_umap', UMAP coordinates (adata.obsm) (0:00:08)
+computing tSNE
+    using 'X_pca' with n_pcs = 30
+    using sklearn.manifold.TSNE
+    finished: added
+    'X_tsne', tSNE coordinates (adata.obsm) (0:00:10)</code></pre>
 </div>
 <div class="cell-output cell-output-display">
 <div class="quarto-figure quarto-figure-left">
@@ -449,14 +518,14 @@ Overlap batch instersection and all: 147</code></pre>
 </div>
 </div>
 <div class="cell" data-execution_count="13">
-<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="co"># compare var_genes</span></span>
-<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>var_genes_combat <span class="op">=</span> adata_combat.var.highly_variable</span>
-<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"With all data </span><span class="sc">%d</span><span class="st">"</span><span class="op">%</span><span class="bu">sum</span>(var_genes_all))</span>
-<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"With combat </span><span class="sc">%d</span><span class="st">"</span><span class="op">%</span><span class="bu">sum</span>(var_genes_combat))</span>
-<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"Overlap </span><span class="sc">%d</span><span class="st">"</span><span class="op">%</span><span class="bu">sum</span>(var_genes_all <span class="op">&amp;</span> var_genes_combat))</span>
-<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"With 2 batches </span><span class="sc">%d</span><span class="st">"</span><span class="op">%</span><span class="bu">sum</span>(var_select))</span>
-<span id="cb22-8"><a href="#cb22-8" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"Overlap </span><span class="sc">%d</span><span class="st">"</span><span class="op">%</span><span class="bu">sum</span>(var_genes_combat <span class="op">&amp;</span> var_select))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="co"># compare var_genes</span></span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>var_genes_combat <span class="op">=</span> adata_combat.var.highly_variable</span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"With all data </span><span class="sc">%d</span><span class="st">"</span><span class="op">%</span><span class="bu">sum</span>(var_genes_all))</span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"With combat </span><span class="sc">%d</span><span class="st">"</span><span class="op">%</span><span class="bu">sum</span>(var_genes_combat))</span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"Overlap </span><span class="sc">%d</span><span class="st">"</span><span class="op">%</span><span class="bu">sum</span>(var_genes_all <span class="op">&amp;</span> var_genes_combat))</span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"With 2 batches </span><span class="sc">%d</span><span class="st">"</span><span class="op">%</span><span class="bu">sum</span>(var_select))</span>
+<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"Overlap </span><span class="sc">%d</span><span class="st">"</span><span class="op">%</span><span class="bu">sum</span>(var_genes_combat <span class="op">&amp;</span> var_select))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>With all data 3090
 With combat 3915
@@ -467,13 +536,13 @@ Overlap 2040</code></pre>
 </div>
 <p>We can now plot the unintegrated and the integrated space reduced dimensions.</p>
 <div class="cell" data-execution_count="14">
-<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>fig, axs <span class="op">=</span> plt.subplots(<span class="dv">2</span>, <span class="dv">2</span>, figsize<span class="op">=</span>(<span class="dv">10</span>,<span class="dv">8</span>),constrained_layout<span class="op">=</span><span class="va">True</span>)</span>
-<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>sc.pl.tsne(adata2, color<span class="op">=</span><span class="st">"sample"</span>, title<span class="op">=</span><span class="st">"BBKNN tsne"</span>, ax<span class="op">=</span>axs[<span class="dv">0</span>,<span class="dv">0</span>], show<span class="op">=</span><span class="va">False</span>)</span>
-<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>sc.pl.tsne(adata_combat, color<span class="op">=</span><span class="st">"sample"</span>, title<span class="op">=</span><span class="st">"Combat tsne"</span>, ax<span class="op">=</span>axs[<span class="dv">0</span>,<span class="dv">1</span>], show<span class="op">=</span><span class="va">False</span>)</span>
-<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata2, color<span class="op">=</span><span class="st">"sample"</span>, title<span class="op">=</span><span class="st">"BBKNN umap"</span>, ax<span class="op">=</span>axs[<span class="dv">1</span>,<span class="dv">0</span>], show<span class="op">=</span><span class="va">False</span>)</span>
-<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata_combat, color<span class="op">=</span><span class="st">"sample"</span>, title<span class="op">=</span><span class="st">"Combat umap"</span>, ax<span class="op">=</span>axs[<span class="dv">1</span>,<span class="dv">1</span>], show<span class="op">=</span><span class="va">False</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>fig, axs <span class="op">=</span> plt.subplots(<span class="dv">2</span>, <span class="dv">2</span>, figsize<span class="op">=</span>(<span class="dv">10</span>,<span class="dv">8</span>),constrained_layout<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>sc.pl.tsne(adata2, color<span class="op">=</span><span class="st">"sample"</span>, title<span class="op">=</span><span class="st">"BBKNN tsne"</span>, ax<span class="op">=</span>axs[<span class="dv">0</span>,<span class="dv">0</span>], show<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>sc.pl.tsne(adata_combat, color<span class="op">=</span><span class="st">"sample"</span>, title<span class="op">=</span><span class="st">"Combat tsne"</span>, ax<span class="op">=</span>axs[<span class="dv">0</span>,<span class="dv">1</span>], show<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata2, color<span class="op">=</span><span class="st">"sample"</span>, title<span class="op">=</span><span class="st">"BBKNN umap"</span>, ax<span class="op">=</span>axs[<span class="dv">1</span>,<span class="dv">0</span>], show<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata_combat, color<span class="op">=</span><span class="st">"sample"</span>, title<span class="op">=</span><span class="st">"Combat umap"</span>, ax<span class="op">=</span>axs[<span class="dv">1</span>,<span class="dv">1</span>], show<span class="op">=</span><span class="va">False</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="14">
-<pre><code>&lt;AxesSubplot: title={'center': 'Combat umap'}, xlabel='UMAP1', ylabel='UMAP2'&gt;</code></pre>
+<pre><code>&lt;Axes: title={'center': 'Combat umap'}, xlabel='UMAP1', ylabel='UMAP2'&gt;</code></pre>
 </div>
 <div class="cell-output cell-output-display">
 <div class="quarto-figure quarto-figure-left">
@@ -485,75 +554,75 @@ Overlap 2040</code></pre>
 </div>
 <p>Let’s save the integrated data for further analysis.</p>
 <div class="cell" data-execution_count="15">
-<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="co">#save to file</span></span>
-<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>save_file <span class="op">=</span> <span class="st">'./data/results/scanpy_combat_corrected_covid.h5ad'</span></span>
-<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a>adata_combat.write_h5ad(save_file)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb27"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a><span class="co">#save to file</span></span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>save_file <span class="op">=</span> <span class="st">'./data/results/scanpy_combat_corrected_covid.h5ad'</span></span>
+<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a>adata_combat.write_h5ad(save_file)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 <section id="meta-int_scanorama" class="level2" data-number="5">
 <h2 data-number="5" class="anchored" data-anchor-id="meta-int_scanorama"><span class="header-section-number">5</span> Scanorama</h2>
 <p>Try out <a href="https://github.com/brianhie/scanorama">Scanorama</a> for data integration as well. First we need to create individual AnnData objects from each of the datasets.</p>
 <div class="cell" data-execution_count="16">
-<div class="sourceCode cell-code" id="cb27"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a><span class="co"># split per batch into new objects.</span></span>
-<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>batches <span class="op">=</span> adata.obs[<span class="st">'sample'</span>].cat.categories.tolist()</span>
-<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a>alldata <span class="op">=</span> {}</span>
-<span id="cb27-4"><a href="#cb27-4" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> batch <span class="kw">in</span> batches:</span>
-<span id="cb27-5"><a href="#cb27-5" aria-hidden="true" tabindex="-1"></a>    alldata[batch] <span class="op">=</span> adata2[adata2.obs[<span class="st">'sample'</span>] <span class="op">==</span> batch,]</span>
-<span id="cb27-6"><a href="#cb27-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb27-7"><a href="#cb27-7" aria-hidden="true" tabindex="-1"></a>alldata   </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="co"># split per batch into new objects.</span></span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>batches <span class="op">=</span> adata.obs[<span class="st">'sample'</span>].cat.categories.tolist()</span>
+<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a>alldata <span class="op">=</span> {}</span>
+<span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> batch <span class="kw">in</span> batches:</span>
+<span id="cb28-5"><a href="#cb28-5" aria-hidden="true" tabindex="-1"></a>    alldata[batch] <span class="op">=</span> adata2[adata2.obs[<span class="st">'sample'</span>] <span class="op">==</span> batch,]</span>
+<span id="cb28-6"><a href="#cb28-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb28-7"><a href="#cb28-7" aria-hidden="true" tabindex="-1"></a>alldata   </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="16">
 <pre><code>{'covid_1': View of AnnData object with n_obs × n_vars = 844 × 18752
      obs: 'type', 'sample', 'batch', 'percent_mt2', 'n_counts', 'n_genes_by_counts', 'total_counts', 'total_counts_mt', 'pct_counts_mt', 'total_counts_ribo', 'pct_counts_ribo', 'total_counts_hb', 'pct_counts_hb', 'n_genes', 'percent_chrY', 'XIST-counts', 'S_score', 'G2M_score', 'phase', 'doublet_scores', 'predicted_doublets', 'doublet_info'
      var: 'gene_ids', 'feature_types', 'genome', 'mt', 'ribo', 'hb', 'n_cells_by_counts', 'mean_counts', 'pct_dropout_by_counts', 'total_counts', 'n_cells', 'highly_variable', 'means', 'dispersions', 'dispersions_norm', 'highly_variable_nbatches', 'highly_variable_intersection'
-     uns: 'doublet_info_colors', 'hvg', 'log1p', 'neighbors', 'pca', 'sample_colors', 'umap'
+     uns: 'doublet_info_colors', 'hvg', 'log1p', 'neighbors', 'pca', 'sample_colors', 'umap', 'tsne'
      obsm: 'X_pca', 'X_tsne', 'X_umap'
      obsp: 'connectivities', 'distances',
  'covid_15': View of AnnData object with n_obs × n_vars = 583 × 18752
      obs: 'type', 'sample', 'batch', 'percent_mt2', 'n_counts', 'n_genes_by_counts', 'total_counts', 'total_counts_mt', 'pct_counts_mt', 'total_counts_ribo', 'pct_counts_ribo', 'total_counts_hb', 'pct_counts_hb', 'n_genes', 'percent_chrY', 'XIST-counts', 'S_score', 'G2M_score', 'phase', 'doublet_scores', 'predicted_doublets', 'doublet_info'
      var: 'gene_ids', 'feature_types', 'genome', 'mt', 'ribo', 'hb', 'n_cells_by_counts', 'mean_counts', 'pct_dropout_by_counts', 'total_counts', 'n_cells', 'highly_variable', 'means', 'dispersions', 'dispersions_norm', 'highly_variable_nbatches', 'highly_variable_intersection'
-     uns: 'doublet_info_colors', 'hvg', 'log1p', 'neighbors', 'pca', 'sample_colors', 'umap'
+     uns: 'doublet_info_colors', 'hvg', 'log1p', 'neighbors', 'pca', 'sample_colors', 'umap', 'tsne'
      obsm: 'X_pca', 'X_tsne', 'X_umap'
      obsp: 'connectivities', 'distances',
  'covid_17': View of AnnData object with n_obs × n_vars = 1018 × 18752
      obs: 'type', 'sample', 'batch', 'percent_mt2', 'n_counts', 'n_genes_by_counts', 'total_counts', 'total_counts_mt', 'pct_counts_mt', 'total_counts_ribo', 'pct_counts_ribo', 'total_counts_hb', 'pct_counts_hb', 'n_genes', 'percent_chrY', 'XIST-counts', 'S_score', 'G2M_score', 'phase', 'doublet_scores', 'predicted_doublets', 'doublet_info'
      var: 'gene_ids', 'feature_types', 'genome', 'mt', 'ribo', 'hb', 'n_cells_by_counts', 'mean_counts', 'pct_dropout_by_counts', 'total_counts', 'n_cells', 'highly_variable', 'means', 'dispersions', 'dispersions_norm', 'highly_variable_nbatches', 'highly_variable_intersection'
-     uns: 'doublet_info_colors', 'hvg', 'log1p', 'neighbors', 'pca', 'sample_colors', 'umap'
+     uns: 'doublet_info_colors', 'hvg', 'log1p', 'neighbors', 'pca', 'sample_colors', 'umap', 'tsne'
      obsm: 'X_pca', 'X_tsne', 'X_umap'
      obsp: 'connectivities', 'distances',
  'ctrl_5': View of AnnData object with n_obs × n_vars = 1028 × 18752
      obs: 'type', 'sample', 'batch', 'percent_mt2', 'n_counts', 'n_genes_by_counts', 'total_counts', 'total_counts_mt', 'pct_counts_mt', 'total_counts_ribo', 'pct_counts_ribo', 'total_counts_hb', 'pct_counts_hb', 'n_genes', 'percent_chrY', 'XIST-counts', 'S_score', 'G2M_score', 'phase', 'doublet_scores', 'predicted_doublets', 'doublet_info'
      var: 'gene_ids', 'feature_types', 'genome', 'mt', 'ribo', 'hb', 'n_cells_by_counts', 'mean_counts', 'pct_dropout_by_counts', 'total_counts', 'n_cells', 'highly_variable', 'means', 'dispersions', 'dispersions_norm', 'highly_variable_nbatches', 'highly_variable_intersection'
-     uns: 'doublet_info_colors', 'hvg', 'log1p', 'neighbors', 'pca', 'sample_colors', 'umap'
+     uns: 'doublet_info_colors', 'hvg', 'log1p', 'neighbors', 'pca', 'sample_colors', 'umap', 'tsne'
      obsm: 'X_pca', 'X_tsne', 'X_umap'
      obsp: 'connectivities', 'distances',
  'ctrl_13': View of AnnData object with n_obs × n_vars = 1132 × 18752
      obs: 'type', 'sample', 'batch', 'percent_mt2', 'n_counts', 'n_genes_by_counts', 'total_counts', 'total_counts_mt', 'pct_counts_mt', 'total_counts_ribo', 'pct_counts_ribo', 'total_counts_hb', 'pct_counts_hb', 'n_genes', 'percent_chrY', 'XIST-counts', 'S_score', 'G2M_score', 'phase', 'doublet_scores', 'predicted_doublets', 'doublet_info'
      var: 'gene_ids', 'feature_types', 'genome', 'mt', 'ribo', 'hb', 'n_cells_by_counts', 'mean_counts', 'pct_dropout_by_counts', 'total_counts', 'n_cells', 'highly_variable', 'means', 'dispersions', 'dispersions_norm', 'highly_variable_nbatches', 'highly_variable_intersection'
-     uns: 'doublet_info_colors', 'hvg', 'log1p', 'neighbors', 'pca', 'sample_colors', 'umap'
+     uns: 'doublet_info_colors', 'hvg', 'log1p', 'neighbors', 'pca', 'sample_colors', 'umap', 'tsne'
      obsm: 'X_pca', 'X_tsne', 'X_umap'
      obsp: 'connectivities', 'distances',
  'ctrl_14': View of AnnData object with n_obs × n_vars = 1041 × 18752
      obs: 'type', 'sample', 'batch', 'percent_mt2', 'n_counts', 'n_genes_by_counts', 'total_counts', 'total_counts_mt', 'pct_counts_mt', 'total_counts_ribo', 'pct_counts_ribo', 'total_counts_hb', 'pct_counts_hb', 'n_genes', 'percent_chrY', 'XIST-counts', 'S_score', 'G2M_score', 'phase', 'doublet_scores', 'predicted_doublets', 'doublet_info'
      var: 'gene_ids', 'feature_types', 'genome', 'mt', 'ribo', 'hb', 'n_cells_by_counts', 'mean_counts', 'pct_dropout_by_counts', 'total_counts', 'n_cells', 'highly_variable', 'means', 'dispersions', 'dispersions_norm', 'highly_variable_nbatches', 'highly_variable_intersection'
-     uns: 'doublet_info_colors', 'hvg', 'log1p', 'neighbors', 'pca', 'sample_colors', 'umap'
+     uns: 'doublet_info_colors', 'hvg', 'log1p', 'neighbors', 'pca', 'sample_colors', 'umap', 'tsne'
      obsm: 'X_pca', 'X_tsne', 'X_umap'
      obsp: 'connectivities', 'distances'}</code></pre>
 </div>
 </div>
 <div class="cell" data-execution_count="17">
-<div class="sourceCode cell-code" id="cb29"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> scanorama</span>
-<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a><span class="co">#subset the individual dataset to the variable genes we defined at the beginning</span></span>
-<span id="cb29-4"><a href="#cb29-4" aria-hidden="true" tabindex="-1"></a>alldata2 <span class="op">=</span> <span class="bu">dict</span>()</span>
-<span id="cb29-5"><a href="#cb29-5" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> ds <span class="kw">in</span> alldata.keys():</span>
-<span id="cb29-6"><a href="#cb29-6" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(ds)</span>
-<span id="cb29-7"><a href="#cb29-7" aria-hidden="true" tabindex="-1"></a>    alldata2[ds] <span class="op">=</span> alldata[ds][:,var_genes]</span>
-<span id="cb29-8"><a href="#cb29-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb29-9"><a href="#cb29-9" aria-hidden="true" tabindex="-1"></a><span class="co">#convert to list of AnnData objects</span></span>
-<span id="cb29-10"><a href="#cb29-10" aria-hidden="true" tabindex="-1"></a>adatas <span class="op">=</span> <span class="bu">list</span>(alldata2.values())</span>
-<span id="cb29-11"><a href="#cb29-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb29-12"><a href="#cb29-12" aria-hidden="true" tabindex="-1"></a><span class="co"># run scanorama.integrate</span></span>
-<span id="cb29-13"><a href="#cb29-13" aria-hidden="true" tabindex="-1"></a>scanorama.integrate_scanpy(adatas, dimred <span class="op">=</span> <span class="dv">50</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb30"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> scanorama</span>
+<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a><span class="co">#subset the individual dataset to the variable genes we defined at the beginning</span></span>
+<span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a>alldata2 <span class="op">=</span> <span class="bu">dict</span>()</span>
+<span id="cb30-5"><a href="#cb30-5" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> ds <span class="kw">in</span> alldata.keys():</span>
+<span id="cb30-6"><a href="#cb30-6" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(ds)</span>
+<span id="cb30-7"><a href="#cb30-7" aria-hidden="true" tabindex="-1"></a>    alldata2[ds] <span class="op">=</span> alldata[ds][:,var_genes]</span>
+<span id="cb30-8"><a href="#cb30-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb30-9"><a href="#cb30-9" aria-hidden="true" tabindex="-1"></a><span class="co">#convert to list of AnnData objects</span></span>
+<span id="cb30-10"><a href="#cb30-10" aria-hidden="true" tabindex="-1"></a>adatas <span class="op">=</span> <span class="bu">list</span>(alldata2.values())</span>
+<span id="cb30-11"><a href="#cb30-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb30-12"><a href="#cb30-12" aria-hidden="true" tabindex="-1"></a><span class="co"># run scanorama.integrate</span></span>
+<span id="cb30-13"><a href="#cb30-13" aria-hidden="true" tabindex="-1"></a>scanorama.integrate_scanpy(adatas, dimred <span class="op">=</span> <span class="dv">50</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>covid_1
 covid_15
@@ -586,42 +655,55 @@ Processing datasets (2, 4)</code></pre>
 </div>
 </div>
 <div class="cell" data-execution_count="18">
-<div class="sourceCode cell-code" id="cb31"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="co">#scanorama adds the corrected matrix to adata.obsm in each of the datasets in adatas.</span></span>
-<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>adatas[<span class="dv">0</span>].obsm[<span class="st">'X_scanorama'</span>].shape</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb32"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a><span class="co">#scanorama adds the corrected matrix to adata.obsm in each of the datasets in adatas.</span></span>
+<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a>adatas[<span class="dv">0</span>].obsm[<span class="st">'X_scanorama'</span>].shape</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="18">
 <pre><code>(844, 50)</code></pre>
 </div>
 </div>
 <div class="cell" data-execution_count="19">
-<div class="sourceCode cell-code" id="cb33"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Get all the integrated matrices.</span></span>
-<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>scanorama_int <span class="op">=</span> [ad.obsm[<span class="st">'X_scanorama'</span>] <span class="cf">for</span> ad <span class="kw">in</span> adatas]</span>
-<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a><span class="co"># make into one matrix.</span></span>
-<span id="cb33-5"><a href="#cb33-5" aria-hidden="true" tabindex="-1"></a>all_s <span class="op">=</span> np.concatenate(scanorama_int)</span>
-<span id="cb33-6"><a href="#cb33-6" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(all_s.shape)</span>
-<span id="cb33-7"><a href="#cb33-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb33-8"><a href="#cb33-8" aria-hidden="true" tabindex="-1"></a><span class="co"># add to the AnnData object, create a new object first</span></span>
-<span id="cb33-9"><a href="#cb33-9" aria-hidden="true" tabindex="-1"></a>adata_sc <span class="op">=</span> adata.copy()</span>
-<span id="cb33-10"><a href="#cb33-10" aria-hidden="true" tabindex="-1"></a>adata_sc.obsm[<span class="st">"Scanorama"</span>] <span class="op">=</span> all_s</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb34"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Get all the integrated matrices.</span></span>
+<span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a>scanorama_int <span class="op">=</span> [ad.obsm[<span class="st">'X_scanorama'</span>] <span class="cf">for</span> ad <span class="kw">in</span> adatas]</span>
+<span id="cb34-3"><a href="#cb34-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb34-4"><a href="#cb34-4" aria-hidden="true" tabindex="-1"></a><span class="co"># make into one matrix.</span></span>
+<span id="cb34-5"><a href="#cb34-5" aria-hidden="true" tabindex="-1"></a>all_s <span class="op">=</span> np.concatenate(scanorama_int)</span>
+<span id="cb34-6"><a href="#cb34-6" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(all_s.shape)</span>
+<span id="cb34-7"><a href="#cb34-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb34-8"><a href="#cb34-8" aria-hidden="true" tabindex="-1"></a><span class="co"># add to the AnnData object, create a new object first</span></span>
+<span id="cb34-9"><a href="#cb34-9" aria-hidden="true" tabindex="-1"></a>adata_sc <span class="op">=</span> adata.copy()</span>
+<span id="cb34-10"><a href="#cb34-10" aria-hidden="true" tabindex="-1"></a>adata_sc.obsm[<span class="st">"Scanorama"</span>] <span class="op">=</span> all_s</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>(5646, 50)</code></pre>
 </div>
 </div>
 <div class="cell" data-execution_count="20">
-<div class="sourceCode cell-code" id="cb35"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a><span class="co"># tsne and umap</span></span>
-<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a>sc.pp.neighbors(adata_sc, n_pcs <span class="op">=</span><span class="dv">30</span>, use_rep <span class="op">=</span> <span class="st">"Scanorama"</span>)</span>
-<span id="cb35-3"><a href="#cb35-3" aria-hidden="true" tabindex="-1"></a>sc.tl.umap(adata_sc)</span>
-<span id="cb35-4"><a href="#cb35-4" aria-hidden="true" tabindex="-1"></a>sc.tl.tsne(adata_sc, n_pcs <span class="op">=</span> <span class="dv">30</span>, use_rep <span class="op">=</span> <span class="st">"Scanorama"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb36"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a><span class="co"># tsne and umap</span></span>
+<span id="cb36-2"><a href="#cb36-2" aria-hidden="true" tabindex="-1"></a>sc.pp.neighbors(adata_sc, n_pcs <span class="op">=</span><span class="dv">30</span>, use_rep <span class="op">=</span> <span class="st">"Scanorama"</span>)</span>
+<span id="cb36-3"><a href="#cb36-3" aria-hidden="true" tabindex="-1"></a>sc.tl.umap(adata_sc)</span>
+<span id="cb36-4"><a href="#cb36-4" aria-hidden="true" tabindex="-1"></a>sc.tl.tsne(adata_sc, n_pcs <span class="op">=</span> <span class="dv">30</span>, use_rep <span class="op">=</span> <span class="st">"Scanorama"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>computing neighbors
+    finished: added to `.uns['neighbors']`
+    `.obsp['distances']`, distances for each pair of neighbors
+    `.obsp['connectivities']`, weighted adjacency matrix (0:00:00)
+computing UMAP
+    finished: added
+    'X_umap', UMAP coordinates (adata.obsm) (0:00:09)
+computing tSNE
+    using sklearn.manifold.TSNE
+    finished: added
+    'X_tsne', tSNE coordinates (adata.obsm) (0:00:11)</code></pre>
+</div>
 </div>
 <p>We can now plot the unintegrated and the integrated space reduced dimensions.</p>
 <div class="cell" data-execution_count="21">
-<div class="sourceCode cell-code" id="cb36"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a>fig, axs <span class="op">=</span> plt.subplots(<span class="dv">2</span>, <span class="dv">2</span>, figsize<span class="op">=</span>(<span class="dv">10</span>,<span class="dv">8</span>),constrained_layout<span class="op">=</span><span class="va">True</span>)</span>
-<span id="cb36-2"><a href="#cb36-2" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata2, color<span class="op">=</span><span class="st">"sample"</span>, title<span class="op">=</span><span class="st">"BBKNN tsne"</span>, ax<span class="op">=</span>axs[<span class="dv">0</span>,<span class="dv">0</span>], show<span class="op">=</span><span class="va">False</span>)</span>
-<span id="cb36-3"><a href="#cb36-3" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, color<span class="op">=</span><span class="st">"sample"</span>, title<span class="op">=</span><span class="st">"Scanorama tsne"</span>, ax<span class="op">=</span>axs[<span class="dv">0</span>,<span class="dv">1</span>], show<span class="op">=</span><span class="va">False</span>)</span>
-<span id="cb36-4"><a href="#cb36-4" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata2, color<span class="op">=</span><span class="st">"sample"</span>, title<span class="op">=</span><span class="st">"BBKNN umap"</span>, ax<span class="op">=</span>axs[<span class="dv">1</span>,<span class="dv">0</span>], show<span class="op">=</span><span class="va">False</span>)</span>
-<span id="cb36-5"><a href="#cb36-5" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, color<span class="op">=</span><span class="st">"sample"</span>, title<span class="op">=</span><span class="st">"Scanorama umap"</span>, ax<span class="op">=</span>axs[<span class="dv">1</span>,<span class="dv">1</span>], show<span class="op">=</span><span class="va">False</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb38"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a>fig, axs <span class="op">=</span> plt.subplots(<span class="dv">2</span>, <span class="dv">2</span>, figsize<span class="op">=</span>(<span class="dv">10</span>,<span class="dv">8</span>),constrained_layout<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb38-2"><a href="#cb38-2" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata2, color<span class="op">=</span><span class="st">"sample"</span>, title<span class="op">=</span><span class="st">"BBKNN tsne"</span>, ax<span class="op">=</span>axs[<span class="dv">0</span>,<span class="dv">0</span>], show<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb38-3"><a href="#cb38-3" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, color<span class="op">=</span><span class="st">"sample"</span>, title<span class="op">=</span><span class="st">"Scanorama tsne"</span>, ax<span class="op">=</span>axs[<span class="dv">0</span>,<span class="dv">1</span>], show<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb38-4"><a href="#cb38-4" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata2, color<span class="op">=</span><span class="st">"sample"</span>, title<span class="op">=</span><span class="st">"BBKNN umap"</span>, ax<span class="op">=</span>axs[<span class="dv">1</span>,<span class="dv">0</span>], show<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb38-5"><a href="#cb38-5" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, color<span class="op">=</span><span class="st">"sample"</span>, title<span class="op">=</span><span class="st">"Scanorama umap"</span>, ax<span class="op">=</span>axs[<span class="dv">1</span>,<span class="dv">1</span>], show<span class="op">=</span><span class="va">False</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="21">
-<pre><code>&lt;AxesSubplot: title={'center': 'Scanorama umap'}, xlabel='UMAP1', ylabel='UMAP2'&gt;</code></pre>
+<pre><code>&lt;Axes: title={'center': 'Scanorama umap'}, xlabel='UMAP1', ylabel='UMAP2'&gt;</code></pre>
 </div>
 <div class="cell-output cell-output-display">
 <div class="quarto-figure quarto-figure-left">
@@ -633,17 +715,17 @@ Processing datasets (2, 4)</code></pre>
 </div>
 <p>Let’s save the integrated data for further analysis.</p>
 <div class="cell" data-execution_count="22">
-<div class="sourceCode cell-code" id="cb38"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a><span class="co">#save to file</span></span>
-<span id="cb38-2"><a href="#cb38-2" aria-hidden="true" tabindex="-1"></a>save_file <span class="op">=</span> <span class="st">'./data/results/scanpy_scanorama_corrected_covid.h5ad'</span></span>
-<span id="cb38-3"><a href="#cb38-3" aria-hidden="true" tabindex="-1"></a>adata_sc.write_h5ad(save_file)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb40"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a><span class="co">#save to file</span></span>
+<span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a>save_file <span class="op">=</span> <span class="st">'./data/results/scanpy_scanorama_corrected_covid.h5ad'</span></span>
+<span id="cb40-3"><a href="#cb40-3" aria-hidden="true" tabindex="-1"></a>adata_sc.write_h5ad(save_file)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 <section id="compare-all" class="level2" data-number="6">
 <h2 data-number="6" class="anchored" data-anchor-id="compare-all"><span class="header-section-number">6</span> Compare all</h2>
-<div class="callout callout-style-default callout-note no-icon callout-titled" title="Discuss">
+<div class="callout callout-style-default callout-note callout-titled" title="Discuss">
 <div class="callout-header d-flex align-content-center">
 <div class="callout-icon-container">
-<i class="callout-icon no-icon"></i>
+<i class="callout-icon"></i>
 </div>
 <div class="callout-title-container flex-fill">
 Discuss
@@ -654,13 +736,13 @@ Discuss
 </div>
 </div>
 <div class="cell" data-execution_count="23">
-<div class="sourceCode cell-code" id="cb39"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a>fig, axs <span class="op">=</span> plt.subplots(<span class="dv">2</span>, <span class="dv">2</span>, figsize<span class="op">=</span>(<span class="dv">10</span>,<span class="dv">8</span>),constrained_layout<span class="op">=</span><span class="va">True</span>)</span>
-<span id="cb39-2"><a href="#cb39-2" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, color<span class="op">=</span><span class="st">"sample"</span>, title<span class="op">=</span><span class="st">"Uncorrected"</span>, ax<span class="op">=</span>axs[<span class="dv">0</span>,<span class="dv">0</span>], show<span class="op">=</span><span class="va">False</span>)</span>
-<span id="cb39-3"><a href="#cb39-3" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata2, color<span class="op">=</span><span class="st">"sample"</span>, title<span class="op">=</span><span class="st">"BBKNN"</span>, ax<span class="op">=</span>axs[<span class="dv">0</span>,<span class="dv">1</span>], show<span class="op">=</span><span class="va">False</span>)</span>
-<span id="cb39-4"><a href="#cb39-4" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata_combat, color<span class="op">=</span><span class="st">"sample"</span>, title<span class="op">=</span><span class="st">"Combat"</span>, ax<span class="op">=</span>axs[<span class="dv">1</span>,<span class="dv">0</span>], show<span class="op">=</span><span class="va">False</span>)</span>
-<span id="cb39-5"><a href="#cb39-5" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata_sc, color<span class="op">=</span><span class="st">"sample"</span>, title<span class="op">=</span><span class="st">"Scanorama"</span>, ax<span class="op">=</span>axs[<span class="dv">1</span>,<span class="dv">1</span>], show<span class="op">=</span><span class="va">False</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb41"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a>fig, axs <span class="op">=</span> plt.subplots(<span class="dv">2</span>, <span class="dv">2</span>, figsize<span class="op">=</span>(<span class="dv">10</span>,<span class="dv">8</span>),constrained_layout<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb41-2"><a href="#cb41-2" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, color<span class="op">=</span><span class="st">"sample"</span>, title<span class="op">=</span><span class="st">"Uncorrected"</span>, ax<span class="op">=</span>axs[<span class="dv">0</span>,<span class="dv">0</span>], show<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb41-3"><a href="#cb41-3" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata2, color<span class="op">=</span><span class="st">"sample"</span>, title<span class="op">=</span><span class="st">"BBKNN"</span>, ax<span class="op">=</span>axs[<span class="dv">0</span>,<span class="dv">1</span>], show<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb41-4"><a href="#cb41-4" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata_combat, color<span class="op">=</span><span class="st">"sample"</span>, title<span class="op">=</span><span class="st">"Combat"</span>, ax<span class="op">=</span>axs[<span class="dv">1</span>,<span class="dv">0</span>], show<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb41-5"><a href="#cb41-5" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata_sc, color<span class="op">=</span><span class="st">"sample"</span>, title<span class="op">=</span><span class="st">"Scanorama"</span>, ax<span class="op">=</span>axs[<span class="dv">1</span>,<span class="dv">1</span>], show<span class="op">=</span><span class="va">False</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="23">
-<pre><code>&lt;AxesSubplot: title={'center': 'Scanorama'}, xlabel='UMAP1', ylabel='UMAP2'&gt;</code></pre>
+<pre><code>&lt;Axes: title={'center': 'Scanorama'}, xlabel='UMAP1', ylabel='UMAP2'&gt;</code></pre>
 </div>
 <div class="cell-output cell-output-display">
 <div class="quarto-figure quarto-figure-left">
@@ -670,10 +752,10 @@ Discuss
 </div>
 </div>
 </div>
-<div class="callout callout-style-default callout-note no-icon callout-titled" title="Discuss">
+<div class="callout callout-style-default callout-note callout-titled" title="Discuss">
 <div class="callout-header d-flex align-content-center">
 <div class="callout-icon-container">
-<i class="callout-icon no-icon"></i>
+<i class="callout-icon"></i>
 </div>
 <div class="callout-title-container flex-fill">
 Discuss
@@ -687,151 +769,142 @@ Discuss
 </section>
 <section id="meta-session" class="level2" data-number="7">
 <h2 data-number="7" class="anchored" data-anchor-id="meta-session"><span class="header-section-number">7</span> Session info</h2>
+<details>
+<summary>
+Click here
+</summary>
 <div class="cell" data-execution_count="24">
-<div class="sourceCode cell-code" id="cb41"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a>sc.logging.print_versions()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb43"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a>sc.logging.print_versions()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>-----
-anndata     0.9.2
-scanpy      1.7.2
-sinfo       0.3.1
+anndata     0.10.3
+scanpy      1.9.6
 -----
-PIL                         10.0.0
-anndata                     0.9.2
-annoy                       NA
-anyio                       NA
-arrow                       1.3.0
-asttokens                   NA
-attr                        23.1.0
-attrs                       23.1.0
-babel                       2.12.1
-backcall                    0.2.0
-bbknn                       1.6.0
-brotli                      1.0.9
-certifi                     2023.07.22
-cffi                        1.16.0
-charset_normalizer          3.2.0
-colorama                    0.4.6
-comm                        0.1.4
-cpuinfo                     NA
-cycler                      0.10.0
-cython_runtime              NA
-dateutil                    2.8.2
-debugpy                     1.8.0
-decorator                   5.1.1
-defusedxml                  0.7.1
-dunamai                     1.18.0
-exceptiongroup              1.1.3
-executing                   1.2.0
-fastjsonschema              NA
-fbpca                       NA
-fqdn                        NA
-get_version                 3.5.4
-h5py                        3.9.0
-idna                        3.4
-igraph                      0.11.2
-importlib_resources         NA
-intervaltree                NA
-ipykernel                   6.25.2
-ipywidgets                  8.1.1
-isoduration                 NA
-jedi                        0.19.1
-jinja2                      3.1.2
-joblib                      1.3.0
-json5                       NA
-jsonpointer                 2.4
-jsonschema                  4.19.1
-jsonschema_specifications   NA
-jupyter_events              0.7.0
-jupyter_server              2.7.3
-jupyterlab_server           2.25.0
-kiwisolver                  1.4.5
-legacy_api_wrap             0.0.0
-leidenalg                   0.10.1
-llvmlite                    0.40.1
-louvain                     0.8.1
-markupsafe                  2.1.3
-matplotlib                  3.6.3
-matplotlib_inline           0.1.6
-mpl_toolkits                NA
-natsort                     8.4.0
-nbformat                    5.9.2
-numba                       0.57.1
-numexpr                     2.8.4
-numpy                       1.24.4
-overrides                   NA
-packaging                   23.1
-pandas                      1.5.3
-parso                       0.8.3
-patsy                       0.5.3
-pexpect                     4.8.0
-pickleshare                 0.7.5
-pkg_resources               NA
-platformdirs                3.10.0
-prometheus_client           NA
-prompt_toolkit              3.0.39
-psutil                      5.9.5
-ptyprocess                  0.7.0
-pure_eval                   0.2.2
-pycparser                   2.21
-pydev_ipython               NA
-pydevconsole                NA
-pydevd                      2.9.5
-pydevd_file_utils           NA
-pydevd_plugins              NA
-pydevd_tracing              NA
-pygments                    2.16.1
-pynndescent                 0.5.10
-pyparsing                   3.0.9
-pythonjsonlogger            NA
-pytz                        2023.3
-referencing                 NA
-requests                    2.31.0
-rfc3339_validator           0.1.4
-rfc3986_validator           0.1.1
-rpds                        NA
-scanorama                   1.7.3
-scanpy                      1.7.2
-scipy                       1.10.1
-send2trash                  NA
-setuptools_scm              NA
-sinfo                       0.3.1
-six                         1.16.0
-sklearn                     1.3.1
-sniffio                     1.3.0
-socks                       1.7.1
-sortedcontainers            2.4.0
-stack_data                  0.6.2
-tables                      3.8.0
-texttable                   1.7.0
-threadpoolctl               3.2.0
-tornado                     6.3.3
-tqdm                        4.65.0
-traitlets                   5.11.2
-typing_extensions           NA
-umap                        0.5.4
-uri_template                NA
-urllib3                     2.0.4
-wcwidth                     0.2.8
-webcolors                   1.13
-websocket                   1.6.4
-yaml                        6.0.1
-zipp                        NA
-zmq                         25.1.1
+PIL                 10.0.0
+annoy               NA
+anyio               NA
+asttokens           NA
+attr                23.1.0
+babel               2.12.1
+backcall            0.2.0
+bbknn               1.6.0
+certifi             2023.11.17
+cffi                1.15.1
+charset_normalizer  3.1.0
+colorama            0.4.6
+comm                0.1.3
+cycler              0.12.1
+cython_runtime      NA
+dateutil            2.8.2
+debugpy             1.6.7
+decorator           5.1.1
+defusedxml          0.7.1
+exceptiongroup      1.2.0
+executing           1.2.0
+fastjsonschema      NA
+fbpca               NA
+gmpy2               2.1.2
+h5py                3.9.0
+idna                3.4
+igraph              0.10.8
+intervaltree        NA
+ipykernel           6.23.1
+ipython_genutils    0.2.0
+jedi                0.18.2
+jinja2              3.1.2
+joblib              1.3.2
+json5               NA
+jsonpointer         2.0
+jsonschema          4.17.3
+jupyter_events      0.6.3
+jupyter_server      2.6.0
+jupyterlab_server   2.22.1
+kiwisolver          1.4.5
+leidenalg           0.10.1
+llvmlite            0.41.1
+louvain             0.8.1
+markupsafe          2.1.2
+matplotlib          3.8.0
+matplotlib_inline   0.1.6
+mpl_toolkits        NA
+mpmath              1.3.0
+natsort             8.4.0
+nbformat            5.8.0
+numba               0.58.1
+numpy               1.26.2
+opt_einsum          v3.3.0
+overrides           NA
+packaging           23.1
+pandas              2.1.4
+parso               0.8.3
+patsy               0.5.5
+pexpect             4.8.0
+pickleshare         0.7.5
+pkg_resources       NA
+platformdirs        3.5.1
+prometheus_client   NA
+prompt_toolkit      3.0.38
+psutil              5.9.5
+ptyprocess          0.7.0
+pure_eval           0.2.2
+pvectorc            NA
+pycparser           2.21
+pydev_ipython       NA
+pydevconsole        NA
+pydevd              2.9.5
+pydevd_file_utils   NA
+pydevd_plugins      NA
+pydevd_tracing      NA
+pygments            2.15.1
+pynndescent         0.5.11
+pyparsing           3.1.1
+pyrsistent          NA
+pythonjsonlogger    NA
+pytz                2023.3
+requests            2.31.0
+rfc3339_validator   0.1.4
+rfc3986_validator   0.1.1
+scanorama           1.7.4
+scipy               1.11.4
+send2trash          NA
+session_info        1.0.0
+six                 1.16.0
+sklearn             1.3.2
+sniffio             1.3.0
+socks               1.7.1
+sortedcontainers    2.4.0
+sparse              0.14.0
+stack_data          0.6.2
+sympy               1.12
+texttable           1.7.0
+threadpoolctl       3.2.0
+torch               2.0.0
+tornado             6.3.2
+tqdm                4.65.0
+traitlets           5.9.0
+typing_extensions   NA
+umap                0.5.5
+urllib3             2.0.2
+wcwidth             0.2.6
+websocket           1.5.2
+yaml                6.0
+zmq                 25.0.2
+zoneinfo            NA
+zstandard           0.19.0
 -----
-IPython             8.12.2
-jupyter_client      8.3.1
-jupyter_core        5.4.0
-jupyterlab          4.0.6
-notebook            7.0.4
+IPython             8.13.2
+jupyter_client      8.2.0
+jupyter_core        5.3.0
+jupyterlab          4.0.1
+notebook            6.5.4
 -----
-Python 3.8.18 | packaged by conda-forge | (default, Oct 10 2023, 15:44:36) [GCC 12.3.0]
-Linux-6.4.16-linuxkit-x86_64-with-glibc2.10
-11 logical CPU cores, x86_64
+Python 3.10.11 | packaged by conda-forge | (main, May 10 2023, 18:58:44) [GCC 11.3.0]
+Linux-6.5.11-linuxkit-x86_64-with-glibc2.35
 -----
-Session information updated at 2023-11-11 20:50
-</code></pre>
+Session information updated at 2024-01-04 16:08</code></pre>
 </div>
 </div>
+</details>
 
 
 </section>
@@ -1073,14 +1146,14 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
 </div> <!-- /content -->
 <footer class="footer">
   <div class="nav-footer">
-    <div class="nav-footer-left">2023 <a href="https://nbis.se">NBIS</a> | <a href="https://choosealicense.com/licenses/gpl-3.0/">GPL-3 License</a></div>   
+    <div class="nav-footer-left">2024 <a href="https://nbis.se">NBIS</a> | <a href="https://choosealicense.com/licenses/gpl-3.0/">GPL-3 License</a></div>   
     <div class="nav-footer-center">
       &nbsp;
     </div>
-    <div class="nav-footer-right">Published with <a href="https://quarto.org/">Quarto</a> v1.3.433</div>
+    <div class="nav-footer-right">Published with <a href="https://quarto.org/">Quarto</a> v1.3.450</div>
   </div>
 </footer>
-<script>var lightboxQuarto = GLightbox({"loop":true,"openEffect":"zoom","selector":".lightbox","closeEffect":"zoom","descPosition":"bottom"});</script>
+<script>var lightboxQuarto = GLightbox({"closeEffect":"zoom","selector":".lightbox","descPosition":"bottom","loop":true,"openEffect":"zoom"});</script>
 
 
 
