@@ -1,81 +1,88 @@
 ---
 title: FAQ
+subtitle: "Frequently Asked Questions"
 date: ""
 author: ""
 code-tools: false
 format: html
-description: Troubleshooting for common errors you might face during installations or during execution of softwares.
+description: Troubleshooting common errors you might face during installations or labs.
+execute: 
+  eval: false
+engine: knitr
 ---
 
-## Command line developer tools not found {{< fa brands apple >}}
+## Command line developer tools not found
+
+[{{< fa brands apple >}}]{.badge .badge-primary}
 
 If you don't yet have Mac OSX command line developer tools, please install it using:
 
-```
+```bash
 xcode-select --install
 ```
 
-## Error - umap-learn not found, or other python packages {{< fa brands r-project >}}
+## Error: umap-learn not found, or other python packages
+
+[{{< fa brands r-project >}}]{.badge .badge-primary}  
 
 If your R does not find the correct python version, it will complain that `umap-learn` is not installed and ask you to install it. Here are some tips on how to find the correct python version that was installed in the conda environment.
 
-Try selecting the correct conda env in R
+Try selecting the correct conda env in R. In this example the conda environment is named `myenv`.
 
-In this example the conda environment is named `scRNAseq2021`.
-
-```
+```r
 library(reticulate)
-reticulate::use_conda("scRNAseq2021")
+reticulate::use_conda("myenv")
 ```
 
 Then check what python you have in R:
 
-```
+```r
 reticulate::py_config()
 # should read at top:
-python:         /Users/asbj/miniconda3/envs/scRNAseq2021/bin/python
+python:         /Users/asbj/miniconda3/envs/myenv/bin/python
 ```
 
 If that still is not right, you may have an `r-reticulate` python installation as well and need to perform the steps below.
 
-Restart R and select python version
+- Restart R and select python version
+- First, find out what path you have to your conda python (in TERMINAL):
 
-OBS! Before doing anything else you need to select python version.
-
-First, find out what path you have to your conda python (in TERMINAL):
-
-```
+```bash
 which python
 /Users/asbj/miniconda3/envs/scRNAseq2021/bin/python
 ```
 
-Then in R (after restarting):
+- Then in R (after restarting):
 
-```
+```r
 reticulate::use_python("/Users/asbj/miniconda3/envs/scRNAseq2021/bin/python", required=T)
 ```
 
-Then check again with `py_config` if correct version of python is used:
+- Then check again with `py_config` if correct version of python is used:
 
-```
+```r
 reticulate::py_config()
 ```
 
-If you have the correct version now, you should be able to run UMAP without issues.
+- If you have the correct version now, you should be able to run UMAP without issues.
 
-## Unable to load stringi.so {{< fa brands windows >}} {{< fa brands ubuntu >}}  
+## Unable to load stringi.so
+
+[{{< fa brands windows >}}]{.badge .badge-primary} [{{< fa brands ubuntu >}}]{.badge .badge-primary}  
 
 You can install stringi in R using:
 
-```
+```r
 install.packages('stringi')
 ```
 
-## ERROR: Failed building wheel for gevent / MacOSX10.9.sdk missing {{< fa brands apple >}}  
+## ERROR: Failed building wheel for gevent / MacOSX10.9.sdk missing
+
+[{{< fa brands apple >}}]{.badge .badge-primary}  
 
 This is a problem with the MacOSX compiler, in which conda is unable to find it.
 
-```
+```bash
 #Download MacOSX10.9.sdk from Github
 curl -o MacOSX10.9.sdk.tar.gz "https://github.com/phracker/MacOSX-SDKs/releases/download/11.3/MacOSX10.9.sdk.tar.xz"
 
@@ -92,27 +99,57 @@ sudo chmod -R a+rX /opt
 ln -s /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk /opt/MacOSX10.9.sdk
 ```
 
-## ERROR: option error has NULL value {{< fa brands r-project >}}  
+## ERROR: option error has NULL value
 
-This error happens when running code inline.
+[{{< fa brands r-project >}}]{.badge .badge-primary}  
 
-One possible solution is to restart Rstudio and type.
+This error happens when running code inline. One possible solution is to restart Rstudio and type.
 
-```
+```r
 if(interactive()) { options(error = utils::recover)}
 ```
 
-Please try other solutions listed here: https://github.com/rstudio/rstudio/issues/4723
+Please try other solutions listed [here](https://github.com/rstudio/rstudio/issues/4723). If none of those work, you can click on the wheel engine symbol and check `Chunk output in console`.
 
-If none of those work, you can click on the wheel engine symbol and check `Chunk output in console` 
+## R crashes due to memory issues
 
-## R crashes due to memory issues {{< fa brands r-project >}}  
+[{{< fa brands r-project >}}]{.badge .badge-primary}
 
 If R crashes due to memory issues, it may be a good idea to increase the vector size `R_MAX_VSIZE`. Put in the file `.Renviron` either in your home directory or the folder you are launching Rstudio from:
 
-```
+```r
 R_MAX_VSIZE=70Gb
 ```
+
 Or to whatever value matches your computer, the default size is 16Gb.
+
+## Docker run fails on Mac apple silicon
+
+Docker run on Apple Mac M1/M2/M3 processors experience this error when running `docker run ...` on an image not built on Apple silicon.
+
+```
+[s6-init] making user provided files available at /var/run/s6/etc...exited 0.
+[s6-init] ensuring user provided files have correct perms...exited 0.
+[fix-attrs.d] applying ownership & permissions fixes...
+[fix-attrs.d] done.
+[cont-init.d] executing container initialization scripts...
+[cont-init.d] 01_set_env: executing...
+skipping /var/run/s6/container_environment/HOME
+skipping /var/run/s6/container_environment/PASSWORD
+skipping /var/run/s6/container_environment/RSTUDIO_VERSION
+[cont-init.d] 01_set_env: exited 0.
+[cont-init.d] 02_userconf: executing...
+[cont-init.d] 02_userconf: exited 0.
+[cont-init.d] done.
+[services.d] starting services
+[services.d] done.
+TTY detected. Printing informational message about logging configuration. Logging configuration loaded from '/etc/rstudio/logging.conf'. Logging to 'syslog'.
+rserver[1195]: ERROR system error 1 (Operation not permitted); OCCURRED AT rstudio::core::Error rstudio::core::system::posix::{anonymous}::restorePrivilegesImpl(uid_t) src/cpp/shared_core/system/PosixSystem.cpp:97; LOGGED FROM: void rstudio::server::pam_auth::{anonymous}::assumeRootPriv() src/cpp/server/ServerPAMAuth.cpp:59
+
+2023-11-28T14:31:03.943703Z [rserver] ERROR system error 1 (Operation not permitted); OCCURRED AT rstudio::core::Error rstudio::core::system::posix::{anonymous}::restorePrivilegesImpl(uid_t) src/cpp/shared_core/system/PosixSystem.cpp:97; LOGGED FROM: void rstudio::server::pam_auth::{anonymous}::assumeRootPriv() src/cpp/server/ServerPAMAuth.cpp:59
+rserver[1199]: ERROR system error 1 (Operation not permitted); OCCURRED AT rstudio::core::Error rstudio::core::system::posix::{anonymous}::restorePrivilegesImpl(uid_t) src/cpp/shared_core/system/PosixSystem.cpp:97; LOGGED FROM: rstudio::core::Error rstudio::core::system::launchChildProcess(std::string, std::string, rstudio::core::system::ProcessConfig, rstudio::core::system::ProcessConfigFilter, PidType*) src/cpp/core/system/PosixSystem.cpp:2195
+```
+
+In Docker Settings > General, check **Use Rosetta for x86/amd64 emulation on Apple Silicon**.
 
 ***

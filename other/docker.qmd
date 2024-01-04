@@ -1,198 +1,67 @@
 ---
-title: Docker
-subtitle: Instructions on working in a docker container
+title: Docker Set Up
+subtitle: Instructions on installing and setting up Docker
 date: ""
 author: ""
 code-tools: false
 format: html
+engine: knitr
 ---
 
-In the last case scenario, if you are having problems installing R packages, please follow these instructions to setup a docker container with R and Rstudio. Then you will need to install packages as usual. See the [precourse material](../home_precourse.qmd) for package installations.
+## Install Docker
 
-## Installing Docker
+Ensure that you install Docker or Docker Desktop before the course starts. If you do not have admin rights to install software on your laptop, talk to your local IT for help.
 
-1. Install docker. You need permission to both install and use `sudo` commands.
+### {{< fa brands ubuntu >}} Linux
 
-* Mac: https://docs.docker.com/docker-for-mac/install/
-* Windows: https://docs.docker.com/docker-for-windows/install/
-* Ubuntu: https://docs.docker.com/install/linux/docker-ce/ubuntu/
+Follow the installation instructions for your OS:
 
-2. Launch docker and got to `Preferences > Resources > Advanced`  and set `Memory=8gb, cpu=4, swp=1`. These will set the maximum values possible for your machine.
+  - [Ubuntu](https://docs.docker.com/install/linux/docker-ce/ubuntu/)
+  - [Debian](https://docs.docker.com/install/linux/docker-ce/debian/)
+  - [Fedora](https://docs.docker.com/install/linux/docker-ce/fedora/)
 
-3. Now go to `Preferences > Security` and tick on "Allow connections from network clients", so that you can communicate with DockerServer.
+After Docker Desktop starts, open the Dashboard and go to *Settings ({{< fa gear >}} in the top-right) > General*. Follow the [instructions](https://docs.docker.com/desktop/settings/linux/) in the _General_ section.
 
-4. Open a terminal shell.
+### {{< fa brands apple >}} Mac
 
-5. You will need to use `docker-machine`. If your docker version does not automatically install `docker-machine` in terminal, please [follow these instructions](https://github.com/docker/machine/releases/tag/v0.16.2) to install it. Then create a Virtual Machine (VM) named "default" and set the amount of CPU and RAM available for you:
+Visit [this page](https://docs.docker.com/docker-for-mac/install/#what-to-know-before-you-install) to ensure you have the requirements necessary.
 
-```bash
-docker-machine create default
-VBoxManage modifyvm default --cpus 4
-VBoxManage modifyvm default --memory 8192
-```
+Download [Docker Desktop for Mac](https://hub.docker.com/editions/community/docker-ce-desktop-mac) with _Apple Silicon_ or _Intel Chip_ and follow the installation instructions.
 
-6. You can now start the machine, the environment (which will give you an IP address to connect to it!) and configure your shell to work with docker.
+After Docker Desktop starts, open the Dashboard and go to *Settings ({{< fa gear >}} in the top-right) > General*. Follow the [instructions](https://docs.docker.com/desktop/settings/mac/) in the _General_ section.
 
-```bash
-docker-machine start
-docker-machine env
-eval "$(docker-machine env default)"
-```
+::: {.callout-important}
+On Mac M1/M2/M3, in Docker Settings > General, check **Use Rosetta for x86/amd64 emulation on Apple Silicon**.
+:::
 
-If at any point from now on you get an error asking you to stop the container, you can do so with:
+### {{< fa brands windows >}} Windows
 
-```bash
-docker-machine stop
-```
+Visit [this page](https://docs.docker.com/desktop/install/windows-install/) to ensure you have the requirements necessary.
 
-## Using the SingleCellSchool container
+Download [Docker Desktop for Windows](https://hub.docker.com/editions/community/docker-ce-desktop-windows) and follow the installation instructions. 
 
-Go to a folder where you can safelly download the course materials (to make them visible to the container). you can simply use 
+After Docker Desktop starts, open the Dashboard and go to *Settings ({{< fa gear >}} in the top-right) > General*. Follow the [instructions](https://docs.docker.com/desktop/settings/windows//) in the _General_ section.
+
+## Test installation
+
+From the terminal, type:
 
 ```bash
-git clone https://github.com/NBISweden/single-cell_sib_scilifelab
+docker --version
 ```
 
-or
+and then run your first image by typing:
 
 ```bash
-cd ~/
-svn export -O https://github.com/NBISweden/single-cell_sib_scilifelab/trunk
-mv trunk SingleCellSchool
-cd SingleCellSchool
+docker run hello-world
 ```
 
-Now that you are setup with docker you can launch/fire the container with all packages from the course from a repository. If you already have a copy on your computer it will launch it, otherwise it will download it from the repositiory first and then launch it. `czarnewski/single_cell_school` is where the docker image is located.
+If both work as expected, you successfully installed Docker Desktop!
 
-```bash
-docker run -d --rm -v $(pwd):/home/rstudio --memory=8g -p 8787:8787 -e PASSWORD=test czarnewski/single_cell_school
-```
+## Allocate resources 
 
-If no errors are thrown, you will be able to connect to your Rstudio machine using a webbrowser, just type the IP.
+Open the Docker Dashboard when Docker Desktop starts and go to *Settings ({{< fa gear >}} in the top-right) > Resources* to allocate the following resources: 
 
-* http://192.168.99.100:8787 (this might change, check the output from the command `docker-machine env` on the step above)
-* LOGIN=`rstudio`
-* PASS=`test`
-
-You can alternativelly check your docker container IP and replace the (192.168.99.100) above:
-
-```bash
-docker-machine ip
-```
-
-Your RStudio session should look like this now:
-
-![](https://github.com/NBISweden/single-cell_sib_scilifelab/raw/master/logos/SingleCellSchool_Docker.png){width="500px"}
-
-You should have for example the package `Seurat` installed and also be able to see the files from the course on your home folder. Just by navigating thought there you will be able to open the exercise files (.Rmd extension).
-
-You can save your container back to an image at any time by typing into the terminal. To run it again just repeat the `docker run` step above .
-
-```bash
-docker commit <container_ID> YOURusername/NEWimagename
-```
-
-You can stop a container from running with:
-
-```bash
-docker container stop <container_ID>
-```
-
-## Building a Docker image from scratch
-
-7. Now we can download a pre-made docker container containing both the latest version R and RStudio (rocker). Here we need to set a new password for the container, which we can set as "test". The `-p 8787:8787` indicates which ports are visible between your computer and the container for visualizing Rstudio. `--rm` will remove the container after use. `-e` sets the password.
-
-```bash
-docker run -d --rm --memory=8g -p 8787:8787 -e PASSWORD=test --name rstudio rocker/verse
-```
-
-If no errors are thrown, you will be able to connect to your Rstudio machine using a webbrowser, just type the IP.
-
-- http://192.168.99.100:8787 (this might change, check the output from the command `docker-machine env` on the step above)
-- LOGIN=`rstudio`
-- PASS=`test`
-
-You can alternativelly check your IP using:
-
-```bash
-docker-machine ip
-```
-
-8. You can now proceed with using Rstudio and installing packages as usual.
-
-See the [precourse material](../home_precourse.qmd)
-
-9. To save your container status, you can commit the changes back to a new image using. If you plan on sharing your image, `YOURusername/NEWimagename` must be a valid Repository on your account on DockerHub (see below).
-
-```bash
-#Login into your DockerHub account
-docker login --username=YOURusername --email=youremail@company.com
-
-#Get container ID
-docker container ls
-
-#Create a commit to save alterations to a new image
-docker commit <container_ID> YOURusername/NEWimagename
-```
-
-Now you can access your image container at any time by running.
-
-```bash
-docker run -d -rm -v $(pwd):/home/rstudio --memory=8g -p 8787:8787 -e PASSWORD=test czarnewski/single_cell_school
-```
-
-If no errors are thrown, you will be able to connect to your Rstudio machine using a webbrowser, just type the IP.
-
-- http://192.168.99.100:8787 (this might change, check the output from the command `docker-machine env` on the step above)
-- LOGIN=`rstudio`
-- PASS=`test`
-
-You can alternativelly check your docker container IP and replace the (192.168.99.100) above:
-
-```bash
-docker-machine ip
-```
-
-## Sharing your Docker Image
-
-1. Create a account/repository in your DockerHub.
-
-- Log in on https://hub.docker.com/
-- Click on `+ Create Repository`.
-- Choose a name (e.g. NEWimagename) and a description for your repository and click Create.
-- Your image name from now on should be called `YOURusername/NEWimagename` (continue below to see how). 
-
-You can apply a tag as of a version of your container. And then push it to your repository
-
-```bash
-docker tag <container_ID> YOURusername/NEWimagename:latest
-docker push yourhubusername/gapminder_my_analysis
-```
-
-## Useful Commands and links
-
-Some of these commands can be used in
-
-```bash
-#get container ip address
-docker-machine ip
-
-#list or remove docker containers
-docker container ls
-docker rm <container_id>
-
-#list or remove docker images
-docker image ls
-docker rmi <image_id>
-
-#runs a interactive (-ti) shell inside the container.
-#"-v" mounts the current directory "$(pwd)" to the folder "/rstudio".
-#You can use them separately
-docker run -it -v $(pwd):/home/rstudio <docker_name>
-```
-
-Useful Links:
-
-- [https://ropenscilabs.github.io/r-docker-tutorial/](https://ropenscilabs.github.io/r-docker-tutorial/)
-- [https://rmarkdown.rstudio.com/articles_integration.html](https://rmarkdown.rstudio.com/articles_integration.html)
-- [https://github.com/rocker-org/rocker/wiki/How-to-save-data](https://github.com/rocker-org/rocker/wiki/How-to-save-data)
+  - **CPU limit**: `8`  
+  - **Memory limit**: `12 GB`  
+  - **Swap**: `2 GB`  
