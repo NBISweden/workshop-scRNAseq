@@ -2,11 +2,14 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.3.433">
+<meta name="generator" content="quarto-1.3.450">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
-<meta name="author" content="Åsa Björklund &amp; Paulo Czarnewski">
+<meta name="author" content="Åsa Björklund">
+<meta name="author" content="Paulo Czarnewski">
+<meta name="author" content="Susanne Reinsbach">
+<meta name="author" content="Roy Francis">
 <meta name="description" content="Assignment of cell identities based on gene expression patterns using reference data.">
 
 <title> Celltype prediction</title>
@@ -105,13 +108,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <style>
 
       .quarto-title-block .quarto-title-banner {
-        background: #E9F2D1;
+        background-image: url(../../assets/images/banner.jpg);
+background-size: cover;
       }
 </style>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono&amp;family=Nunito:ital,wght@0,400;0,600;1,400;1,600&amp;display=swap" rel="stylesheet">
-    
+<link href="https://fonts.googleapis.com/css2?family=Fira+Mono&amp;family=Nunito:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&amp;display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" integrity="sha512-c3Nl8+7g4LMSTdrm621y7kf9v3SDPnhxLNhcjFJbKECVnmZHTdo+IRO05sNLTH/D3vA6u1X32ehoLC7WFVdheg==" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js" integrity="sha512-bLT0Qm9VnAYZDflyKcBaQ2gg0hSYNQrJ8RilYldYQ1FxQYoCLtUjuuRuZo+fjqhx/qtq/1itJ0C2ejDxltZVFg==" crossorigin="anonymous"></script>
 <script type="application/javascript">define('jquery', [],function() {return window.jQuery;})</script>
@@ -174,7 +177,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <div class="quarto-title-banner page-columns page-full">
     <div class="quarto-title column-body">
       <h1 class="title"><i class="fa-solid fa-bacterium" aria-label="bacterium"></i> Celltype prediction</h1>
-            <p class="subtitle lead"><i class="fa-brands fa-python" aria-label="python"></i> SCANPY TOOLKIT</p>
+            <p class="subtitle lead"><i class="fa-brands fa-python" aria-label="python"></i> Scanpy Toolkit</p>
                   <div>
         <div class="description">
           Assignment of cell identities based on gene expression patterns using reference data.
@@ -187,16 +190,19 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <div class="quarto-title-meta">
 
       <div>
-      <div class="quarto-title-meta-heading">Author</div>
+      <div class="quarto-title-meta-heading">Authors</div>
       <div class="quarto-title-meta-contents">
-               <p>Åsa Björklund &amp; Paulo Czarnewski </p>
+               <p>Åsa Björklund </p>
+               <p>Paulo Czarnewski </p>
+               <p>Susanne Reinsbach </p>
+               <p>Roy Francis </p>
             </div>
     </div>
       
       <div>
       <div class="quarto-title-meta-heading">Published</div>
       <div class="quarto-title-meta-contents">
-        <p class="date">02-Nov-2023</p>
+        <p class="date">03-Jan-2024</p>
       </div>
     </div>
     
@@ -230,10 +236,11 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 
 
-<div class="callout callout-style-default callout-note no-icon callout-titled">
+
+<div class="callout callout-style-default callout-note callout-titled">
 <div class="callout-header d-flex align-content-center">
 <div class="callout-icon-container">
-<i class="callout-icon no-icon"></i>
+<i class="callout-icon"></i>
 </div>
 <div class="callout-title-container flex-fill">
 Note
@@ -258,10 +265,13 @@ There are multiple different methods to predict celltypes, here we will just cov
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> scanpy <span class="im">as</span> sc</span>
 <span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co"># verbosity: errors (0), warnings (1), info (2), hints (3)</span></span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>sc.settings.verbosity <span class="op">=</span> <span class="dv">2</span>             </span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>sc.settings.set_figure_params(dpi<span class="op">=</span><span class="dv">80</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> warnings</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>warnings.simplefilter(action<span class="op">=</span><span class="st">"ignore"</span>, category<span class="op">=</span><span class="pp">Warning</span>)</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co"># verbosity: errors (0), warnings (1), info (2), hints (3)</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>sc.settings.verbosity <span class="op">=</span> <span class="dv">2</span>             </span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>sc.settings.set_figure_params(dpi<span class="op">=</span><span class="dv">80</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Let’s read in the saved Covid-19 data object from the clustering step.</p>
 <div class="cell" data-execution_count="2">
@@ -458,23 +468,44 @@ There are multiple different methods to predict celltypes, here we will just cov
 <span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>sc.pp.neighbors(adata_ref)</span>
 <span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>sc.tl.umap(adata_ref)</span>
 <span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata_ref, color<span class="op">=</span><span class="st">'louvain'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>computing PCA
+    with n_comps=50
+    finished (0:00:00)
+computing neighbors
+    using 'X_pca' with n_pcs = 50
+    finished (0:00:08)
+computing UMAP
+    finished (0:00:04)</code></pre>
+</div>
 <div class="cell-output cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="scanpy_06_celltyping_files/figure-html/cell-9-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-4"><img src="scanpy_06_celltyping_files/figure-html/cell-9-output-1.png" class="img-fluid figure-img"></a></p>
+<p><a href="scanpy_06_celltyping_files/figure-html/cell-9-output-2.png" class="lightbox" data-gallery="quarto-lightbox-gallery-4"><img src="scanpy_06_celltyping_files/figure-html/cell-9-output-2.png" class="img-fluid figure-img"></a></p>
 </figure>
 </div>
 </div>
 </div>
 <div class="cell" data-execution_count="9">
-<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>sc.pp.pca(adata)</span>
-<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>sc.pp.neighbors(adata)</span>
-<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>sc.tl.umap(adata)</span>
-<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, color<span class="op">=</span><span class="st">'louvain_0.6'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>sc.pp.pca(adata)</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>sc.pp.neighbors(adata)</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>sc.tl.umap(adata)</span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, color<span class="op">=</span><span class="st">'louvain_0.6'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>computing PCA
+    on highly variable genes
+    with n_comps=50
+    finished (0:00:00)
+computing neighbors
+    using 'X_pca' with n_pcs = 50
+    finished (0:00:00)
+computing UMAP
+    finished (0:00:02)</code></pre>
+</div>
 <div class="cell-output cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="scanpy_06_celltyping_files/figure-html/cell-10-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-5"><img src="scanpy_06_celltyping_files/figure-html/cell-10-output-1.png" class="img-fluid figure-img"></a></p>
+<p><a href="scanpy_06_celltyping_files/figure-html/cell-10-output-2.png" class="lightbox" data-gallery="quarto-lightbox-gallery-5"><img src="scanpy_06_celltyping_files/figure-html/cell-10-output-2.png" class="img-fluid figure-img"></a></p>
 </figure>
 </div>
 </div>
@@ -483,18 +514,18 @@ There are multiple different methods to predict celltypes, here we will just cov
 <section id="integrate-with-scanorama" class="level2" data-number="2">
 <h2 data-number="2" class="anchored" data-anchor-id="integrate-with-scanorama"><span class="header-section-number">2</span> Integrate with scanorama</h2>
 <div class="cell" data-execution_count="10">
-<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> scanorama</span>
-<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a><span class="co">#subset the individual dataset to the same variable genes as in MNN-correct.</span></span>
-<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>alldata <span class="op">=</span> <span class="bu">dict</span>()</span>
-<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>alldata[<span class="st">'ctrl'</span>]<span class="op">=</span>adata</span>
-<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>alldata[<span class="st">'ref'</span>]<span class="op">=</span>adata_ref</span>
-<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a><span class="co">#convert to list of AnnData objects</span></span>
-<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>adatas <span class="op">=</span> <span class="bu">list</span>(alldata.values())</span>
-<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a><span class="co"># run scanorama.integrate</span></span>
-<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a>scanorama.integrate_scanpy(adatas, dimred <span class="op">=</span> <span class="dv">50</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> scanorama</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a><span class="co">#subset the individual dataset to the same variable genes as in MNN-correct.</span></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>alldata <span class="op">=</span> <span class="bu">dict</span>()</span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>alldata[<span class="st">'ctrl'</span>]<span class="op">=</span>adata</span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>alldata[<span class="st">'ref'</span>]<span class="op">=</span>adata_ref</span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a><span class="co">#convert to list of AnnData objects</span></span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>adatas <span class="op">=</span> <span class="bu">list</span>(alldata.values())</span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a><span class="co"># run scanorama.integrate</span></span>
+<span id="cb16-12"><a href="#cb16-12" aria-hidden="true" tabindex="-1"></a>scanorama.integrate_scanpy(adatas, dimred <span class="op">=</span> <span class="dv">50</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Found 476 genes among all datasets
 [[0.         0.96378092]
@@ -503,22 +534,28 @@ Processing datasets (0, 1)</code></pre>
 </div>
 </div>
 <div class="cell" data-execution_count="11">
-<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="co"># add in sample info</span></span>
-<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>adata_ref.obs[<span class="st">'sample'</span>]<span class="op">=</span><span class="st">'pbmc3k'</span></span>
-<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a><span class="co"># create a merged scanpy object and add in the scanorama </span></span>
-<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>adata_merged <span class="op">=</span> alldata[<span class="st">'ctrl'</span>].concatenate(alldata[<span class="st">'ref'</span>], batch_key<span class="op">=</span><span class="st">'sample'</span>, batch_categories<span class="op">=</span>[<span class="st">'ctrl'</span>,<span class="st">'pbmc3k'</span>])</span>
-<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>embedding <span class="op">=</span> np.concatenate([ad.obsm[<span class="st">'X_scanorama'</span>] <span class="cf">for</span> ad <span class="kw">in</span> adatas], axis<span class="op">=</span><span class="dv">0</span>)</span>
-<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>adata_merged.obsm[<span class="st">'Scanorama'</span>] <span class="op">=</span> embedding</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="co"># add in sample info</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>adata_ref.obs[<span class="st">'sample'</span>]<span class="op">=</span><span class="st">'pbmc3k'</span></span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a><span class="co"># create a merged scanpy object and add in the scanorama </span></span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>adata_merged <span class="op">=</span> alldata[<span class="st">'ctrl'</span>].concatenate(alldata[<span class="st">'ref'</span>], batch_key<span class="op">=</span><span class="st">'sample'</span>, batch_categories<span class="op">=</span>[<span class="st">'ctrl'</span>,<span class="st">'pbmc3k'</span>])</span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>embedding <span class="op">=</span> np.concatenate([ad.obsm[<span class="st">'X_scanorama'</span>] <span class="cf">for</span> ad <span class="kw">in</span> adatas], axis<span class="op">=</span><span class="dv">0</span>)</span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>adata_merged.obsm[<span class="st">'Scanorama'</span>] <span class="op">=</span> embedding</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <div class="cell" data-execution_count="12">
-<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="co">#run  umap.</span></span>
-<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>sc.pp.neighbors(adata_merged, n_pcs <span class="op">=</span><span class="dv">50</span>, use_rep <span class="op">=</span> <span class="st">"Scanorama"</span>)</span>
-<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>sc.tl.umap(adata_merged)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="co">#run  umap.</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>sc.pp.neighbors(adata_merged, n_pcs <span class="op">=</span><span class="dv">50</span>, use_rep <span class="op">=</span> <span class="st">"Scanorama"</span>)</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>sc.tl.umap(adata_merged)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>computing neighbors
+    finished (0:00:00)
+computing UMAP
+    finished (0:00:05)</code></pre>
+</div>
 </div>
 <div class="cell" data-execution_count="13">
-<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata_merged, color<span class="op">=</span>[<span class="st">"sample"</span>,<span class="st">"louvain"</span>])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata_merged, color<span class="op">=</span>[<span class="st">"sample"</span>,<span class="st">"louvain"</span>])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
@@ -531,35 +568,35 @@ Processing datasets (0, 1)</code></pre>
 <h3 data-number="2.1" class="anchored" data-anchor-id="label-transfer"><span class="header-section-number">2.1</span> Label transfer</h3>
 <p>Using the function in the Spatial tutorial at the scanpy website we will calculate normalized cosine distances between the two datasets and tranfer labels to the celltype with the highest scores.</p>
 <div class="cell" data-execution_count="14">
-<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.metrics.pairwise <span class="im">import</span> cosine_distances</span>
-<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>distances <span class="op">=</span> <span class="dv">1</span> <span class="op">-</span> cosine_distances(</span>
-<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>    adata_merged[adata_merged.obs[<span class="st">'sample'</span>] <span class="op">==</span> <span class="st">"pbmc3k"</span>].obsm[<span class="st">"Scanorama"</span>],</span>
-<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>    adata_merged[adata_merged.obs[<span class="st">'sample'</span>] <span class="op">==</span> <span class="st">"ctrl"</span>].obsm[<span class="st">"Scanorama"</span>],</span>
-<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> label_transfer(dist, labels, index):</span>
-<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a>    lab <span class="op">=</span> pd.get_dummies(labels)</span>
-<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a>    class_prob <span class="op">=</span> lab.to_numpy().T <span class="op">@</span> dist</span>
-<span id="cb19-11"><a href="#cb19-11" aria-hidden="true" tabindex="-1"></a>    norm <span class="op">=</span> np.linalg.norm(class_prob, <span class="dv">2</span>, axis<span class="op">=</span><span class="dv">0</span>)</span>
-<span id="cb19-12"><a href="#cb19-12" aria-hidden="true" tabindex="-1"></a>    class_prob <span class="op">=</span> class_prob <span class="op">/</span> norm</span>
-<span id="cb19-13"><a href="#cb19-13" aria-hidden="true" tabindex="-1"></a>    class_prob <span class="op">=</span> (class_prob.T <span class="op">-</span> class_prob.<span class="bu">min</span>(<span class="dv">1</span>)) <span class="op">/</span> class_prob.ptp(<span class="dv">1</span>)</span>
-<span id="cb19-14"><a href="#cb19-14" aria-hidden="true" tabindex="-1"></a>    <span class="co"># convert to df</span></span>
-<span id="cb19-15"><a href="#cb19-15" aria-hidden="true" tabindex="-1"></a>    cp_df <span class="op">=</span> pd.DataFrame(</span>
-<span id="cb19-16"><a href="#cb19-16" aria-hidden="true" tabindex="-1"></a>        class_prob, columns<span class="op">=</span>lab.columns</span>
-<span id="cb19-17"><a href="#cb19-17" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb19-18"><a href="#cb19-18" aria-hidden="true" tabindex="-1"></a>    cp_df.index <span class="op">=</span> index</span>
-<span id="cb19-19"><a href="#cb19-19" aria-hidden="true" tabindex="-1"></a>    <span class="co"># classify as max score</span></span>
-<span id="cb19-20"><a href="#cb19-20" aria-hidden="true" tabindex="-1"></a>    m <span class="op">=</span> cp_df.idxmax(axis<span class="op">=</span><span class="dv">1</span>)</span>
-<span id="cb19-21"><a href="#cb19-21" aria-hidden="true" tabindex="-1"></a>    </span>
-<span id="cb19-22"><a href="#cb19-22" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> m</span>
-<span id="cb19-23"><a href="#cb19-23" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb19-24"><a href="#cb19-24" aria-hidden="true" tabindex="-1"></a>class_def <span class="op">=</span> label_transfer(distances, adata_ref.obs.louvain, adata.obs.index)</span>
-<span id="cb19-25"><a href="#cb19-25" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb19-26"><a href="#cb19-26" aria-hidden="true" tabindex="-1"></a><span class="co"># add to obs section of the original object</span></span>
-<span id="cb19-27"><a href="#cb19-27" aria-hidden="true" tabindex="-1"></a>adata.obs[<span class="st">'predicted'</span>] <span class="op">=</span> class_def</span>
-<span id="cb19-28"><a href="#cb19-28" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb19-29"><a href="#cb19-29" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, color<span class="op">=</span><span class="st">"predicted"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.metrics.pairwise <span class="im">import</span> cosine_distances</span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>distances <span class="op">=</span> <span class="dv">1</span> <span class="op">-</span> cosine_distances(</span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>    adata_merged[adata_merged.obs[<span class="st">'sample'</span>] <span class="op">==</span> <span class="st">"pbmc3k"</span>].obsm[<span class="st">"Scanorama"</span>],</span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>    adata_merged[adata_merged.obs[<span class="st">'sample'</span>] <span class="op">==</span> <span class="st">"ctrl"</span>].obsm[<span class="st">"Scanorama"</span>],</span>
+<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-8"><a href="#cb22-8" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> label_transfer(dist, labels, index):</span>
+<span id="cb22-9"><a href="#cb22-9" aria-hidden="true" tabindex="-1"></a>    lab <span class="op">=</span> pd.get_dummies(labels)</span>
+<span id="cb22-10"><a href="#cb22-10" aria-hidden="true" tabindex="-1"></a>    class_prob <span class="op">=</span> lab.to_numpy().T <span class="op">@</span> dist</span>
+<span id="cb22-11"><a href="#cb22-11" aria-hidden="true" tabindex="-1"></a>    norm <span class="op">=</span> np.linalg.norm(class_prob, <span class="dv">2</span>, axis<span class="op">=</span><span class="dv">0</span>)</span>
+<span id="cb22-12"><a href="#cb22-12" aria-hidden="true" tabindex="-1"></a>    class_prob <span class="op">=</span> class_prob <span class="op">/</span> norm</span>
+<span id="cb22-13"><a href="#cb22-13" aria-hidden="true" tabindex="-1"></a>    class_prob <span class="op">=</span> (class_prob.T <span class="op">-</span> class_prob.<span class="bu">min</span>(<span class="dv">1</span>)) <span class="op">/</span> class_prob.ptp(<span class="dv">1</span>)</span>
+<span id="cb22-14"><a href="#cb22-14" aria-hidden="true" tabindex="-1"></a>    <span class="co"># convert to df</span></span>
+<span id="cb22-15"><a href="#cb22-15" aria-hidden="true" tabindex="-1"></a>    cp_df <span class="op">=</span> pd.DataFrame(</span>
+<span id="cb22-16"><a href="#cb22-16" aria-hidden="true" tabindex="-1"></a>        class_prob, columns<span class="op">=</span>lab.columns</span>
+<span id="cb22-17"><a href="#cb22-17" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb22-18"><a href="#cb22-18" aria-hidden="true" tabindex="-1"></a>    cp_df.index <span class="op">=</span> index</span>
+<span id="cb22-19"><a href="#cb22-19" aria-hidden="true" tabindex="-1"></a>    <span class="co"># classify as max score</span></span>
+<span id="cb22-20"><a href="#cb22-20" aria-hidden="true" tabindex="-1"></a>    m <span class="op">=</span> cp_df.idxmax(axis<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb22-21"><a href="#cb22-21" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb22-22"><a href="#cb22-22" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> m</span>
+<span id="cb22-23"><a href="#cb22-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-24"><a href="#cb22-24" aria-hidden="true" tabindex="-1"></a>class_def <span class="op">=</span> label_transfer(distances, adata_ref.obs.louvain, adata.obs.index)</span>
+<span id="cb22-25"><a href="#cb22-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-26"><a href="#cb22-26" aria-hidden="true" tabindex="-1"></a><span class="co"># add to obs section of the original object</span></span>
+<span id="cb22-27"><a href="#cb22-27" aria-hidden="true" tabindex="-1"></a>adata.obs[<span class="st">'predicted'</span>] <span class="op">=</span> class_def</span>
+<span id="cb22-28"><a href="#cb22-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-29"><a href="#cb22-29" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, color<span class="op">=</span><span class="st">"predicted"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
@@ -569,12 +606,14 @@ Processing datasets (0, 1)</code></pre>
 </div>
 </div>
 <div class="cell" data-execution_count="15">
-<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="co"># add to merged object.</span></span>
-<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>adata_merged.obs[<span class="st">'predicted'</span>] <span class="op">=</span> class_def.append(adata_ref.obs[<span class="st">'louvain'</span>]).tolist()</span>
-<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata_merged, color<span class="op">=</span>[<span class="st">"sample"</span>,<span class="st">"louvain"</span>,<span class="st">'predicted'</span>])</span>
-<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a><span class="co">#plot only ctrl cells.</span></span>
-<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata_merged[adata_merged.obs[<span class="st">'sample'</span>]<span class="op">==</span><span class="st">'ctrl'</span>], color<span class="op">=</span><span class="st">'predicted'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="co"># add to merged object.</span></span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>adata_merged.obs[<span class="st">"predicted"</span>] <span class="op">=</span> pd.concat(</span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>    [class_def, adata_ref.obs[<span class="st">"louvain"</span>]], axis<span class="op">=</span><span class="dv">0</span></span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>).tolist()</span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata_merged, color<span class="op">=</span>[<span class="st">"sample"</span>,<span class="st">"louvain"</span>,<span class="st">'predicted'</span>])</span>
+<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a><span class="co">#plot only ctrl cells.</span></span>
+<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata_merged[adata_merged.obs[<span class="st">'sample'</span>]<span class="op">==</span><span class="st">'ctrl'</span>], color<span class="op">=</span><span class="st">'predicted'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
@@ -596,12 +635,16 @@ Processing datasets (0, 1)</code></pre>
 <h2 data-number="3" class="anchored" data-anchor-id="ingest"><span class="header-section-number">3</span> Ingest</h2>
 <p>Another method for celltype prediction is Ingest, for more information, please look at https://scanpy-tutorials.readthedocs.io/en/latest/integrating-data-using-ingest.html</p>
 <div class="cell" data-execution_count="16">
-<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>sc.tl.ingest(adata, adata_ref, obs<span class="op">=</span><span class="st">'louvain'</span>)</span>
-<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, color<span class="op">=</span>[<span class="st">'louvain'</span>,<span class="st">'louvain_0.6'</span>], wspace<span class="op">=</span><span class="fl">0.5</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>sc.tl.ingest(adata, adata_ref, obs<span class="op">=</span><span class="st">'louvain'</span>)</span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, color<span class="op">=</span>[<span class="st">'louvain'</span>,<span class="st">'louvain_0.6'</span>], wspace<span class="op">=</span><span class="fl">0.5</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>running ingest
+    finished (0:00:21)</code></pre>
+</div>
 <div class="cell-output cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="scanpy_06_celltyping_files/figure-html/cell-17-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-10"><img src="scanpy_06_celltyping_files/figure-html/cell-17-output-1.png" class="img-fluid figure-img"></a></p>
+<p><a href="scanpy_06_celltyping_files/figure-html/cell-17-output-2.png" class="lightbox" data-gallery="quarto-lightbox-gallery-10"><img src="scanpy_06_celltyping_files/figure-html/cell-17-output-2.png" class="img-fluid figure-img"></a></p>
 </figure>
 </div>
 </div>
@@ -611,7 +654,7 @@ Processing datasets (0, 1)</code></pre>
 <h2 data-number="4" class="anchored" data-anchor-id="compare-results"><span class="header-section-number">4</span> Compare results</h2>
 <p>The predictions from ingest is stored in the column ‘louvain’ while we named the label transfer with scanorama as ‘predicted’</p>
 <div class="cell" data-execution_count="17">
-<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, color<span class="op">=</span>[<span class="st">'louvain'</span>,<span class="st">'predicted'</span>], wspace<span class="op">=</span><span class="fl">0.5</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, color<span class="op">=</span>[<span class="st">'louvain'</span>,<span class="st">'predicted'</span>], wspace<span class="op">=</span><span class="fl">0.5</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
@@ -628,8 +671,8 @@ Processing datasets (0, 1)</code></pre>
 <p>Another way of predicting celltypes is to use the differentially expressed genes per cluster and compare to lists of known cell marker genes. This requires a list of genes that you trust and that is relevant for the tissue you are working on.</p>
 <p>You can either run it with a marker list from the ontology or a list of your choice as in the example below.</p>
 <div class="cell" data-execution_count="18">
-<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> pd.read_table(<span class="st">'./data/cellmarker/Human_cell_markers.txt'</span>)</span>
-<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>df</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb27"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> pd.read_table(<span class="st">'./data/cellmarker/Human_cell_markers.txt'</span>)</span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>df</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="18">
 <div>
 
@@ -862,71 +905,67 @@ Processing datasets (0, 1)</code></pre>
 </div>
 </div>
 <div class="cell" data-execution_count="19">
-<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Filter for number of genes per celltype</span></span>
-<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(df.shape)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Filter for number of genes per celltype</span></span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(df.shape)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>(2868, 15)</code></pre>
 </div>
 </div>
 <div class="cell" data-execution_count="20">
-<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>df[<span class="st">'nG'</span>] <span class="op">=</span> df.geneSymbol.<span class="bu">str</span>.split(<span class="st">","</span>).<span class="bu">str</span>.<span class="bu">len</span>()</span>
-<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> df[df[<span class="st">'nG'</span>] <span class="op">&gt;</span> <span class="dv">5</span>]</span>
-<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> df[df[<span class="st">'nG'</span>] <span class="op">&lt;</span> <span class="dv">100</span>]</span>
-<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a>d <span class="op">=</span> df[df[<span class="st">'cancerType'</span>] <span class="op">==</span> <span class="st">"Normal"</span>]</span>
-<span id="cb26-6"><a href="#cb26-6" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(df.shape)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb30"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>df[<span class="st">'nG'</span>] <span class="op">=</span> df.geneSymbol.<span class="bu">str</span>.split(<span class="st">","</span>).<span class="bu">str</span>.<span class="bu">len</span>()</span>
+<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> df[df[<span class="st">'nG'</span>] <span class="op">&gt;</span> <span class="dv">5</span>]</span>
+<span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> df[df[<span class="st">'nG'</span>] <span class="op">&lt;</span> <span class="dv">100</span>]</span>
+<span id="cb30-5"><a href="#cb30-5" aria-hidden="true" tabindex="-1"></a>d <span class="op">=</span> df[df[<span class="st">'cancerType'</span>] <span class="op">==</span> <span class="st">"Normal"</span>]</span>
+<span id="cb30-6"><a href="#cb30-6" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(df.shape)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>(445, 16)</code></pre>
 </div>
 </div>
 <div class="cell" data-execution_count="21">
-<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>df.index <span class="op">=</span> df.cellName</span>
-<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>gene_dict <span class="op">=</span> df.geneSymbol.<span class="bu">str</span>.split(<span class="st">","</span>).to_dict()</span>
-<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a><span class="co"># run differential expression per cluster</span></span>
-<span id="cb28-5"><a href="#cb28-5" aria-hidden="true" tabindex="-1"></a>sc.tl.rank_genes_groups(adata, <span class="st">'louvain_0.6'</span>, method<span class="op">=</span><span class="st">'wilcoxon'</span>, key_added <span class="op">=</span> <span class="st">"wilcoxon"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb32"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>df.index <span class="op">=</span> df.cellName</span>
+<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a>gene_dict <span class="op">=</span> df.geneSymbol.<span class="bu">str</span>.split(<span class="st">","</span>).to_dict()</span>
+<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-4"><a href="#cb32-4" aria-hidden="true" tabindex="-1"></a><span class="co"># run differential expression per cluster</span></span>
+<span id="cb32-5"><a href="#cb32-5" aria-hidden="true" tabindex="-1"></a>sc.tl.rank_genes_groups(adata, <span class="st">'louvain_0.6'</span>, method<span class="op">=</span><span class="st">'wilcoxon'</span>, key_added <span class="op">=</span> <span class="st">"wilcoxon"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>ranking genes
+    finished (0:00:01)</code></pre>
+</div>
 </div>
 <div class="cell" data-execution_count="22">
-<div class="sourceCode cell-code" id="cb29"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a><span class="co"># do gene set overlap to the groups in the gene list and top 300 DEGs.</span></span>
-<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> gseapy</span>
-<span id="cb29-4"><a href="#cb29-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb29-5"><a href="#cb29-5" aria-hidden="true" tabindex="-1"></a>gsea_res <span class="op">=</span> <span class="bu">dict</span>()</span>
-<span id="cb29-6"><a href="#cb29-6" aria-hidden="true" tabindex="-1"></a>pred <span class="op">=</span> <span class="bu">dict</span>()</span>
-<span id="cb29-7"><a href="#cb29-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb29-8"><a href="#cb29-8" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> cl <span class="kw">in</span> adata.obs[<span class="st">'louvain_0.6'</span>].cat.categories.tolist():</span>
-<span id="cb29-9"><a href="#cb29-9" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(cl)</span>
-<span id="cb29-10"><a href="#cb29-10" aria-hidden="true" tabindex="-1"></a>    glist <span class="op">=</span> sc.get.rank_genes_groups_df(adata, group<span class="op">=</span>cl, key<span class="op">=</span><span class="st">'wilcoxon'</span>)[<span class="st">'names'</span>].squeeze().<span class="bu">str</span>.strip().tolist()    </span>
-<span id="cb29-11"><a href="#cb29-11" aria-hidden="true" tabindex="-1"></a>    enr_res <span class="op">=</span> gseapy.enrichr(gene_list<span class="op">=</span>glist[:<span class="dv">300</span>],</span>
-<span id="cb29-12"><a href="#cb29-12" aria-hidden="true" tabindex="-1"></a>                      organism<span class="op">=</span><span class="st">'Human'</span>,</span>
-<span id="cb29-13"><a href="#cb29-13" aria-hidden="true" tabindex="-1"></a>                      gene_sets<span class="op">=</span>gene_dict,</span>
-<span id="cb29-14"><a href="#cb29-14" aria-hidden="true" tabindex="-1"></a>                      background <span class="op">=</span> adata.raw.shape[<span class="dv">1</span>],    </span>
-<span id="cb29-15"><a href="#cb29-15" aria-hidden="true" tabindex="-1"></a>                      cutoff <span class="op">=</span> <span class="dv">1</span>)</span>
-<span id="cb29-16"><a href="#cb29-16" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> enr_res.results.shape[<span class="dv">0</span>] <span class="op">==</span> <span class="dv">0</span>:</span>
-<span id="cb29-17"><a href="#cb29-17" aria-hidden="true" tabindex="-1"></a>        pred[cl] <span class="op">=</span> <span class="st">"Unass"</span></span>
-<span id="cb29-18"><a href="#cb29-18" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span>:</span>
-<span id="cb29-19"><a href="#cb29-19" aria-hidden="true" tabindex="-1"></a>        enr_res.results.sort_values(by<span class="op">=</span><span class="st">"P-value"</span>,axis<span class="op">=</span><span class="dv">0</span>, ascending<span class="op">=</span><span class="va">True</span>, inplace<span class="op">=</span><span class="va">True</span>)</span>
-<span id="cb29-20"><a href="#cb29-20" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(enr_res.results.head(<span class="dv">2</span>))</span>
-<span id="cb29-21"><a href="#cb29-21" aria-hidden="true" tabindex="-1"></a>        gsea_res[cl]<span class="op">=</span>enr_res</span>
-<span id="cb29-22"><a href="#cb29-22" aria-hidden="true" tabindex="-1"></a>        pred[cl] <span class="op">=</span> enr_res.results[<span class="st">"Term"</span>][<span class="dv">0</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb34"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a><span class="co"># do gene set overlap to the groups in the gene list and top 300 DEGs.</span></span>
+<span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb34-3"><a href="#cb34-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> gseapy</span>
+<span id="cb34-4"><a href="#cb34-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb34-5"><a href="#cb34-5" aria-hidden="true" tabindex="-1"></a>gsea_res <span class="op">=</span> <span class="bu">dict</span>()</span>
+<span id="cb34-6"><a href="#cb34-6" aria-hidden="true" tabindex="-1"></a>pred <span class="op">=</span> <span class="bu">dict</span>()</span>
+<span id="cb34-7"><a href="#cb34-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb34-8"><a href="#cb34-8" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> cl <span class="kw">in</span> adata.obs[<span class="st">'louvain_0.6'</span>].cat.categories.tolist():</span>
+<span id="cb34-9"><a href="#cb34-9" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(cl)</span>
+<span id="cb34-10"><a href="#cb34-10" aria-hidden="true" tabindex="-1"></a>    glist <span class="op">=</span> sc.get.rank_genes_groups_df(adata, group<span class="op">=</span>cl, key<span class="op">=</span><span class="st">'wilcoxon'</span>)[<span class="st">'names'</span>].squeeze().<span class="bu">str</span>.strip().tolist()    </span>
+<span id="cb34-11"><a href="#cb34-11" aria-hidden="true" tabindex="-1"></a>    enr_res <span class="op">=</span> gseapy.enrichr(gene_list<span class="op">=</span>glist[:<span class="dv">300</span>],</span>
+<span id="cb34-12"><a href="#cb34-12" aria-hidden="true" tabindex="-1"></a>                      organism<span class="op">=</span><span class="st">'Human'</span>,</span>
+<span id="cb34-13"><a href="#cb34-13" aria-hidden="true" tabindex="-1"></a>                      gene_sets<span class="op">=</span>gene_dict,</span>
+<span id="cb34-14"><a href="#cb34-14" aria-hidden="true" tabindex="-1"></a>                      background <span class="op">=</span> adata.raw.shape[<span class="dv">1</span>],    </span>
+<span id="cb34-15"><a href="#cb34-15" aria-hidden="true" tabindex="-1"></a>                      cutoff <span class="op">=</span> <span class="dv">1</span>)</span>
+<span id="cb34-16"><a href="#cb34-16" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> enr_res.results.shape[<span class="dv">0</span>] <span class="op">==</span> <span class="dv">0</span>:</span>
+<span id="cb34-17"><a href="#cb34-17" aria-hidden="true" tabindex="-1"></a>        pred[cl] <span class="op">=</span> <span class="st">"Unass"</span></span>
+<span id="cb34-18"><a href="#cb34-18" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span>:</span>
+<span id="cb34-19"><a href="#cb34-19" aria-hidden="true" tabindex="-1"></a>        enr_res.results.sort_values(by<span class="op">=</span><span class="st">"P-value"</span>,axis<span class="op">=</span><span class="dv">0</span>, ascending<span class="op">=</span><span class="va">True</span>, inplace<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb34-20"><a href="#cb34-20" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(enr_res.results.head(<span class="dv">2</span>))</span>
+<span id="cb34-21"><a href="#cb34-21" aria-hidden="true" tabindex="-1"></a>        gsea_res[cl]<span class="op">=</span>enr_res</span>
+<span id="cb34-22"><a href="#cb34-22" aria-hidden="true" tabindex="-1"></a>        pred[cl] <span class="op">=</span> enr_res.results[<span class="st">"Term"</span>][<span class="dv">0</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>0
-    Gene_set                      Term Overlap   P-value  Adjusted P-value  \
-1   gs_ind_0     Cancer stem-like cell     1/6  0.092243          0.201556   
-20  gs_ind_0  Spermatogonial stem cell     1/6  0.092243          0.201556   
+   Gene_set                   Term Overlap   P-value  Adjusted P-value  \
+0  gs_ind_0  Cancer stem-like cell     1/6  0.092243          0.234895   
+6  gs_ind_0             Macrophage     1/6  0.092243          0.234895   
 
-    Odds Ratio  Combined Score  Genes  
-1    14.444459       34.425848  ANPEP  
-20   14.444459       34.425848   BCL6  
+   Odds Ratio  Combined Score  Genes  
+0   14.444459       34.425848  ANPEP  
+6   14.444459       34.425848   AIF1  
 1
-   Gene_set                    Term Overlap   P-value  Adjusted P-value  \
-2  gs_ind_0  Effector memory T cell     1/7  0.106771          0.213541   
-5  gs_ind_0                Monocyte     1/7  0.106771          0.213541   
-
-   Odds Ratio  Combined Score Genes  
-2   12.517863        28.00338  IL7R  
-5   12.517863        28.00338  CD52  
-2
    Gene_set                      Term Overlap   P-value  Adjusted P-value  \
 5  gs_ind_0  Parietal progenitor cell     1/7  0.106771          0.264036   
 0  gs_ind_0     CD8+ cytotoxic T cell    1/11  0.162599          0.264036   
@@ -934,6 +973,14 @@ Processing datasets (0, 1)</code></pre>
    Odds Ratio  Combined Score  Genes  
 5   12.517863       28.003380  ANXA1  
 0    8.162082       14.826179  LAMP1  
+2
+   Gene_set                    Term Overlap   P-value  Adjusted P-value  \
+2  gs_ind_0  Effector memory T cell     1/7  0.106771          0.213541   
+5  gs_ind_0                Monocyte     1/7  0.106771          0.213541   
+
+   Odds Ratio  Combined Score Genes  
+2   12.517863        28.00338  IL7R  
+5   12.517863        28.00338  CD52  
 3
    Gene_set                    Term Overlap   P-value  Adjusted P-value  \
 6  gs_ind_0  Effector memory T cell     1/7  0.106771          0.234106   
@@ -943,14 +990,6 @@ Processing datasets (0, 1)</code></pre>
 6   12.517863        28.00338  IL7R  
 8   12.517863        28.00338  CCR7  
 4
-   Gene_set                   Term Overlap   P-value  Adjusted P-value  \
-0  gs_ind_0  Cancer stem-like cell     1/6  0.092243          0.186848   
-5  gs_ind_0             Macrophage     1/6  0.092243          0.186848   
-
-   Odds Ratio  Combined Score  Genes  
-0   14.444459       34.425848  ANPEP  
-5   14.444459       34.425848   AIF1  
-5
    Gene_set              Term Overlap   P-value  Adjusted P-value  Odds Ratio  \
 0  gs_ind_0  CD4-CD28+ T cell     1/8  0.121066          0.121066   11.044584   
 1  gs_ind_0  CD4-CD28- T cell     1/8  0.121066          0.121066   11.044584   
@@ -958,15 +997,15 @@ Processing datasets (0, 1)</code></pre>
    Combined Score Genes  
 0        23.31975  BCL2  
 1        23.31975  BCL2  
-6
-   Gene_set                             Term Overlap   P-value  \
-2  gs_ind_0                       Macrophage     1/6  0.092243   
-3  gs_ind_0  Monocyte derived dendritic cell     1/8  0.121066   
+5
+   Gene_set                      Term Overlap   P-value  Adjusted P-value  \
+2  gs_ind_0                Macrophage     1/6  0.092243          0.266926   
+4  gs_ind_0  PROM1Low progenitor cell     1/7  0.106771          0.266926   
 
-   Adjusted P-value  Odds Ratio  Combined Score  Genes  
-2          0.242132   14.444459       34.425848   AIF1  
-3          0.242132   11.044584       23.319750  ITGAX  
-7
+   Odds Ratio  Combined Score  Genes  
+2   14.444459       34.425848   AIF1  
+4   12.517863       28.003380  ALCAM  
+6
    Gene_set              Term Overlap   P-value  Adjusted P-value  Odds Ratio  \
 0  gs_ind_0            B cell     1/6  0.092243          0.151332   14.444459   
 1  gs_ind_0  CD4-CD28+ T cell     1/8  0.121066          0.151332   11.044584   
@@ -974,36 +1013,35 @@ Processing datasets (0, 1)</code></pre>
    Combined Score Genes  
 0       34.425848  CD19  
 1       23.319750  BCL2  
-8
-   Gene_set      Term Overlap   P-value  Adjusted P-value  Odds Ratio  \
-4  gs_ind_0  Monocyte     1/7  0.106771          0.320312   12.517863   
-5  gs_ind_0  Myoblast     1/7  0.106771          0.320312   12.517863   
+7
+   Gene_set                             Term Overlap   P-value  \
+2  gs_ind_0                       Macrophage     1/6  0.092243   
+3  gs_ind_0  Monocyte derived dendritic cell     1/8  0.121066   
 
-   Combined Score  Genes  
-4        28.00338   CD52  
-5        28.00338  CDC20  </code></pre>
+   Adjusted P-value  Odds Ratio  Combined Score  Genes  
+2          0.242132   14.444459       34.425848   AIF1  
+3          0.242132   11.044584       23.319750  ITGAX  </code></pre>
 </div>
 </div>
 <div class="cell" data-execution_count="23">
-<div class="sourceCode cell-code" id="cb31"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="co"># prediction per cluster</span></span>
-<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>pred</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb36"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a><span class="co"># prediction per cluster</span></span>
+<span id="cb36-2"><a href="#cb36-2" aria-hidden="true" tabindex="-1"></a>pred</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="23">
-<pre><code>{'0': 'CD16+ dendritic cell',
- '1': 'CD4+ T cell',
- '2': 'CD8+ cytotoxic T cell',
+<pre><code>{'0': 'Cancer stem-like cell',
+ '1': 'CD8+ cytotoxic T cell',
+ '2': 'CD4+ T cell',
  '3': 'Activated T cell',
- '4': 'Cancer stem-like cell',
- '5': 'CD4-CD28+ T cell',
- '6': 'Circulating fetal cell',
- '7': 'B cell',
- '8': 'Circulating fetal cell'}</code></pre>
+ '4': 'CD4-CD28+ T cell',
+ '5': 'CD1C+_B dendritic cell',
+ '6': 'B cell',
+ '7': 'Circulating fetal cell'}</code></pre>
 </div>
 </div>
 <div class="cell" data-execution_count="24">
-<div class="sourceCode cell-code" id="cb33"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>prediction <span class="op">=</span> [pred[x] <span class="cf">for</span> x <span class="kw">in</span> adata.obs[<span class="st">'louvain_0.6'</span>]]</span>
-<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>adata.obs[<span class="st">"GS_overlap_pred"</span>] <span class="op">=</span> prediction</span>
-<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, color<span class="op">=</span><span class="st">'GS_overlap_pred'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb38"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a>prediction <span class="op">=</span> [pred[x] <span class="cf">for</span> x <span class="kw">in</span> adata.obs[<span class="st">'louvain_0.6'</span>]]</span>
+<span id="cb38-2"><a href="#cb38-2" aria-hidden="true" tabindex="-1"></a>adata.obs[<span class="st">"GS_overlap_pred"</span>] <span class="op">=</span> prediction</span>
+<span id="cb38-3"><a href="#cb38-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb38-4"><a href="#cb38-4" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, color<span class="op">=</span><span class="st">'GS_overlap_pred'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
@@ -1012,10 +1050,10 @@ Processing datasets (0, 1)</code></pre>
 </div>
 </div>
 </div>
-<div class="callout callout-style-default callout-note no-icon callout-titled" title="Discuss">
+<div class="callout callout-style-default callout-note callout-titled" title="Discuss">
 <div class="callout-header d-flex align-content-center">
 <div class="callout-icon-container">
-<i class="callout-icon no-icon"></i>
+<i class="callout-icon"></i>
 </div>
 <div class="callout-title-container flex-fill">
 Discuss
@@ -1028,152 +1066,144 @@ Discuss
 </section>
 <section id="meta-session" class="level2" data-number="6">
 <h2 data-number="6" class="anchored" data-anchor-id="meta-session"><span class="header-section-number">6</span> Session info</h2>
+<details>
+<summary>
+Click here
+</summary>
 <div class="cell" data-execution_count="25">
-<div class="sourceCode cell-code" id="cb34"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a>sc.logging.print_versions()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb39"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a>sc.logging.print_versions()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>-----
-anndata     0.9.2
-scanpy      1.7.2
-sinfo       0.3.1
+anndata     0.10.3
+scanpy      1.9.6
 -----
-PIL                         10.0.0
-anndata                     0.9.2
-annoy                       NA
-anyio                       NA
-arrow                       1.3.0
-asttokens                   NA
-attr                        23.1.0
-attrs                       23.1.0
-babel                       2.12.1
-backcall                    0.2.0
-brotli                      1.0.9
-certifi                     2023.07.22
-cffi                        1.16.0
-charset_normalizer          3.2.0
-colorama                    0.4.6
-comm                        0.1.4
-cpuinfo                     NA
-cycler                      0.10.0
-cython_runtime              NA
-dateutil                    2.8.2
-debugpy                     1.8.0
-decorator                   5.1.1
-defusedxml                  0.7.1
-dunamai                     1.18.0
-exceptiongroup              1.1.3
-executing                   1.2.0
-fastjsonschema              NA
-fbpca                       NA
-fqdn                        NA
-get_version                 3.5.4
-gseapy                      1.0.6
-h5py                        3.9.0
-idna                        3.4
-igraph                      0.11.2
-importlib_resources         NA
-intervaltree                NA
-ipykernel                   6.25.2
-ipywidgets                  8.1.1
-isoduration                 NA
-jedi                        0.19.1
-jinja2                      3.1.2
-joblib                      1.3.0
-json5                       NA
-jsonpointer                 2.4
-jsonschema                  4.19.1
-jsonschema_specifications   NA
-jupyter_events              0.7.0
-jupyter_server              2.7.3
-jupyterlab_server           2.25.0
-kiwisolver                  1.4.5
-legacy_api_wrap             0.0.0
-leidenalg                   0.10.1
-llvmlite                    0.40.1
-louvain                     0.8.1
-markupsafe                  2.1.3
-matplotlib                  3.6.3
-matplotlib_inline           0.1.6
-mpl_toolkits                NA
-natsort                     8.4.0
-nbformat                    5.9.2
-numba                       0.57.1
-numexpr                     2.8.4
-numpy                       1.24.4
-overrides                   NA
-packaging                   23.1
-pandas                      1.5.3
-parso                       0.8.3
-patsy                       0.5.3
-pexpect                     4.8.0
-pickleshare                 0.7.5
-pkg_resources               NA
-platformdirs                3.10.0
-prometheus_client           NA
-prompt_toolkit              3.0.39
-psutil                      5.9.5
-ptyprocess                  0.7.0
-pure_eval                   0.2.2
-pycparser                   2.21
-pydev_ipython               NA
-pydevconsole                NA
-pydevd                      2.9.5
-pydevd_file_utils           NA
-pydevd_plugins              NA
-pydevd_tracing              NA
-pygments                    2.16.1
-pynndescent                 0.5.10
-pyparsing                   3.0.9
-pythonjsonlogger            NA
-pytz                        2023.3
-referencing                 NA
-requests                    2.31.0
-rfc3339_validator           0.1.4
-rfc3986_validator           0.1.1
-rpds                        NA
-scanorama                   1.7.3
-scanpy                      1.7.2
-scipy                       1.10.1
-send2trash                  NA
-setuptools_scm              NA
-sinfo                       0.3.1
-six                         1.16.0
-sklearn                     1.3.1
-sniffio                     1.3.0
-socks                       1.7.1
-sortedcontainers            2.4.0
-stack_data                  0.6.2
-statsmodels                 0.14.0
-tables                      3.8.0
-texttable                   1.7.0
-threadpoolctl               3.2.0
-tornado                     6.3.3
-tqdm                        4.65.0
-traitlets                   5.11.2
-typing_extensions           NA
-umap                        0.5.4
-uri_template                NA
-urllib3                     2.0.4
-wcwidth                     0.2.8
-webcolors                   1.13
-websocket                   1.6.4
-yaml                        6.0.1
-zipp                        NA
-zmq                         25.1.1
+PIL                 10.0.0
+annoy               NA
+anyio               NA
+array_api_compat    1.4
+asttokens           NA
+attr                23.1.0
+babel               2.12.1
+backcall            0.2.0
+certifi             2023.11.17
+cffi                1.15.1
+charset_normalizer  3.1.0
+colorama            0.4.6
+comm                0.1.3
+cycler              0.12.1
+cython_runtime      NA
+dateutil            2.8.2
+debugpy             1.6.7
+decorator           5.1.1
+defusedxml          0.7.1
+exceptiongroup      1.2.0
+executing           1.2.0
+fastjsonschema      NA
+fbpca               NA
+gmpy2               2.1.2
+gseapy              1.0.6
+h5py                3.9.0
+idna                3.4
+igraph              0.10.8
+intervaltree        NA
+ipykernel           6.23.1
+ipython_genutils    0.2.0
+jedi                0.18.2
+jinja2              3.1.2
+joblib              1.3.2
+json5               NA
+jsonpointer         2.0
+jsonschema          4.17.3
+jupyter_events      0.6.3
+jupyter_server      2.6.0
+jupyterlab_server   2.22.1
+kiwisolver          1.4.5
+leidenalg           0.10.1
+llvmlite            0.41.1
+louvain             0.8.1
+markupsafe          2.1.2
+matplotlib          3.8.0
+matplotlib_inline   0.1.6
+mpl_toolkits        NA
+mpmath              1.3.0
+natsort             8.4.0
+nbformat            5.8.0
+numba               0.58.1
+numpy               1.26.2
+opt_einsum          v3.3.0
+overrides           NA
+packaging           23.1
+pandas              2.1.4
+parso               0.8.3
+patsy               0.5.5
+pexpect             4.8.0
+pickleshare         0.7.5
+pkg_resources       NA
+platformdirs        3.5.1
+prometheus_client   NA
+prompt_toolkit      3.0.38
+psutil              5.9.5
+ptyprocess          0.7.0
+pure_eval           0.2.2
+pvectorc            NA
+pycparser           2.21
+pydev_ipython       NA
+pydevconsole        NA
+pydevd              2.9.5
+pydevd_file_utils   NA
+pydevd_plugins      NA
+pydevd_tracing      NA
+pygments            2.15.1
+pynndescent         0.5.11
+pyparsing           3.1.1
+pyrsistent          NA
+pythonjsonlogger    NA
+pytz                2023.3
+requests            2.31.0
+rfc3339_validator   0.1.4
+rfc3986_validator   0.1.1
+scanorama           1.7.4
+scipy               1.11.4
+send2trash          NA
+session_info        1.0.0
+six                 1.16.0
+sklearn             1.3.2
+sniffio             1.3.0
+socks               1.7.1
+sortedcontainers    2.4.0
+sparse              0.14.0
+stack_data          0.6.2
+statsmodels         0.14.1
+sympy               1.12
+texttable           1.7.0
+threadpoolctl       3.2.0
+torch               2.0.0
+tornado             6.3.2
+tqdm                4.65.0
+traitlets           5.9.0
+typing_extensions   NA
+umap                0.5.5
+urllib3             2.0.2
+wcwidth             0.2.6
+websocket           1.5.2
+yaml                6.0
+zmq                 25.0.2
+zoneinfo            NA
+zstandard           0.19.0
 -----
-IPython             8.12.2
-jupyter_client      8.3.1
-jupyter_core        5.4.0
-jupyterlab          4.0.6
-notebook            7.0.4
+IPython             8.13.2
+jupyter_client      8.2.0
+jupyter_core        5.3.0
+jupyterlab          4.0.1
+notebook            6.5.4
 -----
-Python 3.8.18 | packaged by conda-forge | (default, Oct 10 2023, 15:44:36) [GCC 12.3.0]
-Linux-6.4.16-linuxkit-x86_64-with-glibc2.10
-11 logical CPU cores, x86_64
+Python 3.10.11 | packaged by conda-forge | (main, May 10 2023, 18:58:44) [GCC 11.3.0]
+Linux-6.5.11-linuxkit-x86_64-with-glibc2.35
 -----
-Session information updated at 2023-11-11 21:04
-</code></pre>
+Session information updated at 2024-01-04 16:11</code></pre>
 </div>
 </div>
+</details>
 
 
 </section>
@@ -1415,14 +1445,14 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
 </div> <!-- /content -->
 <footer class="footer">
   <div class="nav-footer">
-    <div class="nav-footer-left">2023 <a href="https://nbis.se">NBIS</a> | <a href="https://choosealicense.com/licenses/gpl-3.0/">GPL-3 License</a></div>   
+    <div class="nav-footer-left">2024 <a href="https://nbis.se">NBIS</a> | <a href="https://choosealicense.com/licenses/gpl-3.0/">GPL-3 License</a></div>   
     <div class="nav-footer-center">
       &nbsp;
     </div>
-    <div class="nav-footer-right">Published with <a href="https://quarto.org/">Quarto</a> v1.3.433</div>
+    <div class="nav-footer-right">Published with <a href="https://quarto.org/">Quarto</a> v1.3.450</div>
   </div>
 </footer>
-<script>var lightboxQuarto = GLightbox({"descPosition":"bottom","openEffect":"zoom","loop":true,"selector":".lightbox","closeEffect":"zoom"});</script>
+<script>var lightboxQuarto = GLightbox({"closeEffect":"zoom","openEffect":"zoom","selector":".lightbox","loop":true,"descPosition":"bottom"});</script>
 
 
 

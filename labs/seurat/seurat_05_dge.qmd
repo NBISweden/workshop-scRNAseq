@@ -74,7 +74,7 @@ markers_genes <- FindAllMarkers(
 
 ```{r}
 markers_genes %>% group_by(cluster)  %>% top_n(-25, p_val_adj) -> top25
-top25
+head(top25)
 ```
 
 ```{r}
@@ -92,8 +92,7 @@ for(i in unique(top25$cluster)){
 #| fig-height: 8
 #| fig-width: 8
 
-markers_genes %>% group_by(cluster)  %>% top_n(-5, p_val_adj) -> top5
-
+markers_genes %>% group_by(cluster)  %>% slice_min(p_val_adj,n=5, with_ties = FALSE) -> top5
 # create a scale.data slot for the selected genes
 alldata <- ScaleData(alldata, features = as.character(unique(top5$gene)), assay = "RNA")
 DoHeatmap(alldata, features = as.character(unique(top5$gene)),group.by = sel.clust, assay = "RNA")
@@ -103,7 +102,7 @@ Another way is by representing the overal group expression and detection rates i
 
 ```{r}
 #| fig-height: 8
-#| fig-width: 6
+#| fig-width: 8
 
 DotPlot(alldata, features = rev(as.character(unique(top5$gene))),group.by = sel.clust,assay = "RNA")+coord_flip()
 ```
@@ -131,7 +130,7 @@ Take a screen shot of those results and re-run the same code above with another 
 
 ```{r}
 # select all cells in cluster 1
-cell_selection <- subset(alldata, cells = colnames(alldata)[ alldata@meta.data[,sel.clust] == 2])
+cell_selection <- subset(alldata, cells = colnames(alldata)[ alldata@meta.data[,sel.clust] == 3])
 cell_selection <- SetIdent(cell_selection, value = "type")
 #Compute differentiall expression
 DGE_cell_selection <- FindAllMarkers(cell_selection,
@@ -221,7 +220,7 @@ VlnPlot(alldata, features = as.character(unique(top5_cell_selection$gene)),
 
 ## Patient Batch effects
 
-When we are testing for Covid vs Control we are running a DGE test for 3 vs 3 individuals. That will be very sensitive to sample differences unless we find a way to control for it. So first, lets check how the top DGEs are expressed across the individuals:
+When we are testing for Covid vs Control we are running a DGE test for 4 vs 4 individuals. That will be very sensitive to sample differences unless we find a way to control for it. So first, lets check how the top DGEs are expressed across the individuals within cluster 3:
 
 ```{r}
 #| fig-height: 6
@@ -241,12 +240,10 @@ We can examine more genes with a DotPlot:
 DGE_cell_selection %>%
     group_by(direction) %>%
     top_n(-20, p_val) -> top20_cell_selection
-DotPlot(cell_selection, features = rev(as.character(unique(top20_cell_selection$gene))), group.by = "orig.ident",    assay = "RNA") + coord_flip()
+DotPlot(cell_selection, features = rev(as.character(unique(top20_cell_selection$gene))), group.by = "orig.ident",    assay = "RNA") + coord_flip() + RotatedAxis()
 ```
 
-As you can see, most of the DGEs are driven by the `covid_17` patient.
-
-But it is also the sample with the highest number of cells:
+As you can see, most of the DGEs are driven by the `covid_17` patient. It is also a sample with very high number of cells:
 
 ```{r}
 table(cell_selection$orig.ident)
@@ -292,7 +289,7 @@ VlnPlot(sub_data, features = as.character(unique(top5_sub$gene)),
         ncol = 5,group.by = "type",assay = "RNA", pt.size = .1)
 ```
 
-Plot as dotplot, but in the full dataset:
+Plot as dotplot, but in the full (not subsampled) data, still only showing cluster 3:
 
 ```{r}
 #| fig-height: 8
@@ -302,7 +299,7 @@ DGE_sub %>%
     group_by(direction) %>%
     top_n(-20, p_val) -> top20_sub
 DotPlot(cell_selection, features = rev(as.character(unique(top20_sub$gene))), group.by = "orig.ident", assay = "RNA") +
-  coord_flip()
+  coord_flip() + RotatedAxis()
 ```
 
 It looks much better now. But if we look per patient you can see that we still have some genes that are dominated by a single patient.
@@ -311,9 +308,9 @@ Why do you think this is?
 
 ## Pseudobulk
 
-One option is to treat the samples as pseudobulks and do differential expression for the 3 patients vs 3 controls. You do lose some information about cell variability within each patient, but instead you gain the advantage of mainly looking for effects that are seen in multiple patients.
+One option is to treat the samples as pseudobulks and do differential expression for the 4 patients vs 4 controls. You do lose some information about cell variability within each patient, but instead you gain the advantage of mainly looking for effects that are seen in multiple patients.
 
-However, having only 3 patients is probably too low, with many more patients it will work better to run pseudobulk analysis.
+However, having only 4 patients is perhaps too low, with many more patients it will work better to run pseudobulk analysis.
 
 For a fair comparison we should have equal number of cells per sample when we create the pseudobulk, so we will use the subsampled object.
 
@@ -331,7 +328,7 @@ Then run edgeR:
 
 ```{r}
 # define the groups
-bulk.labels = c("Covid", "Covid", "Covid", "Ctrl", "Ctrl", "Ctrl")
+bulk.labels = c("Covid", "Covid", "Covid", "Covid", "Ctrl", "Ctrl", "Ctrl", "Ctrl")
 
 dge.list <- DGEList(counts = pseudobulk, group = factor(bulk.labels))
 keep <- filterByExpr(dge.list)
@@ -347,9 +344,9 @@ qlf <- glmQLFTest(fit, coef = 2)
 topTags(qlf)
 ```
 
-As you can see, we have very few significant genes, actually only 2 with FDR < 0.1. Since we only have 3 vs 3 samples, we should not expect too many genes with this method.
+As you can see, we have very few significant genes. Since we only have 4 vs 4 samples, we should not expect too many genes with this method.
 
-Again as dotplot including all genes with FDR < 1:
+Again as dotplot including top 10 genes:
 
 ```{r}
 #| fig-height: 6
@@ -412,11 +409,11 @@ First, run the regular MAST analysis without random effects
 tmpdir = "tmp_dge"
 dir.create(tmpdir, showWarnings = F)
 
-tmpfile1 = file.path(tmpdir, "mast_bayesglm_cl1.Rds")
+tmpfile1 = file.path(tmpdir, "mast_bayesglm_cl3.Rds")
 if (file.exists(tmpfile1)) {
     fcHurdle1 = readRDS(tmpfile1)
 } else {
-    zlmCond <- suppressMessages(MAST::zlm(~type, sca, method = "bayesglm", ebayes = T))
+    zlmCond <- suppressMessages(MAST::zlm(~type + nFeature_RNA, sca, method = "bayesglm", ebayes = T))
     summaryCond <- suppressMessages(MAST::summary(zlmCond, doLRT = "typeCtrl"))
     summaryDt <- summaryCond$datatable
     fcHurdle <- merge(summaryDt[summaryDt$contrast == "typeCtrl" & summaryDt$component ==
@@ -432,11 +429,11 @@ Then run MAST with glmer and random effect.
 ```{r}
 library(lme4)
 
-tmpfile2 = file.path(tmpdir, "mast_glme_cl1.Rds")
+tmpfile2 = file.path(tmpdir, "mast_glme_cl3.Rds")
 if (file.exists(tmpfile2)) {
     fcHurdle2 = readRDS(tmpfile2)
 } else {
-    zlmCond <- suppressMessages(MAST::zlm(~type + (1 | orig.ident), sca, method = "glmer",
+    zlmCond <- suppressMessages(MAST::zlm(~type + nFeature_RNA + (1 | orig.ident), sca, method = "glmer",
         ebayes = F, strictConvergence = FALSE))
 
     summaryCond <- suppressMessages(MAST::summary(zlmCond, doLRT = "typeCtrl"))
@@ -497,12 +494,18 @@ p2 = DotPlot(cell_selection, features = mastR, group.by = "orig.ident", assay = 
 
 p1 + p2
 ```
+:::{.callout-note title="Discuss"}
+You have now run DGE analysis for Covid vs Ctrl in cluster 3 with several diffent methods. Have a look at the different results, where did you get more/less significant genes? Which results would you like to present in a paper? Discuss with a neighbor which one you think looks best and why.
+:::
+
 
 ## {{< meta dge_gsa >}}
 
 ### {{< meta dge_gsa_hyper >}}
 
 {{< meta dge_gsa_hyper_1 >}}
+
+In this case we will use the DGE from MAST with random effect to run enrichment analysis. 
 
 ```{r}
 # Load additional packages
@@ -513,7 +516,7 @@ enrichR::listEnrichrDbs()
 
 # Perform enrichment
 enrich_results <- enrichr(
- genes     = DGE_cell_selection$gene[DGE_cell_selection$avg_log2FC > 0],
+ genes     = fcHurdle2$primerid[fcHurdle2$z < 0 & fcHurdle2$pval < 0.05],
  databases = "GO_Biological_Process_2017b" )[[1]]
 ```
 
@@ -535,15 +538,17 @@ abline(v = 0, lty = 1)
 
 {{< meta dge_gsea_1 >}}
 
+Before, we ran `FindMarkers` with the default settings for reporting only significantly up/down regulated genes, but now we need statistics on a larger set of genes, so we will have to rerun the test with more lenient cutoffs.
+
 ```{r}
-cell_selection = SetIdent(cell_selection, value = "type")
+sub_data = SetIdent(sub_data, value = "type")
 
 DGE_cell_selection2 <- FindMarkers(
-    cell_selection,
+    sub_data,
     ident.1 = "Covid",
     log2FC.threshold = -Inf,
     test.use = "wilcox",
-    min.pct = 0.1,
+    min.pct = 0.05,
     min.diff.pct = 0,
     only.pos = FALSE,
     max.cells.per.ident = 50,
@@ -595,16 +600,14 @@ plotGseaTable(gmt[top10_UP], gene_rank, fgseaRes, gseaParam = 0.5)
 {{< meta dge_gsea_4 >}}
 :::
 
-{{< meta dge_save >}}
-
-```{r}
-# saveRDS(alldata, "data/3pbmc_qc_dr_int_cl_dge.rds")
-# save the list of DGE results to a file.
-write.csv(markers_genes, file = "data/3pbmc_qc_dr_int_cl_dge.csv")
-```
 
 ## {{< meta session >}}
+
+<details>
+  <summary>Click here</summary>
 
 ```{r}
 sessionInfo()
 ```
+
+</details>

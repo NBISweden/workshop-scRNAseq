@@ -38,8 +38,11 @@ alldata <- readRDS("data/results/covid_qc_dr_int.rds")
 As we can see above, the **Seurat** function `FindNeighbors()` already computes both the KNN and SNN graphs, in which we can control the minimal percentage of shared neighbours to be kept. See `?FindNeighbors` for additional options.
 
 ```{r}
-# check that CCA is still the active assay
+# check if CCA is still the active assay
 alldata@active.assay
+
+# set the correct assay.
+alldata@active.assay = "CCA"
 
 alldata <- FindNeighbors(alldata, dims = 1:30, k.param = 60, prune.SNN = 1/15)
 
@@ -69,12 +72,14 @@ pheatmap(alldata@graphs$CCA_snn[1:200,1:200],
 
 In **Seurat**, the function `FindClusters()` will do a graph-based clustering using "Louvain" algorithim by default (`algorithm = 1`). To use the leiden algorithm, you need to set it to `algorithm = 4`. See `?FindClusters` for additional options.
 
+By default it will run clustering on the SNN graph we created in the previous step, but you can also specify different graphs for clustering with `graph.name`. 
+
 ```{r}
 #| fig-height: 4
 #| fig-width: 12
 #| results: hide
 
-# Clustering with louvain (algorithm 1)
+# Clustering with louvain (algorithm 1) and a few different resolutions
 for (res in c( 0.1 , 0.25 , .5 , 1 , 1.5 , 2 )){
   alldata <- FindClusters(alldata, graph.name = "CCA_snn", resolution = res , algorithm = 1)
 }
@@ -200,12 +205,40 @@ plot_grid(ncol = 3,
 saveRDS(alldata,"data/results/covid_qc_dr_int_cl.rds")
 ```
 
+### {{< meta clust_distribution >}}
+
+{{< meta clust_distribution_1 >}}
+
+Select the "CCA_snn_res.0.5" and plot proportion of samples per cluster and also proportion covid vs ctrl. 
+
+```{r}
+p1 = ggplot(alldata@meta.data, aes(x=CCA_snn_res.0.5, fill=orig.ident)) + geom_bar(position = "fill")
+p2 = ggplot(alldata@meta.data, aes(x=CCA_snn_res.0.5, fill=type)) + geom_bar(position = "fill")
+
+p1 + p2
+```
+
+{{< meta clust_distribution_2 >}}
+
+{{< meta clust_distribution_3 >}}
+
+```{r}
+ggplot(alldata@meta.data, aes(x = orig.ident, fill=CCA_snn_res.0.5)) + geom_bar(position = "fill")
+```
+
+
+
 :::{.callout-note title="Discuss"}
 {{< meta clust_3 >}}
 :::
 
 ## {{< meta session >}}
 
+<details>
+  <summary>Click here</summary>
+
 ```{r}
 sessionInfo()
 ```
+
+</details>

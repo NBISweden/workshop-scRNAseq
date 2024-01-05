@@ -279,28 +279,36 @@ DimPlot(ctrl,label = T, group.by = "scpred_prediction") + NoAxes() + ggtitle("sc
 {{< meta ct_gsea_annot_1 >}}
 
 ```{r}
+if (!dir.exists("data/cellmarker")){ dir.create("data/cellmarker")}
+if (!file.exists("data/cellmarker/Cell_marker_Human.csv")){
+  download.file(
+    url = "https://export.uppmax.uu.se/naiss2023-23-3/workshops/scRNAseq/misc/Cell_marker_Human.csv",
+    destfile = "data/cellmarker/Cell_marker_Human.csv"
+  )
+}
+
 # Load the human marker table
-markers <- read.delim("data/cellmarker/Human_cell_markers.txt")
-markers <- markers [ markers$speciesType == "Human", ]
-markers <- markers [ markers$cancerType == "Normal", ]
+markers <- read.delim("data/cellmarker/Cell_marker_Human.csv", sep = ";")
+markers <- markers [ markers$species == "Human", ]
+markers <- markers [ markers$cancer_type == "Normal", ]
 
 #Filter by tissue (to reduce computational time and have tissue-specific classification)
-sort(unique(markers$tissueType))
-grep("blood",unique(markers$tissueType),value = T)
-markers <- markers [ markers$tissueType %in% c("Blood","Venous blood",
+sort(unique(markers$tissue_type))
+grep("blood",unique(markers$tissue_type),value = T)
+markers <- markers [ markers$tissue_type %in% c("Blood","Venous blood",
                                                 "Serum","Plasma",
                                                 "Spleen","Bone marrow","Lymph node"), ]
 
 # remove strange characters etc.
-celltype_list <- lapply( unique(markers$cellName) , function(x){
-  x <- paste(markers$geneSymbol[markers$cellName == x],sep=",")
+celltype_list <- lapply( unique(markers$cell_name) , function(x){
+  x <- paste(markers$Symbol[markers$cell_name == x],sep=",")
   x <- gsub("[[]|[]]| |-",",",x)
   x <- unlist(strsplit( x , split = ","))
   x <- unique(x [ ! x %in% c("","NA","family") ])
   x <- casefold(x,upper = T)
 })
-names(celltype_list) <- unique(markers$cellName)
-# celltype_list <- lapply(celltype_list , function(x) {x[1:min(length(x),50)]} )
+names(celltype_list) <- unique(markers$cell_name)
+
 celltype_list <- celltype_list[ unlist(lapply(celltype_list,length)) < 100 ]
 celltype_list <- celltype_list[ unlist(lapply(celltype_list,length)) > 5 ]
 ```
@@ -309,7 +317,7 @@ celltype_list <- celltype_list[ unlist(lapply(celltype_list,length)) > 5 ]
 # run fgsea for each of the clusters in the list
 res <- lapply(DGE_list, function(x){
   gene_rank <- setNames(x$avg_log2FC, x$gene)
-  fgseaRes <- fgsea( pathways=celltype_list, stats=gene_rank,nperm=10000)
+  fgseaRes <- fgsea( pathways=celltype_list, stats=gene_rank,nperm=10000, scoreType = "pos")
   return(fgseaRes)
 })
 names(res) <- names(DGE_list)
@@ -352,7 +360,11 @@ saveRDS(ctrl,"data/results/ctrl13_qc_dr_int_cl_celltype.rds")
 
 ## {{< meta session >}}
 
+<details>
+  <summary>Click here</summary>
+
 ```{r}
 sessionInfo()
 ```
 
+</details>
