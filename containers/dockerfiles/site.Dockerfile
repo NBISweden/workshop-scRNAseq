@@ -13,7 +13,7 @@ COPY scripts/install_site.sh /rocker_scripts/
 
 RUN /rocker_scripts/install_site.sh
 
-CMD quarto render
+ENTRYPOINT ["quarto", "render"]
 
 # build and run
 # docker build --platform=linux/amd64 -t ghcr.io/nbisweden/workshop-scrnaseq:2024-site-r4.3.0 -f dockerfiles/site.Dockerfile .
