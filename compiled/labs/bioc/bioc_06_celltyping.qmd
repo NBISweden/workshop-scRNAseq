@@ -37,29 +37,30 @@ First, lets load required libraries
 
 ``` {r}
 suppressPackageStartupMessages({
-  library(scater)
-  library(scran)
-  library(dplyr)
-  library(cowplot)
-  library(ggplot2)
-  library(pheatmap)
-  library(rafalib)
-  library(scPred)
-  library(scmap)
+    library(scater)
+    library(scran)
+    library(dplyr)
+    library(patchwork)
+    library(ggplot2)
+    library(pheatmap)
+    library(scPred)
+    library(scmap)
 })
 ```
 
 Let's read in the saved Covid-19 data object from the clustering step.
 
 ``` {r}
-#load the data and select 'ctrl_13` sample
-alldata <- readRDS("data/results/covid_qc_dr_int_cl.rds")
+path_data <- "https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"
+path_file <- "data/covid/results/bioc_covid_qc_dr_int_cl.rds"
+if (!file.exists(path_file)) download.file(url = file.path(path_data, "covid/results/bioc_covid_qc_dr_int_cl.rds"), destfile = path_file)
+alldata <- readRDS(path_file)
 ```
 
 Let's read in the saved Covid-19 data object from the clustering step.
 
 ``` {r}
-ctrl.sce <- alldata[, alldata@colData$sample == 'ctrl.13']
+ctrl.sce <- alldata[, alldata@colData$sample == "ctrl.13"]
 
 # remove all old dimensionality reductions as they will mess up the analysis further down
 reducedDims(ctrl.sce) <- NULL
@@ -77,24 +78,26 @@ reference
 Convert to a SCE object.
 
 ``` {r}
-ref.sce = Seurat::as.SingleCellExperiment(reference)
+ref.sce <- Seurat::as.SingleCellExperiment(reference)
 ```
 
 Rerun analysis pipeline. Run normalization, feature selection and
 dimensionality reduction
 
 ``` {r}
-#Normalize
+# Normalize
 ref.sce <- computeSumFactors(ref.sce)
 ref.sce <- logNormCounts(ref.sce)
 
-#Variable genes
-var.out <- modelGeneVar(ref.sce, method="loess")
-hvg.ref <- getTopHVGs(var.out, n=1000)  
+# Variable genes
+var.out <- modelGeneVar(ref.sce, method = "loess")
+hvg.ref <- getTopHVGs(var.out, n = 1000)
 
 # Dim reduction
-ref.sce <- runPCA(ref.sce, exprs_values = "logcounts",  scale = T,
-              ncomponents = 30, subset_row = hvg.ref)
+ref.sce <- runPCA(ref.sce,
+    exprs_values = "logcounts", scale = T,
+    ncomponents = 30, subset_row = hvg.ref
+)
 ref.sce <- runUMAP(ref.sce, dimred = "PCA")
 ```
 
@@ -102,23 +105,23 @@ ref.sce <- runUMAP(ref.sce, dimred = "PCA")
 #| fig-height: 5
 #| fig-width: 6
 
-plotReducedDim(ref.sce,dimred = "UMAP",colour_by = "cell_type")
+plotReducedDim(ref.sce, dimred = "UMAP", colour_by = "cell_type")
 ```
 
 Run all steps of the analysis for the ctrl sample as well. Use the
 clustering from the integration lab with resolution 0.5.
 
 ``` {r}
-#Normalize
+# Normalize
 ctrl.sce <- computeSumFactors(ctrl.sce)
 ctrl.sce <- logNormCounts(ctrl.sce)
 
-#Variable genes
-var.out <- modelGeneVar(ctrl.sce, method="loess")
-hvg.ctrl <- getTopHVGs(var.out, n=1000)  
+# Variable genes
+var.out <- modelGeneVar(ctrl.sce, method = "loess")
+hvg.ctrl <- getTopHVGs(var.out, n = 1000)
 
 # Dim reduction
-ctrl.sce <- runPCA(ctrl.sce, exprs_values = "logcounts",  scale = T, ncomponents = 30, subset_row = hvg.ctrl)
+ctrl.sce <- runPCA(ctrl.sce, exprs_values = "logcounts", scale = T, ncomponents = 30, subset_row = hvg.ctrl)
 ctrl.sce <- runUMAP(ctrl.sce, dimred = "PCA")
 ```
 
@@ -126,7 +129,7 @@ ctrl.sce <- runUMAP(ctrl.sce, dimred = "PCA")
 #| fig-height: 5
 #| fig-width: 6
 
-plotReducedDim(ctrl.sce,dimred = "UMAP",colour_by = "louvain_SNNk15")
+plotReducedDim(ctrl.sce, dimred = "UMAP", colour_by = "louvain_SNNk15")
 ```
 
 ## scMap
@@ -145,17 +148,17 @@ slots.
 
 ``` {r}
 # add in slot cell_type1
-ref.sce@colData$cell_type1 = ref.sce@colData$cell_type
+ref.sce@colData$cell_type1 <- ref.sce@colData$cell_type
 # create a rowData slot with feature_symbol
-rd = data.frame(feature_symbol=rownames(ref.sce))
-rownames(rd) = rownames(ref.sce)
-rowData(ref.sce) = rd
+rd <- data.frame(feature_symbol = rownames(ref.sce))
+rownames(rd) <- rownames(ref.sce)
+rowData(ref.sce) <- rd
 
 # same for the ctrl dataset
 # create a rowData slot with feature_symbol
-rd = data.frame(feature_symbol=rownames(ctrl.sce))
-rownames(rd) = rownames(ctrl.sce)
-rowData(ctrl.sce) = rd
+rd <- data.frame(feature_symbol = rownames(ctrl.sce))
+rownames(rd) <- rownames(ctrl.sce)
+rowData(ctrl.sce) <- rd
 ```
 
 Then we can select variable features in both datasets.
@@ -182,10 +185,10 @@ Now we project the Covid-19 dataset onto that index.
 
 ``` {r}
 project_cluster <- scmapCluster(
-  projection = ctrl.sce,
-  index_list = list(
-    ref = metadata(ref.sce)$scmap_cluster_index
-  )
+    projection = ctrl.sce,
+    index_list = list(
+        ref = metadata(ref.sce)$scmap_cluster_index
+    )
 )
 
 # projected labels
@@ -201,7 +204,7 @@ Then add the predictions to metadata and plot UMAP.
 # add in predictions
 ctrl.sce@colData$scmap_cluster <- project_cluster$scmap_cluster_labs
 
-plotReducedDim(ctrl.sce,dimred = "UMAP",colour_by = "scmap_cluster")
+plotReducedDim(ctrl.sce, dimred = "UMAP", colour_by = "scmap_cluster")
 ```
 
 ## scMap cell
@@ -217,10 +220,10 @@ Again we need to index the reference dataset.
 
 ``` {r}
 project_cell <- scmapCell(
-  projection = ctrl.sce,
-  index_list = list(
-    ref = metadata(ref.sce)$scmap_cell_index
-  )
+    projection = ctrl.sce,
+    index_list = list(
+        ref = metadata(ref.sce)$scmap_cell_index
+    )
 )
 ```
 
@@ -229,7 +232,7 @@ reference dataset for each cell in our dataset. We will select the
 celltype of the closest neighbor and assign it to the data.
 
 ``` {r}
-cell_type_pred <- colData(ref.sce)$cell_type1[project_cell$ref[[1]][1,]]
+cell_type_pred <- colData(ref.sce)$cell_type1[project_cell$ref[[1]][1, ]]
 table(cell_type_pred)
 ```
 
@@ -242,7 +245,7 @@ Then add the predictions to metadata and plot umap.
 # add in predictions
 ctrl.sce@colData$scmap_cell <- cell_type_pred
 
-plotReducedDim(ctrl.sce,dimred = "UMAP",colour_by = "scmap_cell")
+plotReducedDim(ctrl.sce, dimred = "UMAP", colour_by = "scmap_cell")
 ```
 
 Plot both:
@@ -251,9 +254,10 @@ Plot both:
 #| fig-height: 4
 #| fig-width: 10
 
-cowplot::plot_grid( ncol = 2,
-plotReducedDim(ctrl.sce,dimred = "UMAP",colour_by = "scmap_cluster"),
-plotReducedDim(ctrl.sce,dimred = "UMAP",colour_by = "scmap_cell")
+wrap_plots(
+    plotReducedDim(ctrl.sce, dimred = "UMAP", colour_by = "scmap_cluster"),
+    plotReducedDim(ctrl.sce, dimred = "UMAP", colour_by = "scmap_cell"),
+    ncol = 2
 )
 ```
 
@@ -280,11 +284,15 @@ needs that information. So we need to rerun PCA with Seurat and the same
 hvgs.
 
 ``` {r}
-VariableFeatures(reference) = hvg.ref
-reference <- reference %>% ScaleData(verbose=F) %>% RunPCA(verbose=F)
+VariableFeatures(reference) <- hvg.ref
+reference <- reference %>%
+    ScaleData(verbose = F) %>%
+    RunPCA(verbose = F)
 
-VariableFeatures(ctrl) = hvg.ctrl
-ctrl <- ctrl %>% ScaleData(verbose=F) %>% RunPCA(verbose=F)
+VariableFeatures(ctrl) <- hvg.ctrl
+ctrl <- ctrl %>%
+    ScaleData(verbose = F) %>%
+    RunPCA(verbose = F)
 ```
 
 ``` {r}
@@ -325,13 +333,15 @@ Now plot how many cells of each celltypes can be found in each cluster.
 #| fig-height: 5
 #| fig-width: 7
 
-ggplot(ctrl@meta.data, aes(x=louvain_SNNk15, fill = scpred_prediction)) + geom_bar() + theme_classic()
+ggplot(ctrl@meta.data, aes(x = louvain_SNNk15, fill = scpred_prediction)) +
+    geom_bar() +
+    theme_classic()
 ```
 
 Add the predictions into the SCE object
 
 ``` {r}
-ctrl.sce@colData$scpred_prediction = ctrl$scpred_prediction
+ctrl.sce@colData$scpred_prediction <- ctrl$scpred_prediction
 ```
 
 ## Compare results
@@ -367,29 +377,33 @@ lenient.
 ``` {r}
 # run differential expression in our dataset, using clustering at resolution 0.3
 DGE_list <- scran::findMarkers(
-  x = alldata,
-  groups = as.character(alldata@colData$louvain_SNNk15),
-  pval.type = "all",
-  min.prop = 0
+    x = alldata,
+    groups = as.character(alldata@colData$louvain_SNNk15),
+    pval.type = "all",
+    min.prop = 0
 )
 ```
 
 ``` {r}
 # Compute differential gene expression in reference dataset (that has cell annotation)
 ref_DGE <- scran::findMarkers(
-  x = ref.sce,
-  groups = as.character(ref.sce@colData$cell_type),
-  pval.type = "all",
-  direction = "up"
+    x = ref.sce,
+    groups = as.character(ref.sce@colData$cell_type),
+    pval.type = "all",
+    direction = "up"
 )
 
 # Identify the top cell marker genes in reference dataset
 # select top 50 with hihgest foldchange among top 100 signifcant genes.
-ref_list <- lapply(ref_DGE, function(x){
-  x$logFC <- rowSums( as.matrix( x[,grep("logFC",colnames(x))] ))
-  x %>% as.data.frame() %>% filter(p.value < 0.01) %>% top_n(-100, p.value) %>% top_n(50, logFC) %>% rownames()
-  }
-)
+ref_list <- lapply(ref_DGE, function(x) {
+    x$logFC <- rowSums(as.matrix(x[, grep("logFC", colnames(x))]))
+    x %>%
+        as.data.frame() %>%
+        filter(p.value < 0.01) %>%
+        top_n(-100, p.value) %>%
+        top_n(50, logFC) %>%
+        rownames()
+})
 
 unlist(lapply(ref_list, length))
 ```
@@ -401,18 +415,24 @@ enrichment of top DEGs in the reference dataset.
 suppressPackageStartupMessages(library(fgsea))
 
 # run fgsea for each of the clusters in the list
-res <- lapply(DGE_list, function(x){
-  x$logFC <- rowSums( as.matrix( x[,grep("logFC",colnames(x))] ))
-  gene_rank <- setNames(x$logFC, rownames(x))
-  fgseaRes <- fgsea( pathways=ref_list, stats=gene_rank,nperm=10000)
-  return(fgseaRes)
+res <- lapply(DGE_list, function(x) {
+    x$logFC <- rowSums(as.matrix(x[, grep("logFC", colnames(x))]))
+    gene_rank <- setNames(x$logFC, rownames(x))
+    fgseaRes <- fgsea(pathways = ref_list, stats = gene_rank, nperm = 10000)
+    return(fgseaRes)
 })
 names(res) <- names(DGE_list)
 
 # You can filter and resort the table based on ES, NES or pvalue
-res <- lapply(res, function(x) {x[ x$pval < 0.1 , ]} )
-res <- lapply(res, function(x) {x[ x$size > 2 , ]} )
-res <- lapply(res, function(x) {x[order(x$NES,decreasing = T), ]} )
+res <- lapply(res, function(x) {
+    x[x$pval < 0.1, ]
+})
+res <- lapply(res, function(x) {
+    x[x$size > 2, ]
+})
+res <- lapply(res, function(x) {
+    x[order(x$NES, decreasing = T), ]
+})
 res
 ```
 
@@ -430,13 +450,16 @@ clusters.
 #| fig-height: 4
 #| fig-width: 10
 
-new.cluster.ids <- unlist(lapply(res,function(x){as.data.frame(x)[1,1]}))
+new.cluster.ids <- unlist(lapply(res, function(x) {
+    as.data.frame(x)[1, 1]
+}))
 
 alldata@colData$ref_gsea <- new.cluster.ids[as.character(alldata@colData$louvain_SNNk15)]
 
-cowplot::plot_grid( ncol = 2,
-   plotReducedDim(alldata, dimred = "UMAP",colour_by = "louvain_SNNk15"),
-   plotReducedDim(alldata, dimred = "UMAP",colour_by = "ref_gsea")
+wrap_plots(
+    plotReducedDim(alldata, dimred = "UMAP", colour_by = "louvain_SNNk15"),
+    plotReducedDim(alldata, dimred = "UMAP", colour_by = "ref_gsea"),
+    ncol = 2
 )
 ```
 
@@ -447,12 +470,13 @@ ctrl_13 sample.
 #| fig-height: 4
 #| fig-width: 14
 
-ctrl.sce@colData$ref_gsea = alldata@colData$ref_gsea[alldata@colData$sample == "ctrl.13"]
+ctrl.sce@colData$ref_gsea <- alldata@colData$ref_gsea[alldata@colData$sample == "ctrl.13"]
 
-cowplot::plot_grid( ncol = 3,
-  plotReducedDim(ctrl.sce, dimred = "UMAP",colour_by = "ref_gsea"),
-  plotReducedDim(ctrl.sce, dimred = "UMAP",colour_by = "scmap_cell"),          
-  plotReducedDim(ctrl.sce, dimred = "UMAP",colour_by = "scpred_prediction")
+wrap_plots(
+    plotReducedDim(ctrl.sce, dimred = "UMAP", colour_by = "ref_gsea"),
+    plotReducedDim(ctrl.sce, dimred = "UMAP", colour_by = "scmap_cell"),
+    plotReducedDim(ctrl.sce, dimred = "UMAP", colour_by = "scpred_prediction"),
+    ncol = 3
 )
 ```
 
@@ -464,13 +488,16 @@ converted the excel file to a csv for you. Read in the gene lists and do
 some filtering.
 
 ``` {r}
+path_file <- file.path("data/human_cell_markers.txt")
+if (!file.exists(path_file)) download.file(file.path(path_data, "human_cell_markers.txt"), destfile = path_file)
+```
 
-# Load the human marker table
-markers <- read.delim("data/cellmarker/Human_cell_markers.txt")
-markers <- markers [ markers$speciesType == "Human", ]
-markers <- markers [ markers$cancerType == "Normal", ]
+``` {r}
+markers <- read.delim("data/human_cell_markers.txt")
+markers <- markers[markers$speciesType == "Human", ]
+markers <- markers[markers$cancerType == "Normal", ]
 
-#Filter by tissue (to reduce computational time and have tissue-specific classification)
+# Filter by tissue (to reduce computational time and have tissue-specific classification)
 # sort(unique(markers$tissueType))
 # grep("blood",unique(markers$tissueType),value = T)
 # markers <- markers [ markers$tissueType %in% c("Blood","Venous blood",
@@ -479,36 +506,42 @@ markers <- markers [ markers$cancerType == "Normal", ]
 
 
 # remove strange characters etc.
-celltype_list <- lapply( unique(markers$cellName) , function(x){
-  x <- paste(markers$geneSymbol[markers$cellName == x],sep=",")
-  x <- gsub("[[]|[]]| |-",",",x)
-  x <- unlist(strsplit( x , split = ","))
-  x <- unique(x [ ! x %in% c("","NA","family") ])
-  x <- casefold(x,upper = T)
+celltype_list <- lapply(unique(markers$cellName), function(x) {
+    x <- paste(markers$geneSymbol[markers$cellName == x], sep = ",")
+    x <- gsub("[[]|[]]| |-", ",", x)
+    x <- unlist(strsplit(x, split = ","))
+    x <- unique(x[!x %in% c("", "NA", "family")])
+    x <- casefold(x, upper = T)
 })
 names(celltype_list) <- unique(markers$cellName)
 # celltype_list <- lapply(celltype_list , function(x) {x[1:min(length(x),50)]} )
-celltype_list <- celltype_list[ unlist(lapply(celltype_list,length)) < 100 ]
-celltype_list <- celltype_list[ unlist(lapply(celltype_list,length)) > 5 ]
+celltype_list <- celltype_list[unlist(lapply(celltype_list, length)) < 100]
+celltype_list <- celltype_list[unlist(lapply(celltype_list, length)) > 5]
 ```
 
 ``` {r}
 # run fgsea for each of the clusters in the list
 res <- lapply(DGE_list, function(x) {
-  x$logFC <- rowSums(as.matrix(x[, grep("logFC", colnames(x))]))
-  gene_rank <- setNames(x$logFC, rownames(x))
-  fgseaRes <- fgsea(pathways = celltype_list, stats = gene_rank, nperm = 10000)
-  return(fgseaRes)
+    x$logFC <- rowSums(as.matrix(x[, grep("logFC", colnames(x))]))
+    gene_rank <- setNames(x$logFC, rownames(x))
+    fgseaRes <- fgsea(pathways = celltype_list, stats = gene_rank, nperm = 10000)
+    return(fgseaRes)
 })
 names(res) <- names(DGE_list)
 
 # You can filter and resort the table based on ES, NES or pvalue
-res <- lapply(res, function(x) {x[ x$pval < 0.01 , ]} )
-res <- lapply(res, function(x) {x[ x$size > 5 , ]} )
-res <- lapply(res, function(x) {x[order(x$NES,decreasing = T), ]} )
+res <- lapply(res, function(x) {
+    x[x$pval < 0.01, ]
+})
+res <- lapply(res, function(x) {
+    x[x$size > 5, ]
+})
+res <- lapply(res, function(x) {
+    x[order(x$NES, decreasing = T), ]
+})
 
 # show top 3 for each cluster.
-lapply(res,head,3)
+lapply(res, head, 3)
 ```
 
 #CT_GSEA8:
@@ -522,10 +555,10 @@ new.cluster.ids <- unlist(lapply(res, function(x) {
 }))
 alldata@colData$cellmarker_gsea <- new.cluster.ids[as.character(alldata@colData$louvain_SNNk15)]
 
-cowplot::plot_grid(
-    ncol = 2,
+wrap_plots(
     plotReducedDim(alldata, dimred = "UMAP", colour_by = "cellmarker_gsea"),
-    plotReducedDim(alldata, dimred = "UMAP", colour_by = "ref_gsea")
+    plotReducedDim(alldata, dimred = "UMAP", colour_by = "ref_gsea"),
+    ncol = 2
 )
 ```
 
@@ -547,7 +580,7 @@ results make sense.
 Finally, lets save the data with predictions.
 
 ``` {r}
-saveRDS(ctrl.sce,"data/results/ctrl13_qc_dr_int_cl_celltype.rds")
+saveRDS(ctrl.sce, "data/covid/results/bioc_covid_qc_dr_int_cl_ct-ctrl13.rds")
 ```
 
 ## Session info

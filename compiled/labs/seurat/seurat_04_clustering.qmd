@@ -22,17 +22,21 @@ Let's first load all necessary libraries and also the integrated dataset
 from the previous step.
 
 ``` {r}
-
 suppressPackageStartupMessages({
   library(Seurat)
-  library(cowplot)
+  library(patchwork)
   library(ggplot2)
   library(pheatmap)
-  library(rafalib)
   library(clustree)
 })
+```
 
-alldata <- readRDS("data/results/covid_qc_dr_int.rds")
+``` {r}
+path_data <- "https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"
+path_file <- "data/covid/results/seurat_covid_qc_dr_int.rds"
+if (!file.exists(path_file)) download.file(url = file.path(path_data, "covid/results/seurat_covid_qc_dr_int.rds"), destfile = path_file)
+alldata <- readRDS(path_file)
+print(names(alldata@reductions))
 ```
 
 ## Graph clustering
@@ -128,10 +132,11 @@ for (res in c( 0.1 , 0.25 , .5 , 1 , 1.5 , 2 )){
 #| fig-height: 4
 #| fig-width: 12
 
-plot_grid(ncol = 3,
+wrap_plots(
   DimPlot(alldata, reduction = "umap", group.by = "CCA_snn_res.0.5")+ggtitle("louvain_0.5"),
   DimPlot(alldata, reduction = "umap", group.by = "CCA_snn_res.1")+ggtitle("louvain_1"),
-  DimPlot(alldata, reduction = "umap", group.by = "CCA_snn_res.2")+ggtitle("louvain_2")
+  DimPlot(alldata, reduction = "umap", group.by = "CCA_snn_res.2")+ggtitle("louvain_2"),
+  ncol = 3
 )
 ```
 
@@ -165,10 +170,11 @@ for (k in c( 5 , 7 , 10 , 12 , 15 , 17 , 20)){
   alldata@meta.data[,paste0("kmeans_",k)] <- kmeans(x = alldata@reductions[["pca"]]@cell.embeddings, centers = k,nstart = 100)$cluster
 }
 
-plot_grid(ncol = 3,
+wrap_plots(
   DimPlot(alldata, reduction = "umap", group.by = "kmeans_5")+ggtitle("kmeans_5"),
   DimPlot(alldata, reduction = "umap", group.by = "kmeans_10")+ggtitle("kmeans_10"),
-  DimPlot(alldata, reduction = "umap", group.by = "kmeans_15")+ggtitle("kmeans_15")
+  DimPlot(alldata, reduction = "umap", group.by = "kmeans_15")+ggtitle("kmeans_15"),
+  ncol = 3
 )
 ```
 
@@ -262,22 +268,22 @@ alldata$hc_corelation_5 <- cutree(h_correlation,k = 5)
 alldata$hc_corelation_10 <- cutree(h_correlation,k = 10)
 alldata$hc_corelation_15 <- cutree(h_correlation,k = 15)
 
-
-plot_grid(ncol = 3,
+wrap_plots(
   DimPlot(alldata, reduction = "umap", group.by = "hc_euclidean_5")+ggtitle("hc_euc_5"),
   DimPlot(alldata, reduction = "umap", group.by = "hc_euclidean_10")+ggtitle("hc_euc_10"),
   DimPlot(alldata, reduction = "umap", group.by = "hc_euclidean_15")+ggtitle("hc_euc_15"),
 
   DimPlot(alldata, reduction = "umap", group.by = "hc_corelation_5")+ggtitle("hc_cor_5"),
   DimPlot(alldata, reduction = "umap", group.by = "hc_corelation_10")+ggtitle("hc_cor_10"),
-  DimPlot(alldata, reduction = "umap", group.by = "hc_corelation_15")+ggtitle("hc_cor_15")
+  DimPlot(alldata, reduction = "umap", group.by = "hc_corelation_15")+ggtitle("hc_cor_15"),
+  ncol = 3
 )
 ```
 
 Finally, lets save the clustered data for further analysis.
 
 ``` {r}
-saveRDS(alldata,"data/results/covid_qc_dr_int_cl.rds")
+saveRDS(alldata,"data/covid/results/seurat_covid_qc_dr_int_cl.rds")
 ```
 
 ### Distribution of clusters
