@@ -88,7 +88,8 @@ done
 # converting scanpy md files to ipynb
 echo "Converting scanpy .md files to .ipynb ..."
 for file in "${output_dir}"/labs/scanpy/*.md; do
-    docker run --rm --platform=linux/amd64 -v $PWD:/work $docker_site quarto convert "/work/${file}" --output "/work/${file%.md}.ipynb"
+    fname=$(basename "$file")
+    docker run --rm --platform=linux/amd64 -v $PWD:/work $docker_site quarto convert "/work/${file}" --output "${fname%.md}.ipynb"
     rm -rf "$file"
 done
 
