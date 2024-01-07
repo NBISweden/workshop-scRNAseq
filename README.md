@@ -4,18 +4,14 @@ This repo contains the course material for NBIS workshop **Single Cell RNA-Seq D
 
 ## Contributing
 
-To add or update contents of this repo (for collaborators), first clone the repo.
+To add or update contents of this repo (for collaborators), first clone the repo, create a new branch, make changes/updates as needed, stage the changes, commit it and push the new branch to GitHub. Then, on GitHub, send a pull request to master.
 
 ```
 git clone --depth 1 --single-branch --branch master https://github.com/nbisweden/workshop-scrnaseq.git
-```
-
-Make changes/updates as needed. Add the changed files. Commit it. Then push the repo back.
-
-```
+git checkout -b <branch-name>
 git add .
 git commit -m "I did this and that"
-git push origin
+git push -u origin <branch_name>
 ```
 
 ## Environment
