@@ -201,7 +201,7 @@ background-size: cover;
       <div>
       <div class="quarto-title-meta-heading">Published</div>
       <div class="quarto-title-meta-contents">
-        <p class="date">03-Jan-2024</p>
+        <p class="date">07-Jan-2024</p>
       </div>
     </div>
     
@@ -273,8 +273,10 @@ There are multiple different methods to predict celltypes, here we will just cov
 </div>
 <p>Let’s read in the saved Covid-19 data object from the clustering step.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">#load the data and select 'ctrl_13` sample</span></span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>alldata <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="st">"data/results/covid_qc_dr_int_cl.rds"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>path_data <span class="ot">&lt;-</span> <span class="st">"https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>path_file <span class="ot">&lt;-</span> <span class="st">"data/covid/results/seurat_covid_qc_dr_int_cl.rds"</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">file.exists</span>(path_file)) <span class="fu">download.file</span>(<span class="at">url =</span> <span class="fu">file.path</span>(path_data, <span class="st">"covid/results/seurat_covid_qc_dr_int_cl.rds"</span>), <span class="at">destfile =</span> path_file)</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>alldata <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(path_file)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Subset one patient.</p>
 <div class="cell">
@@ -694,21 +696,17 @@ $`8`
 <h3 data-number="6.2" class="anchored" data-anchor-id="meta-ct_gsea_annot"><span class="header-section-number">6.2</span> With annotated gene sets</h3>
 <p>We have dowloaded the celltype gene lists from http://bio-bigdata.hrbmu.edu.cn/CellMarker/CellMarker_download.html and converted the excel file to a csv for you. Read in the gene lists and do some filtering.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb33"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">dir.exists</span>(<span class="st">"data/cellmarker"</span>)){ <span class="fu">dir.create</span>(<span class="st">"data/cellmarker"</span>)}</span>
-<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">file.exists</span>(<span class="st">"data/cellmarker/Cell_marker_Human.csv"</span>)){</span>
-<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">download.file</span>(</span>
-<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">url =</span> <span class="st">"https://export.uppmax.uu.se/naiss2023-23-3/workshops/scRNAseq/misc/Cell_marker_Human.csv"</span>,</span>
-<span id="cb33-5"><a href="#cb33-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">destfile =</span> <span class="st">"data/cellmarker/Cell_marker_Human.csv"</span></span>
-<span id="cb33-6"><a href="#cb33-6" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb33-7"><a href="#cb33-7" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb33-8"><a href="#cb33-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb33-9"><a href="#cb33-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Load the human marker table</span></span>
-<span id="cb33-10"><a href="#cb33-10" aria-hidden="true" tabindex="-1"></a>markers <span class="ot">&lt;-</span> <span class="fu">read.delim</span>(<span class="st">"data/cellmarker/Cell_marker_Human.csv"</span>, <span class="at">sep =</span> <span class="st">";"</span>)</span>
-<span id="cb33-11"><a href="#cb33-11" aria-hidden="true" tabindex="-1"></a>markers <span class="ot">&lt;-</span> markers [ markers<span class="sc">$</span>species <span class="sc">==</span> <span class="st">"Human"</span>, ]</span>
-<span id="cb33-12"><a href="#cb33-12" aria-hidden="true" tabindex="-1"></a>markers <span class="ot">&lt;-</span> markers [ markers<span class="sc">$</span>cancer_type <span class="sc">==</span> <span class="st">"Normal"</span>, ]</span>
-<span id="cb33-13"><a href="#cb33-13" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb33-14"><a href="#cb33-14" aria-hidden="true" tabindex="-1"></a><span class="co">#Filter by tissue (to reduce computational time and have tissue-specific classification)</span></span>
-<span id="cb33-15"><a href="#cb33-15" aria-hidden="true" tabindex="-1"></a><span class="fu">sort</span>(<span class="fu">unique</span>(markers<span class="sc">$</span>tissue_type))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb33"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>path_file <span class="ot">&lt;-</span> <span class="fu">file.path</span>(<span class="st">"data/cell_marker_human.csv"</span>)</span>
+<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">file.exists</span>(path_file)) <span class="fu">download.file</span>(<span class="fu">file.path</span>(path_data, <span class="st">"cell_marker_human.csv"</span>), <span class="at">destfile =</span> path_file)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb34"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Load the human marker table</span></span>
+<span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a>markers <span class="ot">&lt;-</span> <span class="fu">read.delim</span>(<span class="st">"data/cell_marker_human.csv"</span>, <span class="at">sep =</span> <span class="st">";"</span>)</span>
+<span id="cb34-3"><a href="#cb34-3" aria-hidden="true" tabindex="-1"></a>markers <span class="ot">&lt;-</span> markers [ markers<span class="sc">$</span>species <span class="sc">==</span> <span class="st">"Human"</span>, ]</span>
+<span id="cb34-4"><a href="#cb34-4" aria-hidden="true" tabindex="-1"></a>markers <span class="ot">&lt;-</span> markers [ markers<span class="sc">$</span>cancer_type <span class="sc">==</span> <span class="st">"Normal"</span>, ]</span>
+<span id="cb34-5"><a href="#cb34-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb34-6"><a href="#cb34-6" aria-hidden="true" tabindex="-1"></a><span class="co">#Filter by tissue (to reduce computational time and have tissue-specific classification)</span></span>
+<span id="cb34-7"><a href="#cb34-7" aria-hidden="true" tabindex="-1"></a><span class="fu">sort</span>(<span class="fu">unique</span>(markers<span class="sc">$</span>tissue_type))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>  [1] "Abdomen"                        "Abdominal adipose tissue"      
   [3] "Abdominal fat pad"              "Acinus"                        
@@ -854,43 +852,43 @@ $`8`
 [283] "Whartons jelly"                 "White adipose tissue"          
 [285] "White matter"                   "Yolk sac"                      </code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb35"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a><span class="fu">grep</span>(<span class="st">"blood"</span>,<span class="fu">unique</span>(markers<span class="sc">$</span>tissue_type),<span class="at">value =</span> T)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb36"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a><span class="fu">grep</span>(<span class="st">"blood"</span>,<span class="fu">unique</span>(markers<span class="sc">$</span>tissue_type),<span class="at">value =</span> T)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] "Peripheral blood"     "Umbilical cord blood" "Venous blood"        </code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb37"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a>markers <span class="ot">&lt;-</span> markers [ markers<span class="sc">$</span>tissue_type <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">"Blood"</span>,<span class="st">"Venous blood"</span>,</span>
-<span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a>                                                <span class="st">"Serum"</span>,<span class="st">"Plasma"</span>,</span>
-<span id="cb37-3"><a href="#cb37-3" aria-hidden="true" tabindex="-1"></a>                                                <span class="st">"Spleen"</span>,<span class="st">"Bone marrow"</span>,<span class="st">"Lymph node"</span>), ]</span>
-<span id="cb37-4"><a href="#cb37-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb37-5"><a href="#cb37-5" aria-hidden="true" tabindex="-1"></a><span class="co"># remove strange characters etc.</span></span>
-<span id="cb37-6"><a href="#cb37-6" aria-hidden="true" tabindex="-1"></a>celltype_list <span class="ot">&lt;-</span> <span class="fu">lapply</span>( <span class="fu">unique</span>(markers<span class="sc">$</span>cell_name) , <span class="cf">function</span>(x){</span>
-<span id="cb37-7"><a href="#cb37-7" aria-hidden="true" tabindex="-1"></a>  x <span class="ot">&lt;-</span> <span class="fu">paste</span>(markers<span class="sc">$</span>Symbol[markers<span class="sc">$</span>cell_name <span class="sc">==</span> x],<span class="at">sep=</span><span class="st">","</span>)</span>
-<span id="cb37-8"><a href="#cb37-8" aria-hidden="true" tabindex="-1"></a>  x <span class="ot">&lt;-</span> <span class="fu">gsub</span>(<span class="st">"[[]|[]]| |-"</span>,<span class="st">","</span>,x)</span>
-<span id="cb37-9"><a href="#cb37-9" aria-hidden="true" tabindex="-1"></a>  x <span class="ot">&lt;-</span> <span class="fu">unlist</span>(<span class="fu">strsplit</span>( x , <span class="at">split =</span> <span class="st">","</span>))</span>
-<span id="cb37-10"><a href="#cb37-10" aria-hidden="true" tabindex="-1"></a>  x <span class="ot">&lt;-</span> <span class="fu">unique</span>(x [ <span class="sc">!</span> x <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">""</span>,<span class="st">"NA"</span>,<span class="st">"family"</span>) ])</span>
-<span id="cb37-11"><a href="#cb37-11" aria-hidden="true" tabindex="-1"></a>  x <span class="ot">&lt;-</span> <span class="fu">casefold</span>(x,<span class="at">upper =</span> T)</span>
-<span id="cb37-12"><a href="#cb37-12" aria-hidden="true" tabindex="-1"></a>})</span>
-<span id="cb37-13"><a href="#cb37-13" aria-hidden="true" tabindex="-1"></a><span class="fu">names</span>(celltype_list) <span class="ot">&lt;-</span> <span class="fu">unique</span>(markers<span class="sc">$</span>cell_name)</span>
-<span id="cb37-14"><a href="#cb37-14" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb37-15"><a href="#cb37-15" aria-hidden="true" tabindex="-1"></a>celltype_list <span class="ot">&lt;-</span> celltype_list[ <span class="fu">unlist</span>(<span class="fu">lapply</span>(celltype_list,length)) <span class="sc">&lt;</span> <span class="dv">100</span> ]</span>
-<span id="cb37-16"><a href="#cb37-16" aria-hidden="true" tabindex="-1"></a>celltype_list <span class="ot">&lt;-</span> celltype_list[ <span class="fu">unlist</span>(<span class="fu">lapply</span>(celltype_list,length)) <span class="sc">&gt;</span> <span class="dv">5</span> ]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb38"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a>markers <span class="ot">&lt;-</span> markers [ markers<span class="sc">$</span>tissue_type <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">"Blood"</span>,<span class="st">"Venous blood"</span>,</span>
+<span id="cb38-2"><a href="#cb38-2" aria-hidden="true" tabindex="-1"></a>                                                <span class="st">"Serum"</span>,<span class="st">"Plasma"</span>,</span>
+<span id="cb38-3"><a href="#cb38-3" aria-hidden="true" tabindex="-1"></a>                                                <span class="st">"Spleen"</span>,<span class="st">"Bone marrow"</span>,<span class="st">"Lymph node"</span>), ]</span>
+<span id="cb38-4"><a href="#cb38-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb38-5"><a href="#cb38-5" aria-hidden="true" tabindex="-1"></a><span class="co"># remove strange characters etc.</span></span>
+<span id="cb38-6"><a href="#cb38-6" aria-hidden="true" tabindex="-1"></a>celltype_list <span class="ot">&lt;-</span> <span class="fu">lapply</span>( <span class="fu">unique</span>(markers<span class="sc">$</span>cell_name) , <span class="cf">function</span>(x){</span>
+<span id="cb38-7"><a href="#cb38-7" aria-hidden="true" tabindex="-1"></a>  x <span class="ot">&lt;-</span> <span class="fu">paste</span>(markers<span class="sc">$</span>Symbol[markers<span class="sc">$</span>cell_name <span class="sc">==</span> x],<span class="at">sep=</span><span class="st">","</span>)</span>
+<span id="cb38-8"><a href="#cb38-8" aria-hidden="true" tabindex="-1"></a>  x <span class="ot">&lt;-</span> <span class="fu">gsub</span>(<span class="st">"[[]|[]]| |-"</span>,<span class="st">","</span>,x)</span>
+<span id="cb38-9"><a href="#cb38-9" aria-hidden="true" tabindex="-1"></a>  x <span class="ot">&lt;-</span> <span class="fu">unlist</span>(<span class="fu">strsplit</span>( x , <span class="at">split =</span> <span class="st">","</span>))</span>
+<span id="cb38-10"><a href="#cb38-10" aria-hidden="true" tabindex="-1"></a>  x <span class="ot">&lt;-</span> <span class="fu">unique</span>(x [ <span class="sc">!</span> x <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">""</span>,<span class="st">"NA"</span>,<span class="st">"family"</span>) ])</span>
+<span id="cb38-11"><a href="#cb38-11" aria-hidden="true" tabindex="-1"></a>  x <span class="ot">&lt;-</span> <span class="fu">casefold</span>(x,<span class="at">upper =</span> T)</span>
+<span id="cb38-12"><a href="#cb38-12" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb38-13"><a href="#cb38-13" aria-hidden="true" tabindex="-1"></a><span class="fu">names</span>(celltype_list) <span class="ot">&lt;-</span> <span class="fu">unique</span>(markers<span class="sc">$</span>cell_name)</span>
+<span id="cb38-14"><a href="#cb38-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb38-15"><a href="#cb38-15" aria-hidden="true" tabindex="-1"></a>celltype_list <span class="ot">&lt;-</span> celltype_list[ <span class="fu">unlist</span>(<span class="fu">lapply</span>(celltype_list,length)) <span class="sc">&lt;</span> <span class="dv">100</span> ]</span>
+<span id="cb38-16"><a href="#cb38-16" aria-hidden="true" tabindex="-1"></a>celltype_list <span class="ot">&lt;-</span> celltype_list[ <span class="fu">unlist</span>(<span class="fu">lapply</span>(celltype_list,length)) <span class="sc">&gt;</span> <span class="dv">5</span> ]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb38"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a><span class="co"># run fgsea for each of the clusters in the list</span></span>
-<span id="cb38-2"><a href="#cb38-2" aria-hidden="true" tabindex="-1"></a>res <span class="ot">&lt;-</span> <span class="fu">lapply</span>(DGE_list, <span class="cf">function</span>(x){</span>
-<span id="cb38-3"><a href="#cb38-3" aria-hidden="true" tabindex="-1"></a>  gene_rank <span class="ot">&lt;-</span> <span class="fu">setNames</span>(x<span class="sc">$</span>avg_log2FC, x<span class="sc">$</span>gene)</span>
-<span id="cb38-4"><a href="#cb38-4" aria-hidden="true" tabindex="-1"></a>  fgseaRes <span class="ot">&lt;-</span> <span class="fu">fgsea</span>( <span class="at">pathways=</span>celltype_list, <span class="at">stats=</span>gene_rank,<span class="at">nperm=</span><span class="dv">10000</span>, <span class="at">scoreType =</span> <span class="st">"pos"</span>)</span>
-<span id="cb38-5"><a href="#cb38-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(fgseaRes)</span>
-<span id="cb38-6"><a href="#cb38-6" aria-hidden="true" tabindex="-1"></a>})</span>
-<span id="cb38-7"><a href="#cb38-7" aria-hidden="true" tabindex="-1"></a><span class="fu">names</span>(res) <span class="ot">&lt;-</span> <span class="fu">names</span>(DGE_list)</span>
-<span id="cb38-8"><a href="#cb38-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb38-9"><a href="#cb38-9" aria-hidden="true" tabindex="-1"></a><span class="co"># You can filter and resort the table based on ES, NES or pvalue</span></span>
-<span id="cb38-10"><a href="#cb38-10" aria-hidden="true" tabindex="-1"></a>res <span class="ot">&lt;-</span> <span class="fu">lapply</span>(res, <span class="cf">function</span>(x) {x[ x<span class="sc">$</span>pval <span class="sc">&lt;</span> <span class="fl">0.01</span> , ]} )</span>
-<span id="cb38-11"><a href="#cb38-11" aria-hidden="true" tabindex="-1"></a>res <span class="ot">&lt;-</span> <span class="fu">lapply</span>(res, <span class="cf">function</span>(x) {x[ x<span class="sc">$</span>size <span class="sc">&gt;</span> <span class="dv">5</span> , ]} )</span>
-<span id="cb38-12"><a href="#cb38-12" aria-hidden="true" tabindex="-1"></a>res <span class="ot">&lt;-</span> <span class="fu">lapply</span>(res, <span class="cf">function</span>(x) {x[<span class="fu">order</span>(x<span class="sc">$</span>NES,<span class="at">decreasing =</span> T), ]} )</span>
-<span id="cb38-13"><a href="#cb38-13" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb38-14"><a href="#cb38-14" aria-hidden="true" tabindex="-1"></a><span class="co"># show top 3 for each cluster.</span></span>
-<span id="cb38-15"><a href="#cb38-15" aria-hidden="true" tabindex="-1"></a><span class="fu">lapply</span>(res,head,<span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb39"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a><span class="co"># run fgsea for each of the clusters in the list</span></span>
+<span id="cb39-2"><a href="#cb39-2" aria-hidden="true" tabindex="-1"></a>res <span class="ot">&lt;-</span> <span class="fu">lapply</span>(DGE_list, <span class="cf">function</span>(x){</span>
+<span id="cb39-3"><a href="#cb39-3" aria-hidden="true" tabindex="-1"></a>  gene_rank <span class="ot">&lt;-</span> <span class="fu">setNames</span>(x<span class="sc">$</span>avg_log2FC, x<span class="sc">$</span>gene)</span>
+<span id="cb39-4"><a href="#cb39-4" aria-hidden="true" tabindex="-1"></a>  fgseaRes <span class="ot">&lt;-</span> <span class="fu">fgsea</span>( <span class="at">pathways=</span>celltype_list, <span class="at">stats=</span>gene_rank,<span class="at">nperm=</span><span class="dv">10000</span>, <span class="at">scoreType =</span> <span class="st">"pos"</span>)</span>
+<span id="cb39-5"><a href="#cb39-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(fgseaRes)</span>
+<span id="cb39-6"><a href="#cb39-6" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb39-7"><a href="#cb39-7" aria-hidden="true" tabindex="-1"></a><span class="fu">names</span>(res) <span class="ot">&lt;-</span> <span class="fu">names</span>(DGE_list)</span>
+<span id="cb39-8"><a href="#cb39-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb39-9"><a href="#cb39-9" aria-hidden="true" tabindex="-1"></a><span class="co"># You can filter and resort the table based on ES, NES or pvalue</span></span>
+<span id="cb39-10"><a href="#cb39-10" aria-hidden="true" tabindex="-1"></a>res <span class="ot">&lt;-</span> <span class="fu">lapply</span>(res, <span class="cf">function</span>(x) {x[ x<span class="sc">$</span>pval <span class="sc">&lt;</span> <span class="fl">0.01</span> , ]} )</span>
+<span id="cb39-11"><a href="#cb39-11" aria-hidden="true" tabindex="-1"></a>res <span class="ot">&lt;-</span> <span class="fu">lapply</span>(res, <span class="cf">function</span>(x) {x[ x<span class="sc">$</span>size <span class="sc">&gt;</span> <span class="dv">5</span> , ]} )</span>
+<span id="cb39-12"><a href="#cb39-12" aria-hidden="true" tabindex="-1"></a>res <span class="ot">&lt;-</span> <span class="fu">lapply</span>(res, <span class="cf">function</span>(x) {x[<span class="fu">order</span>(x<span class="sc">$</span>NES,<span class="at">decreasing =</span> T), ]} )</span>
+<span id="cb39-13"><a href="#cb39-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb39-14"><a href="#cb39-14" aria-hidden="true" tabindex="-1"></a><span class="co"># show top 3 for each cluster.</span></span>
+<span id="cb39-15"><a href="#cb39-15" aria-hidden="true" tabindex="-1"></a><span class="fu">lapply</span>(res,head,<span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>$`0`
       pathway      pval        padj        ES      NES nMoreExtreme size
@@ -989,17 +987,17 @@ $`8`
 </div>
 <p>#CT_GSEA8:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb40"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a>new.cluster.ids <span class="ot">&lt;-</span> <span class="fu">unlist</span>(<span class="fu">lapply</span>(res,<span class="cf">function</span>(x){<span class="fu">as.data.frame</span>(x)[<span class="dv">1</span>,<span class="dv">1</span>]}))</span>
-<span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a>alldata<span class="sc">$</span>cellmarker_gsea <span class="ot">&lt;-</span> new.cluster.ids[<span class="fu">as.character</span>(alldata<span class="sc">@</span>active.ident)]</span>
-<span id="cb40-3"><a href="#cb40-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb40-4"><a href="#cb40-4" aria-hidden="true" tabindex="-1"></a>cowplot<span class="sc">::</span><span class="fu">plot_grid</span>( <span class="at">ncol =</span> <span class="dv">2</span>,</span>
-<span id="cb40-5"><a href="#cb40-5" aria-hidden="true" tabindex="-1"></a><span class="fu">DimPlot</span>(alldata,<span class="at">label =</span> T,<span class="at">group.by =</span> <span class="st">"ref_gsea"</span>) <span class="sc">+</span> <span class="fu">NoAxes</span>(),</span>
-<span id="cb40-6"><a href="#cb40-6" aria-hidden="true" tabindex="-1"></a><span class="fu">DimPlot</span>(alldata,<span class="at">label =</span> T, <span class="at">group.by =</span> <span class="st">"cellmarker_gsea"</span>) <span class="sc">+</span> <span class="fu">NoAxes</span>()</span>
-<span id="cb40-7"><a href="#cb40-7" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb41"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a>new.cluster.ids <span class="ot">&lt;-</span> <span class="fu">unlist</span>(<span class="fu">lapply</span>(res,<span class="cf">function</span>(x){<span class="fu">as.data.frame</span>(x)[<span class="dv">1</span>,<span class="dv">1</span>]}))</span>
+<span id="cb41-2"><a href="#cb41-2" aria-hidden="true" tabindex="-1"></a>alldata<span class="sc">$</span>cellmarker_gsea <span class="ot">&lt;-</span> new.cluster.ids[<span class="fu">as.character</span>(alldata<span class="sc">@</span>active.ident)]</span>
+<span id="cb41-3"><a href="#cb41-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb41-4"><a href="#cb41-4" aria-hidden="true" tabindex="-1"></a>cowplot<span class="sc">::</span><span class="fu">plot_grid</span>( <span class="at">ncol =</span> <span class="dv">2</span>,</span>
+<span id="cb41-5"><a href="#cb41-5" aria-hidden="true" tabindex="-1"></a><span class="fu">DimPlot</span>(alldata,<span class="at">label =</span> T,<span class="at">group.by =</span> <span class="st">"ref_gsea"</span>) <span class="sc">+</span> <span class="fu">NoAxes</span>(),</span>
+<span id="cb41-6"><a href="#cb41-6" aria-hidden="true" tabindex="-1"></a><span class="fu">DimPlot</span>(alldata,<span class="at">label =</span> T, <span class="at">group.by =</span> <span class="st">"cellmarker_gsea"</span>) <span class="sc">+</span> <span class="fu">NoAxes</span>()</span>
+<span id="cb41-7"><a href="#cb41-7" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="seurat_06_celltyping_files/figure-html/unnamed-chunk-25-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-10"><img src="seurat_06_celltyping_files/figure-html/unnamed-chunk-25-1.png" class="img-fluid figure-img" width="1056"></a></p>
+<p><a href="seurat_06_celltyping_files/figure-html/unnamed-chunk-26-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-10"><img src="seurat_06_celltyping_files/figure-html/unnamed-chunk-26-1.png" class="img-fluid figure-img" width="1056"></a></p>
 </figure>
 </div>
 </div>
@@ -1020,7 +1018,7 @@ Discuss
 <p>In this case we do not have any ground truth, and we cannot say which method performs best. You should keep in mind, that any celltype classification method is just a prediction, and you still need to use your common sense and knowledge of the biological system to judge if the results make sense.</p>
 <p>Finally, lets save the data with predictions.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb41"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(ctrl,<span class="st">"data/results/ctrl13_qc_dr_int_cl_celltype.rds"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb42"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(ctrl,<span class="st">"data/covid/results/seurat_covid_qc_dr_int_cl_ct-ctrl13.rds"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 </section>
@@ -1031,7 +1029,7 @@ Discuss
 Click here
 </summary>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb42"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb43"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>R version 4.3.0 (2023-04-21)
 Platform: x86_64-pc-linux-gnu (64-bit)
@@ -1357,7 +1355,7 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
     <div class="nav-footer-right">Published with <a href="https://quarto.org/">Quarto</a> v1.3.353</div>
   </div>
 </footer>
-<script>var lightboxQuarto = GLightbox({"selector":".lightbox","openEffect":"zoom","closeEffect":"zoom","loop":true,"descPosition":"bottom"});</script>
+<script>var lightboxQuarto = GLightbox({"closeEffect":"zoom","descPosition":"bottom","openEffect":"zoom","loop":true,"selector":".lightbox"});</script>
 
 
 
