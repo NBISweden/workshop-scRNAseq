@@ -23,23 +23,23 @@ Code chunks run R commands unless otherwise specified.
 # remotes::install_github("meichendong/SCDC")
 
 suppressPackageStartupMessages({
-  library(Spaniel)
-  #library(biomaRt)
-  library(SingleCellExperiment)
-  library(Matrix)
-  library(dplyr)
-  library(scran)
-  library(SingleR)
-  library(scater)
-  library(ggplot2)
-  library(patchwork)
+    library(Spaniel)
+    # library(biomaRt)
+    library(SingleCellExperiment)
+    library(Matrix)
+    library(dplyr)
+    library(scran)
+    library(SingleR)
+    library(scater)
+    library(ggplot2)
+    library(patchwork)
 })
 ```
 
 {{< meta st_prep_2 >}}
 
 ```{r}
-path_data = "https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"
+path_data <- "https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"
 ```
 
 ```{r}
@@ -172,9 +172,9 @@ wrap_plots(plist, ncol = 2)
 {{< meta st_qc_filter_1 >}}
 
 ```{r}
-sce <- sce[ , sce$detected > 500 &
-              sce$subsets_mt_percent < 25 &
-              sce$subsets_hb_percent < 20]
+sce <- sce[, sce$detected > 500 &
+    sce$subsets_mt_percent < 25 &
+    sce$subsets_hb_percent < 20]
 dim(sce)
 ```
 
@@ -248,7 +248,7 @@ dim(sce)
 {{< meta st_analysis_1 >}}
 
 ```{r}
-sce <- computeSumFactors(sce, sizes=c(20, 40, 60, 80))
+sce <- computeSumFactors(sce, sizes = c(20, 40, 60, 80))
 sce <- logNormCounts(sce)
 ```
 
@@ -491,10 +491,10 @@ table(ar_sce$subclass)
 Then run normalization and dimensionality reduction.
 
 ```{r}
-ar_sce <- computeSumFactors(ar_sce, sizes=c(20, 40, 60, 80))
+ar_sce <- computeSumFactors(ar_sce, sizes = c(20, 40, 60, 80))
 ar_sce <- logNormCounts(ar_sce)
-allen.var.out <- modelGeneVar(ar_sce, method="loess")
-allen.hvgs = getTopHVGs(allen.var.out, n=2000)
+allen.var.out <- modelGeneVar(ar_sce, method = "loess")
+allen.hvgs <- getTopHVGs(allen.var.out, n = 2000)
 ```
 
 ## {{< meta st_sub >}}
@@ -513,18 +513,22 @@ sce.anterior@metadata <- sce.anterior@metadata[["Anterior"]]
 Next, we select the highly variable genes that are present in both datasets.
 
 ```{r}
-#Find common highly variable genes
-common_hvgs <- intersect(allen.hvgs,hvgs)
+# Find common highly variable genes
+common_hvgs <- intersect(allen.hvgs, hvgs)
 
-#Predict cell classes
-pred.grun <- SingleR(test=sce.anterior[common_hvgs,],
-                     ref=ar_sce[common_hvgs,],
-                     labels=ar_sce$subclass)
+# Predict cell classes
+pred.grun <- SingleR(
+    test = sce.anterior[common_hvgs, ],
+    ref = ar_sce[common_hvgs, ],
+    labels = ar_sce$subclass
+)
 
-#Transfer the classes to the SCE object
+# Transfer the classes to the SCE object
 sce.anterior$cell_prediction <- pred.grun$labels
-sce.anterior@colData <- cbind(sce.anterior@colData,
-                              as.data.frame.matrix(table(list(1:ncol(sce.anterior),sce.anterior$cell_prediction))))
+sce.anterior@colData <- cbind(
+    sce.anterior@colData,
+    as.data.frame.matrix(table(list(1:ncol(sce.anterior), sce.anterior$cell_prediction)))
+)
 ```
 
 Then we can plot the predicted cell populations back to tissue.

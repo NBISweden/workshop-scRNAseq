@@ -14,7 +14,7 @@ Code chunks run R commands unless otherwise specified.
 {{< meta qc_data_1 >}}
 
 ```{r}
-path_data = "https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"
+path_data <- "https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"
 
 path_covid <- "./data/covid"
 if (!dir.exists(path_covid)) dir.create(path_covid, recursive = T)
@@ -25,15 +25,15 @@ if (!dir.exists(path_results)) dir.create(path_results, recursive = T)
 
 ```{r}
 file_list <- c(
-  "normal_pbmc_13.h5", "normal_pbmc_14.h5", "normal_pbmc_19.h5", "normal_pbmc_5.h5",
-  "ncov_pbmc_15.h5", "ncov_pbmc_16.h5", "ncov_pbmc_17.h5", "ncov_pbmc_1.h5"
+    "normal_pbmc_13.h5", "normal_pbmc_14.h5", "normal_pbmc_19.h5", "normal_pbmc_5.h5",
+    "ncov_pbmc_15.h5", "ncov_pbmc_16.h5", "ncov_pbmc_17.h5", "ncov_pbmc_1.h5"
 )
 
 for (i in file_list) {
-  path_file <- file.path(path_covid, i)
-  if (!file.exists(path_file)) {
-    download.file(url = file.path(file.path(path_data, "covid"), i), destfile = path_file)
-  }
+    path_file <- file.path(path_covid, i)
+    if (!file.exists(path_file)) {
+        download.file(url = file.path(file.path(path_data, "covid"), i), destfile = path_file)
+    }
 }
 ```
 
@@ -93,36 +93,36 @@ ctrl.19 <- Seurat::Read10X_h5(
 {{< meta qc_collate_1 >}}
 
 ```{r}
-sdata.cov1 <- CreateSeuratObject(cov.1,  project = "covid_1")
-sdata.cov15 <- CreateSeuratObject(cov.15,  project = "covid_15")
-sdata.cov17 <- CreateSeuratObject(cov.17,  project = "covid_17")
-sdata.cov16 <- CreateSeuratObject(cov.16,  project = "covid_16")
-sdata.ctrl5 <- CreateSeuratObject(ctrl.5,  project = "ctrl_5")
-sdata.ctrl13 <- CreateSeuratObject(ctrl.13,  project = "ctrl_13")
-sdata.ctrl14 <- CreateSeuratObject(ctrl.14,  project = "ctrl_14")
-sdata.ctrl19 <- CreateSeuratObject(ctrl.19,  project = "ctrl_19")
+sdata.cov1 <- CreateSeuratObject(cov.1, project = "covid_1")
+sdata.cov15 <- CreateSeuratObject(cov.15, project = "covid_15")
+sdata.cov17 <- CreateSeuratObject(cov.17, project = "covid_17")
+sdata.cov16 <- CreateSeuratObject(cov.16, project = "covid_16")
+sdata.ctrl5 <- CreateSeuratObject(ctrl.5, project = "ctrl_5")
+sdata.ctrl13 <- CreateSeuratObject(ctrl.13, project = "ctrl_13")
+sdata.ctrl14 <- CreateSeuratObject(ctrl.14, project = "ctrl_14")
+sdata.ctrl19 <- CreateSeuratObject(ctrl.19, project = "ctrl_19")
 
 
 # add metadata
-sdata.cov1$type = "Covid"
-sdata.cov15$type = "Covid"
-sdata.cov16$type = "Covid"
-sdata.cov17$type = "Covid"
+sdata.cov1$type <- "Covid"
+sdata.cov15$type <- "Covid"
+sdata.cov16$type <- "Covid"
+sdata.cov17$type <- "Covid"
 
-sdata.ctrl5$type = "Ctrl"
-sdata.ctrl13$type = "Ctrl"
-sdata.ctrl14$type = "Ctrl"
-sdata.ctrl19$type = "Ctrl"
+sdata.ctrl5$type <- "Ctrl"
+sdata.ctrl13$type <- "Ctrl"
+sdata.ctrl14$type <- "Ctrl"
+sdata.ctrl19$type <- "Ctrl"
 
 # Merge datasets into one single seurat object
-alldata <- merge(sdata.cov1, c(sdata.cov15,sdata.cov16, sdata.cov17, sdata.ctrl5, sdata.ctrl13, sdata.ctrl14,sdata.ctrl19), add.cell.ids=c("covid_1","covid_15","covid_16","covid_17","ctrl_5","ctrl_13", "ctrl_14","ctrl_19"))
+alldata <- merge(sdata.cov1, c(sdata.cov15, sdata.cov16, sdata.cov17, sdata.ctrl5, sdata.ctrl13, sdata.ctrl14, sdata.ctrl19), add.cell.ids = c("covid_1", "covid_15", "covid_16", "covid_17", "ctrl_5", "ctrl_13", "ctrl_14", "ctrl_19"))
 ```
 
 {{< meta qc_collate_2 >}}
 
 ```{r}
 # remove all objects that will not be used.
-rm( cov.1, cov.15, cov.16, cov.17, ctrl.5, ctrl.13, ctrl.14, ctrl.19, sdata.cov1, sdata.cov15, sdata.cov16, sdata.cov17, sdata.ctrl5, sdata.ctrl13, sdata.ctrl14,sdata.ctrl19)
+rm(cov.1, cov.15, cov.16, cov.17, ctrl.5, ctrl.13, ctrl.14, ctrl.19, sdata.cov1, sdata.cov15, sdata.cov16, sdata.cov17, sdata.ctrl5, sdata.ctrl13, sdata.ctrl14, sdata.ctrl19)
 # run garbage collect to free up memory
 gc()
 ```
@@ -130,8 +130,8 @@ gc()
 {{< meta qc_collate_3 >}}
 
 ```{r}
-as.data.frame(alldata@assays$RNA@counts[1:10,1:2])
-head(alldata@meta.data,10)
+as.data.frame(alldata@assays$RNA@counts[1:10, 1:2])
+head(alldata@meta.data, 10)
 ```
 
 ## {{< meta qc_calqc >}}
@@ -146,11 +146,11 @@ alldata <- PercentageFeatureSet(alldata, "^MT-", col.name = "percent_mito")
 ```
 
 ```{r, eval=FALSE}
-# OBS! Do not run now! 
+# OBS! Do not run now!
 # example method 2: doing it manually
 total_counts_per_cell <- colSums(alldata@assays$RNA@counts)
-mito_genes <- rownames(alldata)[grep("^MT-",rownames(alldata))]
-alldata$percent_mito2 <- colSums(alldata@assays$RNA@counts[mito_genes,]) / total_counts_per_cell
+mito_genes <- rownames(alldata)[grep("^MT-", rownames(alldata))]
+alldata$percent_mito2 <- colSums(alldata@assays$RNA@counts[mito_genes, ]) / total_counts_per_cell
 ```
 
 ```{r}
@@ -176,8 +176,8 @@ head(alldata[[]])
 #| fig-height: 8
 #| fig-width: 15
 
-feats <- c("nFeature_RNA","nCount_RNA","percent_mito","percent_ribo", "percent_hb", "percent_plat")
-VlnPlot(alldata, group.by= "orig.ident", features = feats, pt.size = 0.1,ncol = 3) + NoLegend()
+feats <- c("nFeature_RNA", "nCount_RNA", "percent_mito", "percent_ribo", "percent_hb", "percent_plat")
+VlnPlot(alldata, group.by = "orig.ident", features = feats, pt.size = 0.1, ncol = 3) + NoLegend()
 ```
 
 {{< meta qc_plotqc_2 >}}
@@ -186,7 +186,7 @@ VlnPlot(alldata, group.by= "orig.ident", features = feats, pt.size = 0.1,ncol = 
 #| fig-height: 8
 #| fig-width: 15
 
-FeatureScatter(alldata, "nCount_RNA"  , "nFeature_RNA", group.by = "orig.ident", pt.size = .5)
+FeatureScatter(alldata, "nCount_RNA", "nFeature_RNA", group.by = "orig.ident", pt.size = .5)
 ```
 
 :::{.callout-note title="Discuss"}
@@ -201,9 +201,9 @@ FeatureScatter(alldata, "nCount_RNA"  , "nFeature_RNA", group.by = "orig.ident",
 
 ```{r}
 selected_c <- WhichCells(alldata, expression = nFeature_RNA > 200)
-selected_f <- rownames(alldata)[ Matrix::rowSums(alldata) > 3]
+selected_f <- rownames(alldata)[Matrix::rowSums(alldata) > 3]
 
-data.filt <- subset(alldata, features=selected_f, cells=selected_c)
+data.filt <- subset(alldata, features = selected_f, cells = selected_c)
 dim(data.filt)
 table(data.filt$orig.ident)
 ```
@@ -212,7 +212,7 @@ table(data.filt$orig.ident)
 
 ```{r}
 # skip and run DoubletFinder instead
-#data.filt <- subset(data.filt, cells=WhichCells(data.filt, expression = nFeature_RNA < 4100))
+# data.filt <- subset(data.filt, cells=WhichCells(data.filt, expression = nFeature_RNA < 4100))
 
 ```
 
@@ -225,11 +225,13 @@ table(data.filt$orig.ident)
 # Compute the proportion of counts of each gene per cell
 # Use sparse matrix operations, if your dataset is large, doing matrix devisions the regular way will take a very long time.
 
-C = data.filt@assays$RNA@counts
-C@x = C@x/rep.int(colSums(C), diff(C@p))*100
+C <- data.filt@assays$RNA@counts
+C@x <- C@x / rep.int(colSums(C), diff(C@p)) * 100
 most_expressed <- order(Matrix::rowSums(C), decreasing = T)[20:1]
-boxplot(as.matrix(t(C[most_expressed, ])), cex = 0.1, las = 1, xlab = "Percent counts per cell",
-    col = (scales::hue_pal())(20)[20:1], horizontal = TRUE)
+boxplot(as.matrix(t(C[most_expressed, ])),
+    cex = 0.1, las = 1, xlab = "Percent counts per cell",
+    col = (scales::hue_pal())(20)[20:1], horizontal = TRUE
+)
 ```
 
 {{< meta qc_filter_detect_5 >}}
@@ -262,8 +264,8 @@ table(data.filt$orig.ident)
 #| fig-height: 8
 #| fig-width: 15
 
-feats <- c("nFeature_RNA","nCount_RNA","percent_mito","percent_ribo", "percent_hb")
-VlnPlot(data.filt, group.by= "orig.ident", features = feats, pt.size = 0.1,ncol = 3) + NoLegend()
+feats <- c("nFeature_RNA", "nCount_RNA", "percent_mito", "percent_ribo", "percent_hb")
+VlnPlot(data.filt, group.by = "orig.ident", features = feats, pt.size = 0.1, ncol = 3) + NoLegend()
 ```
 
 ### {{< meta qc_filter_genes >}}
@@ -274,16 +276,16 @@ VlnPlot(data.filt, group.by= "orig.ident", features = feats, pt.size = 0.1,ncol 
 dim(data.filt)
 
 # Filter MALAT1
-data.filt <- data.filt[ ! grepl("MALAT1", rownames(data.filt)), ]
+data.filt <- data.filt[!grepl("MALAT1", rownames(data.filt)), ]
 
 # Filter Mitocondrial
-data.filt <- data.filt[ ! grepl("^MT-", rownames(data.filt)), ]
+data.filt <- data.filt[!grepl("^MT-", rownames(data.filt)), ]
 
 # Filter Ribossomal gene (optional if that is a problem on your data)
 # data.filt <- data.filt[ ! grepl("^RP[SL]", rownames(data.filt)), ]
 
 # Filter Hemoglobin gene (optional if that is a problem on your data)
-data.filt <- data.filt[ ! grepl("^HB[^(P)]", rownames(data.filt)), ]
+data.filt <- data.filt[!grepl("^HB[^(P)]", rownames(data.filt)), ]
 
 dim(data.filt)
 ```
@@ -301,11 +303,13 @@ dim(data.filt)
 suppressMessages(library(biomaRt))
 
 # initialize connection to mart, may take some time if the sites are unresponsive.
-mart <- useMart("ENSEMBL_MART_ENSEMBL", dataset="hsapiens_gene_ensembl")
+mart <- useMart("ENSEMBL_MART_ENSEMBL", dataset = "hsapiens_gene_ensembl")
 
 # fetch chromosome info plus some other annotations
-genes_table <- try(biomaRt::getBM(attributes = c("ensembl_gene_id", "external_gene_name", 
-"description","gene_biotype", "chromosome_name","start_position"), mart = mart, useCache = F))
+genes_table <- try(biomaRt::getBM(attributes = c(
+    "ensembl_gene_id", "external_gene_name",
+    "description", "gene_biotype", "chromosome_name", "start_position"
+), mart = mart, useCache = F))
 
 write.csv(genes_table, file = "data/results/genes_table.csv")
 ```
@@ -322,8 +326,8 @@ genes.table <- genes.table[genes.table$external_gene_name %in% rownames(data.fil
 {{< meta qc_sex_3 >}}
 
 ```{r}
-chrY.gene = genes.table$external_gene_name[genes.table$chromosome_name == "Y"]
-data.filt$pct_chrY = colSums(data.filt@assays$RNA@counts[chrY.gene,]) / colSums(data.filt@assays$RNA@counts)
+chrY.gene <- genes.table$external_gene_name[genes.table$chromosome_name == "Y"]
+data.filt$pct_chrY <- colSums(data.filt@assays$RNA@counts[chrY.gene, ]) / colSums(data.filt@assays$RNA@counts)
 ```
 
 {{< meta qc_sex_4 >}}
@@ -346,10 +350,12 @@ VlnPlot(data.filt, features = c("XIST", "pct_chrY"))
 
 ```{r}
 # Before running CellCycleScoring the data need to be normalized and logtransformed.
-data.filt = NormalizeData(data.filt)
-data.filt <- CellCycleScoring(object = data.filt,
-                              g2m.features = cc.genes$g2m.genes,
-                              s.features = cc.genes$s.genes)
+data.filt <- NormalizeData(data.filt)
+data.filt <- CellCycleScoring(
+    object = data.filt,
+    g2m.features = cc.genes$g2m.genes,
+    s.features = cc.genes$s.genes
+)
 ```
 
 {{< meta qc_cellcycle_2 >}}
@@ -358,7 +364,7 @@ data.filt <- CellCycleScoring(object = data.filt,
 #| fig-height: 5
 #| fig-width: 15
 
-VlnPlot(data.filt, features = c("S.Score","G2M.Score"), group.by= "orig.ident",ncol = 4, pt.size = .1)
+VlnPlot(data.filt, features = c("S.Score", "G2M.Score"), group.by = "orig.ident", ncol = 4, pt.size = .1)
 ```
 
 {{< meta qc_cellcycle_3 >}}
@@ -369,7 +375,7 @@ Seurat does an automatic prediction of cell cycle phase with a default cutoff of
 #| fig-height: 5
 #| fig-width: 15
 
-FeatureScatter(data.filt, "S.Score","G2M.Score", group.by = "Phase")
+FeatureScatter(data.filt, "S.Score", "G2M.Score", group.by = "Phase")
 ```
 
 ## {{< meta qc_doublet >}}
@@ -385,10 +391,10 @@ Here, we will use `DoubletFinder` to predict doublet cells. But before doing dou
 ```{r}
 suppressMessages(library(DoubletFinder))
 
-data.filt = FindVariableFeatures(data.filt, verbose = F)
-data.filt = ScaleData(data.filt, vars.to.regress = c("nFeature_RNA", "percent_mito"), verbose = F)
-data.filt = RunPCA(data.filt, verbose = F, npcs = 20)
-data.filt = RunUMAP(data.filt, dims = 1:10, verbose = F)
+data.filt <- FindVariableFeatures(data.filt, verbose = F)
+data.filt <- ScaleData(data.filt, vars.to.regress = c("nFeature_RNA", "percent_mito"), verbose = F)
+data.filt <- RunPCA(data.filt, verbose = F, npcs = 20)
+data.filt <- RunUMAP(data.filt, dims = 1:10, verbose = F)
 ```
 
 Then we run doubletFinder, selecting first 10 PCs and a pK value of 0.9. To optimize the parameters, you can run the `paramSweep` function in the package.
@@ -396,14 +402,14 @@ Then we run doubletFinder, selecting first 10 PCs and a pK value of 0.9. To opti
 ```{r}
 # Can run parameter optimization with paramSweep
 
-#sweep.res <- paramSweep_v3(data.filt)
-#sweep.stats <- summarizeSweep(sweep.res, GT = FALSE)
-#bcmvn <- find.pK(sweep.stats)
-#barplot(bcmvn$BCmetric, names.arg = bcmvn$pK, las=2)
+# sweep.res <- paramSweep_v3(data.filt)
+# sweep.stats <- summarizeSweep(sweep.res, GT = FALSE)
+# bcmvn <- find.pK(sweep.stats)
+# barplot(bcmvn$BCmetric, names.arg = bcmvn$pK, las=2)
 
 # define the expected number of doublet cellscells.
-nExp <- round(ncol(data.filt)* 0.04) # expect 4% doublets
-data.filt <- doubletFinder_v3(data.filt, pN=0.25, pK = 0.09, nExp = nExp, PCs = 1:10)
+nExp <- round(ncol(data.filt) * 0.04) # expect 4% doublets
+data.filt <- doubletFinder_v3(data.filt, pN = 0.25, pK = 0.09, nExp = nExp, PCs = 1:10)
 ```
 
 ```{r}
@@ -426,7 +432,7 @@ VlnPlot(data.filt, features = "nFeature_RNA", group.by = DF.name, pt.size = .1)
 {{< meta qc_doublet_4 >}}
 
 ```{r}
-data.filt = data.filt[,data.filt@meta.data[,DF.name] == "Singlet"]
+data.filt <- data.filt[, data.filt@meta.data[, DF.name] == "Singlet"]
 dim(data.filt)
 ```
 

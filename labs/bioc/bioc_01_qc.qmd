@@ -15,7 +15,7 @@ Code chunks run R commands unless otherwise specified.
 
 
 ```{r}
-path_data = "https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"
+path_data <- "https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"
 
 path_covid <- "./data/covid"
 if (!dir.exists(path_covid)) dir.create(path_covid, recursive = T)
@@ -26,15 +26,15 @@ if (!dir.exists(path_results)) dir.create(path_results, recursive = T)
 
 ```{r}
 file_list <- c(
-  "normal_pbmc_13.h5", "normal_pbmc_14.h5", "normal_pbmc_19.h5", "normal_pbmc_5.h5",
-  "ncov_pbmc_15.h5", "ncov_pbmc_16.h5", "ncov_pbmc_17.h5", "ncov_pbmc_1.h5"
+    "normal_pbmc_13.h5", "normal_pbmc_14.h5", "normal_pbmc_19.h5", "normal_pbmc_5.h5",
+    "ncov_pbmc_15.h5", "ncov_pbmc_16.h5", "ncov_pbmc_17.h5", "ncov_pbmc_1.h5"
 )
 
 for (i in file_list) {
-  path_file <- file.path(path_covid, i)
-  if (!file.exists(path_file)) {
-    download.file(url = file.path(file.path(path_data, "covid"), i), destfile = path_file)
-  }
+    path_file <- file.path(path_covid, i)
+    if (!file.exists(path_file)) {
+        download.file(url = file.path(file.path(path_data, "covid"), i), destfile = path_file)
+    }
 }
 ```
 
@@ -42,12 +42,12 @@ for (i in file_list) {
 
 ```{r}
 suppressPackageStartupMessages({
-  library(scater)
-  library(scran)
-  library(patchwork) # combining figures
-  library(org.Hs.eg.db)
-  # remotes::install_github('chris-mcginnis-ucsf/DoubletFinder',upgrade = F, dependencies=F)
-  # library(DoubletFinder)
+    library(scater)
+    library(scran)
+    library(patchwork) # combining figures
+    library(org.Hs.eg.db)
+    # remotes::install_github('chris-mcginnis-ucsf/DoubletFinder',upgrade = F, dependencies=F)
+    # library(DoubletFinder)
 })
 ```
 
@@ -94,11 +94,11 @@ ctrl.19 <- Seurat::Read10X_h5(
 {{< meta qc_collate_1 >}}
 
 ```{r}
-sce <- SingleCellExperiment( assays = list(counts = cbind(cov.1,cov.15, cov.17, ctrl.5, ctrl.13, ctrl.14)) )
+sce <- SingleCellExperiment(assays = list(counts = cbind(cov.1, cov.15, cov.17, ctrl.5, ctrl.13, ctrl.14)))
 dim(sce)
-#Adding metadata
-sce@colData$sample <- unlist(sapply(c("cov.1","cov.15","cov.17", "ctrl.5","ctrl.13","ctrl.14"),function(x) rep(x,ncol(get(x)))))
-sce@colData$type <- ifelse(grepl("cov",sce@colData$sample), "Covid","Control")
+# Adding metadata
+sce@colData$sample <- unlist(sapply(c("cov.1", "cov.15", "cov.17", "ctrl.5", "ctrl.13", "ctrl.14"), function(x) rep(x, ncol(get(x)))))
+sce@colData$type <- ifelse(grepl("cov", sce@colData$sample), "Covid", "Control")
 ```
 
 {{< meta qc_collate_2 >}}
@@ -113,8 +113,8 @@ gc()
 {{< meta qc_collate_3 >}}
 
 ```{r }
-head(counts(sce)[,1:10])
-head(sce@colData,10)
+head(counts(sce)[, 1:10])
+head(sce@colData, 10)
 ```
 
 ## {{< meta qc_calqc >}}
@@ -125,17 +125,17 @@ head(sce@colData,10)
 
 ```{r}
 # Mitochondrial genes
-mito_genes <- rownames(sce)[grep("^MT-",rownames(sce))]
+mito_genes <- rownames(sce)[grep("^MT-", rownames(sce))]
 # Ribosomal genes
-ribo_genes <- rownames(sce)[grep("^RP[SL]",rownames(sce))]
+ribo_genes <- rownames(sce)[grep("^RP[SL]", rownames(sce))]
 # Hemoglobin genes - includes all genes starting with HB except HBP.
-hb_genes <- rownames(sce)[grep("^HB[^(P)]",rownames(sce))]
+hb_genes <- rownames(sce)[grep("^HB[^(P)]", rownames(sce))]
 ```
 
 First, let Scran calculate some general qc-stats for genes and cells with the function `perCellQCMetrics`. It can also calculate proportion of counts for specific gene subsets, so first we need to define which genes are mitochondrial, ribosomal and hemoglobin.
 
 ```{r}
-sce <- addPerCellQC(sce, flatten = T, subsets = list(mt=mito_genes, hb=hb_genes, ribo=ribo_genes))
+sce <- addPerCellQC(sce, flatten = T, subsets = list(mt = mito_genes, hb = hb_genes, ribo = ribo_genes))
 
 # Way2: Doing it manually
 sce@colData$percent_mito <- Matrix::colSums(counts(sce)[mito_genes, ]) / sce@colData$total
@@ -174,7 +174,7 @@ wrap_plots(
 ```{r}
 #| fig-height: 5
 #| fig-width: 6
-plotColData(sce,x = "total", y = "detected", colour_by = "sample")
+plotColData(sce, x = "total", y = "detected", colour_by = "sample")
 ```
 
 :::{.callout-note title="Discuss"}
@@ -192,10 +192,10 @@ In Scran, we can use the function `quickPerCellQC` to filter out outliers from d
 ```{r}
 dim(sce)
 
-selected_c <-  colnames(sce)[sce$detected > 200]
-selected_f <- rownames(sce)[ Matrix::rowSums(counts(sce)) > 3]
+selected_c <- colnames(sce)[sce$detected > 200]
+selected_f <- rownames(sce)[Matrix::rowSums(counts(sce)) > 3]
 
-sce.filt <- sce[selected_f , selected_c]
+sce.filt <- sce[selected_f, selected_c]
 dim(sce.filt)
 ```
 
@@ -204,14 +204,14 @@ dim(sce.filt)
 ```{r}
 # skip for now and run doublet detection instead...
 
-#high.det.v3 <- sce.filt$nFeatures > 4100
-#high.det.v2 <- (sce.filt$nFeatures > 2000) & (sce.filt$sample_id == "v2.1k")
+# high.det.v3 <- sce.filt$nFeatures > 4100
+# high.det.v2 <- (sce.filt$nFeatures > 2000) & (sce.filt$sample_id == "v2.1k")
 
 # remove these cells
-#sce.filt <- sce.filt[ , (!high.det.v3) & (!high.det.v2)]
+# sce.filt <- sce.filt[ , (!high.det.v3) & (!high.det.v2)]
 
 # check number of cells
-#ncol(sce.filt)
+# ncol(sce.filt)
 ```
 
 {{< meta qc_filter_detect_4 >}}
@@ -221,12 +221,12 @@ In Scater, you can also use the function `plotHighestExprs()` to plot the gene c
 ```{r}
 #| fig-height: 7
 #| fig-width: 7
-#Compute the relative expression of each gene per cell
-#Use sparse matrix operations, if your dataset is large, doing matrix devisions the regular way will take a very long time.
-C = counts(sce)
-C@x = C@x / rep.int(colSums(C), diff(C@p))
-most_expressed <- order(Matrix::rowSums( C ),decreasing = T)[20:1]
-boxplot( as.matrix(t(C[most_expressed,])),cex=.1, las=1, xlab="% total count per cell",col=scales::hue_pal()(20)[20:1],horizontal=TRUE)
+# Compute the relative expression of each gene per cell
+# Use sparse matrix operations, if your dataset is large, doing matrix devisions the regular way will take a very long time.
+C <- counts(sce)
+C@x <- C@x / rep.int(colSums(C), diff(C@p))
+most_expressed <- order(Matrix::rowSums(C), decreasing = T)[20:1]
+boxplot(as.matrix(t(C[most_expressed, ])), cex = .1, las = 1, xlab = "% total count per cell", col = scales::hue_pal()(20)[20:1], horizontal = TRUE)
 
 rm(C)
 
@@ -244,7 +244,7 @@ selected_mito <- sce.filt$subsets_mt_percent < 30
 selected_ribo <- sce.filt$subsets_ribo_percent > 5
 
 # and subset the object to only keep those cells
-sce.filt <- sce.filt[, selected_mito & selected_ribo ]
+sce.filt <- sce.filt[, selected_mito & selected_ribo]
 dim(sce.filt)
 ```
 
@@ -275,16 +275,16 @@ wrap_plots(
 dim(sce.filt)
 
 # Filter MALAT1
-sce.filt <- sce.filt[ ! grepl("MALAT1", rownames(sce.filt)), ]
+sce.filt <- sce.filt[!grepl("MALAT1", rownames(sce.filt)), ]
 
 # Filter Mitocondrial
-sce.filt <- sce.filt[ ! grepl("^MT-", rownames(sce.filt)), ]
+sce.filt <- sce.filt[!grepl("^MT-", rownames(sce.filt)), ]
 
 # Filter Ribossomal gene (optional if that is a problem on your data)
 # sce.filt <- sce.filt[ ! grepl("^RP[SL]", rownames(sce.filt)), ]
 
 # Filter Hemoglobin gene
-sce.filt <- sce.filt[ ! grepl("^HB[^(P)]", rownames(sce.filt)), ]
+sce.filt <- sce.filt[!grepl("^HB[^(P)]", rownames(sce.filt)), ]
 
 dim(sce.filt)
 ```
@@ -303,11 +303,13 @@ dim(sce.filt)
 suppressMessages(library(biomaRt))
 
 # initialize connection to mart, may take some time if the sites are unresponsive.
-mart <- useMart("ENSEMBL_MART_ENSEMBL", dataset="hsapiens_gene_ensembl")
+mart <- useMart("ENSEMBL_MART_ENSEMBL", dataset = "hsapiens_gene_ensembl")
 
 # fetch chromosome info plus some other annotations
-genes_table <- try(biomaRt::getBM(attributes = c("ensembl_gene_id", "external_gene_name", 
-"description","gene_biotype", "chromosome_name","start_position"), mart = mart, useCache = F))
+genes_table <- try(biomaRt::getBM(attributes = c(
+    "ensembl_gene_id", "external_gene_name",
+    "description", "gene_biotype", "chromosome_name", "start_position"
+), mart = mart, useCache = F))
 
 write.csv(genes_table, file = "data/results/genes_table.csv")
 ```
@@ -324,8 +326,8 @@ genes.table <- genes.table[genes.table$external_gene_name %in% rownames(sce.filt
 {{< meta qc_sex_3 >}}
 
 ```{r}
-chrY.gene = genes.table$external_gene_name[genes.table$chromosome_name == "Y"]
-sce.filt@colData$pct_chrY  = Matrix::colSums(counts(sce.filt)[chrY.gene,]) / colSums(counts(sce.filt))
+chrY.gene <- genes.table$external_gene_name[genes.table$chromosome_name == "Y"]
+sce.filt@colData$pct_chrY <- Matrix::colSums(counts(sce.filt)[chrY.gene, ]) / colSums(counts(sce.filt))
 ```
 
 {{< meta qc_sex_4 >}}
@@ -335,8 +337,8 @@ sce.filt@colData$pct_chrY  = Matrix::colSums(counts(sce.filt)[chrY.gene,]) / col
 #| fig-width: 5
 
 # as plotColData cannot take an expression vs metadata, we need to add in XIST expression to colData
-sce.filt@colData$XIST = counts(sce.filt)["XIST",] /  colSums(counts(sce.filt)) * 10000
-plotColData(sce.filt,  "XIST",  "pct_chrY")
+sce.filt@colData$XIST <- counts(sce.filt)["XIST", ] / colSums(counts(sce.filt)) * 10000
+plotColData(sce.filt, "XIST", "pct_chrY")
 ```
 
 {{< meta qc_sex_5 >}}
@@ -410,9 +412,9 @@ There is a method to predict if a cluster consists of mainly doublets `findDoubl
 ```{r}
 sce.filt <- logNormCounts(sce.filt)
 dec <- modelGeneVar(sce.filt, block = sce.filt$sample)
-hvgs = getTopHVGs(dec, n=2000)
+hvgs <- getTopHVGs(dec, n = 2000)
 
-sce.filt <- runPCA(sce.filt, subset_row=hvgs)
+sce.filt <- runPCA(sce.filt, subset_row = hvgs)
 
 sce.filt <- runUMAP(sce.filt, pca = 10)
 ```
@@ -438,7 +440,7 @@ wrap_plots(
 {{< meta qc_doublet_4 >}}
 
 ```{r}
-sce.filt = sce.filt[,sce.filt$scDblFinder.score < 2]
+sce.filt <- sce.filt[, sce.filt$scDblFinder.score < 2]
 dim(sce.filt)
 ```
 
