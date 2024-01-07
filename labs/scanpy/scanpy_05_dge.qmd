@@ -28,10 +28,12 @@ import scanpy as sc
 import gseapy
 import matplotlib.pyplot as plt
 import warnings
+import os
+import urllib.request
 
 warnings.simplefilter(action="ignore", category=Warning)
 
- # verbosity: errors (0), warnings (1), info (2), hints (3)
+# verbosity: errors (0), warnings (1), info (2), hints (3)
 sc.settings.verbosity = 2
 
 sc.settings.set_figure_params(dpi=80)
@@ -40,8 +42,19 @@ sc.settings.set_figure_params(dpi=80)
 Read in the clustered data object.
 
 ```{python}
-adata = sc.read_h5ad('./data/results/scanpy_clustered_covid.h5ad')
+path_data = "https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"
 
+#path_file = "data/covid/results/scanpy_covid_qc_dr_scanorama_cl.h5ad"
+path_file = "data/covid/results/scanpy_clustered_covid.h5ad"
+if not os.path.exists(path_file):
+    urllib.request.urlretrieve(os.path.join(
+        path_data, 'covid/results/scanpy_covid_qc_dr_scanorama_cl.h5ad'), path_file)
+
+adata = sc.read_h5ad(path_file)
+adata
+```
+
+```{python}
 print(adata.X.shape)
 print(adata.raw.X.shape)
 print(adata.raw.X[:10,:10])
@@ -373,7 +386,7 @@ gseapy.gseaplot(rank_metric=res.ranking, term=terms[0], **res.results[terms[0]])
 {{< meta dge_save >}}
 
 ```{python}
-adata.write_h5ad('./data/results/scanpy_DGE_covid.h5ad')
+adata.write_h5ad('./data/covid/results/scanpy_covid_qc_dr_scanorama_cl_dge.h5ad')
 ```
 
 ## {{< meta session >}}

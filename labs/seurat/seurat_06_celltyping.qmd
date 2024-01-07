@@ -21,10 +21,9 @@ Code chunks run R commands unless otherwise specified.
 suppressPackageStartupMessages({
   library(Seurat)
   library(dplyr)
-  library(cowplot)
+  library(patchwork)
   library(ggplot2)
   library(pheatmap)
-  library(rafalib)
   # remotes::install_github("powellgenomicslab/scPred")
   library(scPred)
 })
@@ -33,8 +32,10 @@ suppressPackageStartupMessages({
 {{< meta ct_read_2 >}}
 
 ```{r}
-#load the data and select 'ctrl_13` sample
-alldata <- readRDS("data/results/covid_qc_dr_int_cl.rds")
+path_data <- "https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"
+path_file <- "data/covid/results/seurat_covid_qc_dr_int_cl.rds"
+if (!file.exists(path_file)) download.file(url = file.path(path_data, "covid/results/seurat_covid_qc_dr_int_cl.rds"), destfile = path_file)
+alldata <- readRDS(path_file)
 ```
 
 {{< meta ct_read_3 >}}
@@ -254,9 +255,11 @@ new.cluster.ids <- unlist(lapply(res,function(x){as.data.frame(x)[1,1]}))
 
 alldata$ref_gsea <- new.cluster.ids[as.character(alldata@active.ident)]
 
-cowplot::plot_grid( ncol = 2,
+wrap_plots(
 DimPlot(alldata,label = T,group.by = "CCA_snn_res.0.5") + NoAxes(),
-DimPlot(alldata,label = T, group.by = "ref_gsea") + NoAxes())
+DimPlot(alldata,label = T, group.by = "ref_gsea") + NoAxes(),
+ncol = 2
+)
 ```
 
 {{< meta ct_gsea_deg_4 >}}
@@ -267,10 +270,11 @@ DimPlot(alldata,label = T, group.by = "ref_gsea") + NoAxes())
 
 ctrl$ref_gsea = alldata$ref_gsea[alldata$orig.ident == "ctrl_13"]
 
-cowplot::plot_grid( ncol = 3,
+wrap_plots( ncol = 3,
 DimPlot(ctrl,label = T,group.by = "ref_gsea") + NoAxes() + ggtitle("GSEA"),
 DimPlot(ctrl,label = T, group.by = "predicted.id") + NoAxes() + ggtitle("LabelTransfer"),
-DimPlot(ctrl,label = T, group.by = "scpred_prediction") + NoAxes() + ggtitle("scPred")
+DimPlot(ctrl,label = T, group.by = "scpred_prediction") + NoAxes() + ggtitle("scPred"),
+ncol = 3
 )
 ```
 
@@ -279,16 +283,13 @@ DimPlot(ctrl,label = T, group.by = "scpred_prediction") + NoAxes() + ggtitle("sc
 {{< meta ct_gsea_annot_1 >}}
 
 ```{r}
-if (!dir.exists("data/cellmarker")){ dir.create("data/cellmarker")}
-if (!file.exists("data/cellmarker/Cell_marker_Human.csv")){
-  download.file(
-    url = "https://export.uppmax.uu.se/naiss2023-23-3/workshops/scRNAseq/misc/Cell_marker_Human.csv",
-    destfile = "data/cellmarker/Cell_marker_Human.csv"
-  )
-}
+path_file <- file.path("data/cell_marker_human.csv")
+if (!file.exists(path_file)) download.file(file.path(path_data, "cell_marker_human.csv"), destfile = path_file)
+```
 
+```{r}
 # Load the human marker table
-markers <- read.delim("data/cellmarker/Cell_marker_Human.csv", sep = ";")
+markers <- read.delim("data/cell_marker_human.csv", sep = ";")
 markers <- markers [ markers$species == "Human", ]
 markers <- markers [ markers$cancer_type == "Normal", ]
 
@@ -337,12 +338,15 @@ lapply(res,head,3)
 #| fig-height: 5
 #| fig-width: 11
 
-new.cluster.ids <- unlist(lapply(res,function(x){as.data.frame(x)[1,1]}))
+new.cluster.ids <- unlist(lapply(res, function(x) {
+    as.data.frame(x)[1, 1]
+}))
 alldata$cellmarker_gsea <- new.cluster.ids[as.character(alldata@active.ident)]
 
-cowplot::plot_grid( ncol = 2,
-DimPlot(alldata,label = T,group.by = "ref_gsea") + NoAxes(),
-DimPlot(alldata,label = T, group.by = "cellmarker_gsea") + NoAxes()
+wrap_plots(
+    DimPlot(alldata, label = T, group.by = "ref_gsea") + NoAxes(),
+    DimPlot(alldata, label = T, group.by = "cellmarker_gsea") + NoAxes(),
+    ncol = 2
 )
 ```
 
@@ -355,7 +359,7 @@ DimPlot(alldata,label = T, group.by = "cellmarker_gsea") + NoAxes()
 {{< meta ct_save >}}
 
 ```{r}
-saveRDS(ctrl,"data/results/ctrl13_qc_dr_int_cl_celltype.rds")
+saveRDS(ctrl,"data/covid/results/seurat_covid_qc_dr_int_cl_ct-ctrl13.rds")
 ```
 
 ## {{< meta session >}}

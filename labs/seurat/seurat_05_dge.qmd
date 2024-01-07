@@ -17,17 +17,21 @@ Code chunks run R commands unless otherwise specified.
 suppressPackageStartupMessages({
   library(Seurat)
   library(dplyr)
-  library(cowplot)
+  library(patchwork)
   library(ggplot2)
   library(pheatmap)
   library(enrichR)
-  library(rafalib)
   library(Matrix)
   library(edgeR)
   library(MAST)
 })
+```
 
-alldata <- readRDS("data/results/covid_qc_dr_int_cl.rds")
+```{r}
+path_data <- "https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"
+path_file <- "data/covid/results/seurat_covid_qc_dr_int_cl.rds"
+if (!file.exists(path_file)) download.file(url = file.path(path_data, "covid/results/seurat_covid_qc_dr_int_cl.rds"), destfile = path_file)
+alldata <- readRDS(path_file)
 ```
 
 ```{r}
@@ -46,10 +50,12 @@ table(alldata@active.ident)
 #| fig-width: 12
 
 # plot this clustering
-plot_grid(ncol = 3,
+wrap_plots(
   DimPlot(alldata, label = T) + NoAxes(),
   DimPlot(alldata, group.by = "orig.ident") + NoAxes(),
-  DimPlot(alldata, group.by = "type") + NoAxes() )
+  DimPlot(alldata, group.by = "type") + NoAxes(),
+  ncol = 3
+)
 ```
 
 ## {{< meta dge_cmg >}}
@@ -78,7 +84,7 @@ head(top25)
 ```
 
 ```{r}
-mypar(2,5,mar=c(4,6,3,1))
+par(mfrow=c(2,5),mar=c(4,6,3,1))
 for(i in unique(top25$cluster)){
   barplot( sort( setNames(top25$avg_log2FC, top25$gene) [top25$cluster == i], F),
            horiz = T,las=1 ,main=paste0(i," vs. rest"),border = "white", yaxs="i" )
@@ -171,7 +177,12 @@ To remove some of the bias due to inbalanced sex in the subjects we can remove t
 
 
 ```{r}
-gene.info = read.csv("data/results/genes.table.csv") #was created in the QC exercise
+genes_file <- file.path("data/covid/results/genes_table.csv")
+if (!file.exists(genes_file)) download.file(file.path(path_data, "covid/results/genes_table.csv"), destfile = genes_file)
+```
+
+```{r}
+gene.info = read.csv(genes_file) #was created in the QC exercise
 
 auto.genes = gene.info$external_gene_name[!(gene.info$chromosome_name %in% c("X", "Y"))]
 
@@ -406,7 +417,7 @@ First, run the regular MAST analysis without random effects
 
 ```{r}
 # takes a while to run, so save a file to tmpdir in case you have to rerun the code
-tmpdir = "tmp_dge"
+tmpdir = "data/covid/results/tmp_dge"
 dir.create(tmpdir, showWarnings = F)
 
 tmpfile1 = file.path(tmpdir, "mast_bayesglm_cl3.Rds")
@@ -494,6 +505,7 @@ p2 = DotPlot(cell_selection, features = mastR, group.by = "orig.ident", assay = 
 
 p1 + p2
 ```
+
 :::{.callout-note title="Discuss"}
 You have now run DGE analysis for Covid vs Ctrl in cluster 3 with several diffent methods. Have a look at the different results, where did you get more/less significant genes? Which results would you like to present in a paper? Discuss with a neighbor which one you think looks best and why.
 :::

@@ -28,20 +28,33 @@ import pandas as pd
 import scanpy as sc
 import matplotlib.pyplot as plt
 import warnings
+import os
+import urllib.request
 
 warnings.simplefilter(action="ignore", category=Warning)
 
 # verbosity: errors (0), warnings (1), info (2), hints (3)
-sc.settings.verbosity = 2             
+sc.settings.verbosity = 2
 sc.settings.set_figure_params(dpi=80)
 ```
 
 {{< meta ct_read_2 >}}
 
 ```{python}
-adata = sc.read_h5ad('./data/results/scanpy_clustered_covid.h5ad')
-adata.uns['log1p']['base']=None
+path_data = "https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"
 
+#path_file = "data/covid/results/scanpy_covid_qc_dr_scanorama_cl.h5ad"
+path_file = "data/covid/results/scanpy_clustered_covid.h5ad"
+if not os.path.exists(path_file):
+    urllib.request.urlretrieve(os.path.join(
+        path_data, 'covid/results/scanpy_covid_qc_dr_scanorama_cl.h5ad'), path_file)
+
+adata = sc.read_h5ad(path_file)
+adata
+```
+
+```{python}
+adata.uns['log1p']['base']=None
 print(adata.shape)
 print(adata.raw.shape)
 ```
@@ -220,7 +233,14 @@ for the tissue you are working on.
 You can either run it with a marker list from the ontology or a list of your choice as in the example below.
 
 ```{python}
-df = pd.read_table('./data/cellmarker/Human_cell_markers.txt')
+path_file = 'data/human_cell_markers.txt'
+if not os.path.exists(path_file):
+    urllib.request.urlretrieve(os.path.join(
+        path_data, 'human_cell_markers.txt'), path_file)
+```
+
+```{python}
+df = pd.read_table(path_file)
 df
 ```
 

@@ -18,15 +18,20 @@ suppressPackageStartupMessages({
   library(scater)
   library(scran)
   #library(venn)
-  library(cowplot)
+  library(patchwork)
   library(ggplot2)
-  # library(rafalib)
   library(pheatmap)
   library(igraph)
   library(dplyr)
 })
+```
 
-sce <- readRDS("data/results/covid_qc_dr_int_cl.rds")
+```{r}
+path_data <- "https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"
+path_file <- "data/covid/results/bioc_covid_qc_dr_int_cl.rds"
+if (!file.exists(path_file)) download.file(url = file.path(path_data, "covid/results/bioc_covid_qc_dr_int_cl.rds"), destfile = path_file)
+sce <- readRDS(path_file)
+print(reducedDims(sce))
 ```
 
 ## {{< meta dge_cmg >}}
@@ -149,7 +154,7 @@ for (i in unique(top5_cell_selection$gene)) {
     plotlist[[i]] <- plotReducedDim(sce, dimred = "UMAP_on_MNN", colour_by = i, by_exprs_values = "logcounts") +
         ggtitle(label = i) + theme(plot.title = element_text(size = 20))
 }
-plot_grid(ncol = 3, plotlist = plotlist)
+wrap_plots(plotlist = plotlist, ncol = 3)
 ```
 
 ## {{< meta dge_gsa >}}
@@ -251,7 +256,7 @@ plotGseaTable(gmt[top10_UP], gene_rank, fgseaRes, gseaParam = 0.5)
 {{< meta dge_save >}}
 
 ```{r}
-saveRDS(sce,"data/results/covid_qc_dr_int_cl_dge.rds")
+saveRDS(sce,"data/covid/results/bioc_covid_qc_dr_int_cl_dge.rds")
 ```
 
 ## {{< meta session >}}

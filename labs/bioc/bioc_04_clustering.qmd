@@ -17,14 +17,20 @@ Code chunks run R commands unless otherwise specified.
 suppressPackageStartupMessages({
   library(scater)
   library(scran)
-  library(cowplot)
+  library(patchwork)
   library(ggplot2)
-  library(rafalib)
   library(pheatmap)
   library(igraph)
+  library(clustree)
 })
+```
 
-sce <- readRDS("data/results/covid_qc_dr_int.rds")
+```{r}
+path_data <- "https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"
+path_file <- "data/covid/results/bioc_covid_qc_dr_int.rds"
+if (!file.exists(path_file)) download.file(url = file.path(path_data, "covid/results/bioc_covid_qc_dr_int.rds"), destfile = path_file)
+sce <- readRDS(path_file)
+print(reducedDims(sce))
 ```
 
 ## {{< meta clust_graphclust >}}
@@ -82,13 +88,14 @@ sce$louvain_SNNk10 <- factor( cluster_louvain(g)$membership )
 g <- buildSNNGraph(sce,k=15,use.dimred="MNN")
 sce$louvain_SNNk15 <- factor( cluster_louvain(g)$membership )
 
-plot_grid(ncol = 3,
+wrap_plots(
   plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = "louvain_SNNk5")+
     ggplot2::ggtitle(label ="louvain_SNNk5"),
   plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = "louvain_SNNk10")+
     ggplot2::ggtitle(label ="louvain_SNNk10"),
   plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = "louvain_SNNk15")+
-    ggplot2::ggtitle(label ="louvain_SNNk15")
+    ggplot2::ggtitle(label ="louvain_SNNk15"),
+  ncol = 3
 )
 ```
 
@@ -114,13 +121,14 @@ sce$kmeans_5 <- factor( kmeans(x = reducedDim(sce,"MNN"),centers = 5)$cluster )
 sce$kmeans_10 <- factor(kmeans(x = reducedDim(sce,"MNN"),centers = 10)$cluster)
 sce$kmeans_15 <- factor(kmeans(x = reducedDim(sce,"MNN"),centers = 15)$cluster)
 
-plot_grid(ncol = 3,
+wrap_plots(
   plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = "kmeans_5")+
     ggplot2::ggtitle(label ="KMeans5"),
   plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = "kmeans_10")+
     ggplot2::ggtitle(label ="KMeans10"),
   plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = "kmeans_15")+
-    ggplot2::ggtitle(label ="KMeans15")
+    ggplot2::ggtitle(label ="KMeans15"),
+  ncol = 3
 )
 ```
 
@@ -182,8 +190,7 @@ sce$hc_corelation_5 <- factor( cutree(h_correlation,k = 5) )
 sce$hc_corelation_10 <- factor( cutree(h_correlation,k = 10) )
 sce$hc_corelation_15 <- factor( cutree(h_correlation,k = 15) )
 
-
-plot_grid(ncol = 3,
+wrap_plots(
   plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = "hc_euclidean_5")+
     ggplot2::ggtitle(label ="HC_euclidean_5"),
   plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = "hc_euclidean_10")+
@@ -196,14 +203,15 @@ plot_grid(ncol = 3,
   plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = "hc_corelation_10")+
     ggplot2::ggtitle(label ="HC_correlation_10"),
   plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = "hc_corelation_15")+
-    ggplot2::ggtitle(label ="HC_correlation_15")
+    ggplot2::ggtitle(label ="HC_correlation_15"),
+  ncol = 3
 )
 ```
 
 {{< meta clust_save >}}
 
 ```{r}
-saveRDS(sce,"data/results/covid_qc_dr_int_cl.rds")
+saveRDS(sce,"data/covid/results/bioc_covid_qc_dr_int_cl.rds")
 ```
 
 :::{.callout-note title="Discuss"}
