@@ -68,7 +68,7 @@ installBioc.r --error --skipinstalled -n "$NCPUS" \
     tradeSeq
 
 ## Install R packages from GitHub
-installGithub.r \
+installGithub.r --update FALSE \
     https://github.com/powellgenomicslab/scPred/tree/af5492e778b076e529c20462c92aacd06c75bdc0 
     
 ## Clean up
