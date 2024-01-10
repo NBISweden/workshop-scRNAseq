@@ -46,10 +46,10 @@ installBioc.r --error --skipinstalled -n "$NCPUS" \
     Biobase
 
 ## Install packages from GitHub
-installGithub.r \
+installGithub.r --update FALSE \
     https://github.com/renozao/xbioc/tree/1354168bd7e64be4ee1f9f74e971a61556d75003 \
     https://github.com/meichendong/SCDC/tree/890c604eebd7fffa4a08d7344fbd516df6efcf8d \
-    https://github.com/satijalab/seurat-data/tree/dd7d0df1fe7cd563281eac91edd0f1fac1ff3fe5
+    https://github.com/satijalab/seurat-data/tree/d6a8ce61ccb21a3b204f194d07009772c822791d
 
 ## Clean up
 rm -rf /var/lib/apt/lists/*
