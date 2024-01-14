@@ -14,31 +14,31 @@ title:  Quality Control
 
 ## Get data
 
-In this tutorial, we will run all tutorials with a set of 6 PBMC 10x
-datasets from 3 covid-19 patients and 3 healthy controls, the samples
-have been subsampled to 1500 cells per sample. They are part of the
-github repo and if you have cloned the repo they should be available in
-folder: `labs/data/covid_data_GSE149689`. Instructions on how to
-download them can also be found in the Precourse material.
+In this tutorial, we will run all tutorials with a set of 8 PBMC 10x
+datasets from 4 covid-19 patients and 4 healthy controls, the samples
+have been subsampled to 1500 cells per sample. We can start by defining
+our paths.
 
 ``` {r}
-webpath <- "https://export.uppmax.uu.se/naiss2023-23-3/workshops/scRNAseq/covid_data/"
+path_data <- "https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"
 
-if(!dir.exists("./data/raw")){
-  dir.create("./data/raw", recursive = T)
-}
+path_covid <- "./data/covid"
+if (!dir.exists(path_covid)) dir.create(path_covid, recursive = T)
 
+path_results <- "data/covid/results"
+if (!dir.exists(path_results)) dir.create(path_results, recursive = T)
+```
+
+``` {r}
 file_list <- c(
-      "Normal_PBMC_13.h5", "Normal_PBMC_14.h5", "Normal_PBMC_19.h5", "Normal_PBMC_5.h5",
-      "nCoV_PBMC_15.h5", "nCoV_PBMC_16.h5", "nCoV_PBMC_17.h5", "nCoV_PBMC_1.h5" )
+    "normal_pbmc_13.h5", "normal_pbmc_14.h5", "normal_pbmc_19.h5", "normal_pbmc_5.h5",
+    "ncov_pbmc_15.h5", "ncov_pbmc_16.h5", "ncov_pbmc_17.h5", "ncov_pbmc_1.h5"
+)
 
 for (i in file_list) {
-  new_path = paste0("./data/raw/", i)
-  if (!file.exists(new_path)){
-      download.file(
-          url = paste0(webpath, i),
-          destfile = new_path
-        )
+    path_file <- file.path(path_covid, i)
+    if (!file.exists(path_file)) {
+        download.file(url = file.path(file.path(path_data, "covid"), i), destfile = path_file)
     }
 }
 ```
@@ -47,49 +47,53 @@ With data in place, now we can start loading libraries we will use in
 this tutorial.
 
 ``` {r}
-suppressMessages(require(Seurat))
-suppressMessages(require(Matrix))
-if(!"DoubletFinder" %in% rownames(installed.packages())){
-   remotes::install_github('chris-mcginnis-ucsf/DoubletFinder',upgrade = FALSE, dependencies=TRUE)
-}
-suppressMessages(require(DoubletFinder))
+suppressPackageStartupMessages({
+    library(Seurat)
+    library(Matrix)
+    library(ggplot2)
+    library(patchwork)
+    # remotes::install_github("chris-mcginnis-ucsf/DoubletFinder", upgrade = FALSE, dependencies = TRUE)
+    # library(DoubletFinder)
+})
 ```
 
 We can first load the data individually by reading directly from HDF5
 file format (.h5).
 
 ``` {r}
-## OBS! Change after new upload link has been provided
-indir = "./data/raw"
-
-
 cov.15 <- Seurat::Read10X_h5(
-  filename = file.path(indir,"nCoV_PBMC_15.h5"),
-  use.names = T)
+    filename = file.path(path_covid, "ncov_pbmc_15.h5"),
+    use.names = T
+)
 cov.1 <- Seurat::Read10X_h5(
-  filename = file.path(indir,"nCoV_PBMC_1.h5"),
-  use.names = T)
+    filename = file.path(path_covid, "ncov_pbmc_1.h5"),
+    use.names = T
+)
 cov.16 <- Seurat::Read10X_h5(
-  filename = file.path(indir,"nCoV_PBMC_16.h5"),
-  use.names = T)
+    filename = file.path(path_covid, "ncov_pbmc_16.h5"),
+    use.names = T
+)
 cov.17 <- Seurat::Read10X_h5(
-  filename = file.path(indir,"nCoV_PBMC_17.h5"),
-  use.names = T)
+    filename = file.path(path_covid, "ncov_pbmc_17.h5"),
+    use.names = T
+)
 
 ctrl.5 <- Seurat::Read10X_h5(
-  filename = file.path(indir,"Normal_PBMC_5.h5"),
-  use.names = T)
+    filename = file.path(path_covid, "normal_pbmc_5.h5"),
+    use.names = T
+)
 ctrl.13 <- Seurat::Read10X_h5(
-  filename = file.path(indir,"Normal_PBMC_13.h5"),
-  use.names = T)
+    filename = file.path(path_covid, "normal_pbmc_13.h5"),
+    use.names = T
+)
 ctrl.14 <- Seurat::Read10X_h5(
-  filename = file.path(indir,"Normal_PBMC_14.h5"),
-  use.names = T)
+    filename = file.path(path_covid, "normal_pbmc_14.h5"),
+    use.names = T
+)
 ctrl.19 <- Seurat::Read10X_h5(
-  filename = file.path(indir,"Normal_PBMC_19.h5"),
-  use.names = T)
-
-
+    filename = file.path(path_covid, "normal_pbmc_19.h5"),
+    use.names = T
+)
 ```
 
 ## Collate
@@ -101,29 +105,29 @@ case you have overlapping barcodes between the datasets. After that we
 add a column **Chemistry** in the metadata for plotting later on.
 
 ``` {r}
-sdata.cov1 <- CreateSeuratObject(cov.1,  project = "covid_1")
-sdata.cov15 <- CreateSeuratObject(cov.15,  project = "covid_15")
-sdata.cov17 <- CreateSeuratObject(cov.17,  project = "covid_17")
-sdata.cov16 <- CreateSeuratObject(cov.16,  project = "covid_16")
-sdata.ctrl5 <- CreateSeuratObject(ctrl.5,  project = "ctrl_5")
-sdata.ctrl13 <- CreateSeuratObject(ctrl.13,  project = "ctrl_13")
-sdata.ctrl14 <- CreateSeuratObject(ctrl.14,  project = "ctrl_14")
-sdata.ctrl19 <- CreateSeuratObject(ctrl.19,  project = "ctrl_19")
+sdata.cov1 <- CreateSeuratObject(cov.1, project = "covid_1")
+sdata.cov15 <- CreateSeuratObject(cov.15, project = "covid_15")
+sdata.cov17 <- CreateSeuratObject(cov.17, project = "covid_17")
+sdata.cov16 <- CreateSeuratObject(cov.16, project = "covid_16")
+sdata.ctrl5 <- CreateSeuratObject(ctrl.5, project = "ctrl_5")
+sdata.ctrl13 <- CreateSeuratObject(ctrl.13, project = "ctrl_13")
+sdata.ctrl14 <- CreateSeuratObject(ctrl.14, project = "ctrl_14")
+sdata.ctrl19 <- CreateSeuratObject(ctrl.19, project = "ctrl_19")
 
 
 # add metadata
-sdata.cov1$type = "Covid"
-sdata.cov15$type = "Covid"
-sdata.cov16$type = "Covid"
-sdata.cov17$type = "Covid"
+sdata.cov1$type <- "Covid"
+sdata.cov15$type <- "Covid"
+sdata.cov16$type <- "Covid"
+sdata.cov17$type <- "Covid"
 
-sdata.ctrl5$type = "Ctrl"
-sdata.ctrl13$type = "Ctrl"
-sdata.ctrl14$type = "Ctrl"
-sdata.ctrl19$type = "Ctrl"
+sdata.ctrl5$type <- "Ctrl"
+sdata.ctrl13$type <- "Ctrl"
+sdata.ctrl14$type <- "Ctrl"
+sdata.ctrl19$type <- "Ctrl"
 
 # Merge datasets into one single seurat object
-alldata <- merge(sdata.cov1, c(sdata.cov15,sdata.cov16, sdata.cov17, sdata.ctrl5, sdata.ctrl13, sdata.ctrl14,sdata.ctrl19), add.cell.ids=c("covid_1","covid_15","covid_16","covid_17","ctrl_5","ctrl_13", "ctrl_14","ctrl_19"))
+alldata <- merge(sdata.cov1, c(sdata.cov15, sdata.cov16, sdata.cov17, sdata.ctrl5, sdata.ctrl13, sdata.ctrl14, sdata.ctrl19), add.cell.ids = c("covid_1", "covid_15", "covid_16", "covid_17", "ctrl_5", "ctrl_13", "ctrl_14", "ctrl_19"))
 ```
 
 Once you have created the merged Seurat object, the count matrices and
@@ -132,7 +136,7 @@ good idea to remove them and run garbage collect to free up some memory.
 
 ``` {r}
 # remove all objects that will not be used.
-rm( cov.1, cov.15, cov.16, cov.17, ctrl.5, ctrl.13, ctrl.14, ctrl.19, sdata.cov1, sdata.cov15, sdata.cov16, sdata.cov17, sdata.ctrl5, sdata.ctrl13, sdata.ctrl14,sdata.ctrl19)
+rm(cov.1, cov.15, cov.16, cov.17, ctrl.5, ctrl.13, ctrl.14, ctrl.19, sdata.cov1, sdata.cov15, sdata.cov16, sdata.cov17, sdata.ctrl5, sdata.ctrl13, sdata.ctrl14, sdata.ctrl19)
 # run garbage collect to free up memory
 gc()
 ```
@@ -140,8 +144,8 @@ gc()
 Here is how the count matrix and the metadata look like for every cell.
 
 ``` {r}
-as.data.frame(alldata@assays$RNA@counts[1:10,1:2])
-head(alldata@meta.data,10)
+as.data.frame(alldata@assays$RNA@counts[1:10, 1:2])
+head(alldata@meta.data, 10)
 ```
 
 ## Calculate QC
@@ -167,7 +171,7 @@ tears in the cell membrane.
 alldata <- PercentageFeatureSet(alldata, "^MT-", col.name = "percent_mito")
 ```
 
-`{r, eval=FALSE} # OBS! Do not run now!  # example method 2: doing it manually total_counts_per_cell <- colSums(alldata@assays$RNA@counts) mito_genes <- rownames(alldata)[grep("^MT-",rownames(alldata))] alldata$percent_mito2 <- colSums(alldata@assays$RNA@counts[mito_genes,]) / total_counts_per_cell`
+`{r, eval=FALSE} # OBS! Do not run now! # example method 2: doing it manually total_counts_per_cell <- colSums(alldata@assays$RNA@counts) mito_genes <- rownames(alldata)[grep("^MT-", rownames(alldata))] alldata$percent_mito2 <- colSums(alldata@assays$RNA@counts[mito_genes, ]) / total_counts_per_cell`
 
 ``` {r}
 # Ribosomal
@@ -192,8 +196,8 @@ Now we can plot some of the QC variables as violin plots.
 #| fig-height: 8
 #| fig-width: 15
 
-feats <- c("nFeature_RNA","nCount_RNA","percent_mito","percent_ribo", "percent_hb", "percent_plat")
-VlnPlot(alldata, group.by= "orig.ident", features = feats, pt.size = 0.1,ncol = 3) + NoLegend()
+feats <- c("nFeature_RNA", "nCount_RNA", "percent_mito", "percent_ribo", "percent_hb", "percent_plat")
+VlnPlot(alldata, group.by = "orig.ident", features = feats, pt.size = 0.1, ncol = 3) + NoLegend()
 ```
 
 As you can see, there is quite some difference in quality for the 4
@@ -208,7 +212,7 @@ plots.
 #| fig-height: 8
 #| fig-width: 15
 
-FeatureScatter(alldata, "nCount_RNA"  , "nFeature_RNA", group.by = "orig.ident", pt.size = .5)
+FeatureScatter(alldata, "nCount_RNA", "nFeature_RNA", group.by = "orig.ident", pt.size = .5)
 ```
 
 <div>
@@ -232,9 +236,9 @@ highly dependent on the library preparation method used.
 
 ``` {r}
 selected_c <- WhichCells(alldata, expression = nFeature_RNA > 200)
-selected_f <- rownames(alldata)[ Matrix::rowSums(alldata) > 3]
+selected_f <- rownames(alldata)[Matrix::rowSums(alldata) > 3]
 
-data.filt <- subset(alldata, features=selected_f, cells=selected_c)
+data.filt <- subset(alldata, features = selected_f, cells = selected_c)
 dim(data.filt)
 table(data.filt$orig.ident)
 ```
@@ -248,7 +252,7 @@ can be run:
 
 ``` {r}
 # skip and run DoubletFinder instead
-#data.filt <- subset(data.filt, cells=WhichCells(data.filt, expression = nFeature_RNA < 4100))
+# data.filt <- subset(data.filt, cells=WhichCells(data.filt, expression = nFeature_RNA < 4100))
 ```
 
 Additionally, we can also see which genes contribute the most to such
@@ -261,11 +265,13 @@ reads. We can for instance plot the percentage of counts per gene.
 # Compute the proportion of counts of each gene per cell
 # Use sparse matrix operations, if your dataset is large, doing matrix devisions the regular way will take a very long time.
 
-C = data.filt@assays$RNA@counts
-C@x = C@x/rep.int(colSums(C), diff(C@p))*100
+C <- data.filt@assays$RNA@counts
+C@x <- C@x / rep.int(colSums(C), diff(C@p)) * 100
 most_expressed <- order(Matrix::rowSums(C), decreasing = T)[20:1]
-boxplot(as.matrix(t(C[most_expressed, ])), cex = 0.1, las = 1, xlab = "Percent counts per cell",
-    col = (scales::hue_pal())(20)[20:1], horizontal = TRUE)
+boxplot(as.matrix(t(C[most_expressed, ])),
+    cex = 0.1, las = 1, xlab = "Percent counts per cell",
+    col = (scales::hue_pal())(20)[20:1], horizontal = TRUE
+)
 ```
 
 As you can see, MALAT1 constitutes up to 30% of the UMIs from a single
@@ -319,8 +325,8 @@ Lets plot the same QC-stats another time.
 #| fig-height: 8
 #| fig-width: 15
 
-feats <- c("nFeature_RNA","nCount_RNA","percent_mito","percent_ribo", "percent_hb")
-VlnPlot(data.filt, group.by= "orig.ident", features = feats, pt.size = 0.1,ncol = 3) + NoLegend()
+feats <- c("nFeature_RNA", "nCount_RNA", "percent_mito", "percent_ribo", "percent_hb")
+VlnPlot(data.filt, group.by = "orig.ident", features = feats, pt.size = 0.1, ncol = 3) + NoLegend()
 ```
 
 ### Filter genes
@@ -333,16 +339,16 @@ before any further analysis.
 dim(data.filt)
 
 # Filter MALAT1
-data.filt <- data.filt[ ! grepl("MALAT1", rownames(data.filt)), ]
+data.filt <- data.filt[!grepl("MALAT1", rownames(data.filt)), ]
 
 # Filter Mitocondrial
-data.filt <- data.filt[ ! grepl("^MT-", rownames(data.filt)), ]
+data.filt <- data.filt[!grepl("^MT-", rownames(data.filt)), ]
 
 # Filter Ribossomal gene (optional if that is a problem on your data)
 # data.filt <- data.filt[ ! grepl("^RP[SL]", rownames(data.filt)), ]
 
 # Filter Hemoglobin gene (optional if that is a problem on your data)
-data.filt <- data.filt[ ! grepl("^HB[^(P)]", rownames(data.filt)), ]
+data.filt <- data.filt[!grepl("^HB[^(P)]", rownames(data.filt)), ]
 
 dim(data.filt)
 ```
@@ -362,48 +368,44 @@ To get chromosome information for all genes, you should ideally parse
 the information from the gtf file that you used in the mapping pipeline
 as it has the exact same annotation version/gene naming. However, it may
 not always be available, as in this case where we have downloaded public
-data. Hence, we will use biomart to fetch chromosome information. As the
-biomart instances quite often are unresponsive, you can try the code
-below, but if it fails, we have the file with gene annotations on github
-[here](https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/labs/misc/genes.table.csv).
-Make sure you put it at the correct location for the path `genes.file`
-to work.
+data. R package biomaRt can be used to fetch annotation information. The
+code to run biomaRt is provided. As the biomart instances quite often
+are unresponsive, we will download and use a file that was created in
+advance.
 
 ``` {r}
-genes.file = "data/results/genes.table.csv"
+#| eval: false
 
-if (!file.exists(genes.file)){
-  suppressMessages(require(biomaRt))
+# this code chunk is not executed
+suppressMessages(library(biomaRt))
 
-  # initialize connection to mart, may take some time if the sites are unresponsive.
-  mart <- useMart("ENSEMBL_MART_ENSEMBL", dataset="hsapiens_gene_ensembl")
+# initialize connection to mart, may take some time if the sites are unresponsive.
+mart <- useMart("ENSEMBL_MART_ENSEMBL", dataset = "hsapiens_gene_ensembl")
 
-  # fetch chromosome info plus some other annotations
-  genes.table <- try(biomaRt::getBM(attributes = c("ensembl_gene_id",
-              "external_gene_name", "description","gene_biotype", "chromosome_name","start_position"),
-              mart = mart, useCache = F))
-  
-  if(!dir.exists("data/results")){dir.create("data/results")}
-  if(is.data.frame(genes.table)){write.csv(genes.table, file = genes.file)}
-  
-  if (!file.exists(genes.file)){
-  download.file("https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/master/labs/misc/genes.table.csv",destfile = "data/results/genes.table.csv")
-    genes.table = read.csv(genes.file)
-    }
+# fetch chromosome info plus some other annotations
+genes_table <- try(biomaRt::getBM(attributes = c(
+    "ensembl_gene_id", "external_gene_name",
+    "description", "gene_biotype", "chromosome_name", "start_position"
+), mart = mart, useCache = F))
 
-} else {
-  genes.table = read.csv(genes.file)
-}
+write.csv(genes_table, file = "data/results/genes_table.csv")
+```
 
-genes.table <- genes.table[genes.table$external_gene_name %in% rownames(data.filt),]
+``` {r}
+genes_file <- file.path(path_results, "genes_table.csv")
+
+if (!file.exists(genes_file)) download.file(file.path(path_data, "covid/results/genes_table.csv"), destfile = genes_file)
+genes.table <- read.csv(genes_file)
+
+genes.table <- genes.table[genes.table$external_gene_name %in% rownames(data.filt), ]
 ```
 
 Now that we have the chromosome information, we can calculate per cell
 the proportion of reads that comes from chromosome Y.
 
 ``` {r}
-chrY.gene = genes.table$external_gene_name[genes.table$chromosome_name == "Y"]
-data.filt$pct_chrY = colSums(data.filt@assays$RNA@counts[chrY.gene,]) / colSums(data.filt@assays$RNA@counts)
+chrY.gene <- genes.table$external_gene_name[genes.table$chromosome_name == "Y"]
+data.filt$pct_chrY <- colSums(data.filt@assays$RNA@counts[chrY.gene, ]) / colSums(data.filt@assays$RNA@counts)
 ```
 
 Then plot XIST expression vs chrY proportion. As you can see, the
@@ -437,10 +439,12 @@ cycle phase.
 
 ``` {r}
 # Before running CellCycleScoring the data need to be normalized and logtransformed.
-data.filt = NormalizeData(data.filt)
-data.filt <- CellCycleScoring(object = data.filt,
-                              g2m.features = cc.genes$g2m.genes,
-                              s.features = cc.genes$s.genes)
+data.filt <- NormalizeData(data.filt)
+data.filt <- CellCycleScoring(
+    object = data.filt,
+    g2m.features = cc.genes$g2m.genes,
+    s.features = cc.genes$s.genes
+)
 ```
 
 We can now plot a violin plot for the cell cycle scores as well.
@@ -449,7 +453,7 @@ We can now plot a violin plot for the cell cycle scores as well.
 #| fig-height: 5
 #| fig-width: 15
 
-VlnPlot(data.filt, features = c("S.Score","G2M.Score"), group.by= "orig.ident",ncol = 4, pt.size = .1)
+VlnPlot(data.filt, features = c("S.Score", "G2M.Score"), group.by = "orig.ident", ncol = 4, pt.size = .1)
 ```
 
 In this case it looks like we only have a few cycling cells in the
@@ -464,7 +468,7 @@ suggest that you look at the scores.
 #| fig-height: 5
 #| fig-width: 15
 
-FeatureScatter(data.filt, "S.Score","G2M.Score", group.by = "Phase")
+FeatureScatter(data.filt, "S.Score", "G2M.Score", group.by = "Phase")
 ```
 
 ## Predict doublets
@@ -502,12 +506,12 @@ and pca, as well as UMAP for visualization. These steps will be explored
 in more detail in coming exercises.
 
 ``` {r}
-suppressMessages(require(DoubletFinder))
+suppressMessages(library(DoubletFinder))
 
-data.filt = FindVariableFeatures(data.filt, verbose = F)
-data.filt = ScaleData(data.filt, vars.to.regress = c("nFeature_RNA", "percent_mito"), verbose = F)
-data.filt = RunPCA(data.filt, verbose = F, npcs = 20)
-data.filt = RunUMAP(data.filt, dims = 1:10, verbose = F)
+data.filt <- FindVariableFeatures(data.filt, verbose = F)
+data.filt <- ScaleData(data.filt, vars.to.regress = c("nFeature_RNA", "percent_mito"), verbose = F)
+data.filt <- RunPCA(data.filt, verbose = F, npcs = 20)
+data.filt <- RunUMAP(data.filt, dims = 1:10, verbose = F)
 ```
 
 Then we run doubletFinder, selecting first 10 PCs and a pK value of 0.9.
@@ -517,23 +521,24 @@ package.
 ``` {r}
 # Can run parameter optimization with paramSweep
 
-#sweep.res <- paramSweep_v3(data.filt)
-#sweep.stats <- summarizeSweep(sweep.res, GT = FALSE)
-#bcmvn <- find.pK(sweep.stats)
-#barplot(bcmvn$BCmetric, names.arg = bcmvn$pK, las=2)
+# sweep.res <- paramSweep_v3(data.filt)
+# sweep.stats <- summarizeSweep(sweep.res, GT = FALSE)
+# bcmvn <- find.pK(sweep.stats)
+# barplot(bcmvn$BCmetric, names.arg = bcmvn$pK, las=2)
 
 # define the expected number of doublet cellscells.
-nExp <- round(ncol(data.filt)* 0.04) # expect 4% doublets
-data.filt <- doubletFinder_v3(data.filt, pN=0.25, pK = 0.09, nExp = nExp, PCs = 1:10)
+nExp <- round(ncol(data.filt) * 0.04) # expect 4% doublets
+data.filt <- doubletFinder_v3(data.filt, pN = 0.25, pK = 0.09, nExp = nExp, PCs = 1:10)
 ```
 
 ``` {r}
 # name of the DF prediction can change, so extract the correct column name.
-DF.name = colnames(data.filt@meta.data)[grepl("DF.classification", colnames(data.filt@meta.data))]
+DF.name <- colnames(data.filt@meta.data)[grepl("DF.classification", colnames(data.filt@meta.data))]
 
-cowplot::plot_grid( ncol = 2,
-DimPlot(data.filt, group.by = "orig.ident") + NoAxes(),
-DimPlot(data.filt, group.by = DF.name) + NoAxes()
+wrap_plots(
+    DimPlot(data.filt, group.by = "orig.ident") + NoAxes(),
+    DimPlot(data.filt, group.by = DF.name) + NoAxes(),
+    ncol = 2
 )
 ```
 
@@ -548,7 +553,7 @@ VlnPlot(data.filt, features = "nFeature_RNA", group.by = DF.name, pt.size = .1)
 Now, lets remove all predicted doublets from our data.
 
 ``` {r}
-data.filt = data.filt[,data.filt@meta.data[,DF.name] == "Singlet"]
+data.filt <- data.filt[, data.filt@meta.data[, DF.name] == "Singlet"]
 dim(data.filt)
 ```
 
@@ -559,8 +564,7 @@ output directory `results` and save data to that folder. This will be
 used in downstream labs.
 
 ``` {r}
-if (!dir.exists("data/results")) dir.create("data/results", showWarnings = F)
-if (!file.exists("data/results/seurat_covid_qc.rds")) saveRDS(data.filt, "data/results/seurat_covid_qc.rds")
+saveRDS(data.filt, file.path(path_results, "seurat_covid_qc.rds"))
 ```
 
 ## Session info

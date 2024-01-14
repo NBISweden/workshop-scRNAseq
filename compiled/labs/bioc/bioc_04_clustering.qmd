@@ -23,16 +23,22 @@ from the previous step.
 
 ``` {r}
 suppressPackageStartupMessages({
-  library(scater)
-  library(scran)
-  library(cowplot)
-  library(ggplot2)
-  library(rafalib)
-  library(pheatmap)
-  library(igraph)
+    library(scater)
+    library(scran)
+    library(patchwork)
+    library(ggplot2)
+    library(pheatmap)
+    library(igraph)
+    library(clustree)
 })
+```
 
-sce <- readRDS("data/results/covid_qc_dr_int.rds")
+``` {r}
+path_data <- "https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"
+path_file <- "data/covid/results/bioc_covid_qc_dr_int.rds"
+if (!file.exists(path_file)) download.file(url = file.path(path_data, "covid/results/bioc_covid_qc_dr_int.rds"), destfile = path_file)
+sce <- readRDS(path_file)
+print(reducedDims(sce))
 ```
 
 ## Graph clustering
@@ -51,13 +57,13 @@ done for dimensionality reduction, we will use ony the top *N* PCA
 dimensions for this purpose (the same used for computing UMAP / tSNE).
 
 ``` {r}
-#These 2 lines are for demonstration purposes only
-g <- buildKNNGraph(sce,k=30,use.dimred="MNN")
-reducedDim(sce,"KNN") <- igraph::as_adjacency_matrix(g)
+# These 2 lines are for demonstration purposes only
+g <- buildKNNGraph(sce, k = 30, use.dimred = "MNN")
+reducedDim(sce, "KNN") <- igraph::as_adjacency_matrix(g)
 
-#These 2 lines are the most recommended
-g <- buildSNNGraph(sce,k=30,use.dimred="MNN")
-reducedDim(sce,"SNN")  <- as_adjacency_matrix(g, attr = "weight")
+# These 2 lines are the most recommended
+g <- buildSNNGraph(sce, k = 30, use.dimred = "MNN")
+reducedDim(sce, "SNN") <- as_adjacency_matrix(g, attr = "weight")
 ```
 
 We can take a look at the kNN and SNN graphs. The kNN graph is a matrix
@@ -75,16 +81,18 @@ but clustering on unweighted graphs is faster for large datasets (\>
 #| fig-height: 6
 #| fig-width: 6
 
-#plot the KNN graph
-pheatmap(reducedDim(sce,"KNN")[1:200,1:200],
-         col=c("white","black"),border_color = "grey90",
-         legend = F,cluster_rows = F,cluster_cols = F,fontsize = 2)
+# plot the KNN graph
+pheatmap(reducedDim(sce, "KNN")[1:200, 1:200],
+    col = c("white", "black"), border_color = "grey90",
+    legend = F, cluster_rows = F, cluster_cols = F, fontsize = 2
+)
 
-#or the SNN graph
-pheatmap(reducedDim(sce,"SNN")[1:200,1:200],
-        col = colorRampPalette(c("white","yellow","red","black"))(20),
-        border_color = "grey90",
-         legend = T,cluster_rows = F,cluster_cols = F,fontsize = 2)
+# or the SNN graph
+pheatmap(reducedDim(sce, "SNN")[1:200, 1:200],
+    col = colorRampPalette(c("white", "yellow", "red", "black"))(20),
+    border_color = "grey90",
+    legend = T, cluster_rows = F, cluster_cols = F, fontsize = 2
+)
 ```
 
 As you can see, the way Scran computes the SNN graph is different to
@@ -103,22 +111,23 @@ higher number of clusters.
 #| fig-height: 3
 #| fig-width: 12
 
-g <- buildSNNGraph(sce,k=5,use.dimred="MNN")
-sce$louvain_SNNk5 <- factor( cluster_louvain(g)$membership )
+g <- buildSNNGraph(sce, k = 5, use.dimred = "MNN")
+sce$louvain_SNNk5 <- factor(cluster_louvain(g)$membership)
 
-g <- buildSNNGraph(sce,k=10,use.dimred="MNN")
-sce$louvain_SNNk10 <- factor( cluster_louvain(g)$membership )
+g <- buildSNNGraph(sce, k = 10, use.dimred = "MNN")
+sce$louvain_SNNk10 <- factor(cluster_louvain(g)$membership)
 
-g <- buildSNNGraph(sce,k=15,use.dimred="MNN")
-sce$louvain_SNNk15 <- factor( cluster_louvain(g)$membership )
+g <- buildSNNGraph(sce, k = 15, use.dimred = "MNN")
+sce$louvain_SNNk15 <- factor(cluster_louvain(g)$membership)
 
-plot_grid(ncol = 3,
-  plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = "louvain_SNNk5")+
-    ggplot2::ggtitle(label ="louvain_SNNk5"),
-  plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = "louvain_SNNk10")+
-    ggplot2::ggtitle(label ="louvain_SNNk10"),
-  plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = "louvain_SNNk15")+
-    ggplot2::ggtitle(label ="louvain_SNNk15")
+wrap_plots(
+    plotReducedDim(sce, dimred = "UMAP_on_MNN", colour_by = "louvain_SNNk5") +
+        ggplot2::ggtitle(label = "louvain_SNNk5"),
+    plotReducedDim(sce, dimred = "UMAP_on_MNN", colour_by = "louvain_SNNk10") +
+        ggplot2::ggtitle(label = "louvain_SNNk10"),
+    plotReducedDim(sce, dimred = "UMAP_on_MNN", colour_by = "louvain_SNNk15") +
+        ggplot2::ggtitle(label = "louvain_SNNk15"),
+    ncol = 3
 )
 ```
 
@@ -148,17 +157,18 @@ starting configurations (via the nstart argument).
 #| fig-height: 3
 #| fig-width: 10
 
-sce$kmeans_5 <- factor( kmeans(x = reducedDim(sce,"MNN"),centers = 5)$cluster )
-sce$kmeans_10 <- factor(kmeans(x = reducedDim(sce,"MNN"),centers = 10)$cluster)
-sce$kmeans_15 <- factor(kmeans(x = reducedDim(sce,"MNN"),centers = 15)$cluster)
+sce$kmeans_5 <- factor(kmeans(x = reducedDim(sce, "MNN"), centers = 5)$cluster)
+sce$kmeans_10 <- factor(kmeans(x = reducedDim(sce, "MNN"), centers = 10)$cluster)
+sce$kmeans_15 <- factor(kmeans(x = reducedDim(sce, "MNN"), centers = 15)$cluster)
 
-plot_grid(ncol = 3,
-  plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = "kmeans_5")+
-    ggplot2::ggtitle(label ="KMeans5"),
-  plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = "kmeans_10")+
-    ggplot2::ggtitle(label ="KMeans10"),
-  plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = "kmeans_15")+
-    ggplot2::ggtitle(label ="KMeans15")
+wrap_plots(
+    plotReducedDim(sce, dimred = "UMAP_on_MNN", colour_by = "kmeans_5") +
+        ggplot2::ggtitle(label = "KMeans5"),
+    plotReducedDim(sce, dimred = "UMAP_on_MNN", colour_by = "kmeans_10") +
+        ggplot2::ggtitle(label = "KMeans10"),
+    plotReducedDim(sce, dimred = "UMAP_on_MNN", colour_by = "kmeans_15") +
+        ggplot2::ggtitle(label = "KMeans15"),
+    ncol = 3
 )
 ```
 
@@ -182,7 +192,7 @@ distance methods available in `dist` are: 'euclidean', 'maximum',
 'manhattan', 'canberra', 'binary' or 'minkowski'.
 
 ``` {r}
-d <- dist( reducedDim(sce,"MNN"),  method="euclidean")
+d <- dist(reducedDim(sce, "MNN"), method = "euclidean")
 ```
 
 As you might have realized, correlation is not a method implemented in
@@ -203,13 +213,13 @@ transformation does not need to have a maximum of 1, but it is more
 intuitive to have it at 1, rather than at any other number.
 
 ``` {r}
-#Compute sample correlations
-sample_cor <- cor( Matrix::t(reducedDim(sce,"MNN")) )
+# Compute sample correlations
+sample_cor <- cor(Matrix::t(reducedDim(sce, "MNN")))
 
-#Transform the scale from correlations
+# Transform the scale from correlations
 sample_cor <- (1 - sample_cor) / 2
 
-#Convert it to a distance object
+# Convert it to a distance object
 d2 <- as.dist(sample_cor)
 ```
 
@@ -224,11 +234,11 @@ the distance objects created above. The methods available are: 'ward.D',
 this is very time consuming and we will omit for this tutorial.
 
 ``` {r}
-#euclidean
-h_euclidean <- hclust(d, method="ward.D2")
+# euclidean
+h_euclidean <- hclust(d, method = "ward.D2")
 
-#correlation
-h_correlation <- hclust(d2, method="ward.D2")
+# correlation
+h_correlation <- hclust(d2, method = "ward.D2")
 ```
 
 Once your dendrogram is created, the next step is to define which
@@ -242,38 +252,37 @@ different clustering levels.
 #| fig-height: 8
 #| fig-width: 13
 
-#euclidean distance
-sce$hc_euclidean_5 <- factor( cutree(h_euclidean,k = 5) )
-sce$hc_euclidean_10 <- factor( cutree(h_euclidean,k = 10) )
-sce$hc_euclidean_15 <- factor( cutree(h_euclidean,k = 15) )
+# euclidean distance
+sce$hc_euclidean_5 <- factor(cutree(h_euclidean, k = 5))
+sce$hc_euclidean_10 <- factor(cutree(h_euclidean, k = 10))
+sce$hc_euclidean_15 <- factor(cutree(h_euclidean, k = 15))
 
-#correlation distance
-sce$hc_corelation_5 <- factor( cutree(h_correlation,k = 5) )
-sce$hc_corelation_10 <- factor( cutree(h_correlation,k = 10) )
-sce$hc_corelation_15 <- factor( cutree(h_correlation,k = 15) )
+# correlation distance
+sce$hc_corelation_5 <- factor(cutree(h_correlation, k = 5))
+sce$hc_corelation_10 <- factor(cutree(h_correlation, k = 10))
+sce$hc_corelation_15 <- factor(cutree(h_correlation, k = 15))
 
-
-plot_grid(ncol = 3,
-  plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = "hc_euclidean_5")+
-    ggplot2::ggtitle(label ="HC_euclidean_5"),
-  plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = "hc_euclidean_10")+
-    ggplot2::ggtitle(label ="HC_euclidean_10"),
-  plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = "hc_euclidean_15")+
-    ggplot2::ggtitle(label ="HC_euclidean_15"),
-
-  plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = "hc_corelation_5")+
-    ggplot2::ggtitle(label ="HC_correlation_5"),
-  plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = "hc_corelation_10")+
-    ggplot2::ggtitle(label ="HC_correlation_10"),
-  plotReducedDim(sce,dimred = "UMAP_on_MNN",colour_by = "hc_corelation_15")+
-    ggplot2::ggtitle(label ="HC_correlation_15")
+wrap_plots(
+    plotReducedDim(sce, dimred = "UMAP_on_MNN", colour_by = "hc_euclidean_5") +
+        ggplot2::ggtitle(label = "HC_euclidean_5"),
+    plotReducedDim(sce, dimred = "UMAP_on_MNN", colour_by = "hc_euclidean_10") +
+        ggplot2::ggtitle(label = "HC_euclidean_10"),
+    plotReducedDim(sce, dimred = "UMAP_on_MNN", colour_by = "hc_euclidean_15") +
+        ggplot2::ggtitle(label = "HC_euclidean_15"),
+    plotReducedDim(sce, dimred = "UMAP_on_MNN", colour_by = "hc_corelation_5") +
+        ggplot2::ggtitle(label = "HC_correlation_5"),
+    plotReducedDim(sce, dimred = "UMAP_on_MNN", colour_by = "hc_corelation_10") +
+        ggplot2::ggtitle(label = "HC_correlation_10"),
+    plotReducedDim(sce, dimred = "UMAP_on_MNN", colour_by = "hc_corelation_15") +
+        ggplot2::ggtitle(label = "HC_correlation_15"),
+    ncol = 3
 )
 ```
 
 Finally, lets save the clustered data for further analysis.
 
 ``` {r}
-saveRDS(sce,"data/results/covid_qc_dr_int_cl.rds")
+saveRDS(sce, "data/covid/results/bioc_covid_qc_dr_int_cl.rds")
 ```
 
 <div>

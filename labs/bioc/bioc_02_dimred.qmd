@@ -15,15 +15,19 @@ Code chunks run R commands unless otherwise specified.
 
 ```{r}
 suppressPackageStartupMessages({
-  library(scater)
-  library(scran)
-  library(cowplot)
-  library(ggplot2)
-  library(rafalib)
-  library(umap)
+    library(scater)
+    library(scran)
+    library(patchwork)
+    library(ggplot2)
+    library(umap)
 })
+```
 
-sce <- readRDS("data/results/covid_qc.rds")
+```{r}
+path_data <- "https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"
+path_file <- "data/covid/results/bioc_covid_qc.rds"
+if (!file.exists(path_file)) download.file(url = file.path(path_data, "covid/results/bioc_covid_qc.rds"), destfile = path_file)
+sce <- readRDS(path_file)
 ```
 
 ## {{< meta dimred_fs >}}
@@ -34,30 +38,36 @@ sce <- readRDS("data/results/covid_qc.rds")
 #| fig-height: 4
 #| fig-width: 8
 
-sce <- computeSumFactors(sce, sizes=c(20, 40, 60, 80))
+sce <- computeSumFactors(sce, sizes = c(20, 40, 60, 80))
 sce <- logNormCounts(sce)
-var.out <- modelGeneVar(sce, method="loess")
-hvgs = getTopHVGs(var.out, n=2000)
+var.out <- modelGeneVar(sce, method = "loess")
+hvgs <- getTopHVGs(var.out, n = 2000)
 
-mypar(1,2)
-#plot mean over TOTAL variance
+par(mfrow = c(1, 2))
+# plot mean over TOTAL variance
 # Visualizing the fit:
 fit.var <- metadata(var.out)
-plot(fit.var$mean, fit.var$var, xlab="Mean of log-expression",
-    ylab="Variance of log-expression")
-curve(fit.var$trend(x), col="dodgerblue", add=TRUE, lwd=2)
+{
+    plot(fit.var$mean, fit.var$var,
+        xlab = "Mean of log-expression",
+        ylab = "Variance of log-expression"
+    )
+    curve(fit.var$trend(x), col = "dodgerblue", add = TRUE, lwd = 2)
 
-#Select 1000 top variable genes
-hvg.out <- getTopHVGs(var.out, n=1000)
+    # Select 1000 top variable genes
+    hvg.out <- getTopHVGs(var.out, n = 1000)
 
-# highligt those cells in the plot
-cutoff <- rownames(var.out) %in% hvg.out
-points(fit.var$mean[cutoff], fit.var$var[cutoff], col="red", pch=16,cex=.6)
+    # highligt those cells in the plot
+    cutoff <- rownames(var.out) %in% hvg.out
+    points(fit.var$mean[cutoff], fit.var$var[cutoff], col = "red", pch = 16, cex = .6)
+}
 
-#plot mean over BIOLOGICAL variance
-plot(var.out$mean, var.out$bio, pch=16, cex=0.4, xlab="Mean log-expression", ylab="Variance of log-expression")
-lines(c(min(var.out$mean),max(var.out$mean)), c(0,0), col="dodgerblue", lwd=2)
-points(var.out$mean[cutoff], var.out$bio[cutoff], col="red", pch=16,cex=.6)
+{
+    # plot mean over BIOLOGICAL variance
+    plot(var.out$mean, var.out$bio, pch = 16, cex = 0.4, xlab = "Mean log-expression", ylab = "Variance of log-expression")
+    lines(c(min(var.out$mean), max(var.out$mean)), c(0, 0), col = "dodgerblue", lwd = 2)
+    points(var.out$mean[cutoff], var.out$bio[cutoff], col = "red", pch = 16, cex = .6)
+}
 ```
 
 ## {{< meta dimred_zs >}}
@@ -79,7 +89,7 @@ However, unlike the Seurat, this step is implemented inside the PCA function bel
 We use the `logcounts` and then set `scale_features` to TRUE in order to scale each gene.
 
 ```{r}
-#runPCA and specify the variable genes to use for dim reduction with subset_row
+# runPCA and specify the variable genes to use for dim reduction with subset_row
 sce <- runPCA(sce, exprs_values = "logcounts", ncomponents = 50, subset_row = hvg.out, scale = TRUE)
 ```
 
@@ -89,10 +99,11 @@ sce <- runPCA(sce, exprs_values = "logcounts", ncomponents = 50, subset_row = hv
 #| fig-height: 4
 #| fig-width: 13
 
-plot_grid(ncol = 3,
-  plotReducedDim(sce,dimred = "PCA",colour_by = "sample",ncomponents = 1:2,point_size = 0.6),
-  plotReducedDim(sce,dimred = "PCA",colour_by = "sample",ncomponents = 3:4,point_size = 0.6),
-  plotReducedDim(sce,dimred = "PCA",colour_by = "sample",ncomponents = 5:6,point_size = 0.6)
+wrap_plots(
+    plotReducedDim(sce, dimred = "PCA", colour_by = "sample", ncomponents = 1:2, point_size = 0.6),
+    plotReducedDim(sce, dimred = "PCA", colour_by = "sample", ncomponents = 3:4, point_size = 0.6),
+    plotReducedDim(sce, dimred = "PCA", colour_by = "sample", ncomponents = 5:6, point_size = 0.6),
+    ncol = 3
 )
 ```
 
@@ -102,7 +113,7 @@ plot_grid(ncol = 3,
 #| fig-height: 4
 #| fig-width: 16
 
-plot_grid(ncol = 2, plotExplanatoryPCs(sce))
+plotExplanatoryPCs(sce)
 ```
 
 {{< meta dimred_pca_4 >}}
@@ -111,9 +122,8 @@ plot_grid(ncol = 2, plotExplanatoryPCs(sce))
 #| fig-height: 4
 #| fig-width: 4
 
-mypar()
-plot(attr(reducedDim(sce,"PCA"),"percentVar")[1:50]*100,type="l",ylab="% variance",xlab="Principal component #")
-points(attr(reducedDim(sce,"PCA"),"percentVar")[1:50]*100,pch=21,bg="grey",cex=.5)
+plot(attr(reducedDim(sce, "PCA"), "percentVar")[1:50] * 100, type = "l", ylab = "% variance", xlab = "Principal component #")
+points(attr(reducedDim(sce, "PCA"), "percentVar")[1:50] * 100, pch = 21, bg = "grey", cex = .5)
 ```
 
 {{< meta dimred_pca_5 >}}
@@ -124,7 +134,7 @@ points(attr(reducedDim(sce,"PCA"),"percentVar")[1:50]*100,pch=21,bg="grey",cex=.
 
 ```{r}
 set.seed(42)
-sce <- runTSNE(sce, dimred = "PCA", n_dimred = 30, perplexity = 30,name = "tSNE_on_PCA")
+sce <- runTSNE(sce, dimred = "PCA", n_dimred = 30, perplexity = 30, name = "tSNE_on_PCA")
 ```
 
 {{< meta dimred_tsne_2 >}}
@@ -133,7 +143,7 @@ sce <- runTSNE(sce, dimred = "PCA", n_dimred = 30, perplexity = 30,name = "tSNE_
 #| fig-height: 5
 #| fig-width: 7
 
-plot_grid(ncol = 3,plotReducedDim(sce,dimred = "tSNE_on_PCA",colour_by = "sample"))
+plotReducedDim(sce, dimred = "tSNE_on_PCA", colour_by = "sample")
 ```
 
 ## {{< meta dimred_umap >}}
@@ -141,15 +151,15 @@ plot_grid(ncol = 3,plotReducedDim(sce,dimred = "tSNE_on_PCA",colour_by = "sample
 {{< meta dimred_umap_1 >}}
 
 ```{r}
-sce <- runUMAP(sce,dimred = "PCA", n_dimred = 30,   ncomponents = 2,name = "UMAP_on_PCA")
-#see ?umap and ?runUMAP for more info
+sce <- runUMAP(sce, dimred = "PCA", n_dimred = 30, ncomponents = 2, name = "UMAP_on_PCA")
+# see ?umap and ?runUMAP for more info
 ```
 
 {{< meta dimred_umap_2 >}}
 
 ```{r}
-sce <- runUMAP(sce,dimred = "PCA", n_dimred = 30,   ncomponents = 10, name = "UMAP10_on_PCA")
-#see ?umap and ?runUMAP for more info
+sce <- runUMAP(sce, dimred = "PCA", n_dimred = 30, ncomponents = 10, name = "UMAP10_on_PCA")
+# see ?umap and ?runUMAP for more info
 ```
 
 {{< meta dimred_umap_3 >}}
@@ -158,13 +168,14 @@ sce <- runUMAP(sce,dimred = "PCA", n_dimred = 30,   ncomponents = 10, name = "UM
 #| fig-height: 4.5
 #| fig-width: 15
 
-plot_grid(ncol = 3,
-  plotReducedDim(sce,dimred = "UMAP_on_PCA",colour_by = "sample")+
-    ggplot2::ggtitle(label ="UMAP_on_PCA"),
-  plotReducedDim(sce,dimred = "UMAP10_on_PCA",colour_by = "sample",ncomponents = 1:2)+
-    ggplot2::ggtitle(label ="UMAP10_on_PCA"),
-  plotReducedDim(sce,dimred = "UMAP10_on_PCA",colour_by = "sample",ncomponents = 3:4)+
-    ggplot2::ggtitle(label ="UMAP10_on_PCA")
+wrap_plots(
+    plotReducedDim(sce, dimred = "UMAP_on_PCA", colour_by = "sample") +
+        ggplot2::ggtitle(label = "UMAP_on_PCA"),
+    plotReducedDim(sce, dimred = "UMAP10_on_PCA", colour_by = "sample", ncomponents = 1:2) +
+        ggplot2::ggtitle(label = "UMAP10_on_PCA"),
+    plotReducedDim(sce, dimred = "UMAP10_on_PCA", colour_by = "sample", ncomponents = 3:4) +
+        ggplot2::ggtitle(label = "UMAP10_on_PCA"),
+    ncol = 3
 )
 ```
 
@@ -181,7 +192,7 @@ plot_grid(ncol = 3,
 {{< meta dimred_zsg_zs_1 >}}
 
 ```{r}
-sce <- runUMAP(sce, exprs_values='logcounts',name = "UMAP_on_ScaleData")
+sce <- runUMAP(sce, exprs_values = "logcounts", name = "UMAP_on_ScaleData")
 ```
 
 ### {{< meta dimred_zsg_g >}}
@@ -189,16 +200,16 @@ sce <- runUMAP(sce, exprs_values='logcounts',name = "UMAP_on_ScaleData")
 {{< meta dimred_zsg_g_1 >}}
 
 ```{r}
-#Build Graph
-nn <- RANN::nn2(reducedDim(sce,"PCA"),k = 30)
-names(nn) <- c("idx","dist")
-g <- buildKNNGraph(sce, k=30, use.dimred="PCA")
-reducedDim(sce,"KNN") <- igraph::as_adjacency_matrix(g)
+# Build Graph
+nn <- RANN::nn2(reducedDim(sce, "PCA"), k = 30)
+names(nn) <- c("idx", "dist")
+g <- buildKNNGraph(sce, k = 30, use.dimred = "PCA")
+reducedDim(sce, "KNN") <- igraph::as_adjacency_matrix(g)
 
-#Run UMAP and rename it for comparisson
+# Run UMAP and rename it for comparisson
 # temp <- umap::umap.defaults
-try(reducedDim(sce,"UMAP_on_Graph") <- NULL)
-reducedDim(sce,"UMAP_on_Graph") <- uwot::umap(X=NULL, n_components = 2, nn_method=nn)
+try(reducedDim(sce, "UMAP_on_Graph") <- NULL)
+reducedDim(sce, "UMAP_on_Graph") <- uwot::umap(X = NULL, n_components = 2, nn_method = nn)
 ```
 
 {{< meta dimred_zsg_g_2 >}}
@@ -207,13 +218,14 @@ reducedDim(sce,"UMAP_on_Graph") <- uwot::umap(X=NULL, n_components = 2, nn_metho
 #| fig-height: 4.5
 #| fig-width: 15
 
-plot_grid(ncol = 3,
-  plotReducedDim(sce, dimred = "UMAP_on_PCA", colour_by = "sample")+
-    ggplot2::ggtitle(label ="UMAP_on_PCA"),
-  plotReducedDim(sce, dimred = "UMAP_on_ScaleData", colour_by = "sample")+
-    ggplot2::ggtitle(label ="UMAP_on_ScaleData"),
-  plotReducedDim(sce, dimred = "UMAP_on_Graph", colour_by = "sample")+
-    ggplot2::ggtitle(label ="UMAP_on_Graph")
+wrap_plots(
+    plotReducedDim(sce, dimred = "UMAP_on_PCA", colour_by = "sample") +
+        ggplot2::ggtitle(label = "UMAP_on_PCA"),
+    plotReducedDim(sce, dimred = "UMAP_on_ScaleData", colour_by = "sample") +
+        ggplot2::ggtitle(label = "UMAP_on_ScaleData"),
+    plotReducedDim(sce, dimred = "UMAP_on_Graph", colour_by = "sample") +
+        ggplot2::ggtitle(label = "UMAP_on_Graph"),
+    ncol = 3
 )
 ```
 
@@ -237,11 +249,12 @@ plot_grid(ncol = 3,
 #| fig-width: 12
 
 plotlist <- list()
-for(i in c("CD3E","CD4","CD8A","NKG7","GNLY","MS4A1","CD14","LYZ","MS4A7","FCGR3A","CST3","FCER1A")){
-  plotlist[[i]] <- plotReducedDim(sce,dimred = "UMAP_on_PCA",colour_by = i,by_exprs_values = "logcounts") +
-  scale_fill_gradientn(colours = colorRampPalette(c("grey90","orange3","firebrick","firebrick","red","red" ))(10)) +
-  ggtitle(label = i)+ theme(plot.title = element_text(size=20)) }
-plot_grid(ncol=3, plotlist = plotlist)
+for (i in c("CD3E", "CD4", "CD8A", "NKG7", "GNLY", "MS4A1", "CD14", "LYZ", "MS4A7", "FCGR3A", "CST3", "FCER1A")) {
+    plotlist[[i]] <- plotReducedDim(sce, dimred = "UMAP_on_PCA", colour_by = i, by_exprs_values = "logcounts") +
+        scale_fill_gradientn(colours = colorRampPalette(c("grey90", "orange3", "firebrick", "firebrick", "red", "red"))(10)) +
+        ggtitle(label = i) + theme(plot.title = element_text(size = 20))
+}
+wrap_plots(plotlist, ncol = 3)
 ```
 
 :::{.callout-note title="Discuss"}
@@ -253,8 +266,7 @@ plot_grid(ncol=3, plotlist = plotlist)
 {{< meta dimred_save_1 >}}
 
 ```{r}
-path <- "data/results/covid_qc_dm.rds"
-if(!file.exists(path)) saveRDS(sce,path)
+saveRDS(sce, "data/covid/results/bioc_covid_qc_dr.rds")
 ```
 
 ## {{< meta session >}}

@@ -9,7 +9,7 @@ format: html
 Code chunks run R commands unless otherwise specified.
 :::
 
-This tutorial is adapted from the (Seurat vignette)[https://satijalab.org/seurat/v3.2/spatial_vignette.html].
+This tutorial is adapted from the [Seurat vignette](https://satijalab.org/seurat/v3.2/spatial_vignette.html).
 
 {{< meta st_1 >}}
 
@@ -18,16 +18,16 @@ This tutorial is adapted from the (Seurat vignette)[https://satijalab.org/seurat
 {{< meta st_prep_1 >}}
 
 ```{r packages}
-# devtools::install_github('satijalab/seurat-data', dependencies=FALSE)
+# remotes::install_github('satijalab/seurat-data', dependencies=FALSE)
 
 suppressPackageStartupMessages({
-  require(Matrix)
-  require(dplyr)
-  require(SeuratData)
-  require(Seurat)
-  require(ggplot2)
-  require(patchwork)
-  require(dplyr)
+    library(Matrix)
+    library(dplyr)
+    library(SeuratData)
+    library(Seurat)
+    library(ggplot2)
+    library(patchwork)
+    library(dplyr)
 })
 ```
 
@@ -36,14 +36,14 @@ suppressPackageStartupMessages({
 The package `SeuratData` has some seurat objects for different datasets. Among those are spatial transcriptomics data from mouse brain and kidney. Here we will download and process sections from the mouse brain. 
 
 ```{r load}
-outdir = "data/spatial/"
-if(!dir.exists(outdir)) dir.create(outdir, showWarnings = F)
+outdir <- "data/spatial/"
+if (!dir.exists(outdir)) dir.create(outdir, showWarnings = F)
 
 # to list available datasets in SeuratData you can run AvailableData()
 
 # first we dowload the dataset
-if (!("stxBrain.SeuratData" %in% rownames(InstalledData()))){
-  InstallData("stxBrain")
+if (!("stxBrain.SeuratData" %in% rownames(SeuratData::InstalledData()))) {
+    InstallData("stxBrain")
 }
 
 # now we can list what datasets we have downloaded
@@ -76,7 +76,7 @@ Now the counts and feature counts are calculated on the Spatial assay, so they a
 brain <- PercentageFeatureSet(brain, "^mt-", col.name = "percent_mito")
 brain <- PercentageFeatureSet(brain, "^Hb.*-", col.name = "percent_hb")
 
-VlnPlot(brain, features = c("nCount_Spatial", "nFeature_Spatial","percent_mito","percent_hb"), pt.size = 0.1, ncol = 2) + NoLegend()
+VlnPlot(brain, features = c("nCount_Spatial", "nFeature_Spatial", "percent_mito", "percent_hb"), pt.size = 0.1, ncol = 2) + NoLegend()
 ```
 
 {{< meta st_qc_2 >}}
@@ -85,7 +85,7 @@ VlnPlot(brain, features = c("nCount_Spatial", "nFeature_Spatial","percent_mito",
 #| fig-height: 15
 #| fig-width: 5
 
-SpatialFeaturePlot(brain, features = c("nCount_Spatial", "nFeature_Spatial","percent_mito","percent_hb")) 
+SpatialFeaturePlot(brain, features = c("nCount_Spatial", "nFeature_Spatial", "percent_mito", "percent_hb"))
 ```
 
 {{< meta st_qc_3 >}}
@@ -96,7 +96,7 @@ SpatialFeaturePlot(brain, features = c("nCount_Spatial", "nFeature_Spatial","per
 
 
 ```{r}
-brain <- brain[, brain$nFeature_Spatial>500 & brain$percent_mito < 25 & brain$percent_hb < 20]
+brain <- brain[, brain$nFeature_Spatial > 500 & brain$percent_mito < 25 & brain$percent_hb < 20]
 ```
 
 And replot onto tissue section:
@@ -105,7 +105,7 @@ And replot onto tissue section:
 #| fig-height: 12
 #| fig-width: 5
 
-SpatialFeaturePlot(brain, features = c("nCount_Spatial", "nFeature_Spatial","percent_mito"))
+SpatialFeaturePlot(brain, features = c("nCount_Spatial", "nFeature_Spatial", "percent_mito"))
 ```
 
 ### {{< meta st_qc_top >}}
@@ -116,13 +116,15 @@ SpatialFeaturePlot(brain, features = c("nCount_Spatial", "nFeature_Spatial","per
 #| fig-height: 6
 #| fig-width: 6
 
-C <- brain@assays$Spatial@counts
+C <- GetAssayData(brain, assay = "Spatial", slot = "counts")
 C@x <- C@x / rep.int(colSums(C), diff(C@p))
 most_expressed <- order(Matrix::rowSums(C), decreasing = T)[20:1]
 boxplot(as.matrix(t(C[most_expressed, ])),
     cex = 0.1, las = 1, xlab = "% total count per cell",
     col = (scales::hue_pal())(20)[20:1], horizontal = TRUE
 )
+rm(C)
+gc()
 ```
 
 {{< meta st_qc_top_2 >}}
@@ -154,7 +156,7 @@ For ST data, the Seurat team recommends to use SCTranform for normalization, so 
 
 ```{r}
 #| results: hide
-brain <- SCTransform(brain, assay = "Spatial", verbose = TRUE, method = 'poisson')
+brain <- SCTransform(brain, assay = "Spatial", method = "poisson", verbose = TRUE)
 ```
 
 {{< meta st_analysis_2 >}}
@@ -238,7 +240,7 @@ st.list <- PrepSCTIntegration(object.list = st.list, anchor.features = st.featur
 Now we can perform the actual integration.
 
 ```{r}
-int.anchors <- FindIntegrationAnchors(object.list = st.list, normalization.method = "SCT",   verbose = FALSE, anchor.features = st.features)
+int.anchors <- FindIntegrationAnchors(object.list = st.list, normalization.method = "SCT", verbose = FALSE, anchor.features = st.features)
 brain.integrated <- IntegrateData(anchorset = int.anchors, normalization.method = "SCT", verbose = FALSE)
 
 rm(int.anchors, st.list)
@@ -296,7 +298,7 @@ Takes a long time to run, so skip this step for now!
 :::
 
 ```{r}
-# brain <- FindSpatiallyVariableFeatures(brain, assay = "SCT", features = VariableFeatures(brain)[1:1000], 
+# brain <- FindSpatiallyVariableFeatures(brain, assay = "SCT", features = VariableFeatures(brain)[1:1000],
 #     selection.method = "markvariogram")
 
 # We would get top features from SpatiallyVariableFeatures
@@ -307,37 +309,30 @@ Takes a long time to run, so skip this step for now!
 
 {{< meta st_ss_1 >}}
 
-First download the seurat data from: https://www.dropbox.com/s/cuowvm4vrf65pvq/allen_cortex.rds?dl=1 to folder `data/spatial/` with command:
+First download the seurat data:
 
-```{bash}
+```{r}
+path_data <- "https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"
 
-FILE="./data/spatial/allen_cortex.rds"
-
-if [ -e $FILE ]
-then
-   echo "File $FILE is downloaded."
-else
-   echo "Downloading $FILE"
-   mkdir -p data/spatial
-   wget  -O data/spatial/allen_cortex.rds https://www.dropbox.com/s/cuowvm4vrf65pvq/allen_cortex.rds?dl=1
-fi
-
+if (!dir.exists("data/spatial/visium")) dir.create("data/spatial/visium")
+path_file <- "data/spatial/visium/allen_cortex.rds"
+if (!file.exists(path_file)) download.file(url = file.path(path_data, "spatial/visium/allen_cortex.rds"), destfile = path_file)
 ```
 
 {{< meta st_ss_2 >}}
 
 ```{r}
-allen_reference <- readRDS("data/spatial/allen_cortex.rds")
+ar <- readRDS("data/spatial/visium/allen_cortex.rds")
 
 # check number of cells per subclass
-table(allen_reference$subclass)
+table(ar$subclass)
 
 # select 200 cells per subclass, fist set subclass ass active.ident
-Idents(allen_reference) <- allen_reference$subclass
-allen_reference <- subset(allen_reference, cells = WhichCells(allen_reference, downsample = 200))
+Idents(ar) <- ar$subclass
+ar <- subset(ar, cells = WhichCells(ar, downsample = 200))
 
 # check again number of cells per subclass
-table(allen_reference$subclass)
+table(ar$subclass)
 ```
 
 Then run normalization and dimensionality reduction.
@@ -346,11 +341,13 @@ Then run normalization and dimensionality reduction.
 #| fig-height: 5
 #| fig-width: 7
 
-# First run SCTransform and PCA 
-allen_reference <- SCTransform(allen_reference, ncells = 3000, verbose = FALSE, method = 'poisson') %>% RunPCA(verbose = FALSE) %>%    RunUMAP(dims = 1:30)
+# First run SCTransform and PCA
+ar <- SCTransform(ar, ncells = 3000, verbose = FALSE, method = "poisson") %>%
+    RunPCA(verbose = FALSE) %>%
+    RunUMAP(dims = 1:30)
 
 # the annotation is stored in the 'subclass' column of object metadata
-DimPlot(allen_reference, label = TRUE)
+DimPlot(ar, label = TRUE)
 ```
 
 ## {{< meta st_sub >}}
@@ -362,21 +359,26 @@ DimPlot(allen_reference, label = TRUE)
 #| fig-width: 9
 
 # subset for the anterior dataset
-cortex <- subset(brain.integrated, orig.ident == "anterior1")
+cortex <- subset(brain.integrated, subset = orig.ident == "anterior1")
 
 # there seems to be an error in the subsetting, so the posterior1 image is not removed, do it manually
-cortex@images$posterior1 = NULL
+cortex@images$posterior1 <- NULL
+
+# add coordinates to metadata
+# note that this only returns one slide by default
+cortex$imagerow <- GetTissueCoordinates(cortex)$imagerow
+cortex$imagecol <- GetTissueCoordinates(cortex)$imagecol
 
 # subset for a specific region
-cortex <- subset(cortex, anterior1_imagerow > 400 | anterior1_imagecol < 150, invert = TRUE)
-cortex <- subset(cortex, anterior1_imagerow > 275 & anterior1_imagecol > 370, invert = TRUE)
-cortex <- subset(cortex, anterior1_imagerow > 250 & anterior1_imagecol > 440, invert = TRUE)
+cortex <- subset(cortex, subset = imagerow > 400 | imagecol < 150, invert = TRUE)
+cortex <- subset(cortex, subset = imagerow > 275 & imagecol > 370, invert = TRUE)
+cortex <- subset(cortex, subset = imagerow > 250 & imagecol > 440, invert = TRUE)
 
 # also subset for Frontal cortex clusters
-cortex <- subset(cortex, idents = c(1,2,3,4,5))
+cortex <- subset(cortex, subset = seurat_clusters %in% c(1, 2, 3, 4, 5))
 
-p1 <- SpatialDimPlot(cortex, crop = TRUE, label = TRUE)
-p2 <- SpatialDimPlot(cortex, crop = FALSE, label = TRUE, pt.size.factor = 1, label.size = 3)
+p1 <- SpatialDimPlot(cortex, crop = TRUE)
+p2 <- SpatialDimPlot(cortex, crop = FALSE, pt.size.factor = 1, label.size = 3)
 p1 + p2
 ```
 
@@ -384,20 +386,20 @@ p1 + p2
 
 {{< meta st_deconv_1 >}}
 
-Here we will use SCDC for deconvolution of celltypes in the Visium spots. For more information on the tool please check their website: https://meichendong.github.io/SCDC/articles/SCDC.html. First, make sure the packages you need are installed. All dependencies should be in the conda environment.
+Here we will use SCDC for deconvolution of celltypes in the Visium spots. For more information on the tool please check their website: https://meichendong.github.io/SCDC/articles/SCDC.html. First, make sure the packages you need are installed.
 
 ```{r}
-inst = installed.packages()
+inst <- installed.packages()
 
-if (!("xbioc" %in% rownames(inst))){
-  remotes::install_github("renozao/xbioc", dependencies = FALSE)
+if (!("xbioc" %in% rownames(inst))) {
+    remotes::install_github("renozao/xbioc", dependencies = FALSE)
 }
-if (!("SCDC" %in% rownames(inst))){
-  remotes::install_github("meichendong/SCDC", dependencies = FALSE)
+if (!("SCDC" %in% rownames(inst))) {
+    remotes::install_github("meichendong/SCDC", dependencies = FALSE)
 }
 
-suppressPackageStartupMessages(require(SCDC))
-suppressPackageStartupMessages(require(Biobase))
+suppressPackageStartupMessages(library(SCDC))
+suppressPackageStartupMessages(library(Biobase))
 ```
 
 ### {{< meta st_deconv_genes >}}
@@ -407,28 +409,32 @@ suppressPackageStartupMessages(require(Biobase))
 For SCDC we want to find unique markers per cluster, so we select top 20 DEGs per cluster. Ideally you should run with a larger set of genes, perhaps 100 genes per cluster to get better results. However, for the sake of speed, we are now selecting only top20 genes and it still takes about 10 minutes to run.
 
 ```{r}
-allen_reference@active.assay = "RNA"
+ar@active.assay <- "RNA"
 
-markers_sc <- FindAllMarkers(allen_reference,
-                            only.pos = TRUE,
-                            logfc.threshold = 0.1,
-                            test.use = "wilcox",
-                            min.pct = 0.05,
-                            min.diff.pct = 0.1,
-                            max.cells.per.ident = 200,
-                            return.thresh = 0.05,
-                            assay = "RNA")
+markers_sc <- FindAllMarkers(ar,
+    only.pos = TRUE,
+    logfc.threshold = 0.1,
+    test.use = "wilcox",
+    min.pct = 0.05,
+    min.diff.pct = 0.1,
+    max.cells.per.ident = 200,
+    return.thresh = 0.05,
+    assay = "RNA"
+)
 
 # Filter for genes that are also present in the ST data
-markers_sc <- markers_sc[markers_sc$gene %in% rownames(cortex),]
+markers_sc <- markers_sc[markers_sc$gene %in% rownames(cortex), ]
 
 
 # Select top 20 genes per cluster, select top by first p-value, then absolute diff in pct, then quota of pct.
 markers_sc$pct.diff <- markers_sc$pct.1 - markers_sc$pct.2
-markers_sc$log.pct.diff <- log2( (markers_sc$pct.1*99+1) / (markers_sc$pct.2*99+1) )
-markers_sc %>% group_by(cluster)  %>% top_n(-100, p_val) %>% top_n(50, pct.diff) %>% top_n(20, log.pct.diff)-> top20
+markers_sc$log.pct.diff <- log2((markers_sc$pct.1 * 99 + 1) / (markers_sc$pct.2 * 99 + 1))
+markers_sc %>%
+    group_by(cluster) %>%
+    top_n(-100, p_val) %>%
+    top_n(50, pct.diff) %>%
+    top_n(20, log.pct.diff) -> top20
 m_feats <- unique(as.character(top20$gene))
-
 ```
 
 ### Create Expression Sets
@@ -436,9 +442,11 @@ m_feats <- unique(as.character(top20$gene))
 For SCDC both the SC and the ST data need to be in the format of an Expression set with the count matrices as `AssayData`. We also subset the matrices for the genes we selected in the previous step.
 
 ```{r}
-eset_SC <- ExpressionSet(assayData=as.matrix(allen_reference@assays$RNA@counts[m_feats,]),
-                         phenoData =  AnnotatedDataFrame(allen_reference@meta.data))
-eset_ST <- ExpressionSet(assayData=as.matrix(cortex@assays$Spatial@counts[m_feats,]),phenoData = AnnotatedDataFrame(cortex@meta.data))
+eset_SC <- ExpressionSet(
+    assayData = as.matrix(ar@assays$RNA@counts[m_feats, ]),
+    phenoData = AnnotatedDataFrame(ar@meta.data)
+)
+eset_ST <- ExpressionSet(assayData = as.matrix(cortex@assays$Spatial@counts[m_feats, ]), phenoData = AnnotatedDataFrame(cortex@meta.data))
 ```
 
 ### Deconvolve
@@ -446,10 +454,21 @@ eset_ST <- ExpressionSet(assayData=as.matrix(cortex@assays$Spatial@counts[m_feat
 We then run the deconvolution defining the celltype of interest as "subclass" column in the single cell data.
 
 ```{r}
-deconvolution_crc <- SCDC::SCDC_prop(bulk.eset = eset_ST,
-                       sc.eset = eset_SC,
-                       ct.varname = "subclass",
-                       ct.sub = as.character(unique(eset_SC$subclass)) )
+#| results: hide
+#| eval: false
+deconvolution_crc <- SCDC::SCDC_prop(
+    bulk.eset = eset_ST,
+    sc.eset = eset_SC,
+    ct.varname = "subclass",
+    ct.sub = as.character(unique(eset_SC$subclass))
+)
+saveRDS(deconvolution_crc, "data/spatial/visium/seurat_scdc.rds")
+```
+
+```{r}
+path_file <- "data/spatial/visium/seurat_scdc.rds"
+if (!file.exists(path_file)) download.file(url = file.path(path_data, "spatial/visium/results/seurat_scdc.rds"), destfile = path_file)
+deconvolution_crc <- readRDS(path_file)
 ```
 
 Now we have a matrix with predicted proportions of each celltypes for each visium spot in `prop.est.mvw`.
@@ -464,8 +483,8 @@ Now we take the deconvolution output and add it to the Seurat object as a new as
 cortex@assays[["SCDC"]] <- CreateAssayObject(data = t(deconvolution_crc$prop.est.mvw))
 
 # Seems to be a bug in SeuratData package that the key is not set and any plotting function etc. will throw an error.
-if (length(cortex@assays$SCDC@key) == 0 ){
-  cortex@assays$SCDC@key = "scdc_"
+if (length(cortex@assays$SCDC@key) == 0) {
+    cortex@assays$SCDC@key <- "scdc_"
 }
 ```
 
@@ -482,9 +501,13 @@ Based on these prediction scores, we can also predict cell types whose location 
 ```{r}
 #| fig-height: 9
 #| fig-width: 8
+#| eval: false
+# FindSpatiallyVariableFeatures() does not work with markvariogram or moransi
 
-cortex <- FindSpatiallyVariableFeatures(cortex, assay = "SCDC", selection.method = "markvariogram", 
-    features = rownames(cortex), r.metric = 5, slot = "data")
+cortex <- FindSpatiallyVariableFeatures(cortex,
+    assay = "SCDC", selection.method = "markvariogram",
+    features = rownames(cortex), r.metric = 5, slot = "data"
+)
 top.clusters <- head(SpatiallyVariableFeatures(cortex), 4)
 SpatialPlot(object = cortex, features = top.clusters, ncol = 2)
 ```
@@ -494,8 +517,9 @@ We can also visualize the scores per cluster in ST data.
 ```{r}
 #| fig-height: 7.5
 #| fig-width: 7
+#| eval: false
 
-VlnPlot(cortex, group.by = "seurat_clusters", features = top.clusters, pt.size = 0, ncol=2)
+VlnPlot(cortex, group.by = "seurat_clusters", features = top.clusters, pt.size = 0, ncol = 2)
 ```
 
 {{< meta st_2 >}}
@@ -508,13 +532,18 @@ VlnPlot(cortex, group.by = "seurat_clusters", features = top.clusters, pt.size =
 #| fig-width: 9
 
 # subset for the anterior dataset
-subregion <- subset(brain.integrated, orig.ident == "posterior1")
+subregion <- subset(brain.integrated, subset = orig.ident == "posterior1")
 
 # there seems to be an error in the subsetting, so the posterior1 image is not removed, do it manually
-subregion@images$anterior1 = NULL
+subregion@images$anterior1 <- NULL
+
+# add coordinates to metadata
+# note that this only returns one slide by default
+subregion$imagerow <- GetTissueCoordinates(subregion)$imagerow
+subregion$imagecol <- GetTissueCoordinates(subregion)$imagecol
 
 # subset for a specific region
-subregion <- subset(subregion,  posterior1_imagecol > 400, invert = FALSE)
+subregion <- subset(subregion, subset = imagecol > 400, invert = FALSE)
 
 p1 <- SpatialDimPlot(subregion, crop = TRUE, label = TRUE)
 p2 <- SpatialDimPlot(subregion, crop = FALSE, label = TRUE, pt.size.factor = 1, label.size = 3)

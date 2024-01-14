@@ -201,7 +201,7 @@ background-size: cover;
       <div>
       <div class="quarto-title-meta-heading">Published</div>
       <div class="quarto-title-meta-contents">
-        <p class="date">03-Jan-2024</p>
+        <p class="date">07-Jan-2024</p>
       </div>
     </div>
     
@@ -297,9 +297,16 @@ Note
 <h2 data-number="1" class="anchored" data-anchor-id="meta-int_prep"><span class="header-section-number">1</span> Data preparation</h2>
 <p>Let’s first load necessary libraries and the data saved in the previous lab.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Activate scanorama Python venv</span></span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>reticulate<span class="sc">::</span><span class="fu">use_virtualenv</span>(<span class="st">"/opt/venv/scanorama"</span>)</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>reticulate<span class="sc">::</span><span class="fu">py_discover_config</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">suppressPackageStartupMessages</span>({</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">library</span>(Seurat)</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">library</span>(ggplot2)</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">library</span>(patchwork)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">library</span>(reticulate)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Activate scanorama Python venv</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>reticulate<span class="sc">::</span><span class="fu">use_virtualenv</span>(<span class="st">"/opt/venv/scanorama"</span>)</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>reticulate<span class="sc">::</span><span class="fu">py_discover_config</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>python:         /opt/venv/scanorama/bin/python
 libpython:      /usr/lib/python3.10/config-3.10-x86_64-linux-gnu/libpython3.10.so
@@ -310,15 +317,13 @@ numpy_version:  1.26.2
 
 NOTE: Python version was forced by use_python function</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">suppressPackageStartupMessages</span>({</span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">library</span>(Seurat)</span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">library</span>(cowplot)</span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">library</span>(ggplot2)</span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">library</span>(reticulate)</span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>})</span>
-<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>alldata <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="st">"data/results/covid_qc_dr.rds"</span>)</span>
-<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(<span class="fu">names</span>(alldata<span class="sc">@</span>reductions))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>path_data <span class="ot">&lt;-</span> <span class="st">"https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>path_file <span class="ot">&lt;-</span> <span class="st">"data/covid/results/seurat_covid_qc_dr.rds"</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">file.exists</span>(path_file)) <span class="fu">download.file</span>(<span class="at">url =</span> <span class="fu">file.path</span>(path_data, <span class="st">"covid/results/seurat_covid_qc_dr.rds"</span>), <span class="at">destfile =</span> path_file)</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>alldata <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(path_file)</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(<span class="fu">names</span>(alldata<span class="sc">@</span>reductions))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] "pca"               "umap"              "tsne"             
 [4] "UMAP10_on_PCA"     "UMAP_on_ScaleData" "UMAP_on_Graph"    </code></pre>
@@ -346,7 +351,7 @@ NOTE: Python version was forced by use_python function</code></pre>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="seurat_03_integration_files/figure-html/unnamed-chunk-2-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-2"><img src="seurat_03_integration_files/figure-html/unnamed-chunk-2-1.png" class="img-fluid figure-img" width="768"></a></p>
+<p><a href="seurat_03_integration_files/figure-html/unnamed-chunk-3-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-2"><img src="seurat_03_integration_files/figure-html/unnamed-chunk-3-1.png" class="img-fluid figure-img" width="768"></a></p>
 </figure>
 </div>
 </div>
@@ -364,7 +369,7 @@ NOTE: Python version was forced by use_python function</code></pre>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="seurat_03_integration_files/figure-html/unnamed-chunk-3-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-3"><img src="seurat_03_integration_files/figure-html/unnamed-chunk-3-1.png" class="img-fluid figure-img" width="672"></a></p>
+<p><a href="seurat_03_integration_files/figure-html/unnamed-chunk-4-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-3"><img src="seurat_03_integration_files/figure-html/unnamed-chunk-4-1.png" class="img-fluid figure-img" width="672"></a></p>
 </figure>
 </div>
 </div>
@@ -404,19 +409,20 @@ NOTE: Python version was forced by use_python function</code></pre>
 </div>
 <p>We can now plot the unintegrated and the integrated space reduced dimensions.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_grid</span>(<span class="at">ncol =</span> <span class="dv">3</span>,</span>
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="fu">wrap_plots</span>(</span>
 <span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"pca"</span>, <span class="at">group.by =</span> <span class="st">"orig.ident"</span>)<span class="sc">+</span><span class="fu">NoAxes</span>()<span class="sc">+</span><span class="fu">ggtitle</span>(<span class="st">"PCA raw_data"</span>),</span>
 <span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"tsne"</span>, <span class="at">group.by =</span> <span class="st">"orig.ident"</span>)<span class="sc">+</span><span class="fu">NoAxes</span>()<span class="sc">+</span><span class="fu">ggtitle</span>(<span class="st">"tSNE raw_data"</span>),</span>
 <span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"umap"</span>, <span class="at">group.by =</span> <span class="st">"orig.ident"</span>)<span class="sc">+</span><span class="fu">NoAxes</span>()<span class="sc">+</span><span class="fu">ggtitle</span>(<span class="st">"UMAP raw_data"</span>),</span>
 <span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>  </span>
 <span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">DimPlot</span>(alldata.int, <span class="at">reduction =</span> <span class="st">"pca"</span>, <span class="at">group.by =</span> <span class="st">"orig.ident"</span>)<span class="sc">+</span><span class="fu">NoAxes</span>()<span class="sc">+</span><span class="fu">ggtitle</span>(<span class="st">"PCA integrated"</span>),</span>
 <span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">DimPlot</span>(alldata.int, <span class="at">reduction =</span> <span class="st">"tsne"</span>, <span class="at">group.by =</span> <span class="st">"orig.ident"</span>)<span class="sc">+</span><span class="fu">NoAxes</span>()<span class="sc">+</span><span class="fu">ggtitle</span>(<span class="st">"tSNE integrated"</span>),</span>
-<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">DimPlot</span>(alldata.int, <span class="at">reduction =</span> <span class="st">"umap"</span>, <span class="at">group.by =</span> <span class="st">"orig.ident"</span>)<span class="sc">+</span><span class="fu">NoAxes</span>()<span class="sc">+</span><span class="fu">ggtitle</span>(<span class="st">"UMAP integrated"</span>)</span>
-<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">DimPlot</span>(alldata.int, <span class="at">reduction =</span> <span class="st">"umap"</span>, <span class="at">group.by =</span> <span class="st">"orig.ident"</span>)<span class="sc">+</span><span class="fu">NoAxes</span>()<span class="sc">+</span><span class="fu">ggtitle</span>(<span class="st">"UMAP integrated"</span>),</span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">ncol =</span> <span class="dv">3</span></span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="seurat_03_integration_files/figure-html/unnamed-chunk-8-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-4"><img src="seurat_03_integration_files/figure-html/unnamed-chunk-8-1.png" class="img-fluid figure-img" width="960"></a></p>
+<p><a href="seurat_03_integration_files/figure-html/unnamed-chunk-9-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-4"><img src="seurat_03_integration_files/figure-html/unnamed-chunk-9-1.png" class="img-fluid figure-img" width="960"></a></p>
 </figure>
 </div>
 </div>
@@ -434,8 +440,8 @@ NOTE: Python version was forced by use_python function</code></pre>
 <span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a><span class="fu">gc</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>            used   (Mb) gc trigger   (Mb)  max used   (Mb)
-Ncells   3432990  183.4    5085894  271.7   5085894  271.7
-Vcells 203614255 1553.5  564409381 4306.2 877223131 6692.7</code></pre>
+Ncells   3409564  182.1    4989599  266.5   4989599  266.5
+Vcells 203211550 1550.4  564337043 4305.6 879336131 6708.9</code></pre>
 </div>
 </div>
 <p>Let’s plot some marker genes for different cell types onto the embedding.</p>
@@ -487,14 +493,7 @@ Vcells 203614255 1553.5  564409381 4306.2 877223131 6692.7</code></pre>
 <span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span>(i <span class="cf">in</span> myfeatures){</span>
 <span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>  plot_list[[i]] <span class="ot">&lt;-</span> <span class="fu">FeaturePlot</span>(alldata.int, <span class="at">reduction =</span> <span class="st">"umap"</span>,<span class="at">dims =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">2</span>,</span>
 <span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>            <span class="at">features =</span> i,<span class="at">ncol =</span> <span class="dv">3</span>,<span class="at">order =</span> T) <span class="sc">+</span> <span class="fu">NoLegend</span>() <span class="sc">+</span> <span class="fu">NoAxes</span>() <span class="sc">+</span> <span class="fu">NoGrid</span>() }</span>
-<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_grid</span>(<span class="at">ncol=</span><span class="dv">3</span>, <span class="at">plotlist =</span> plot_list)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output-display">
-<div class="quarto-figure quarto-figure-left">
-<figure class="figure">
-<p><a href="seurat_03_integration_files/figure-html/unnamed-chunk-10-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-5"><img src="seurat_03_integration_files/figure-html/unnamed-chunk-10-1.png" class="img-fluid figure-img" width="960"></a></p>
-</figure>
-</div>
-</div>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a><span class="fu">wrap_plots</span>(<span class="at">plotlist =</span> plot_list, <span class="at">ncol =</span> <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 </section>
@@ -528,7 +527,7 @@ Vcells 203614255 1553.5  564409381 4306.2 877223131 6692.7</code></pre>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="seurat_03_integration_files/figure-html/unnamed-chunk-13-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-6"><img src="seurat_03_integration_files/figure-html/unnamed-chunk-13-1.png" class="img-fluid figure-img" width="672"></a></p>
+<p><a href="seurat_03_integration_files/figure-html/unnamed-chunk-14-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-5"><img src="seurat_03_integration_files/figure-html/unnamed-chunk-14-1.png" class="img-fluid figure-img" width="672"></a></p>
 </figure>
 </div>
 </div>
@@ -580,25 +579,17 @@ Vcells 203614255 1553.5  564409381 4306.2 877223131 6692.7</code></pre>
 <h2 data-number="5" class="anchored" data-anchor-id="overview-all-methods"><span class="header-section-number">5</span> Overview all methods</h2>
 <p>Now we will plot UMAPS with all three integration methods side by side.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>p1 <span class="ot">&lt;-</span> <span class="fu">DimPlot</span>(alldata.int, <span class="at">reduction =</span> <span class="st">"umap_raw"</span>, <span class="at">group.by =</span> <span class="st">"orig.ident"</span>)<span class="sc">+</span><span class="fu">ggtitle</span>(<span class="st">"UMAP raw_data"</span>)</span>
-<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>p2 <span class="ot">&lt;-</span> <span class="fu">DimPlot</span>(alldata.int, <span class="at">reduction =</span> <span class="st">"umap"</span>, <span class="at">group.by =</span> <span class="st">"orig.ident"</span>)<span class="sc">+</span><span class="fu">ggtitle</span>(<span class="st">"UMAP CCA"</span>)</span>
-<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>p3 <span class="ot">&lt;-</span> <span class="fu">DimPlot</span>(alldata.int, <span class="at">reduction =</span> <span class="st">"umap_harmony"</span>, <span class="at">group.by =</span> <span class="st">"orig.ident"</span>)<span class="sc">+</span><span class="fu">ggtitle</span>(<span class="st">"UMAP Harmony"</span>)</span>
-<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a><span class="co">#p4 &lt;- DimPlot(alldata.int, reduction = "umap_scanorama", group.by = "orig.ident")+ggtitle("UMAP Scanorama")</span></span>
-<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a>leg <span class="ot">&lt;-</span> <span class="fu">get_legend</span>(p1)</span>
-<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb24-7"><a href="#cb24-7" aria-hidden="true" tabindex="-1"></a>gridExtra<span class="sc">::</span><span class="fu">grid.arrange</span>(</span>
-<span id="cb24-8"><a href="#cb24-8" aria-hidden="true" tabindex="-1"></a>  gridExtra<span class="sc">::</span><span class="fu">arrangeGrob</span>(</span>
-<span id="cb24-9"><a href="#cb24-9" aria-hidden="true" tabindex="-1"></a>    p1 <span class="sc">+</span> <span class="fu">NoLegend</span>() <span class="sc">+</span> <span class="fu">NoAxes</span>(),</span>
-<span id="cb24-10"><a href="#cb24-10" aria-hidden="true" tabindex="-1"></a>    p2 <span class="sc">+</span> <span class="fu">NoLegend</span>() <span class="sc">+</span> <span class="fu">NoAxes</span>(),</span>
-<span id="cb24-11"><a href="#cb24-11" aria-hidden="true" tabindex="-1"></a>    p3 <span class="sc">+</span> <span class="fu">NoLegend</span>() <span class="sc">+</span> <span class="fu">NoAxes</span>(),</span>
-<span id="cb24-12"><a href="#cb24-12" aria-hidden="true" tabindex="-1"></a>    <span class="co">#p4 + NoLegend() + NoAxes(), </span></span>
-<span id="cb24-13"><a href="#cb24-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">nrow=</span><span class="dv">2</span>),</span>
-<span id="cb24-14"><a href="#cb24-14" aria-hidden="true" tabindex="-1"></a>  leg, <span class="at">ncol=</span><span class="dv">2</span>,<span class="at">widths=</span><span class="fu">c</span>(<span class="dv">8</span>,<span class="dv">2</span>)</span>
-<span id="cb24-15"><a href="#cb24-15" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>p1 <span class="ot">&lt;-</span> <span class="fu">DimPlot</span>(alldata.int, <span class="at">reduction =</span> <span class="st">"umap_raw"</span>, <span class="at">group.by =</span> <span class="st">"orig.ident"</span>) <span class="sc">+</span> <span class="fu">ggtitle</span>(<span class="st">"UMAP raw_data"</span>)</span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>p2 <span class="ot">&lt;-</span> <span class="fu">DimPlot</span>(alldata.int, <span class="at">reduction =</span> <span class="st">"umap"</span>, <span class="at">group.by =</span> <span class="st">"orig.ident"</span>) <span class="sc">+</span> <span class="fu">ggtitle</span>(<span class="st">"UMAP CCA"</span>)</span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>p3 <span class="ot">&lt;-</span> <span class="fu">DimPlot</span>(alldata.int, <span class="at">reduction =</span> <span class="st">"umap_harmony"</span>, <span class="at">group.by =</span> <span class="st">"orig.ident"</span>) <span class="sc">+</span> <span class="fu">ggtitle</span>(<span class="st">"UMAP Harmony"</span>)</span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a><span class="co"># p4 &lt;- DimPlot(alldata.int, reduction = "umap_scanorama", group.by = "orig.ident")+ggtitle("UMAP Scanorama")</span></span>
+<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a><span class="fu">wrap_plots</span>(p1, p2, p3, <span class="at">nrow =</span> <span class="dv">2</span>) <span class="sc">+</span></span>
+<span id="cb24-7"><a href="#cb24-7" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plot_layout</span>(<span class="at">guides =</span> <span class="st">"collect"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="seurat_03_integration_files/figure-html/unnamed-chunk-17-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-7"><img src="seurat_03_integration_files/figure-html/unnamed-chunk-17-1.png" class="img-fluid figure-img" width="864"></a></p>
+<p><a href="seurat_03_integration_files/figure-html/unnamed-chunk-18-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-6"><img src="seurat_03_integration_files/figure-html/unnamed-chunk-18-1.png" class="img-fluid figure-img" width="864"></a></p>
 </figure>
 </div>
 </div>
@@ -618,7 +609,7 @@ Discuss
 </div>
 <p>Let’s save the integrated data for further analysis.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(alldata.int,<span class="st">"data/results/covid_qc_dr_int.rds"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(alldata.int,<span class="st">"data/covid/results/seurat_covid_qc_dr_int.rds"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 <section id="extra-task" class="level2" data-number="6">
@@ -657,8 +648,8 @@ attached base packages:
 [1] stats     graphics  grDevices utils     datasets  methods   base     
 
 other attached packages:
-[1] harmony_1.2.0      Rcpp_1.0.10        reticulate_1.30    ggplot2_3.4.2     
-[5] cowplot_1.1.1      SeuratObject_4.1.3 Seurat_4.3.0      
+[1] harmony_1.2.0      Rcpp_1.0.10        reticulate_1.30    patchwork_1.1.2   
+[5] ggplot2_3.4.2      SeuratObject_4.1.3 Seurat_4.3.0      
 
 loaded via a namespace (and not attached):
   [1] deldir_1.0-9           pbapply_1.7-0          gridExtra_2.3         
@@ -689,14 +680,14 @@ loaded via a namespace (and not attached):
  [76] scales_1.2.1           globals_0.16.2         xtable_1.8-4          
  [79] RhpcBLASctl_0.23-42    glue_1.6.2             pheatmap_1.0.12       
  [82] lazyeval_0.2.2         tools_4.3.0            data.table_1.14.8     
- [85] RANN_2.6.1             leiden_0.4.3           grid_4.3.0            
- [88] tidyr_1.3.0            colorspace_2.1-0       nlme_3.1-162          
- [91] patchwork_1.1.2        cli_3.6.1              spatstat.sparse_3.0-1 
+ [85] RANN_2.6.1             leiden_0.4.3           cowplot_1.1.1         
+ [88] grid_4.3.0             tidyr_1.3.0            colorspace_2.1-0      
+ [91] nlme_3.1-162           cli_3.6.1              spatstat.sparse_3.0-1 
  [94] fansi_1.0.4            viridisLite_0.4.2      dplyr_1.1.2           
  [97] uwot_0.1.14            gtable_0.3.3           digest_0.6.31         
 [100] progressr_0.13.0       ggrepel_0.9.3          farver_2.1.1          
 [103] htmlwidgets_1.6.2      htmltools_0.5.5        lifecycle_1.0.3       
-[106] httr_1.4.6             here_1.0.1             mime_0.12             
+[106] here_1.0.1             httr_1.4.6             mime_0.12             
 [109] MASS_7.3-58.4         </code></pre>
 </div>
 </div>
@@ -949,7 +940,7 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
     <div class="nav-footer-right">Published with <a href="https://quarto.org/">Quarto</a> v1.3.353</div>
   </div>
 </footer>
-<script>var lightboxQuarto = GLightbox({"openEffect":"zoom","loop":true,"descPosition":"bottom","selector":".lightbox","closeEffect":"zoom"});</script>
+<script>var lightboxQuarto = GLightbox({"selector":".lightbox","openEffect":"zoom","loop":true,"closeEffect":"zoom","descPosition":"bottom"});</script>
 
 
 

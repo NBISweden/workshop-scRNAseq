@@ -26,18 +26,23 @@ genes.
 
 ``` {r}
 suppressPackageStartupMessages({
-  library(scater)
-  library(scran)
-  #library(venn)
-  library(cowplot)
-  library(ggplot2)
-  # library(rafalib)
-  library(pheatmap)
-  library(igraph)
-  library(dplyr)
+    library(scater)
+    library(scran)
+    # library(venn)
+    library(patchwork)
+    library(ggplot2)
+    library(pheatmap)
+    library(igraph)
+    library(dplyr)
 })
+```
 
-sce <- readRDS("data/results/covid_qc_dr_int_cl.rds")
+``` {r}
+path_data <- "https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"
+path_file <- "data/covid/results/bioc_covid_qc_dr_int_cl.rds"
+if (!file.exists(path_file)) download.file(url = file.path(path_data, "covid/results/bioc_covid_qc_dr_int_cl.rds"), destfile = path_file)
+sce <- readRDS(path_file)
+print(reducedDims(sce))
 ```
 
 ## Cell marker genes
@@ -49,29 +54,34 @@ want genes that are positivelly expressed in a cell type and possibly
 not expressed in the others.
 
 ``` {r}
-#Compute differentiall expression
+# Compute differentiall expression
 markers_genes <- scran::findMarkers(
-  x = sce,
-  groups = as.character(sce$louvain_SNNk15),
-  lfc=.5,
-  pval.type = "all",
-  direction = "up"
+    x = sce,
+    groups = as.character(sce$louvain_SNNk15),
+    lfc = .5,
+    pval.type = "all",
+    direction = "up"
 )
 
-#List of dataFrames with the results for each cluster
+# List of dataFrames with the results for each cluster
 markers_genes
 
-#Visualizing the expression of one
+# Visualizing the expression of one
 markers_genes[["1"]]
 ```
 
 We can now select the top 25 up regulated genes for plotting.
 
 ``` {r}
-#Colect the top 25 genes for each cluster and put the into a single table
-top25 <- lapply( names(markers_genes), function(x) { temp <- markers_genes[[x]][1:25, 1:2] ; temp$gene <- rownames(markers_genes[[x]])[1:25] ; temp$cluster <- x ; return(temp) } )
+# Colect the top 25 genes for each cluster and put the into a single table
+top25 <- lapply(names(markers_genes), function(x) {
+    temp <- markers_genes[[x]][1:25, 1:2]
+    temp$gene <- rownames(markers_genes[[x]])[1:25]
+    temp$cluster <- x
+    return(temp)
+})
 top25 <- as_tibble(do.call(rbind, top25))
-top25$p.value[top25$p.value==0] <- 1e-300
+top25$p.value[top25$p.value == 0] <- 1e-300
 top25
 ```
 
@@ -94,7 +104,9 @@ We can visualize them as a heatmap. Here we are selecting the top 5.
 #| fig-height: 6
 #| fig-width: 8
 
-as_tibble(top25) %>% group_by(cluster)  %>% top_n(-5, p.value) -> top5
+as_tibble(top25) %>%
+    group_by(cluster) %>%
+    top_n(-5, p.value) -> top5
 
 scater::plotHeatmap(sce[, order(sce$louvain_SNNk15)],
     features = unique(top5$gene),
@@ -112,7 +124,7 @@ We can also plot a violin plot for each gene.
 #| fig-height: 12
 #| fig-width: 13
 
-scater::plotExpression(sce, features = unique(top5$gene), x = "louvain_SNNk15", ncol = 5, colour_by = "louvain_SNNk15", scales="free")
+scater::plotExpression(sce, features = unique(top5$gene), x = "louvain_SNNk15", ncol = 5, colour_by = "louvain_SNNk15", scales = "free")
 ```
 
 ## DGE across conditions
@@ -170,7 +182,7 @@ for (i in unique(top5_cell_selection$gene)) {
     plotlist[[i]] <- plotReducedDim(sce, dimred = "UMAP_on_MNN", colour_by = i, by_exprs_values = "logcounts") +
         ggtitle(label = i) + theme(plot.title = element_text(size = 20))
 }
-plot_grid(ncol = 3, plotlist = plotlist)
+wrap_plots(plotlist = plotlist, ncol = 3)
 ```
 
 ## Gene Set Analysis (GSA)
@@ -188,11 +200,12 @@ library(enrichR)
 enrichR::listEnrichrDbs()
 
 # Perform enrichment
-top_DGE <- DGE_cell_selection$Covid[ (DGE_cell_selection$Covid$p.value < 0.01) & (abs(DGE_cell_selection$Covid[,grep("logFC.C",colnames(DGE_cell_selection$Covid))])>0.25), ]
+top_DGE <- DGE_cell_selection$Covid[(DGE_cell_selection$Covid$p.value < 0.01) & (abs(DGE_cell_selection$Covid[, grep("logFC.C", colnames(DGE_cell_selection$Covid))]) > 0.25), ]
 
 enrich_results <- enrichr(
- genes     = rownames(top_DGE),
- databases = "GO_Biological_Process_2017b" )[[1]]
+    genes     = rownames(top_DGE),
+    databases = "GO_Biological_Process_2017b"
+)[[1]]
 ```
 
 Some databases of interest:\
@@ -292,7 +305,7 @@ plotGseaTable(gmt[top10_UP], gene_rank, fgseaRes, gseaParam = 0.5)
 Finally, lets save the integrated data for further analysis.
 
 ``` {r}
-saveRDS(sce,"data/results/covid_qc_dr_int_cl_dge.rds")
+saveRDS(sce, "data/covid/results/bioc_covid_qc_dr_int_cl_dge.rds")
 ```
 
 ## Session info

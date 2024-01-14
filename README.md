@@ -36,8 +36,8 @@ docker pull ghcr.io/nbisweden/workshop-scrnaseq:2024-scanpy_spatial-py3.10
 - To run Seurat or Bioconductor labs in RStudio
 
 ```
-docker run --rm -ti --platform=linux/amd64 -p 8787:8787 -e PASSWORD=scrnaseq -v $PWD:/home/rstudio/workdir ghcr.io/nbisweden/workshop-scrnaseq:2024-seurat-r4.3.0
-docker run --rm -ti --platform=linux/amd64 -p 8787:8787 -e PASSWORD=scrnaseq -v $PWD:/home/rstudio/workdir ghcr.io/nbisweden/workshop-scrnaseq:2024-bioconductor-r4.3.0
+docker run --rm -ti --platform=linux/amd64 -p 8787:8787 -e PASSWORD=scrnaseq -v ${PWD}:/home/rstudio/workdir ghcr.io/nbisweden/workshop-scrnaseq:2024-seurat-r4.3.0
+docker run --rm -ti --platform=linux/amd64 -p 8787:8787 -e PASSWORD=scrnaseq -v ${PWD}:/home/rstudio/workdir ghcr.io/nbisweden/workshop-scrnaseq:2024-bioconductor-r4.3.0
 ```
 
 - Open in browser: `http://localhost:8787/`, login: rstudio, pass: scrnaseq
@@ -46,7 +46,7 @@ docker run --rm -ti --platform=linux/amd64 -p 8787:8787 -e PASSWORD=scrnaseq -v 
 - To run Python labs in JupyterLab
 
 ```
-docker run --rm -ti --platform=linux/amd64 -p 8888:8888 -v $PWD:/home/jovyan/workdir ghcr.io/nbisweden/workshop-scrnaseq:2024-scanpy-py3.10
+docker run --rm -ti --platform=linux/amd64 -p 8888:8888 -v ${PWD}:/home/jovyan/workdir ghcr.io/nbisweden/workshop-scrnaseq:2024-scanpy-py3.10
 ```
 
 - Open in browser: `http://127.0.0.1:8888/lab?token=xxxx` (Use exact token from terminal on launch)
@@ -60,13 +60,13 @@ Instructions to render the `.qmd` files to `.html`.
 
 ```
 # r/seurat
-docker run --rm -ti --platform=linux/amd64 -p 8787:8787 -e PASSWORD=scrnaseq -v $PWD:/work ghcr.io/nbisweden/workshop-scrnaseq:2024-seurat-r4.3.0 quarto render /work/labs/seurat/seurat_01_qc.qmd
+docker run --rm -ti --platform=linux/amd64 -p 8787:8787 -e PASSWORD=scrnaseq -v ${PWD}:/work ghcr.io/nbisweden/workshop-scrnaseq:2024-seurat-r4.3.0 quarto render /work/labs/seurat/seurat_01_qc.qmd
 
 # r/bioc
-docker run --rm -ti --platform=linux/amd64 -p 8787:8787 -e PASSWORD=scrnaseq -v $PWD:/work ghcr.io/nbisweden/workshop-scrnaseq:2024-bioconductor-r4.3.0 quarto render /work/labs/bioc/bioc_01_qc.qmd
+docker run --rm -ti --platform=linux/amd64 -p 8787:8787 -e PASSWORD=scrnaseq -v ${PWD}:/work ghcr.io/nbisweden/workshop-scrnaseq:2024-bioconductor-r4.3.0 quarto render /work/labs/bioc/bioc_01_qc.qmd
 
 # python/scanpy
-docker run --rm -ti --platform=linux/amd64 -p 8888:8888 -v $PWD:/work ghcr.io/nbisweden/workshop-scrnaseq:2024-scanpy-py3.10 quarto render /work/labs/scanpy/scanpy_01_qc.qmd
+docker run --rm -ti --platform=linux/amd64 -p 8888:8888 -v ${PWD}:/work ghcr.io/nbisweden/workshop-scrnaseq:2024-scanpy-py3.10 quarto render /work/labs/scanpy/scanpy_01_qc.qmd
 ```
 
 - Successfully rendered outputs are moved to `docs` folder and chunks are cached under `_freeze`.
