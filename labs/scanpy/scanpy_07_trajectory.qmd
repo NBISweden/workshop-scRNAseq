@@ -52,10 +52,6 @@ path_data = "https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrna
 path_trajectory = "./data/trajectory"
 if not os.path.exists(path_trajectory):
     os.makedirs(path_trajectory, exist_ok=True)
-
-path_results = "data/results/trajectory"
-if not os.path.exists(path_results):
-    os.makedirs(path_results, exist_ok=True)
 ```
 
 ```{python}
@@ -231,7 +227,7 @@ Compare the 2 graphs
 ```{python}
 sc.pl.paga_compare(
     adata, threshold=0.03, title='', right_margin=0.2, size=10, edge_width_scale=0.5,
-    legend_fontsize=12, fontsize=12, frameon=False, edges=True, save=True)
+    legend_fontsize=12, fontsize=12, frameon=False, edges=True)
 ```
 
 ## Reconstructing gene changes along PAGA paths for a given set of genes
@@ -256,15 +252,13 @@ lineages.
 ```{python}
 # Define paths
 
-paths = [('erythrocytes', ['5_progen', '8_progen', '6','3','7', '11_eryth']),
-          ('lympoid', ['5_progen', '12', '16_BC', '14_TC']), 
-          ('granulo', ['5_progen', '4_progen', '2', '9_gran', '1_gran']),
-          ('mono', ['5_progen','4_progen','0_mono','18_dend','17_macro'])
-        ]
+paths = [('erythrocytes', ['5_progen', '8_progen', '6', '3', '7', '11_eryth']),
+         ('lympoid', ['5_progen', '12', '16_BC', '14_TC']),
+         ('granulo', ['5_progen', '4_progen', '2', '9_gran', '1_gran']),
+         ('mono', ['5_progen', '4_progen', '0_mono', '18_dend', '17_macro'])
+         ]
 
 adata.obs['distance'] = adata.obs['dpt_pseudotime']
-
-!mkdir write
 ```
 
 Then we select some genes that can vary in the lineages and plot onto the paths.
@@ -278,31 +272,29 @@ gene_names = ['Gata2', 'Gata1', 'Klf1', 'Epor', 'Hba-a2',  # erythroid
 ```
 
 ```{python}
-#| eval: false
-# this chunk is broken. fix code and remove eval: false
-
-_, axs = pl.subplots(ncols=4, figsize=(10, 4), gridspec_kw={'wspace': 0.05, 'left': 0.12})
+_, axs = pl.subplots(ncols=4, figsize=(10, 4), gridspec_kw={
+                     'wspace': 0.05, 'left': 0.12})
 pl.subplots_adjust(left=0.05, right=0.98, top=0.82, bottom=0.2)
 for ipath, (descr, path) in enumerate(paths):
     _, data = sc.pl.paga_path(
-        adata, path, gene_names,                         
+        adata, path, gene_names,
         show_node_names=False,
         ax=axs[ipath],
         ytick_fontsize=12,
         left_margin=0.15,
         n_avg=50,
         annotations=['distance'],
-        show_yticks=True if ipath==0 else False,
+        show_yticks=True if ipath == 0 else False,
         show_colorbar=False,
         color_map='Greys',
         groups_key='annot',
         color_maps_annotations={'distance': 'viridis'},
         title='{} path'.format(descr),
         return_data=True,
-        use_raw = False,
+        use_raw=False,
         show=False)
-    data.to_csv('./write/paga_path_{}.csv'.format(descr))
-pl.savefig('./figures/paga_path.pdf')
+    data.to_csv('data/trajectory/paga_path_{}.csv'.format(descr))
+pl.savefig('data/trajectory/paga_path.pdf')
 pl.show()
 ```
 
