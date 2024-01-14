@@ -259,6 +259,8 @@ print(df.shape)
 ```
 
 ```{python}
+#| eval: false
+
 df.index = df.cellName
 gene_dict = df.geneSymbol.str.split(",").to_dict()
 
@@ -267,6 +269,8 @@ sc.tl.rank_genes_groups(adata, 'louvain_0.6', method='wilcoxon', key_added = "wi
 ```
 
 ```{python}
+# | eval: false
+
 # do gene set overlap to the groups in the gene list and top 300 DEGs.
 
 import gseapy
@@ -276,28 +280,34 @@ pred = dict()
 
 for cl in adata.obs['louvain_0.6'].cat.categories.tolist():
     print(cl)
-    glist = sc.get.rank_genes_groups_df(adata, group=cl, key='wilcoxon')['names'].squeeze().str.strip().tolist()    
+    glist = sc.get.rank_genes_groups_df(adata, group=cl, key='wilcoxon')[
+        'names'].squeeze().str.strip().tolist()
     enr_res = gseapy.enrichr(gene_list=glist[:300],
-                      organism='Human',
-                      gene_sets=gene_dict,
-                      background = adata.raw.shape[1],    
-                      cutoff = 1)
+                             organism='Human',
+                             gene_sets=gene_dict,
+                             background=adata.raw.shape[1],
+                             cutoff=1)
     if enr_res.results.shape[0] == 0:
         pred[cl] = "Unass"
     else:
-        enr_res.results.sort_values(by="P-value",axis=0, ascending=True, inplace=True)
+        enr_res.results.sort_values(
+            by="P-value", axis=0, ascending=True, inplace=True)
         print(enr_res.results.head(2))
-        gsea_res[cl]=enr_res
+        gsea_res[cl] = enr_res
         pred[cl] = enr_res.results["Term"][0]
 ```
 
 
 ```{python}
+# | eval: false
+
 # prediction per cluster
 pred
 ```
 
 ```{python}
+# | eval: false
+
 prediction = [pred[x] for x in adata.obs['louvain_0.6']]
 adata.obs["GS_overlap_pred"] = prediction
 
