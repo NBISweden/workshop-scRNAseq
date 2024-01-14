@@ -4,6 +4,7 @@ set -e
 
 ## Build ARGs
 NCPUS=${NCPUS:--1}
+QUARTO_VERSION="1.3.450"
 
 ## Function to install apt packages only if they are not installed
 function apt_install() {
@@ -20,11 +21,18 @@ apt_install \
     libglpk-dev \
     libxt-dev \
     libhdf5-dev \
+    libxt6 \
     patch \
     python3.10-dev \
     python3-pip \
     python3.10-venv \
-    vim
+    vim \
+    curl
+
+## Install quarto cli
+curl -o quarto-linux-amd64.deb -L https://github.com/quarto-dev/quarto-cli/releases/download/v${QUARTO_VERSION}/quarto-${QUARTO_VERSION}-linux-amd64.deb \
+    && apt-get install -y ./quarto-linux-amd64.deb \
+    && rm -rf ./quarto-linux-amd64.deb \
 
 ## Install Miniconda
 wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /home/rstudio/miniconda.sh

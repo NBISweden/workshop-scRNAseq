@@ -70,16 +70,19 @@ py_discover_config()
 If you need to install additional R packages from `Cran`, `Bioconductor` or `GitHub`, the following scripts are available for convenience. From the _Terminal_, run the corresponding command below:
 
 * CRAN  
+
   ```bash
   install2.r --error --skipinstalled -n "$NCPUS" <PACKAGE-NAME>
   ```
 
 * Bioconductor
+
   ```bash
   installBioc.r --error --skipinstalled -n "$NCPUS" <PACKAGE-NAME>
   ```
 
 * GitHub
+
   ```bash
   installGithub.r <GITHUB-OWNER>/<GITHUB-REPOSITORY>
   ```
@@ -118,7 +121,7 @@ In the browser, go to [localhost:8888](localhost:8888).
 From the project root directory, run the following command:
 
 ```bash
-docker build -t scrnaseq:<TOOLKIT> --file containers/dockerfiles/<TOOLKIT>.Dockerfile ./containers
+docker build -t ghcr.io/nbisweden/workshop-scrnaseq:<TOOLKIT> --file containers/dockerfiles/<TOOLKIT>.Dockerfile ./containers
 ```
 
 ## Push to GitHub Container Registry
