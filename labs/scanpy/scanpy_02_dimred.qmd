@@ -35,6 +35,10 @@ sc.settings.set_figure_params(dpi=80)
 ```{python}
 path_data = "https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"
 
+path_results = "data/covid/results"
+if not os.path.exists(path_results):
+    os.makedirs(path_results, exist_ok=True)
+
 path_file = "data/covid/results/scanpy_covid_qc.h5ad"
 if not os.path.exists(path_file):
     urllib.request.urlretrieve(os.path.join(
@@ -176,13 +180,16 @@ sc.pl.umap(adata, color='sample')
 {{< meta dimred_umap_2 >}}
 
 ```{python}
-#run with 10 components, save to a new object so that the umap with 2D is not overwritten.
+# run with 10 components, save to a new object so that the umap with 2D is not overwritten.
 umap10 = sc.tl.umap(adata, n_components=10, copy=True)
-fig, axs = plt.subplots(1, 3, figsize=(10,4),constrained_layout=True)
+fig, axs = plt.subplots(1, 3, figsize=(10, 4), constrained_layout=True)
 
-sc.pl.umap(adata, color='sample',  title="UMAP", show=False, ax=axs[0])
-sc.pl.umap(umap10, color='sample', title="UMAP10", show=False, ax=axs[1], components=['1,2'])
-sc.pl.umap(umap10, color='sample', title="UMAP10", show=False, ax=axs[2], components=['3,4'])
+sc.pl.umap(adata, color='sample',  title="UMAP",
+           show=False, ax=axs[0], legend_loc=None)
+sc.pl.umap(umap10, color='sample', title="UMAP10", show=False,
+           ax=axs[1], components=['1,2'], legend_loc=None)
+sc.pl.umap(umap10, color='sample', title="UMAP10",
+           show=False, ax=axs[2], components=['3,4'], legend_loc=None)
 
 # we can also plot the umap with neighbor edges
 sc.pl.umap(adata, color='sample', title="UMAP", edges=True)
@@ -190,7 +197,14 @@ sc.pl.umap(adata, color='sample', title="UMAP", edges=True)
 
 {{< meta dimred_umap_3 >}}
 
-TODO: [pca, tsne and umap plots side by side]
+```{python}
+fig, axs = plt.subplots(2, 2, figsize=(10, 8), constrained_layout=True)
+sc.pl.pca(adata, color='sample', components=['1,2'], ax=axs[0, 0], show=False)
+sc.pl.tsne(adata, color='sample', components=['1,2'], ax=axs[0, 1], show=False)
+sc.pl.umap(adata, color='sample', components=['1,2'], ax=axs[1, 0], show=False)
+```
+
+Finally, we can compare the PCA, tSNE and UMAP.
 
 ::: {.callout-note title="Discuss"}
 {{< meta dimred_umap_4 >}}

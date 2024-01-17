@@ -15,11 +15,11 @@ Code chunks run R commands unless otherwise specified.
 
 ```{r}
 suppressPackageStartupMessages({
-  library(Seurat)
-  library(patchwork)
-  library(ggplot2)
-  library(pheatmap)
-  library(clustree)
+    library(Seurat)
+    library(patchwork)
+    library(ggplot2)
+    library(pheatmap)
+    library(clustree)
 })
 ```
 
@@ -47,9 +47,9 @@ As we can see above, the **Seurat** function `FindNeighbors()` already computes 
 alldata@active.assay
 
 # set the correct assay.
-alldata@active.assay = "CCA"
+alldata@active.assay <- "CCA"
 
-alldata <- FindNeighbors(alldata, dims = 1:30, k.param = 60, prune.SNN = 1/15)
+alldata <- FindNeighbors(alldata, dims = 1:30, k.param = 60, prune.SNN = 1 / 15)
 
 # check the names for graphs in the object.
 names(alldata@graphs)
@@ -61,14 +61,16 @@ names(alldata@graphs)
 #| fig-height: 6
 #| fig-width: 6
 
-pheatmap(alldata@graphs$CCA_nn[1:200,1:200],
-         col=c("white","black"),border_color = "grey90", main = "KNN graph",
-         legend = F,cluster_rows = F,cluster_cols = F,fontsize = 2)
+pheatmap(alldata@graphs$CCA_nn[1:200, 1:200],
+    col = c("white", "black"), border_color = "grey90", main = "KNN graph",
+    legend = F, cluster_rows = F, cluster_cols = F, fontsize = 2
+)
 
-pheatmap(alldata@graphs$CCA_snn[1:200,1:200],
-         col=colorRampPalette(c("white","yellow","red"))(100), 
-         border_color = "grey90", main = "SNN graph",
-         legend = F,cluster_rows = F,cluster_cols = F,fontsize = 2)
+pheatmap(alldata@graphs$CCA_snn[1:200, 1:200],
+    col = colorRampPalette(c("white", "yellow", "red"))(100),
+    border_color = "grey90", main = "SNN graph",
+    legend = F, cluster_rows = F, cluster_cols = F, fontsize = 2
+)
 ```
 
 ### {{< meta clust_graphclust_graph >}}
@@ -85,8 +87,8 @@ By default it will run clustering on the SNN graph we created in the previous st
 #| results: hide
 
 # Clustering with louvain (algorithm 1) and a few different resolutions
-for (res in c( 0.1 , 0.25 , .5 , 1 , 1.5 , 2 )){
-  alldata <- FindClusters(alldata, graph.name = "CCA_snn", resolution = res , algorithm = 1)
+for (res in c(0.1, 0.25, .5, 1, 1.5, 2)) {
+    alldata <- FindClusters(alldata, graph.name = "CCA_snn", resolution = res, algorithm = 1)
 }
 
 # each time you run clustering, the data is stored in meta data columns:
@@ -99,11 +101,11 @@ for (res in c( 0.1 , 0.25 , .5 , 1 , 1.5 , 2 )){
 #| fig-width: 12
 
 wrap_plots(
-  DimPlot(alldata, reduction = "umap", group.by = "CCA_snn_res.0.5")+ggtitle("louvain_0.5"),
-  DimPlot(alldata, reduction = "umap", group.by = "CCA_snn_res.1")+ggtitle("louvain_1"),
-  DimPlot(alldata, reduction = "umap", group.by = "CCA_snn_res.2")+ggtitle("louvain_2"),
-  ncol = 3
-)
+    DimPlot(alldata, reduction = "umap", group.by = "CCA_snn_res.0.5") + ggtitle("louvain_0.5"),
+    DimPlot(alldata, reduction = "umap", group.by = "CCA_snn_res.1") + ggtitle("louvain_1"),
+    DimPlot(alldata, reduction = "umap", group.by = "CCA_snn_res.2") + ggtitle("louvain_2"),
+    ncol = 3
+) + plot_layout(guides = "collect")
 ```
 
 {{< meta clust_graphclust_graph_2 >}}
@@ -124,16 +126,16 @@ clustree(alldata@meta.data, prefix = "CCA_snn_res.")
 #| fig-height: 4
 #| fig-width: 12
 
-for (k in c( 5 , 7 , 10 , 12 , 15 , 17 , 20)){
-  alldata@meta.data[,paste0("kmeans_",k)] <- kmeans(x = alldata@reductions[["pca"]]@cell.embeddings, centers = k,nstart = 100)$cluster
+for (k in c(5, 7, 10, 12, 15, 17, 20)) {
+    alldata@meta.data[, paste0("kmeans_", k)] <- kmeans(x = alldata@reductions[["pca"]]@cell.embeddings, centers = k, nstart = 100)$cluster
 }
 
 wrap_plots(
-  DimPlot(alldata, reduction = "umap", group.by = "kmeans_5")+ggtitle("kmeans_5"),
-  DimPlot(alldata, reduction = "umap", group.by = "kmeans_10")+ggtitle("kmeans_10"),
-  DimPlot(alldata, reduction = "umap", group.by = "kmeans_15")+ggtitle("kmeans_15"),
-  ncol = 3
-)
+    DimPlot(alldata, reduction = "umap", group.by = "kmeans_5") + ggtitle("kmeans_5"),
+    DimPlot(alldata, reduction = "umap", group.by = "kmeans_10") + ggtitle("kmeans_10"),
+    DimPlot(alldata, reduction = "umap", group.by = "kmeans_15") + ggtitle("kmeans_15"),
+    ncol = 3
+) + plot_layout(guides = "collect")
 ```
 
 ```{r}
@@ -150,19 +152,19 @@ clustree(alldata@meta.data, prefix = "kmeans_")
 {{< meta clust_hier_dist_1 >}}
 
 ```{r}
-d <- dist( alldata@reductions[["pca"]]@cell.embeddings, method="euclidean")
+d <- dist(alldata@reductions[["pca"]]@cell.embeddings, method = "euclidean")
 ```
 
 {{< meta clust_hier_dist_2 >}}
 
 ```{r}
-#Compute sample correlations
-sample_cor <- cor( Matrix::t(alldata@reductions[["pca"]]@cell.embeddings) )
+# Compute sample correlations
+sample_cor <- cor(Matrix::t(alldata@reductions[["pca"]]@cell.embeddings))
 
-#Transform the scale from correlations
+# Transform the scale from correlations
 sample_cor <- (1 - sample_cor) / 2
 
-#Convert it to a distance object
+# Convert it to a distance object
 d2 <- as.dist(sample_cor)
 ```
 
@@ -171,11 +173,11 @@ d2 <- as.dist(sample_cor)
 {{< meta clust_hier_clust_1 >}}
 
 ```{r}
-#euclidean
-h_euclidean <- hclust(d, method="ward.D2")
+# euclidean
+h_euclidean <- hclust(d, method = "ward.D2")
 
-#correlation
-h_correlation <- hclust(d2, method="ward.D2")
+# correlation
+h_correlation <- hclust(d2, method = "ward.D2")
 ```
 
 {{< meta clust_hier_clust_2 >}}
@@ -184,32 +186,31 @@ h_correlation <- hclust(d2, method="ward.D2")
 #| fig-height: 8
 #| fig-width: 13
 
-#euclidean distance
-alldata$hc_euclidean_5 <- cutree(h_euclidean,k = 5)
-alldata$hc_euclidean_10 <- cutree(h_euclidean,k = 10)
-alldata$hc_euclidean_15 <- cutree(h_euclidean,k = 15)
+# euclidean distance
+alldata$hc_euclidean_5 <- cutree(h_euclidean, k = 5)
+alldata$hc_euclidean_10 <- cutree(h_euclidean, k = 10)
+alldata$hc_euclidean_15 <- cutree(h_euclidean, k = 15)
 
-#correlation distance
-alldata$hc_corelation_5 <- cutree(h_correlation,k = 5)
-alldata$hc_corelation_10 <- cutree(h_correlation,k = 10)
-alldata$hc_corelation_15 <- cutree(h_correlation,k = 15)
+# correlation distance
+alldata$hc_corelation_5 <- cutree(h_correlation, k = 5)
+alldata$hc_corelation_10 <- cutree(h_correlation, k = 10)
+alldata$hc_corelation_15 <- cutree(h_correlation, k = 15)
 
 wrap_plots(
-  DimPlot(alldata, reduction = "umap", group.by = "hc_euclidean_5")+ggtitle("hc_euc_5"),
-  DimPlot(alldata, reduction = "umap", group.by = "hc_euclidean_10")+ggtitle("hc_euc_10"),
-  DimPlot(alldata, reduction = "umap", group.by = "hc_euclidean_15")+ggtitle("hc_euc_15"),
-
-  DimPlot(alldata, reduction = "umap", group.by = "hc_corelation_5")+ggtitle("hc_cor_5"),
-  DimPlot(alldata, reduction = "umap", group.by = "hc_corelation_10")+ggtitle("hc_cor_10"),
-  DimPlot(alldata, reduction = "umap", group.by = "hc_corelation_15")+ggtitle("hc_cor_15"),
-  ncol = 3
-)
+    DimPlot(alldata, reduction = "umap", group.by = "hc_euclidean_5") + ggtitle("hc_euc_5"),
+    DimPlot(alldata, reduction = "umap", group.by = "hc_euclidean_10") + ggtitle("hc_euc_10"),
+    DimPlot(alldata, reduction = "umap", group.by = "hc_euclidean_15") + ggtitle("hc_euc_15"),
+    DimPlot(alldata, reduction = "umap", group.by = "hc_corelation_5") + ggtitle("hc_cor_5"),
+    DimPlot(alldata, reduction = "umap", group.by = "hc_corelation_10") + ggtitle("hc_cor_10"),
+    DimPlot(alldata, reduction = "umap", group.by = "hc_corelation_15") + ggtitle("hc_cor_15"),
+    ncol = 3
+) + plot_layout(guides = "collect")
 ```
 
 {{< meta clust_save >}}
 
 ```{r}
-saveRDS(alldata,"data/covid/results/seurat_covid_qc_dr_int_cl.rds")
+saveRDS(alldata, "data/covid/results/seurat_covid_qc_dr_int_cl.rds")
 ```
 
 ### {{< meta clust_distribution >}}
@@ -219,8 +220,13 @@ saveRDS(alldata,"data/covid/results/seurat_covid_qc_dr_int_cl.rds")
 Select the "CCA_snn_res.0.5" and plot proportion of samples per cluster and also proportion covid vs ctrl. 
 
 ```{r}
-p1 = ggplot(alldata@meta.data, aes(x=CCA_snn_res.0.5, fill=orig.ident)) + geom_bar(position = "fill")
-p2 = ggplot(alldata@meta.data, aes(x=CCA_snn_res.0.5, fill=type)) + geom_bar(position = "fill")
+#| fig-height: 4
+#| fig-width: 9
+
+p1 <- ggplot(alldata@meta.data, aes(x = CCA_snn_res.0.5, fill = orig.ident)) +
+    geom_bar(position = "fill")
+p2 <- ggplot(alldata@meta.data, aes(x = CCA_snn_res.0.5, fill = type)) +
+    geom_bar(position = "fill")
 
 p1 + p2
 ```
@@ -230,7 +236,8 @@ p1 + p2
 {{< meta clust_distribution_3 >}}
 
 ```{r}
-ggplot(alldata@meta.data, aes(x = orig.ident, fill=CCA_snn_res.0.5)) + geom_bar(position = "fill")
+ggplot(alldata@meta.data, aes(x = orig.ident, fill = CCA_snn_res.0.5)) +
+    geom_bar(position = "fill")
 ```
 
 :::{.callout-note title="Discuss"}

@@ -37,7 +37,7 @@ echo "Rendering Seurat files..."
 start_seurat=$(date +%s.%N)
 docker run --rm --platform=linux/amd64 -p 8787:8787 -e PASSWORD=scrnaseq -v ${PWD}:/work $docker_seurat quarto render /work/labs/seurat/seurat_01_qc.qmd
 docker run --rm --platform=linux/amd64 -p 8787:8787 -e PASSWORD=scrnaseq -v ${PWD}:/work $docker_seurat quarto render /work/labs/seurat/seurat_02_dimred.qmd
-#docker run --rm --platform=linux/amd64 -p 8787:8787 -e PASSWORD=scrnaseq -v ${PWD}:/work $docker_seurat quarto render /work/labs/seurat/seurat_03_integration.qmd
+docker run --rm --platform=linux/amd64 -p 8787:8787 -e PASSWORD=scrnaseq -v ${PWD}:/work $docker_seurat quarto render /work/labs/seurat/seurat_03_integration.qmd
 docker run --rm --platform=linux/amd64 -p 8787:8787 -e PASSWORD=scrnaseq -v ${PWD}:/work $docker_seurat quarto render /work/labs/seurat/seurat_04_clustering.qmd
 docker run --rm --platform=linux/amd64 -p 8787:8787 -e PASSWORD=scrnaseq -v ${PWD}:/work $docker_seurat quarto render /work/labs/seurat/seurat_05_dge.qmd
 docker run --rm --platform=linux/amd64 -p 8787:8787 -e PASSWORD=scrnaseq -v ${PWD}:/work $docker_seurat quarto render /work/labs/seurat/seurat_06_celltyping.qmd
@@ -50,7 +50,7 @@ echo "Rendering Bioconductor files..."
 start_bioc=$(date +%s.%N)
 docker run --rm --platform=linux/amd64 -p 8787:8787 -e PASSWORD=scrnaseq -v ${PWD}:/work $docker_bioc quarto render /work/labs/bioc/bioc_01_qc.qmd
 docker run --rm --platform=linux/amd64 -p 8787:8787 -e PASSWORD=scrnaseq -v ${PWD}:/work $docker_bioc quarto render /work/labs/bioc/bioc_02_dimred.qmd
-#docker run --rm --platform=linux/amd64 -p 8787:8787 -e PASSWORD=scrnaseq -v ${PWD}:/work $docker_bioc quarto render /work/labs/bioc/bioc_03_integration.qmd
+docker run --rm --platform=linux/amd64 -p 8787:8787 -e PASSWORD=scrnaseq -v ${PWD}:/work $docker_bioc quarto render /work/labs/bioc/bioc_03_integration.qmd
 docker run --rm --platform=linux/amd64 -p 8787:8787 -e PASSWORD=scrnaseq -v ${PWD}:/work $docker_bioc quarto render /work/labs/bioc/bioc_04_clustering.qmd
 docker run --rm --platform=linux/amd64 -p 8787:8787 -e PASSWORD=scrnaseq -v ${PWD}:/work $docker_bioc quarto render /work/labs/bioc/bioc_05_dge.qmd
 docker run --rm --platform=linux/amd64 -p 8787:8787 -e PASSWORD=scrnaseq -v ${PWD}:/work $docker_bioc quarto render /work/labs/bioc/bioc_06_celltyping.qmd
