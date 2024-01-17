@@ -177,7 +177,7 @@ wrap_plots(
   DimPlot(alldata.int, reduction = "tsne", group.by = "orig.ident")+NoAxes()+ggtitle("tSNE integrated"),
   DimPlot(alldata.int, reduction = "umap", group.by = "orig.ident")+NoAxes()+ggtitle("UMAP integrated"),
   ncol = 3
-)
+) + plot_layout(guides = "collect")
 ```
 
 ### Clean memory
@@ -216,15 +216,11 @@ embedding.
   FCER1A, CST3               DCs
 
 ``` {r}
-#| fig-height: 10
-#| fig-width: 10
+#| fig-height: 8
+#| fig-width: 9
 
-myfeatures <- c("CD3E","CD4","CD8A","NKG7","GNLY","MS4A1","CD14","LYZ","MS4A7","FCGR3A","CST3","FCER1A")
-plot_list <- list()
-for(i in myfeatures){
-  plot_list[[i]] <- FeaturePlot(alldata.int, reduction = "umap",dims = 1:2,
-            features = i,ncol = 3,order = T) + NoLegend() + NoAxes() + NoGrid() }
-wrap_plots(plotlist = plot_list, ncol = 3)
+myfeatures <- c("CD3E", "CD4", "CD8A", "NKG7", "GNLY", "MS4A1", "CD14", "LYZ", "MS4A7", "FCGR3A", "CST3", "FCER1A")
+FeaturePlot(alldata.int, reduction = "umap", dims = 1:2, features = myfeatures, ncol = 4, order = T) + NoLegend() + NoAxes() + NoGrid()
 ```
 
 ## Harmony
@@ -296,6 +292,7 @@ lapply(assaylist,dim)
 ``` {r}
 #| fig-height: 5
 #| fig-width: 16
+#| eval: false
 
 # Activate scanorama Python venv
 scanorama <- reticulate::import("scanorama")
@@ -320,6 +317,7 @@ alldata.int[["scanorama"]] <- CreateDimReducObject(
 ```
 
 ``` {r}
+#| eval: false
 
 #Here we use all PCs computed from Scanorama for UMAP calculation
 alldata.int <- RunUMAP(alldata.int, dims = 1:100, reduction = "scanorama",reduction.name = "umap_scanorama")
@@ -334,14 +332,14 @@ Now we will plot UMAPS with all three integration methods side by side.
 ``` {r}
 #| fig-height: 8
 #| fig-width: 9
+#| eval: false
 
 p1 <- DimPlot(alldata.int, reduction = "umap_raw", group.by = "orig.ident") + ggtitle("UMAP raw_data")
 p2 <- DimPlot(alldata.int, reduction = "umap", group.by = "orig.ident") + ggtitle("UMAP CCA")
 p3 <- DimPlot(alldata.int, reduction = "umap_harmony", group.by = "orig.ident") + ggtitle("UMAP Harmony")
 p4 <- DimPlot(alldata.int, reduction = "umap_scanorama", group.by = "orig.ident")+ggtitle("UMAP Scanorama")
 
-wrap_plots(p1, p2, p3, p4, nrow = 2) +
-    plot_layout(guides = "collect")
+wrap_plots(p1, p2, p3, p4, nrow = 2) + plot_layout(guides = "collect")
 ```
 
 <div>
