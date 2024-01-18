@@ -85,6 +85,10 @@ docker run --rm --platform=linux/amd64 -v ${PWD}:/work $docker_site quarto rende
 #docker run --rm --platform=linux/amd64 -v ${PWD}:/work $docker_site quarto render /work/404.md
 docker run --rm --platform=linux/amd64 -v ${PWD}:/work $docker_site quarto render /work/labs/index.qmd
 
+# build compiled files
+bash ./scripts/compile.sh
+echo "All labs compiled successfully."
+
 echo "Seurat time elapsed: $duration_seurat seconds"
 echo "Bioc time elapsed: $duration_bioc seconds"
 echo "Scanpy time elapsed: $duration_scanpy seconds"
