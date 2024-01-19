@@ -60,6 +60,8 @@ sc.settings.set_figure_params(dpi=80)
 
 {{< meta qc_data_3 >}}
 
+In Scanpy we read them into an Anndata object with the the function `read_10x_h5`
+
 ```{python}
 data_cov1 = sc.read_10x_h5(os.path.join(path_covid,'ncov_pbmc_1.h5'))
 data_cov1.var_names_make_unique()
@@ -76,6 +78,8 @@ data_ctrl14.var_names_make_unique()
 ```
 
 ## {{< meta qc_collate >}}
+
+{{< qc_collate_1 >}}
 
 ```{python}
 # add some metadata
@@ -121,7 +125,7 @@ adata.var['mt'] = adata.var_names.str.startswith('MT-')
 # ribosomal genes
 adata.var['ribo'] = adata.var_names.str.startswith(("RPS","RPL"))
 # hemoglobin genes.
-adata.var['hb'] = adata.var_names.str.contains(("^HB[^(P)]"))
+adata.var['hb'] = adata.var_names.str.contains(("^HB[^(P|E|S)]"))
 
 adata.var
 ```
@@ -131,6 +135,8 @@ sc.pp.calculate_qc_metrics(adata, qc_vars=['mt','ribo','hb'], percent_top=None, 
 ```
 
 {{< meta qc_calqc_3 >}}
+
+Another opition to using the `calculate_qc_metrics` function is to calculate the values on your own and add to a metadata slot. An example for mito genes can be found below:
 
 ```{python}
 mito_genes = adata.var_names.str.startswith('MT-')
@@ -239,7 +245,7 @@ malat1 = adata.var_names.str.startswith('MALAT1')
 # we need to redefine the mito_genes since they were first 
 # calculated on the full object before removing low expressed genes.
 mito_genes = adata.var_names.str.startswith('MT-')
-hb_genes = adata.var_names.str.contains('^HB[^(P)]')
+hb_genes = adata.var_names.str.contains('^HB[^(P|E|S)]')
 
 remove = np.add(mito_genes, malat1)
 remove = np.add(remove, hb_genes)
@@ -353,13 +359,20 @@ sc.pl.violin(adata, ['S_score', 'G2M_score'], jitter=0.4, groupby = 'sample', ro
 
 {{< meta qc_cellcycle_3 >}}
 
+Scanpy does an automatic prediction of cell cycle phase with a default cutoff of the scores at zero. As you can see this does not fit this data very well, so be cautios with using these predictions. Instead we suggest that you look at the scores.
+
+
+```{python}
+#| fig-height: 8
+#| fig-width: 10
+
+sc.pl.scatter(adata, x='S_score', y='G2M_score', color="phase")
+```
+
 ## {{< meta qc_doublet >}}
 
 {{< meta qc_doublet_1 >}}
 
-:::{.callout-caution}
-{{< meta qc_doublet_2 >}}
-:::
 
 For doublet detection, we will use the package `Scrublet`, so first we need to get the raw counts from `adata.raw.X` and run scrublet with that matrix. Then we add in the doublet prediction info into our anndata object.
 
