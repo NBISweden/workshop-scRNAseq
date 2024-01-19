@@ -48,7 +48,7 @@ if not os.path.exists(path_results):
     os.makedirs(path_results, exist_ok=True)
 
 # path_file = "data/covid/results/scanpy_covid_qc_dr_scanorama_cl.h5ad"
-path_file = "data/covid/results/scanpy_clustered_covid.h5ad"
+path_file = "data/covid/results/scanpy_covid_qc_dr_scanorama_cl.h5ad"
 if not os.path.exists(path_file):
     urllib.request.urlretrieve(os.path.join(
         path_data, 'covid/results/scanpy_covid_qc_dr_scanorama_cl.h5ad'), path_file)
@@ -69,6 +69,17 @@ print(adata.raw.shape)
 adata = adata[adata.obs["sample"] == "ctrl_13",:]
 print(adata.shape)
 ```
+
+```{python}
+adata.obs["louvain_0.6"].value_counts()
+```
+
+As you can see, we have only one cell from cluster 10 in this sample, so lets remove that cell for now.
+
+```{python}
+adata = adata[adata.obs["louvain_0.6"] != "10",:]
+```
+
 
 ```{python}
 sc.pl.umap(
@@ -206,6 +217,15 @@ sc.pl.umap(adata_merged, color=["sample","louvain",'predicted'])
 sc.pl.umap(adata_merged[adata_merged.obs['sample']=='ctrl'], color='predicted')
 ```
 
+Now plot how many cells of each celltypes can be found in each cluster.
+
+```{python}
+tmp = pd.crosstab(adata.obs['louvain_0.6'],adata.obs['predicted'], normalize='index')
+tmp.plot.bar(stacked=True).legend(bbox_to_anchor=(1.8, 1),loc='upper right')
+
+```
+
+
 ## Ingest
 
 Another method for celltype prediction is Ingest, for more information, please look at
@@ -215,6 +235,15 @@ https://scanpy-tutorials.readthedocs.io/en/latest/integrating-data-using-ingest.
 sc.tl.ingest(adata, adata_ref, obs='louvain')
 sc.pl.umap(adata, color=['louvain','louvain_0.6'], wspace=0.5)
 ```
+
+Now plot how many cells of each celltypes can be found in each cluster.
+
+```{python}
+tmp = pd.crosstab(adata.obs['louvain_0.6'],adata.obs['louvain'], normalize='index')
+tmp.plot.bar(stacked=True).legend(bbox_to_anchor=(1.8, 1),loc='upper right')
+
+```
+
 
 ## Compare results
 
@@ -246,14 +275,12 @@ if not os.path.exists(path_file):
 ```{python}
 df = pd.read_table(path_file)
 df
-```
 
-```{python}
-# Filter for number of genes per celltype
 print(df.shape)
 ```
 
 ```{python}
+# Filter for number of genes per celltype
 df['nG'] = df.geneSymbol.str.split(",").str.len()
 
 df = df[df['nG'] > 5]
@@ -263,20 +290,16 @@ print(df.shape)
 ```
 
 ```{python}
-#| eval: false
-# this chunk has issues and therefore not evaluated
-
 df.index = df.cellName
 gene_dict = df.geneSymbol.str.split(",").to_dict()
+```
 
+```{python}
 # run differential expression per cluster
 sc.tl.rank_genes_groups(adata, 'louvain_0.6', method='wilcoxon', key_added = "wilcoxon")
 ```
 
 ```{python}
-# | eval: false
-# this chunk has issues and therefore not evaluated
-
 # do gene set overlap to the groups in the gene list and top 300 DEGs.
 import gseapy
 
@@ -304,17 +327,11 @@ for cl in adata.obs['louvain_0.6'].cat.categories.tolist():
 
 
 ```{python}
-# | eval: false
-# this chunk has issues and therefore not evaluated
-
 # prediction per cluster
 pred
 ```
 
 ```{python}
-# | eval: false
-# this chunk has issues and therefore not evaluated
-
 prediction = [pred[x] for x in adata.obs['louvain_0.6']]
 adata.obs["GS_overlap_pred"] = prediction
 

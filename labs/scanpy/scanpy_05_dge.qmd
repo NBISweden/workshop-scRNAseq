@@ -49,7 +49,7 @@ if not os.path.exists(path_results):
     os.makedirs(path_results, exist_ok=True)
    
 # path_file = "data/covid/results/scanpy_covid_qc_dr_scanorama_cl.h5ad"
-path_file = "data/covid/results/scanpy_clustered_covid.h5ad"
+path_file = "data/covid/results/scanpy_covid_qc_dr_scanorama_cl.h5ad"
 if not os.path.exists(path_file):
     urllib.request.urlretrieve(os.path.join(
         path_data, 'covid/results/scanpy_covid_qc_dr_scanorama_cl.h5ad'), path_file)
@@ -66,14 +66,12 @@ print(adata.raw.X[:10,:10])
 
 As you can see, the X matrix only contains the variable genes, while the raw matrix contains all genes.
 
-Printing a few of the values in adata.raw.X shows that the raw matrix is not normalized.
+Printing a few of the values in adata.raw.X shows that the raw matrix is normalized.
 
-For DGE analysis we would like to run with all genes, but on normalized values, so we will have to revert back to the raw matrix and renormalize.
+For DGE analysis we would like to run with all genes, on normalized values, so we will have to revert back to the raw matrix. In case you have raw counts in the matrix you also have to renormalize and logtransform.
 
 ```{python}
 adata = adata.raw.to_adata()
-sc.pp.normalize_per_cell(adata, counts_per_cell_after=1e4)
-sc.pp.log1p(adata)
 ```
 
 Now lets look at the clustering of the object we loaded in the umap. We will use louvain_0.6 clustering in this exercise.
@@ -134,7 +132,7 @@ venn3([set(wc),set(tt),set(tt_ov)], ('Wilcox','T-test','T-test_ov') )
 plt.show()
 ```
 
-As you can see, the Wilcoxon test and the T-test with overestimated variance gives very similar result. Also the regular T-test has good overlap, while the Logistic regression gives quite different genes.
+As you can see, the Wilcoxon test and the T-test with overestimated variance gives very similar result. Also the regular T-test has good overlap.
 
 ## Visualization
 
@@ -173,7 +171,7 @@ sc.pl.stacked_violin(adata, mynames, groupby = 'louvain_0.6')
 {{< meta dge_cond_1 >}}
 
 ```{python}
-cl1 = adata[adata.obs['louvain_0.6'] == '4',:]
+cl1 = adata[adata.obs['louvain_0.6'] == '5',:]
 cl1.obs['type'].value_counts()
 
 sc.tl.rank_genes_groups(cl1, 'type', method='wilcoxon', key_added = "wilcoxon")
@@ -246,8 +244,6 @@ sc.pl.violin(cl1, genes2, groupby='sample')
 
 As you can see, many of the genes detected as DGE in Covid are unique to one or 2 patients.
 
-We can examine more genes with a DotPlot:
-
 We can also plot the top Covid and top Ctrl genes as a dotplot:
 
 ```{python}
@@ -270,14 +266,11 @@ cl1.obs['sample'].value_counts()
 
 So one obvious thing to consider is an equal amount of cells per individual so that the DGE results are not dominated by a single sample.
 
-So we will downsample to an equal number of cells per sample.
+So we will downsample to an equal number of cells per sample, in this case 34 cells per sample as it is the lowest number among all samples
+
 
 ```{python}
-cl1.obs['sample'].value_counts()
-```
-
-```{python}
-target_cells = 50
+target_cells = 37
 
 tmp = [cl1[cl1.obs['sample'] == s] for s in cl1.obs['sample'].cat.categories]
 
@@ -304,8 +297,6 @@ sc.pl.dotplot(cl1,genes, groupby='sample')
 ```
 
 It looks much better now. But if we look per patient you can see that we still have some genes that are dominated by a single patient. Still, it is often a good idea to control the number of cells from each sample when doing differential expression.
-
-Why do you think this is?
 
 There are many different ways to try and resolve the issue of patient batch effects, however most of them require R packages. These can be run via rpy2 as is demonstraded in this compendium:
 https://www.sc-best-practices.org/conditions/differential_gene_expression.html
