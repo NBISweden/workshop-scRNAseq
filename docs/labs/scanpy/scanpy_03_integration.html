@@ -199,7 +199,7 @@ background-size: cover;
       <div>
       <div class="quarto-title-meta-heading">Published</div>
       <div class="quarto-title-meta-contents">
-        <p class="date">16-Jan-2024</p>
+        <p class="date">19-Jan-2024</p>
       </div>
     </div>
     
@@ -220,8 +220,9 @@ background-size: cover;
   <li><a href="#bbknn" id="toc-bbknn" class="nav-link" data-scroll-target="#bbknn"><span class="header-section-number">3</span> BBKNN</a></li>
   <li><a href="#combat" id="toc-combat" class="nav-link" data-scroll-target="#combat"><span class="header-section-number">4</span> Combat</a></li>
   <li><a href="#meta-int_scanorama" id="toc-meta-int_scanorama" class="nav-link" data-scroll-target="#meta-int_scanorama"><span class="header-section-number">5</span> Scanorama</a></li>
-  <li><a href="#compare-all" id="toc-compare-all" class="nav-link" data-scroll-target="#compare-all"><span class="header-section-number">6</span> Compare all</a></li>
-  <li><a href="#meta-session" id="toc-meta-session" class="nav-link" data-scroll-target="#meta-session"><span class="header-section-number">7</span> Session info</a></li>
+  <li><a href="#overview-all-methods" id="toc-overview-all-methods" class="nav-link" data-scroll-target="#overview-all-methods"><span class="header-section-number">6</span> Overview all methods</a></li>
+  <li><a href="#extra-task" id="toc-extra-task" class="nav-link" data-scroll-target="#extra-task"><span class="header-section-number">7</span> Extra task</a></li>
+  <li><a href="#meta-session" id="toc-meta-session" class="nav-link" data-scroll-target="#meta-session"><span class="header-section-number">8</span> Session info</a></li>
   </ul>
 </nav>
     </div>
@@ -318,10 +319,10 @@ Note
 <span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>adata <span class="op">=</span> sc.read_h5ad(path_file)</span>
 <span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>adata</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="2">
-<pre><code>AnnData object with n_obs × n_vars = 5725 × 2727
+<pre><code>AnnData object with n_obs × n_vars = 7222 × 2626
     obs: 'type', 'sample', 'batch', 'n_genes_by_counts', 'total_counts', 'total_counts_mt', 'pct_counts_mt', 'total_counts_ribo', 'pct_counts_ribo', 'total_counts_hb', 'pct_counts_hb', 'percent_mt2', 'n_counts', 'n_genes', 'percent_chrY', 'XIST-counts', 'S_score', 'G2M_score', 'phase', 'doublet_scores', 'predicted_doublets', 'doublet_info'
     var: 'gene_ids', 'feature_types', 'genome', 'mt', 'ribo', 'hb', 'n_cells_by_counts', 'mean_counts', 'pct_dropout_by_counts', 'total_counts', 'n_cells', 'highly_variable', 'means', 'dispersions', 'dispersions_norm', 'mean', 'std'
-    uns: 'doublet_info_colors', 'hvg', 'log1p', 'neighbors', 'pca', 'sample_colors', 'tsne', 'umap'
+    uns: 'doublet_info_colors', 'hvg', 'log1p', 'neighbors', 'pca', 'phase_colors', 'sample_colors', 'tsne', 'umap'
     obsm: 'X_pca', 'X_tsne', 'X_umap'
     varm: 'PCs'
     obsp: 'connectivities', 'distances'</code></pre>
@@ -330,20 +331,21 @@ Note
 <div class="cell" data-execution_count="3">
 <div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(adata.X.shape)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>(5725, 2727)</code></pre>
+<pre><code>(7222, 2626)</code></pre>
 </div>
 </div>
 <p>As the stored AnnData object contains scaled data based on variable genes, we need to make a new object with the logtransformed normalized counts. The new variable gene selection should not be performed on the scaled data matrix.</p>
 <div class="cell" data-execution_count="4">
 <div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>adata2 <span class="op">=</span> adata.raw.to_adata() </span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>adata2.uns[<span class="st">'log1p'</span>][<span class="st">'base'</span>]<span class="op">=</span><span class="va">None</span></span>
-<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="co"># check that the matrix looks like normalized counts</span></span>
-<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(adata2.X[<span class="dv">1</span>:<span class="dv">10</span>,<span class="dv">1</span>:<span class="dv">10</span>])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="co"># in some versions of Anndata there is an issue with information on the logtransformation in the slot log1p.base so we set it to None to not get errors.</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>adata2.uns[<span class="st">'log1p'</span>][<span class="st">'base'</span>]<span class="op">=</span><span class="va">None</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="co"># check that the matrix looks like normalized counts</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(adata2.X[<span class="dv">1</span>:<span class="dv">10</span>,<span class="dv">1</span>:<span class="dv">10</span>])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>  (0, 2)    0.7825693876867097
-  (7, 5)    1.1311041336746985</code></pre>
+<pre><code>  (0, 3)    0.7825693876867097
+  (7, 6)    1.1311041336746985</code></pre>
 </div>
 </div>
 </section>
@@ -355,7 +357,7 @@ Note
 <span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"Highly variable genes: </span><span class="sc">%d</span><span class="st">"</span><span class="op">%</span><span class="bu">sum</span>(var_genes_all))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>Highly variable genes: 2727</code></pre>
+<pre><code>Highly variable genes: 2626</code></pre>
 </div>
 </div>
 <p>Detect variable genes in each dataset separately using the <code>batch_key</code> parameter.</p>
@@ -376,16 +378,18 @@ Note
     'means', float vector (adata.var)
     'dispersions', float vector (adata.var)
     'dispersions_norm', float vector (adata.var)
-Highly variable genes intersection: 196
+Highly variable genes intersection: 122
 Number of batches where gene is variable:
 highly_variable_nbatches
-0    8436
-1    4729
-2    3037
-3    1504
-4     627
-5     301
-6     196
+0    7876
+1    4163
+2    3161
+3    2025
+4    1115
+5     559
+6     277
+7     170
+8     122
 Name: count, dtype: int64</code></pre>
 </div>
 </div>
@@ -397,11 +401,11 @@ Name: count, dtype: int64</code></pre>
 <span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"Variable genes in all batches: </span><span class="sc">%d</span><span class="st">"</span><span class="op">%</span><span class="bu">sum</span>(adata2.var.highly_variable_nbatches <span class="op">==</span> <span class="dv">6</span>))</span>
 <span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"Overlap batch instersection and all: </span><span class="sc">%d</span><span class="st">"</span><span class="op">%</span><span class="bu">sum</span>(var_genes_all <span class="op">&amp;</span> adata2.var.highly_variable_intersection))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>Any batch var genes: 10394
-All data var genes: 2727
-Overlap: 2724
-Variable genes in all batches: 196
-Overlap batch instersection and all: 193</code></pre>
+<pre><code>Any batch var genes: 11592
+All data var genes: 2626
+Overlap: 2625
+Variable genes in all batches: 277
+Overlap batch instersection and all: 122</code></pre>
 </div>
 </div>
 <p>Select all genes that are variable in at least 2 datasets and use for remaining analysis.</p>
@@ -410,7 +414,7 @@ Overlap batch instersection and all: 193</code></pre>
 <span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>var_genes <span class="op">=</span> var_select.index[var_select]</span>
 <span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a><span class="bu">len</span>(var_genes)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="8">
-<pre><code>2628</code></pre>
+<pre><code>4268</code></pre>
 </div>
 </div>
 </section>
@@ -431,12 +435,12 @@ Overlap batch instersection and all: 193</code></pre>
     `.obsp['connectivities']`, weighted adjacency matrix (0:00:02)
 computing UMAP
     finished: added
-    'X_umap', UMAP coordinates (adata.obsm) (0:00:09)
+    'X_umap', UMAP coordinates (adata.obsm) (0:00:12)
 computing tSNE
     using 'X_pca' with n_pcs = 50
     using sklearn.manifold.TSNE
     finished: added
-    'X_tsne', tSNE coordinates (adata.obsm) (0:00:10)</code></pre>
+    'X_tsne', tSNE coordinates (adata.obsm) (0:00:14)</code></pre>
 </div>
 </div>
 <p>We can now plot the unintegrated and the integrated space reduced dimensions.</p>
@@ -478,12 +482,12 @@ computing tSNE
 <div class="cell-output cell-output-stdout">
 <pre><code>Standardizing Data across genes.
 
-Found 6 batches
+Found 8 batches
 
 Found 0 numerical variables:
     
 
-Found 37 genes with zero variance.
+Found 39 genes with zero variance.
 Fitting L/S model and finding priors
 
 Finding parametric adjustments
@@ -512,7 +516,7 @@ Adjusting data
     'means', float vector (adata.var)
     'dispersions', float vector (adata.var)
     'dispersions_norm', float vector (adata.var)
-Highly variable genes: 3533
+Highly variable genes: 3923
 computing PCA
     on highly variable genes
     with n_comps=30
@@ -521,15 +525,15 @@ computing neighbors
     using 'X_pca' with n_pcs = 30
     finished: added to `.uns['neighbors']`
     `.obsp['distances']`, distances for each pair of neighbors
-    `.obsp['connectivities']`, weighted adjacency matrix (0:00:00)
+    `.obsp['connectivities']`, weighted adjacency matrix (0:00:01)
 computing UMAP
     finished: added
-    'X_umap', UMAP coordinates (adata.obsm) (0:00:08)
+    'X_umap', UMAP coordinates (adata.obsm) (0:00:11)
 computing tSNE
     using 'X_pca' with n_pcs = 30
     using sklearn.manifold.TSNE
     finished: added
-    'X_tsne', tSNE coordinates (adata.obsm) (0:00:09)</code></pre>
+    'X_tsne', tSNE coordinates (adata.obsm) (0:00:14)</code></pre>
 </div>
 <div class="cell-output cell-output-display">
 <div class="quarto-figure quarto-figure-left">
@@ -549,11 +553,11 @@ computing tSNE
 <span id="cb25-7"><a href="#cb25-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"With 2 batches </span><span class="sc">%d</span><span class="st">"</span><span class="op">%</span><span class="bu">sum</span>(var_select))</span>
 <span id="cb25-8"><a href="#cb25-8" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"Overlap </span><span class="sc">%d</span><span class="st">"</span><span class="op">%</span><span class="bu">sum</span>(var_genes_combat <span class="op">&amp;</span> var_select))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>With all data 2727
-With combat 3533
-Overlap 2003
-With 2 batches 2628
-Overlap 1896</code></pre>
+<pre><code>With all data 2626
+With combat 3923
+Overlap 1984
+With 2 batches 4268
+Overlap 2729</code></pre>
 </div>
 </div>
 <p>We can now plot the unintegrated and the integrated space reduced dimensions.</p>
@@ -593,40 +597,52 @@ Overlap 1896</code></pre>
 <span id="cb30-6"><a href="#cb30-6" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb30-7"><a href="#cb30-7" aria-hidden="true" tabindex="-1"></a>alldata   </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="17">
-<pre><code>{'covid_1': View of AnnData object with n_obs × n_vars = 875 × 18830
+<pre><code>{'covid_1': View of AnnData object with n_obs × n_vars = 876 × 19468
      obs: 'type', 'sample', 'batch', 'n_genes_by_counts', 'total_counts', 'total_counts_mt', 'pct_counts_mt', 'total_counts_ribo', 'pct_counts_ribo', 'total_counts_hb', 'pct_counts_hb', 'percent_mt2', 'n_counts', 'n_genes', 'percent_chrY', 'XIST-counts', 'S_score', 'G2M_score', 'phase', 'doublet_scores', 'predicted_doublets', 'doublet_info'
      var: 'gene_ids', 'feature_types', 'genome', 'mt', 'ribo', 'hb', 'n_cells_by_counts', 'mean_counts', 'pct_dropout_by_counts', 'total_counts', 'n_cells', 'highly_variable', 'means', 'dispersions', 'dispersions_norm', 'highly_variable_nbatches', 'highly_variable_intersection'
-     uns: 'doublet_info_colors', 'hvg', 'log1p', 'neighbors', 'pca', 'sample_colors', 'tsne', 'umap'
+     uns: 'doublet_info_colors', 'hvg', 'log1p', 'neighbors', 'pca', 'phase_colors', 'sample_colors', 'tsne', 'umap'
      obsm: 'X_pca', 'X_tsne', 'X_umap'
      obsp: 'connectivities', 'distances',
- 'covid_15': View of AnnData object with n_obs × n_vars = 591 × 18830
+ 'covid_15': View of AnnData object with n_obs × n_vars = 591 × 19468
      obs: 'type', 'sample', 'batch', 'n_genes_by_counts', 'total_counts', 'total_counts_mt', 'pct_counts_mt', 'total_counts_ribo', 'pct_counts_ribo', 'total_counts_hb', 'pct_counts_hb', 'percent_mt2', 'n_counts', 'n_genes', 'percent_chrY', 'XIST-counts', 'S_score', 'G2M_score', 'phase', 'doublet_scores', 'predicted_doublets', 'doublet_info'
      var: 'gene_ids', 'feature_types', 'genome', 'mt', 'ribo', 'hb', 'n_cells_by_counts', 'mean_counts', 'pct_dropout_by_counts', 'total_counts', 'n_cells', 'highly_variable', 'means', 'dispersions', 'dispersions_norm', 'highly_variable_nbatches', 'highly_variable_intersection'
-     uns: 'doublet_info_colors', 'hvg', 'log1p', 'neighbors', 'pca', 'sample_colors', 'tsne', 'umap'
+     uns: 'doublet_info_colors', 'hvg', 'log1p', 'neighbors', 'pca', 'phase_colors', 'sample_colors', 'tsne', 'umap'
      obsm: 'X_pca', 'X_tsne', 'X_umap'
      obsp: 'connectivities', 'distances',
- 'covid_17': View of AnnData object with n_obs × n_vars = 1083 × 18830
+ 'covid_16': View of AnnData object with n_obs × n_vars = 370 × 19468
      obs: 'type', 'sample', 'batch', 'n_genes_by_counts', 'total_counts', 'total_counts_mt', 'pct_counts_mt', 'total_counts_ribo', 'pct_counts_ribo', 'total_counts_hb', 'pct_counts_hb', 'percent_mt2', 'n_counts', 'n_genes', 'percent_chrY', 'XIST-counts', 'S_score', 'G2M_score', 'phase', 'doublet_scores', 'predicted_doublets', 'doublet_info'
      var: 'gene_ids', 'feature_types', 'genome', 'mt', 'ribo', 'hb', 'n_cells_by_counts', 'mean_counts', 'pct_dropout_by_counts', 'total_counts', 'n_cells', 'highly_variable', 'means', 'dispersions', 'dispersions_norm', 'highly_variable_nbatches', 'highly_variable_intersection'
-     uns: 'doublet_info_colors', 'hvg', 'log1p', 'neighbors', 'pca', 'sample_colors', 'tsne', 'umap'
+     uns: 'doublet_info_colors', 'hvg', 'log1p', 'neighbors', 'pca', 'phase_colors', 'sample_colors', 'tsne', 'umap'
      obsm: 'X_pca', 'X_tsne', 'X_umap'
      obsp: 'connectivities', 'distances',
- 'ctrl_5': View of AnnData object with n_obs × n_vars = 1028 × 18830
+ 'covid_17': View of AnnData object with n_obs × n_vars = 1084 × 19468
      obs: 'type', 'sample', 'batch', 'n_genes_by_counts', 'total_counts', 'total_counts_mt', 'pct_counts_mt', 'total_counts_ribo', 'pct_counts_ribo', 'total_counts_hb', 'pct_counts_hb', 'percent_mt2', 'n_counts', 'n_genes', 'percent_chrY', 'XIST-counts', 'S_score', 'G2M_score', 'phase', 'doublet_scores', 'predicted_doublets', 'doublet_info'
      var: 'gene_ids', 'feature_types', 'genome', 'mt', 'ribo', 'hb', 'n_cells_by_counts', 'mean_counts', 'pct_dropout_by_counts', 'total_counts', 'n_cells', 'highly_variable', 'means', 'dispersions', 'dispersions_norm', 'highly_variable_nbatches', 'highly_variable_intersection'
-     uns: 'doublet_info_colors', 'hvg', 'log1p', 'neighbors', 'pca', 'sample_colors', 'tsne', 'umap'
+     uns: 'doublet_info_colors', 'hvg', 'log1p', 'neighbors', 'pca', 'phase_colors', 'sample_colors', 'tsne', 'umap'
      obsm: 'X_pca', 'X_tsne', 'X_umap'
      obsp: 'connectivities', 'distances',
- 'ctrl_13': View of AnnData object with n_obs × n_vars = 1117 × 18830
+ 'ctrl_5': View of AnnData object with n_obs × n_vars = 1017 × 19468
      obs: 'type', 'sample', 'batch', 'n_genes_by_counts', 'total_counts', 'total_counts_mt', 'pct_counts_mt', 'total_counts_ribo', 'pct_counts_ribo', 'total_counts_hb', 'pct_counts_hb', 'percent_mt2', 'n_counts', 'n_genes', 'percent_chrY', 'XIST-counts', 'S_score', 'G2M_score', 'phase', 'doublet_scores', 'predicted_doublets', 'doublet_info'
      var: 'gene_ids', 'feature_types', 'genome', 'mt', 'ribo', 'hb', 'n_cells_by_counts', 'mean_counts', 'pct_dropout_by_counts', 'total_counts', 'n_cells', 'highly_variable', 'means', 'dispersions', 'dispersions_norm', 'highly_variable_nbatches', 'highly_variable_intersection'
-     uns: 'doublet_info_colors', 'hvg', 'log1p', 'neighbors', 'pca', 'sample_colors', 'tsne', 'umap'
+     uns: 'doublet_info_colors', 'hvg', 'log1p', 'neighbors', 'pca', 'phase_colors', 'sample_colors', 'tsne', 'umap'
      obsm: 'X_pca', 'X_tsne', 'X_umap'
      obsp: 'connectivities', 'distances',
- 'ctrl_14': View of AnnData object with n_obs × n_vars = 1031 × 18830
+ 'ctrl_13': View of AnnData object with n_obs × n_vars = 1121 × 19468
      obs: 'type', 'sample', 'batch', 'n_genes_by_counts', 'total_counts', 'total_counts_mt', 'pct_counts_mt', 'total_counts_ribo', 'pct_counts_ribo', 'total_counts_hb', 'pct_counts_hb', 'percent_mt2', 'n_counts', 'n_genes', 'percent_chrY', 'XIST-counts', 'S_score', 'G2M_score', 'phase', 'doublet_scores', 'predicted_doublets', 'doublet_info'
      var: 'gene_ids', 'feature_types', 'genome', 'mt', 'ribo', 'hb', 'n_cells_by_counts', 'mean_counts', 'pct_dropout_by_counts', 'total_counts', 'n_cells', 'highly_variable', 'means', 'dispersions', 'dispersions_norm', 'highly_variable_nbatches', 'highly_variable_intersection'
-     uns: 'doublet_info_colors', 'hvg', 'log1p', 'neighbors', 'pca', 'sample_colors', 'tsne', 'umap'
+     uns: 'doublet_info_colors', 'hvg', 'log1p', 'neighbors', 'pca', 'phase_colors', 'sample_colors', 'tsne', 'umap'
+     obsm: 'X_pca', 'X_tsne', 'X_umap'
+     obsp: 'connectivities', 'distances',
+ 'ctrl_14': View of AnnData object with n_obs × n_vars = 1030 × 19468
+     obs: 'type', 'sample', 'batch', 'n_genes_by_counts', 'total_counts', 'total_counts_mt', 'pct_counts_mt', 'total_counts_ribo', 'pct_counts_ribo', 'total_counts_hb', 'pct_counts_hb', 'percent_mt2', 'n_counts', 'n_genes', 'percent_chrY', 'XIST-counts', 'S_score', 'G2M_score', 'phase', 'doublet_scores', 'predicted_doublets', 'doublet_info'
+     var: 'gene_ids', 'feature_types', 'genome', 'mt', 'ribo', 'hb', 'n_cells_by_counts', 'mean_counts', 'pct_dropout_by_counts', 'total_counts', 'n_cells', 'highly_variable', 'means', 'dispersions', 'dispersions_norm', 'highly_variable_nbatches', 'highly_variable_intersection'
+     uns: 'doublet_info_colors', 'hvg', 'log1p', 'neighbors', 'pca', 'phase_colors', 'sample_colors', 'tsne', 'umap'
+     obsm: 'X_pca', 'X_tsne', 'X_umap'
+     obsp: 'connectivities', 'distances',
+ 'ctrl_19': View of AnnData object with n_obs × n_vars = 1133 × 19468
+     obs: 'type', 'sample', 'batch', 'n_genes_by_counts', 'total_counts', 'total_counts_mt', 'pct_counts_mt', 'total_counts_ribo', 'pct_counts_ribo', 'total_counts_hb', 'pct_counts_hb', 'percent_mt2', 'n_counts', 'n_genes', 'percent_chrY', 'XIST-counts', 'S_score', 'G2M_score', 'phase', 'doublet_scores', 'predicted_doublets', 'doublet_info'
+     var: 'gene_ids', 'feature_types', 'genome', 'mt', 'ribo', 'hb', 'n_cells_by_counts', 'mean_counts', 'pct_dropout_by_counts', 'total_counts', 'n_cells', 'highly_variable', 'means', 'dispersions', 'dispersions_norm', 'highly_variable_nbatches', 'highly_variable_intersection'
+     uns: 'doublet_info_colors', 'hvg', 'log1p', 'neighbors', 'pca', 'phase_colors', 'sample_colors', 'tsne', 'umap'
      obsm: 'X_pca', 'X_tsne', 'X_umap'
      obsp: 'connectivities', 'distances'}</code></pre>
 </div>
@@ -648,39 +664,62 @@ Overlap 1896</code></pre>
 <div class="cell-output cell-output-stdout">
 <pre><code>covid_1
 covid_15
+covid_16
 covid_17
 ctrl_5
 ctrl_13
 ctrl_14
-Found 2628 genes among all datasets
-[[0.         0.74450085 0.2843952  0.63521401 0.456      0.37485714]
- [0.         0.         0.5177665  0.48346304 0.32656514 0.36886633]
- [0.         0.         0.         0.32976654 0.11080332 0.15327793]
- [0.         0.         0.         0.         0.83754864 0.74319066]
- [0.         0.         0.         0.         0.         0.85675918]
- [0.         0.         0.         0.         0.         0.        ]]
+ctrl_19
+Found 4268 genes among all datasets
+[[0.         0.50761421 0.52972973 0.26845018 0.59488692 0.48401826
+  0.36757991 0.09973522]
+ [0.         0.         0.81891892 0.33840948 0.43362832 0.23181049
+  0.29949239 0.17597293]
+ [0.         0.         0.         0.22702703 0.49459459 0.52972973
+  0.42702703 0.3       ]
+ [0.         0.         0.         0.         0.27138643 0.09132841
+  0.1300738  0.17387467]
+ [0.         0.         0.         0.         0.         0.8446411
+  0.73647984 0.25419241]
+ [0.         0.         0.         0.         0.         0.
+  0.82815534 0.44836717]
+ [0.         0.         0.         0.         0.         0.
+  0.         0.78022948]
+ [0.         0.         0.         0.         0.         0.
+  0.         0.        ]]
 Processing datasets (4, 5)
-Processing datasets (3, 4)
-Processing datasets (0, 1)
-Processing datasets (3, 5)
-Processing datasets (0, 3)
+Processing datasets (5, 6)
 Processing datasets (1, 2)
-Processing datasets (1, 3)
+Processing datasets (6, 7)
+Processing datasets (4, 6)
 Processing datasets (0, 4)
+Processing datasets (2, 5)
+Processing datasets (0, 2)
+Processing datasets (0, 1)
+Processing datasets (2, 4)
 Processing datasets (0, 5)
+Processing datasets (5, 7)
+Processing datasets (1, 4)
+Processing datasets (2, 6)
+Processing datasets (0, 6)
+Processing datasets (1, 3)
+Processing datasets (2, 7)
+Processing datasets (1, 6)
+Processing datasets (3, 4)
+Processing datasets (0, 3)
+Processing datasets (4, 7)
 Processing datasets (1, 5)
 Processing datasets (2, 3)
-Processing datasets (1, 4)
-Processing datasets (0, 2)
-Processing datasets (2, 5)
-Processing datasets (2, 4)</code></pre>
+Processing datasets (1, 7)
+Processing datasets (3, 7)
+Processing datasets (3, 6)</code></pre>
 </div>
 </div>
 <div class="cell" data-execution_count="19">
 <div class="sourceCode cell-code" id="cb34"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a><span class="co">#scanorama adds the corrected matrix to adata.obsm in each of the datasets in adatas.</span></span>
 <span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a>adatas[<span class="dv">0</span>].obsm[<span class="st">'X_scanorama'</span>].shape</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="19">
-<pre><code>(875, 50)</code></pre>
+<pre><code>(876, 50)</code></pre>
 </div>
 </div>
 <div class="cell" data-execution_count="20">
@@ -695,7 +734,7 @@ Processing datasets (2, 4)</code></pre>
 <span id="cb36-9"><a href="#cb36-9" aria-hidden="true" tabindex="-1"></a>adata_sc <span class="op">=</span> adata.copy()</span>
 <span id="cb36-10"><a href="#cb36-10" aria-hidden="true" tabindex="-1"></a>adata_sc.obsm[<span class="st">"Scanorama"</span>] <span class="op">=</span> all_s</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>(5725, 50)</code></pre>
+<pre><code>(7222, 50)</code></pre>
 </div>
 </div>
 <div class="cell" data-execution_count="21">
@@ -707,23 +746,23 @@ Processing datasets (2, 4)</code></pre>
 <pre><code>computing neighbors
     finished: added to `.uns['neighbors']`
     `.obsp['distances']`, distances for each pair of neighbors
-    `.obsp['connectivities']`, weighted adjacency matrix (0:00:00)
+    `.obsp['connectivities']`, weighted adjacency matrix (0:00:01)
 computing UMAP
     finished: added
-    'X_umap', UMAP coordinates (adata.obsm) (0:00:08)
+    'X_umap', UMAP coordinates (adata.obsm) (0:00:11)
 computing tSNE
     using sklearn.manifold.TSNE
     finished: added
-    'X_tsne', tSNE coordinates (adata.obsm) (0:00:09)</code></pre>
+    'X_tsne', tSNE coordinates (adata.obsm) (0:00:13)</code></pre>
 </div>
 </div>
 <p>We can now plot the unintegrated and the integrated space reduced dimensions.</p>
 <div class="cell" data-execution_count="22">
 <div class="sourceCode cell-code" id="cb40"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a>fig, axs <span class="op">=</span> plt.subplots(<span class="dv">2</span>, <span class="dv">2</span>, figsize<span class="op">=</span>(<span class="dv">10</span>,<span class="dv">8</span>),constrained_layout<span class="op">=</span><span class="va">True</span>)</span>
-<span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata2, color<span class="op">=</span><span class="st">"sample"</span>, title<span class="op">=</span><span class="st">"BBKNN tsne"</span>, ax<span class="op">=</span>axs[<span class="dv">0</span>,<span class="dv">0</span>], show<span class="op">=</span><span class="va">False</span>)</span>
-<span id="cb40-3"><a href="#cb40-3" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, color<span class="op">=</span><span class="st">"sample"</span>, title<span class="op">=</span><span class="st">"Scanorama tsne"</span>, ax<span class="op">=</span>axs[<span class="dv">0</span>,<span class="dv">1</span>], show<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a>sc.pl.tsne(adata2, color<span class="op">=</span><span class="st">"sample"</span>, title<span class="op">=</span><span class="st">"BBKNN tsne"</span>, ax<span class="op">=</span>axs[<span class="dv">0</span>,<span class="dv">0</span>], show<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb40-3"><a href="#cb40-3" aria-hidden="true" tabindex="-1"></a>sc.pl.tsne(adata_sc, color<span class="op">=</span><span class="st">"sample"</span>, title<span class="op">=</span><span class="st">"Scanorama tsne"</span>, ax<span class="op">=</span>axs[<span class="dv">0</span>,<span class="dv">1</span>], show<span class="op">=</span><span class="va">False</span>)</span>
 <span id="cb40-4"><a href="#cb40-4" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata2, color<span class="op">=</span><span class="st">"sample"</span>, title<span class="op">=</span><span class="st">"BBKNN umap"</span>, ax<span class="op">=</span>axs[<span class="dv">1</span>,<span class="dv">0</span>], show<span class="op">=</span><span class="va">False</span>)</span>
-<span id="cb40-5"><a href="#cb40-5" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, color<span class="op">=</span><span class="st">"sample"</span>, title<span class="op">=</span><span class="st">"Scanorama umap"</span>, ax<span class="op">=</span>axs[<span class="dv">1</span>,<span class="dv">1</span>], show<span class="op">=</span><span class="va">False</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb40-5"><a href="#cb40-5" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata_sc, color<span class="op">=</span><span class="st">"sample"</span>, title<span class="op">=</span><span class="st">"Scanorama umap"</span>, ax<span class="op">=</span>axs[<span class="dv">1</span>,<span class="dv">1</span>], show<span class="op">=</span><span class="va">False</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="22">
 <pre><code>&lt;Axes: title={'center': 'Scanorama umap'}, xlabel='UMAP1', ylabel='UMAP2'&gt;</code></pre>
 </div>
@@ -742,21 +781,9 @@ computing tSNE
 <span id="cb42-3"><a href="#cb42-3" aria-hidden="true" tabindex="-1"></a>adata_sc.write_h5ad(save_file)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
-<section id="compare-all" class="level2" data-number="6">
-<h2 data-number="6" class="anchored" data-anchor-id="compare-all"><span class="header-section-number">6</span> Compare all</h2>
-<div class="callout callout-style-default callout-note callout-titled" title="Discuss">
-<div class="callout-header d-flex align-content-center">
-<div class="callout-icon-container">
-<i class="callout-icon"></i>
-</div>
-<div class="callout-title-container flex-fill">
-Discuss
-</div>
-</div>
-<div class="callout-body-container callout-body">
-<p>Plot umap of all the methods we tested here. Which do you think looks better and why?</p>
-</div>
-</div>
+<section id="overview-all-methods" class="level2" data-number="6">
+<h2 data-number="6" class="anchored" data-anchor-id="overview-all-methods"><span class="header-section-number">6</span> Overview all methods</h2>
+<p>Now we will plot UMAPS with all three integration methods side by side.</p>
 <div class="cell" data-execution_count="24">
 <div class="sourceCode cell-code" id="cb43"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a>fig, axs <span class="op">=</span> plt.subplots(<span class="dv">2</span>, <span class="dv">2</span>, figsize<span class="op">=</span>(<span class="dv">10</span>,<span class="dv">8</span>),constrained_layout<span class="op">=</span><span class="va">True</span>)</span>
 <span id="cb43-2"><a href="#cb43-2" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, color<span class="op">=</span><span class="st">"sample"</span>, title<span class="op">=</span><span class="st">"Uncorrected"</span>, ax<span class="op">=</span>axs[<span class="dv">0</span>,<span class="dv">0</span>], show<span class="op">=</span><span class="va">False</span>)</span>
@@ -784,13 +811,17 @@ Discuss
 </div>
 </div>
 <div class="callout-body-container callout-body">
-<p>Have a look at the documentation for <a href="https://scanpy.readthedocs.io/en/latest/generated/scanpy.external.pp.bbknn.html#scanpy-external-pp-bbknn">BBKNN</a></p>
-<p>Try changing some of the parameteres in BBKNN, such as distance metric, number of PCs and number of neighbors. How does the results change with different parameters? Can you explain why?</p>
+<p>Look at the different integration results, which one do you think looks the best? How would you motivate selecting one method over the other? How do you think you could best evaluate if the integration worked well?</p>
 </div>
 </div>
 </section>
-<section id="meta-session" class="level2" data-number="7">
-<h2 data-number="7" class="anchored" data-anchor-id="meta-session"><span class="header-section-number">7</span> Session info</h2>
+<section id="extra-task" class="level2" data-number="7">
+<h2 data-number="7" class="anchored" data-anchor-id="extra-task"><span class="header-section-number">7</span> Extra task</h2>
+<p>Have a look at the documentation for <a href="https://scanpy.readthedocs.io/en/latest/generated/scanpy.external.pp.bbknn.html#scanpy-external-pp-bbknn">BBKNN</a></p>
+<p>Try changing some of the parameteres in BBKNN, such as distance metric, number of PCs and number of neighbors. How does the results change with different parameters? Can you explain why?</p>
+</section>
+<section id="meta-session" class="level2" data-number="8">
+<h2 data-number="8" class="anchored" data-anchor-id="meta-session"><span class="header-section-number">8</span> Session info</h2>
 <details>
 <summary>
 Click here
@@ -921,9 +952,9 @@ jupyterlab          4.0.1
 notebook            6.5.4
 -----
 Python 3.10.11 | packaged by conda-forge | (main, May 10 2023, 18:58:44) [GCC 11.3.0]
-Linux-6.5.11-linuxkit-x86_64-with-glibc2.35
+Linux-6.4.16-linuxkit-x86_64-with-glibc2.35
 -----
-Session information updated at 2024-01-16 23:21</code></pre>
+Session information updated at 2024-01-19 14:58</code></pre>
 </div>
 </div>
 </details>
@@ -1175,7 +1206,7 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
     <div class="nav-footer-right">Published with <a href="https://quarto.org/">Quarto</a> v1.3.450</div>
   </div>
 </footer>
-<script>var lightboxQuarto = GLightbox({"openEffect":"zoom","selector":".lightbox","closeEffect":"zoom","loop":true,"descPosition":"bottom"});</script>
+<script>var lightboxQuarto = GLightbox({"descPosition":"bottom","loop":true,"selector":".lightbox","closeEffect":"zoom","openEffect":"zoom"});</script>
 
 
 
