@@ -1,0 +1,209 @@
+---
+title: "Preprocess Covid data"
+author: "Åsa Björklund  &  Paulo Czarnewski"
+date: '`r format(Sys.Date(), "%B %d, %Y")`'
+output:
+  html_document:
+    self_contained: true
+    highlight: tango
+    df_print: paged
+    toc: yes
+    toc_float:
+      collapsed: false
+      smooth_scroll: true
+    toc_depth: 3
+    keep_md: yes
+    fig_caption: true
+  html_notebook:
+    self_contained: true
+    highlight: tango
+    df_print: paged
+    toc: yes
+    toc_float:
+      collapsed: false
+      smooth_scroll: true
+    toc_depth: 3
+editor_options:
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(message=FALSE, warning=FALSE, result='hold',fig.width=12,tidy=TRUE)
+knitr::opts_knit$set(progress=TRUE,verbose=TRUE)
+```
+
+## Download data
+
+```{r}
+# download to folder full:
+# ftp://ftp.ncbi.nlm.nih.gov/geo/series/GSE149nnn/GSE149689/matrix/GSE149689_series_matrix.txt.gz
+# ftp://ftp.ncbi.nlm.nih.gov/geo/series/GSE149nnn/GSE149689/suppl/GSE149689_barcodes.tsv.gz
+# ftp://ftp.ncbi.nlm.nih.gov/geo/series/GSE149nnn/GSE149689/suppl/GSE149689_features.tsv.gz
+# ftp://ftp.ncbi.nlm.nih.gov/geo/series/GSE149nnn/GSE149689/suppl/GSE149689_matrix.mtx.gz
+```
+
+## Load all data
+
+```{r}
+library(Matrix)
+library(hdf5r)
+library(rhdf5)
+```
+
+Read the matrix
+
+```{r}
+
+sm <- as(Matrix::readMM("full/GSE149689_matrix.mtx.gz"),Class = "dgCMatrix")
+sm@Dimnames[[1]] <- as.character(read.delim("full/GSE149689_features.tsv.gz",header = F)[,2])
+sm@Dimnames[[2]] <- as.character(read.delim("full/GSE149689_barcodes.tsv.gz",header = F)[,1])
+dim(sm)
+
+
+
+#see sample metadata
+meta <- read.delim("full/GSE149689_series_matrix.txt.gz",skip = 54)
+t(meta[c(7,8,9,10,11,12),])
+
+#check how many cells per sample.
+t = table(sub(".*-","",colnames(sm)))[as.character(1:length(table(sub(".*-","",colnames(sm)))) )]
+cbind(t,colnames(meta)[2:21],t(unname(meta[10,2:21])))
+
+```
+
+Have shift in metadata for the Normal/Flu samples.
+
+Severe cases:
+1,9,10,15,16,17
+M,F,M,F,F,M
+
+Healthy:
+5,13,14,19
+F,F,F,M
+
+Only 19 is male.
+
+
+Select severe covid samples with many cells. 15,16 probably best.
+
+
+Filter for at least 400 umis per cell and recount, have cells with only 15 umis...
+
+```{r}
+nC = colSums(sm)
+range(nC)
+dim(sm)
+sm = sm[,nC>400]
+dim(sm)
+# removes 708 cells. Mainly from samples 8,10,17.
+
+t2 = table(sub(".*-","",colnames(sm)))[as.character(1:length(table(sub(".*-","",colnames(sm)))) )]
+data.frame(count=as.vector(t2), name=colnames(meta)[2:21])
+
+```
+
+## Select samples
+
+Select all severe and normal samples and create matrices. Skip sample 9,10, less than 1500 cells. 
+
+Subsample to 1500 cells per sample.
+
+```{r}
+samples_use <- c(c(1,15,16,17),c(5,13,14,19))
+sum(table(sub(".*-","",colnames(sm)))[as.character(samples_use)])
+
+
+
+sel <- unlist(lapply(samples_use,function(x){
+  set.seed(1);x <- sample(size = 1500,grep(paste0("-",x,"$"),colnames(sm),value = T) )
+}))
+sm2 <- sm[,sel]
+table(sub(".*-","",colnames(sm2)))[as.character(samples_use)]
+
+dim(sm2)
+
+```
+
+
+
+
+## Write as h5
+
+```{r, eval=FALSE}
+
+# need to add in gene id column as well.
+feats = read.delim("full/GSE149689_features.tsv.gz",header = F)
+
+
+
+for(i in c(paste0("nCoV_PBMC_",c(1,15,16,17)), paste0("Normal_PBMC_",c(5,13,14,19)) )) {
+  message(paste0("PROCESSING SAMPLE:    ",i) )
+  spn <- sub(".*_","",i)
+  fn <- paste0("sub/",i,".h5")
+  group <- grep(paste0("-",spn,"$"),colnames(sm2),value = T)
+  sm3 <-  sm2[,group]
+  dim(sm3)
+  
+  # file.remove(fn)
+  rhdf5::h5createFile(fn)
+  rhdf5::h5createGroup(fn,"matrix")
+  
+  rhdf5::h5write(sm3@Dimnames[[2]],fn,"matrix/barcodes")
+  rhdf5::h5write(sm3@x,fn,"matrix/data")
+  rhdf5::h5write(sm3@i,fn,"matrix/indices")
+  rhdf5::h5write(sm3@p,fn,"matrix/indptr")
+  rhdf5::h5write(sm3@Dim,fn,"matrix/shape")
+  
+  rhdf5::h5createGroup(fn,"matrix/features")
+  rhdf5::h5write(sm3@Dimnames[[1]]
+          ,fn,"matrix/features/name")
+  rhdf5::h5write(sm3@Dimnames[[1]]
+          ,fn,"matrix/features/_all_tag_keys")
+  rhdf5::h5write(feats[,3],
+          fn,"matrix/features/feature_type")
+  rhdf5::h5write(feats[,1],
+          fn,"matrix/features/id")
+  rhdf5::h5write(rep("GRCh38",nrow(sm3))
+          ,fn,"matrix/features/genome")
+  
+  rhdf5::h5ls(fn)
+  
+  nd <- Seurat::Read10X_h5(fn)
+  print(sum(!nd == sm3))
+  message("\n\n")
+}
+```
+
+## Check quality of all
+
+
+```{r}
+library(Seurat)
+sid = sub(".*-","",colnames(sm2))
+m = data.frame(sample = paste0("sm",sid), type = ifelse(sid %in% c(5,13,14,19), "Normal","Covid"))
+rownames(m) = colnames(sm2)
+m$sample2 = paste(m$type, m$sample, sep="_")
+m$sex = ifelse(sid %in% c(1,17,19), "M","F")
+sdata = CreateSeuratObject(sm2, meta.data = m)
+
+
+#pdf("sample_qualities.pdf")
+
+VlnPlot(sdata, features = c("nFeature_RNA", "nCount_RNA"), group.by = "sample2", pt.size = 0)
+#dev.off()
+
+```
+
+Most samples are females, only males are 1,17,19
+
+Sample 16 too low quality.
+
+Use covid 1,15,17 and normal 13,14,19 for the exercises.
+
+Gives 1 male in Normal, and 2 in covid.
+
+
+```{r}
+sessionInfo()
+```
+
