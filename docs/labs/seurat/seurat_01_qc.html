@@ -165,6 +165,11 @@ background-size: cover;
     <a class="nav-link" href="../../home_info.html" rel="" target="">
  <span class="menu-text">Info</span></a>
   </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/NBISweden/workshop-scRNAseq/" rel="" target=""><i class="bi bi-github" role="img">
+</i> 
+ <span class="menu-text"></span></a>
+  </li>  
 </ul>
             <div class="quarto-navbar-tools">
 </div>
@@ -202,7 +207,7 @@ background-size: cover;
       <div>
       <div class="quarto-title-meta-heading">Published</div>
       <div class="quarto-title-meta-contents">
-        <p class="date">16-Jan-2024</p>
+        <p class="date">23-Jan-2024</p>
       </div>
     </div>
     
@@ -332,7 +337,8 @@ Note
 </section>
 <section id="meta-qc_collate" class="level2" data-number="2">
 <h2 data-number="2" class="anchored" data-anchor-id="meta-qc_collate"><span class="header-section-number">2</span> Collate</h2>
-<p>We can now load the expression matrices and merge them into a single object. Each analysis workflow (Seurat, Scater, Scanpy, etc) has its own way of storing data. We will add dataset labels as <strong>cell.ids</strong> just in case you have overlapping barcodes between the datasets. After that we add a column <strong>Chemistry</strong> in the metadata for plotting later on.</p>
+<p>We can now merge them objects into a single object. Each analysis workflow (Seurat, Scater, Scanpy, etc) has its own way of storing data. We will add dataset labels as <strong>cell.ids</strong> just in case you have overlapping barcodes between the datasets. After that we add a column <strong>type</strong> in the metadata to define covid and ctrl samples.</p>
+<p>But first, we need to create Seurat objects using each of the expression matrices we loaded. We define each sample in the <code>project</code> slot, so in each object, the sample id can be found in the metadata slot <code>orig.ident</code>.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>sdata.cov1 <span class="ot">&lt;-</span> <span class="fu">CreateSeuratObject</span>(cov<span class="fl">.1</span>, <span class="at">project =</span> <span class="st">"covid_1"</span>)</span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>sdata.cov15 <span class="ot">&lt;-</span> <span class="fu">CreateSeuratObject</span>(cov<span class="fl">.15</span>, <span class="at">project =</span> <span class="st">"covid_15"</span>)</span>
@@ -366,8 +372,8 @@ Note
 <span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="fu">gc</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>           used  (Mb) gc trigger (Mb)  max used   (Mb)
-Ncells  3325459 177.6    4998412  267   4998412  267.0
-Vcells 58182395 443.9  150859912 1151 136166604 1038.9</code></pre>
+Ncells  3325437 177.6    4998403  267   4998403  267.0
+Vcells 58182452 443.9  150860051 1151 136166661 1038.9</code></pre>
 </div>
 </div>
 <p>Here is how the count matrix and the metadata look like for every cell.</p>
@@ -442,7 +448,7 @@ Vcells 58182395 443.9  150859912 1151 136166604 1038.9</code></pre>
 </div>
 </div>
 </div>
-<p>As you can see, there is quite some difference in quality for the 4 datasets, with for instance the covid_15 sample having fewer cells with many detected genes and more mitochondrial content. As the ribosomal proteins are highly expressed they will make up a larger proportion of the transcriptional landscape when fewer of the lowly expressed genes are detected. And we can plot the different QC-measures as scatter plots.</p>
+<p>As you can see, there is quite some difference in quality for the 4 datasets, with for instance the covid_15 and covid_16 samples having fewer cells with many detected genes and more mitochondrial content. As the ribosomal proteins are highly expressed they will make up a larger proportion of the transcriptional landscape when fewer of the lowly expressed genes are detected. We can also plot the different QC-measures as scatter plots.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="fu">FeatureScatter</span>(alldata, <span class="st">"nCount_RNA"</span>, <span class="st">"nFeature_RNA"</span>, <span class="at">group.by =</span> <span class="st">"orig.ident"</span>, <span class="at">pt.size =</span> .<span class="dv">5</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
@@ -555,7 +561,7 @@ Discuss
 </section>
 <section id="meta-qc_filter_genes" class="level3" data-number="5.4">
 <h3 data-number="5.4" class="anchored" data-anchor-id="meta-qc_filter_genes"><span class="header-section-number">5.4</span> Filter genes</h3>
-<p>As the level of expression of mitochondrial and MALAT1 genes are judged as mainly technical, it can be wise to remove them from the dataset before any further analysis.</p>
+<p>As the level of expression of mitochondrial and MALAT1 genes are judged as mainly technical, it can be wise to remove them from the dataset before any further analysis. In this case we will also remove the HB genes.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a><span class="fu">dim</span>(data.filt)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
@@ -571,11 +577,11 @@ Discuss
 <span id="cb29-8"><a href="#cb29-8" aria-hidden="true" tabindex="-1"></a><span class="co"># data.filt &lt;- data.filt[ ! grepl("^RP[SL]", rownames(data.filt)), ]</span></span>
 <span id="cb29-9"><a href="#cb29-9" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb29-10"><a href="#cb29-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Filter Hemoglobin gene (optional if that is a problem on your data)</span></span>
-<span id="cb29-11"><a href="#cb29-11" aria-hidden="true" tabindex="-1"></a>data.filt <span class="ot">&lt;-</span> data.filt[<span class="sc">!</span><span class="fu">grepl</span>(<span class="st">"^HB[^(P)]"</span>, <span class="fu">rownames</span>(data.filt)), ]</span>
+<span id="cb29-11"><a href="#cb29-11" aria-hidden="true" tabindex="-1"></a>data.filt <span class="ot">&lt;-</span> data.filt[<span class="sc">!</span><span class="fu">grepl</span>(<span class="st">"^HB[^(PES)]"</span>, <span class="fu">rownames</span>(data.filt)), ]</span>
 <span id="cb29-12"><a href="#cb29-12" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb29-13"><a href="#cb29-13" aria-hidden="true" tabindex="-1"></a><span class="fu">dim</span>(data.filt)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>[1] 18851  7431</code></pre>
+<pre><code>[1] 18854  7431</code></pre>
 </div>
 </div>
 </section>
@@ -597,7 +603,7 @@ Discuss
 <span id="cb31-10"><a href="#cb31-10" aria-hidden="true" tabindex="-1"></a>    <span class="st">"description"</span>, <span class="st">"gene_biotype"</span>, <span class="st">"chromosome_name"</span>, <span class="st">"start_position"</span></span>
 <span id="cb31-11"><a href="#cb31-11" aria-hidden="true" tabindex="-1"></a>), <span class="at">mart =</span> mart, <span class="at">useCache =</span> F))</span>
 <span id="cb31-12"><a href="#cb31-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-13"><a href="#cb31-13" aria-hidden="true" tabindex="-1"></a><span class="fu">write.csv</span>(genes_table, <span class="at">file =</span> <span class="st">"data/results/genes_table.csv"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb31-13"><a href="#cb31-13" aria-hidden="true" tabindex="-1"></a><span class="fu">write.csv</span>(genes_table, <span class="at">file =</span> <span class="st">"data/covid/results/genes_table.csv"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb32"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>genes_file <span class="ot">&lt;-</span> <span class="fu">file.path</span>(path_results, <span class="st">"genes_table.csv"</span>)</span>
@@ -634,7 +640,19 @@ Discuss
 </div>
 </div>
 </div>
-<p>Here, we can see clearly that we have two males and 4 females, can you see which samples they are? Do you think this will cause any problems for downstream analysis? Discuss with your group: what would be the best way to deal with this type of sex bias?</p>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Discuss
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Here, we can see clearly that we have three males and five females, can you see which samples they are? Do you think this will cause any problems for downstream analysis? Discuss with your group: what would be the best way to deal with this type of sex bias?</p>
+</div>
+</div>
 </section>
 <section id="meta-qc_cellcycle" class="level2" data-number="7">
 <h2 data-number="7" class="anchored" data-anchor-id="meta-qc_cellcycle"><span class="header-section-number">7</span> Cell cycle state</h2>
@@ -755,7 +773,7 @@ Caution
 <div class="sourceCode cell-code" id="cb44"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a>data.filt <span class="ot">&lt;-</span> data.filt[, data.filt<span class="sc">@</span>meta.data[, DF.name] <span class="sc">==</span> <span class="st">"Singlet"</span>]</span>
 <span id="cb44-2"><a href="#cb44-2" aria-hidden="true" tabindex="-1"></a><span class="fu">dim</span>(data.filt)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>[1] 18851  7134</code></pre>
+<pre><code>[1] 18854  7134</code></pre>
 </div>
 </div>
 </section>
@@ -1092,7 +1110,7 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
     <div class="nav-footer-right">Published with <a href="https://quarto.org/">Quarto</a> v1.3.450</div>
   </div>
 </footer>
-<script>var lightboxQuarto = GLightbox({"descPosition":"bottom","loop":true,"selector":".lightbox","closeEffect":"zoom","openEffect":"zoom"});</script>
+<script>var lightboxQuarto = GLightbox({"descPosition":"bottom","selector":".lightbox","closeEffect":"zoom","loop":true,"openEffect":"zoom"});</script>
 
 
 
