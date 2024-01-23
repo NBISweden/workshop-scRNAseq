@@ -202,7 +202,7 @@ background-size: cover;
       <div>
       <div class="quarto-title-meta-heading">Published</div>
       <div class="quarto-title-meta-contents">
-        <p class="date">16-Jan-2024</p>
+        <p class="date">23-Jan-2024</p>
       </div>
     </div>
     
@@ -219,14 +219,17 @@ background-size: cover;
    
   <ul>
   <li><a href="#loading-libraries" id="toc-loading-libraries" class="nav-link active" data-scroll-target="#loading-libraries"><span class="header-section-number">1</span> Loading libraries</a></li>
-  <li><a href="#loading-data" id="toc-loading-data" class="nav-link" data-scroll-target="#loading-data"><span class="header-section-number">2</span> Loading data</a></li>
-  <li><a href="#explore-the-data" id="toc-explore-the-data" class="nav-link" data-scroll-target="#explore-the-data"><span class="header-section-number">3</span> Explore the data</a></li>
-  <li><a href="#rerun-analysis-in-scanpy" id="toc-rerun-analysis-in-scanpy" class="nav-link" data-scroll-target="#rerun-analysis-in-scanpy"><span class="header-section-number">4</span> Rerun analysis in Scanpy</a></li>
-  <li><a href="#run-paga" id="toc-run-paga" class="nav-link" data-scroll-target="#run-paga"><span class="header-section-number">5</span> Run PAGA</a></li>
-  <li><a href="#data-pre-processing-prior-trajectory-inference" id="toc-data-pre-processing-prior-trajectory-inference" class="nav-link" data-scroll-target="#data-pre-processing-prior-trajectory-inference"><span class="header-section-number">6</span> Data pre-processing prior trajectory inference</a></li>
-  <li><a href="#rerun-paga-again-on-the-data" id="toc-rerun-paga-again-on-the-data" class="nav-link" data-scroll-target="#rerun-paga-again-on-the-data"><span class="header-section-number">7</span> Rerun PAGA again on the data</a></li>
-  <li><a href="#recomputing-the-embedding-using-paga-initialization" id="toc-recomputing-the-embedding-using-paga-initialization" class="nav-link" data-scroll-target="#recomputing-the-embedding-using-paga-initialization"><span class="header-section-number">8</span> Recomputing the embedding using PAGA-initialization</a></li>
-  <li><a href="#reconstructing-gene-changes-along-paga-paths-for-a-given-set-of-genes" id="toc-reconstructing-gene-changes-along-paga-paths-for-a-given-set-of-genes" class="nav-link" data-scroll-target="#reconstructing-gene-changes-along-paga-paths-for-a-given-set-of-genes"><span class="header-section-number">9</span> Reconstructing gene changes along PAGA paths for a given set of genes</a></li>
+  <li><a href="#preparing-data" id="toc-preparing-data" class="nav-link" data-scroll-target="#preparing-data"><span class="header-section-number">2</span> Preparing data</a></li>
+  <li><a href="#reading-data" id="toc-reading-data" class="nav-link" data-scroll-target="#reading-data"><span class="header-section-number">3</span> Reading data</a></li>
+  <li><a href="#explore-the-data" id="toc-explore-the-data" class="nav-link" data-scroll-target="#explore-the-data"><span class="header-section-number">4</span> Explore the data</a></li>
+  <li><a href="#rerun-analysis-in-scanpy" id="toc-rerun-analysis-in-scanpy" class="nav-link" data-scroll-target="#rerun-analysis-in-scanpy"><span class="header-section-number">5</span> Rerun analysis in Scanpy</a></li>
+  <li><a href="#run-paga" id="toc-run-paga" class="nav-link" data-scroll-target="#run-paga"><span class="header-section-number">6</span> Run PAGA</a></li>
+  <li><a href="#filtering-graph-edges" id="toc-filtering-graph-edges" class="nav-link" data-scroll-target="#filtering-graph-edges"><span class="header-section-number">7</span> Filtering graph edges</a>
+  <ul>
+  <li><a href="#rerun-paga-again-on-the-data" id="toc-rerun-paga-again-on-the-data" class="nav-link" data-scroll-target="#rerun-paga-again-on-the-data"><span class="header-section-number">7.1</span> Rerun PAGA again on the data</a></li>
+  </ul></li>
+  <li><a href="#embedding-using-paga-initialization" id="toc-embedding-using-paga-initialization" class="nav-link" data-scroll-target="#embedding-using-paga-initialization"><span class="header-section-number">8</span> Embedding using PAGA-initialization</a></li>
+  <li><a href="#gene-changes" id="toc-gene-changes" class="nav-link" data-scroll-target="#gene-changes"><span class="header-section-number">9</span> Gene changes</a></li>
   <li><a href="#session-info" id="toc-session-info" class="nav-link" data-scroll-target="#session-info"><span class="header-section-number">10</span> Session info</a></li>
   </ul>
 </nav>
@@ -251,7 +254,7 @@ Note
 <p>Code chunks run Python commands unless it starts with <code>%%bash</code>, in which case, those chunks run shell commands.</p>
 </div>
 </div>
-<p>Partly following <a href="https://scanpy-tutorials.readthedocs.io/en/latest/paga-paul15.html">this tutorial</a>.</p>
+<p>Partly following this PAGA <a href="https://scanpy-tutorials.readthedocs.io/en/latest/paga-paul15.html">tutorial</a> with some modifications.</p>
 <section id="loading-libraries" class="level2" data-number="1">
 <h2 data-number="1" class="anchored" data-anchor-id="loading-libraries"><span class="header-section-number">1</span> Loading libraries</h2>
 <div class="cell" data-execution_count="1">
@@ -273,42 +276,47 @@ Note
 <span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>sc.settings.set_figure_params(dpi<span class="op">=</span><span class="dv">100</span>, frameon<span class="op">=</span><span class="va">False</span>, figsize<span class="op">=</span>(<span class="dv">5</span>, <span class="dv">5</span>), facecolor<span class="op">=</span><span class="st">'white'</span>, color_map <span class="op">=</span> <span class="st">'viridis_r'</span>) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
-<section id="loading-data" class="level2" data-number="2">
-<h2 data-number="2" class="anchored" data-anchor-id="loading-data"><span class="header-section-number">2</span> Loading data</h2>
+<section id="preparing-data" class="level2" data-number="2">
+<h2 data-number="2" class="anchored" data-anchor-id="preparing-data"><span class="header-section-number">2</span> Preparing data</h2>
 <p>In order to speed up the computations during the exercises, we will be using a subset of a bone marrow dataset (originally containing about 100K cells). The bone marrow is the source of adult immune cells, and contains virtually all differentiation stages of cell from the immune system which later circulate in the blood to all other organs.</p>
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
 <p><a href="../figs/hematopoiesis.png" class="lightbox" data-gallery="quarto-lightbox-gallery-2"><img src="../figs/hematopoiesis.png" class="img-fluid figure-img"></a></p>
 </figure>
 </div>
-<p>All the data has been preprocessed with Seurat. The file trajectory_scanpy_filtered.h5ad was converted from the Seurat object using the SeuratDisk package. For more information on how it was done, have a look at the script: convert_to_h5ad.R in the github repo.</p>
+<p>If you have been using the <strong>Seurat</strong>, <strong>Bioconductor</strong> or <strong>Scanpy</strong> toolkits with your own data, you need to reach to the point where can find get:</p>
+<ul>
+<li>A dimensionality reduction where to perform the trajectory (for example: PCA, ICA, MNN, harmony, Diffusion Maps, UMAP)</li>
+<li>The cell clustering information (for example: from Louvain, k-means)</li>
+<li>A KNN/SNN graph (this is useful to inspect and sanity-check your trajectories)</li>
+</ul>
+<p>In this case, all the data has been preprocessed with Seurat with standard pipelines. In addition there was some manual filtering done to remove clusters that are disconnected and cells that are hard to cluster, which can be seen in this <a href="https://github.com/NBISweden/workshop-scRNAseq/blob/master/scripts/data_processing/slingshot_preprocessing.Rmd">script</a></p>
+<p>The file trajectory_scanpy_filtered.h5ad was converted from the Seurat object using the SeuratDisk package. For more information on how it was done, have a look at the script: <a href="https://github.com/NBISweden/workshop-scRNAseq/blob/master/scripts/data_processing/convert_to_h5ad.R">convert_to_h5ad.R</a> in the github repo.</p>
+<p>You can download the data with the commands:</p>
 <div class="cell" data-execution_count="2">
 <div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>path_data <span class="op">=</span> <span class="st">"https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"</span></span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>path_trajectory <span class="op">=</span> <span class="st">"./data/trajectory"</span></span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(path_trajectory):</span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    os.makedirs(path_trajectory, exist_ok<span class="op">=</span><span class="va">True</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> urllib.request</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>path_data <span class="op">=</span> <span class="st">"https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>path_results <span class="op">=</span> <span class="st">"data/trajectory"</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(path_results):</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    os.makedirs(path_results, exist_ok<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>path_file <span class="op">=</span> <span class="st">"data/trajectory/trajectory_seurat_filtered.h5ad"</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(path_file):</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    file_url <span class="op">=</span> os.path.join(</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>        path_data, <span class="st">"trajectory/trajectory_seurat_filtered.h5ad"</span>)</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>    urllib.request.urlretrieve(file_url, path_file)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
+</section>
+<section id="reading-data" class="level2" data-number="3">
+<h2 data-number="3" class="anchored" data-anchor-id="reading-data"><span class="header-section-number">3</span> Reading data</h2>
+<p>We already have pre-computed and subsetted the dataset (with 6688 cells and 3585 genes) following the analysis steps in this course. We then saved the objects, so you can use common tools to open and start to work with them (either in R or Python).</p>
 <div class="cell" data-execution_count="3">
-<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> urllib.request</span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>path_results <span class="op">=</span> <span class="st">"data/trajectory"</span></span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(path_results):</span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    os.makedirs(path_results, exist_ok<span class="op">=</span><span class="va">True</span>)</span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>path_file <span class="op">=</span> <span class="st">"data/trajectory/trajectory_seurat_filtered.h5ad"</span></span>
-<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(path_file):</span>
-<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    file_url <span class="op">=</span> os.path.join(</span>
-<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>        path_data, <span class="st">"trajectory/trajectory_seurat_filtered.h5ad"</span>)</span>
-<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>    urllib.request.urlretrieve(file_url, path_file)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-<p>Check that the variable names are correct.</p>
-<div class="cell" data-execution_count="4">
-<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>adata <span class="op">=</span> sc.read_h5ad(<span class="st">"data/trajectory/trajectory_seurat_filtered.h5ad"</span>)</span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>adata.var</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="4">
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>adata <span class="op">=</span> sc.read_h5ad(<span class="st">"data/trajectory/trajectory_seurat_filtered.h5ad"</span>)</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>adata.var</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="3">
 <div>
 
 
@@ -371,9 +379,9 @@ Note
 </div>
 </div>
 </div>
-<div class="cell" data-execution_count="5">
-<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># check what you have in the X matrix, should be lognormalized counts.</span></span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(adata.X[:<span class="dv">10</span>,:<span class="dv">10</span>])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell" data-execution_count="4">
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># check what you have in the X matrix, should be lognormalized counts.</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(adata.X[:<span class="dv">10</span>,:<span class="dv">10</span>])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>  (0, 4)    0.11622072805743532
   (0, 8)    0.4800893970571722
@@ -403,15 +411,15 @@ Note
 </div>
 </div>
 </section>
-<section id="explore-the-data" class="level2" data-number="3">
-<h2 data-number="3" class="anchored" data-anchor-id="explore-the-data"><span class="header-section-number">3</span> Explore the data</h2>
+<section id="explore-the-data" class="level2" data-number="4">
+<h2 data-number="4" class="anchored" data-anchor-id="explore-the-data"><span class="header-section-number">4</span> Explore the data</h2>
 <p>There is a umap and clusters provided with the object, first plot some information from the previous analysis onto the umap.</p>
-<div class="cell" data-execution_count="6">
-<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, color <span class="op">=</span> [<span class="st">'clusters'</span>,<span class="st">'dataset'</span>,<span class="st">'batches'</span>,<span class="st">'Phase'</span>],legend_loc <span class="op">=</span> <span class="st">'on data'</span>, legend_fontsize <span class="op">=</span> <span class="st">'xx-small'</span>, ncols <span class="op">=</span> <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell" data-execution_count="5">
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, color <span class="op">=</span> [<span class="st">'clusters'</span>,<span class="st">'dataset'</span>,<span class="st">'batches'</span>,<span class="st">'Phase'</span>],legend_loc <span class="op">=</span> <span class="st">'on data'</span>, legend_fontsize <span class="op">=</span> <span class="st">'xx-small'</span>, ncols <span class="op">=</span> <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="scanpy_07_trajectory_files/figure-html/cell-7-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-3"><img src="scanpy_07_trajectory_files/figure-html/cell-7-output-1.png" class="img-fluid figure-img"></a></p>
+<p><a href="scanpy_07_trajectory_files/figure-html/cell-6-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-3"><img src="scanpy_07_trajectory_files/figure-html/cell-6-output-1.png" class="img-fluid figure-img"></a></p>
 </figure>
 </div>
 </div>
@@ -467,117 +475,117 @@ Note
 </tr>
 </tbody>
 </table>
-<div class="cell" data-execution_count="7">
-<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>markers <span class="op">=</span> [<span class="st">"Cd34"</span>,<span class="st">"Alas2"</span>,<span class="st">"Pf4"</span>,<span class="st">"Mcpt8"</span>,<span class="st">"Ltf"</span>,<span class="st">"Cst3"</span>, <span class="st">"Siglech"</span>, <span class="st">"C1qc"</span>, <span class="st">"Ms4a1"</span>, <span class="st">"Cd3e"</span>, ]</span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, color <span class="op">=</span> markers, use_raw <span class="op">=</span> <span class="va">False</span>, ncols <span class="op">=</span> <span class="dv">4</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell" data-execution_count="6">
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>markers <span class="op">=</span> [<span class="st">"Cd34"</span>,<span class="st">"Alas2"</span>,<span class="st">"Pf4"</span>,<span class="st">"Mcpt8"</span>,<span class="st">"Ltf"</span>,<span class="st">"Cst3"</span>, <span class="st">"Siglech"</span>, <span class="st">"C1qc"</span>, <span class="st">"Ms4a1"</span>, <span class="st">"Cd3e"</span>, ]</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, color <span class="op">=</span> markers, use_raw <span class="op">=</span> <span class="va">False</span>, ncols <span class="op">=</span> <span class="dv">4</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="scanpy_07_trajectory_files/figure-html/cell-8-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-4"><img src="scanpy_07_trajectory_files/figure-html/cell-8-output-1.png" class="img-fluid figure-img"></a></p>
+<p><a href="scanpy_07_trajectory_files/figure-html/cell-7-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-4"><img src="scanpy_07_trajectory_files/figure-html/cell-7-output-1.png" class="img-fluid figure-img"></a></p>
 </figure>
 </div>
 </div>
 </div>
 </section>
-<section id="rerun-analysis-in-scanpy" class="level2" data-number="4">
-<h2 data-number="4" class="anchored" data-anchor-id="rerun-analysis-in-scanpy"><span class="header-section-number">4</span> Rerun analysis in Scanpy</h2>
+<section id="rerun-analysis-in-scanpy" class="level2" data-number="5">
+<h2 data-number="5" class="anchored" data-anchor-id="rerun-analysis-in-scanpy"><span class="header-section-number">5</span> Rerun analysis in Scanpy</h2>
 <p>Redo clustering and umap using the basic Scanpy pipeline. Use the provided “X_harmony_Phase” dimensionality reduction as the staring point.</p>
-<div class="cell" data-execution_count="8">
-<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># first, store the old umap with a new name so it is not overwritten</span></span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>adata.obsm[<span class="st">'X_umap_old'</span>] <span class="op">=</span> adata.obsm[<span class="st">'X_umap'</span>]</span>
-<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>sc.pp.neighbors(adata, n_pcs <span class="op">=</span> <span class="dv">30</span>, n_neighbors <span class="op">=</span> <span class="dv">20</span>, use_rep<span class="op">=</span><span class="st">"X_harmony_Phase"</span>)</span>
-<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>sc.tl.umap(adata, min_dist<span class="op">=</span><span class="fl">0.4</span>, spread<span class="op">=</span><span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell" data-execution_count="7">
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co"># first, store the old umap with a new name so it is not overwritten</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>adata.obsm[<span class="st">'X_umap_old'</span>] <span class="op">=</span> adata.obsm[<span class="st">'X_umap'</span>]</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>sc.pp.neighbors(adata, n_pcs <span class="op">=</span> <span class="dv">30</span>, n_neighbors <span class="op">=</span> <span class="dv">20</span>, use_rep<span class="op">=</span><span class="st">"X_harmony_Phase"</span>)</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>sc.tl.umap(adata, min_dist<span class="op">=</span><span class="fl">0.4</span>, spread<span class="op">=</span><span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>computing neighbors
     finished: added to `.uns['neighbors']`
     `.obsp['distances']`, distances for each pair of neighbors
-    `.obsp['connectivities']`, weighted adjacency matrix (0:00:08)
+    `.obsp['connectivities']`, weighted adjacency matrix (0:00:10)
 computing UMAP
     finished: added
-    'X_umap', UMAP coordinates (adata.obsm) (0:00:09)</code></pre>
+    'X_umap', UMAP coordinates (adata.obsm) (0:00:11)</code></pre>
 </div>
 </div>
-<div class="cell" data-execution_count="9">
-<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co">#sc.tl.umap(adata, min_dist=0.6, spread=1.5)</span></span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, color <span class="op">=</span> [<span class="st">'clusters'</span>],legend_loc <span class="op">=</span> <span class="st">'on data'</span>, legend_fontsize <span class="op">=</span> <span class="st">'xx-small'</span>, edges <span class="op">=</span> <span class="va">True</span>)</span>
-<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, color <span class="op">=</span> markers, use_raw <span class="op">=</span> <span class="va">False</span>, ncols <span class="op">=</span> <span class="dv">4</span>)</span>
-<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Redo clustering as well</span></span>
-<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>sc.tl.leiden(adata, key_added <span class="op">=</span> <span class="st">"leiden_1.0"</span>, resolution <span class="op">=</span> <span class="fl">1.0</span>) <span class="co"># default resolution in 1.0</span></span>
-<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>sc.tl.leiden(adata, key_added <span class="op">=</span> <span class="st">"leiden_1.2"</span>, resolution <span class="op">=</span> <span class="fl">1.2</span>) <span class="co"># default resolution in 1.0</span></span>
-<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>sc.tl.leiden(adata, key_added <span class="op">=</span> <span class="st">"leiden_1.4"</span>, resolution <span class="op">=</span> <span class="fl">1.4</span>) <span class="co"># default resolution in 1.0</span></span>
-<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a><span class="co">#sc.tl.louvain(adata, key_added = "leiden_1.0") # default resolution in 1.0</span></span>
-<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, color <span class="op">=</span> [<span class="st">'leiden_1.0'</span>, <span class="st">'leiden_1.2'</span>, <span class="st">'leiden_1.4'</span>,<span class="st">'clusters'</span>],legend_loc <span class="op">=</span> <span class="st">'on data'</span>, legend_fontsize <span class="op">=</span> <span class="st">'xx-small'</span>, ncols <span class="op">=</span><span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell" data-execution_count="8">
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co">#sc.tl.umap(adata, min_dist=0.6, spread=1.5)</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, color <span class="op">=</span> [<span class="st">'clusters'</span>],legend_loc <span class="op">=</span> <span class="st">'on data'</span>, legend_fontsize <span class="op">=</span> <span class="st">'xx-small'</span>, edges <span class="op">=</span> <span class="va">True</span>)</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, color <span class="op">=</span> markers, use_raw <span class="op">=</span> <span class="va">False</span>, ncols <span class="op">=</span> <span class="dv">4</span>)</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Redo clustering as well</span></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>sc.tl.leiden(adata, key_added <span class="op">=</span> <span class="st">"leiden_1.0"</span>, resolution <span class="op">=</span> <span class="fl">1.0</span>) <span class="co"># default resolution in 1.0</span></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>sc.tl.leiden(adata, key_added <span class="op">=</span> <span class="st">"leiden_1.2"</span>, resolution <span class="op">=</span> <span class="fl">1.2</span>) <span class="co"># default resolution in 1.0</span></span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>sc.tl.leiden(adata, key_added <span class="op">=</span> <span class="st">"leiden_1.4"</span>, resolution <span class="op">=</span> <span class="fl">1.4</span>) <span class="co"># default resolution in 1.0</span></span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a><span class="co">#sc.tl.louvain(adata, key_added = "leiden_1.0") # default resolution in 1.0</span></span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, color <span class="op">=</span> [<span class="st">'leiden_1.0'</span>, <span class="st">'leiden_1.2'</span>, <span class="st">'leiden_1.4'</span>,<span class="st">'clusters'</span>],legend_loc <span class="op">=</span> <span class="st">'on data'</span>, legend_fontsize <span class="op">=</span> <span class="st">'xx-small'</span>, ncols <span class="op">=</span><span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="scanpy_07_trajectory_files/figure-html/cell-10-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-5"><img src="scanpy_07_trajectory_files/figure-html/cell-10-output-1.png" class="img-fluid figure-img"></a></p>
+<p><a href="scanpy_07_trajectory_files/figure-html/cell-9-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-5"><img src="scanpy_07_trajectory_files/figure-html/cell-9-output-1.png" class="img-fluid figure-img"></a></p>
 </figure>
 </div>
 </div>
 <div class="cell-output cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="scanpy_07_trajectory_files/figure-html/cell-10-output-2.png" class="lightbox" data-gallery="quarto-lightbox-gallery-6"><img src="scanpy_07_trajectory_files/figure-html/cell-10-output-2.png" class="img-fluid figure-img"></a></p>
+<p><a href="scanpy_07_trajectory_files/figure-html/cell-9-output-2.png" class="lightbox" data-gallery="quarto-lightbox-gallery-6"><img src="scanpy_07_trajectory_files/figure-html/cell-9-output-2.png" class="img-fluid figure-img"></a></p>
 </figure>
 </div>
 </div>
 <div class="cell-output cell-output-stdout">
 <pre><code>running Leiden clustering
     finished: found 16 clusters and added
-    'leiden_1.0', the cluster labels (adata.obs, categorical) (0:00:02)
+    'leiden_1.0', the cluster labels (adata.obs, categorical) (0:00:04)
 running Leiden clustering
     finished: found 17 clusters and added
-    'leiden_1.2', the cluster labels (adata.obs, categorical) (0:00:01)
+    'leiden_1.2', the cluster labels (adata.obs, categorical) (0:00:02)
 running Leiden clustering
     finished: found 19 clusters and added
-    'leiden_1.4', the cluster labels (adata.obs, categorical) (0:00:02)</code></pre>
+    'leiden_1.4', the cluster labels (adata.obs, categorical) (0:00:03)</code></pre>
 </div>
 <div class="cell-output cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="scanpy_07_trajectory_files/figure-html/cell-10-output-4.png" class="lightbox" data-gallery="quarto-lightbox-gallery-7"><img src="scanpy_07_trajectory_files/figure-html/cell-10-output-4.png" class="img-fluid figure-img"></a></p>
+<p><a href="scanpy_07_trajectory_files/figure-html/cell-9-output-4.png" class="lightbox" data-gallery="quarto-lightbox-gallery-7"><img src="scanpy_07_trajectory_files/figure-html/cell-9-output-4.png" class="img-fluid figure-img"></a></p>
 </figure>
 </div>
 </div>
 </div>
-<div class="cell" data-execution_count="10">
-<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Rename clusters with really clear markers, the rest are left unlabelled.</span></span>
-<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>annot <span class="op">=</span> pd.DataFrame(adata.obs[<span class="st">'leiden_1.4'</span>].astype(<span class="st">'string'</span>))</span>
-<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>annot[annot[<span class="st">'leiden_1.4'</span>] <span class="op">==</span> <span class="st">'10'</span>] <span class="op">=</span> <span class="st">'10_megakaryo'</span> <span class="co">#Pf4</span></span>
-<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>annot[annot[<span class="st">'leiden_1.4'</span>] <span class="op">==</span> <span class="st">'17'</span>] <span class="op">=</span> <span class="st">'17_macro'</span>  <span class="co">#C1qc</span></span>
-<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>annot[annot[<span class="st">'leiden_1.4'</span>] <span class="op">==</span> <span class="st">'11'</span>] <span class="op">=</span> <span class="st">'11_eryth'</span> <span class="co">#Alas2</span></span>
-<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>annot[annot[<span class="st">'leiden_1.4'</span>] <span class="op">==</span> <span class="st">'18'</span>] <span class="op">=</span> <span class="st">'18_dend'</span> <span class="co">#Siglech</span></span>
-<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>annot[annot[<span class="st">'leiden_1.4'</span>] <span class="op">==</span> <span class="st">'13'</span>] <span class="op">=</span> <span class="st">'13_mast'</span> <span class="co">#Mcpt8</span></span>
-<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>annot[annot[<span class="st">'leiden_1.4'</span>] <span class="op">==</span> <span class="st">'0'</span>] <span class="op">=</span> <span class="st">'0_mono'</span> <span class="co">#Cts3</span></span>
-<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>annot[annot[<span class="st">'leiden_1.4'</span>] <span class="op">==</span> <span class="st">'1'</span>] <span class="op">=</span> <span class="st">'1_gran'</span> <span class="co">#Ltf</span></span>
-<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a>annot[annot[<span class="st">'leiden_1.4'</span>] <span class="op">==</span> <span class="st">'9'</span>] <span class="op">=</span> <span class="st">'9_gran'</span></span>
-<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a>annot[annot[<span class="st">'leiden_1.4'</span>] <span class="op">==</span> <span class="st">'14'</span>] <span class="op">=</span> <span class="st">'14_TC'</span> <span class="co">#Cd3e</span></span>
-<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a>annot[annot[<span class="st">'leiden_1.4'</span>] <span class="op">==</span> <span class="st">'16'</span>] <span class="op">=</span> <span class="st">'16_BC'</span> <span class="co">#Ms4a1</span></span>
-<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a>annot[annot[<span class="st">'leiden_1.4'</span>] <span class="op">==</span> <span class="st">'8'</span>] <span class="op">=</span> <span class="st">'8_progen'</span>  <span class="co"># Cd34</span></span>
-<span id="cb13-15"><a href="#cb13-15" aria-hidden="true" tabindex="-1"></a>annot[annot[<span class="st">'leiden_1.4'</span>] <span class="op">==</span> <span class="st">'4'</span>] <span class="op">=</span> <span class="st">'4_progen'</span> </span>
-<span id="cb13-16"><a href="#cb13-16" aria-hidden="true" tabindex="-1"></a>annot[annot[<span class="st">'leiden_1.4'</span>] <span class="op">==</span> <span class="st">'5'</span>] <span class="op">=</span> <span class="st">'5_progen'</span></span>
-<span id="cb13-17"><a href="#cb13-17" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb13-18"><a href="#cb13-18" aria-hidden="true" tabindex="-1"></a>adata.obs[<span class="st">'annot'</span>]<span class="op">=</span>annot[<span class="st">'leiden_1.4'</span>].astype(<span class="st">'category'</span>)</span>
-<span id="cb13-19"><a href="#cb13-19" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb13-20"><a href="#cb13-20" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, color <span class="op">=</span> <span class="st">'annot'</span>,legend_loc <span class="op">=</span> <span class="st">'on data'</span>, legend_fontsize <span class="op">=</span> <span class="st">'xx-small'</span>, ncols <span class="op">=</span><span class="dv">2</span>)</span>
-<span id="cb13-21"><a href="#cb13-21" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb13-22"><a href="#cb13-22" aria-hidden="true" tabindex="-1"></a>annot.value_counts()</span>
-<span id="cb13-23"><a href="#cb13-23" aria-hidden="true" tabindex="-1"></a><span class="co">#type(annot)</span></span>
-<span id="cb13-24"><a href="#cb13-24" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb13-25"><a href="#cb13-25" aria-hidden="true" tabindex="-1"></a><span class="co"># astype('category')</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell" data-execution_count="9">
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Rename clusters with really clear markers, the rest are left unlabelled.</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>annot <span class="op">=</span> pd.DataFrame(adata.obs[<span class="st">'leiden_1.4'</span>].astype(<span class="st">'string'</span>))</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>annot[annot[<span class="st">'leiden_1.4'</span>] <span class="op">==</span> <span class="st">'10'</span>] <span class="op">=</span> <span class="st">'10_megakaryo'</span> <span class="co">#Pf4</span></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>annot[annot[<span class="st">'leiden_1.4'</span>] <span class="op">==</span> <span class="st">'17'</span>] <span class="op">=</span> <span class="st">'17_macro'</span>  <span class="co">#C1qc</span></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>annot[annot[<span class="st">'leiden_1.4'</span>] <span class="op">==</span> <span class="st">'11'</span>] <span class="op">=</span> <span class="st">'11_eryth'</span> <span class="co">#Alas2</span></span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>annot[annot[<span class="st">'leiden_1.4'</span>] <span class="op">==</span> <span class="st">'18'</span>] <span class="op">=</span> <span class="st">'18_dend'</span> <span class="co">#Siglech</span></span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>annot[annot[<span class="st">'leiden_1.4'</span>] <span class="op">==</span> <span class="st">'13'</span>] <span class="op">=</span> <span class="st">'13_mast'</span> <span class="co">#Mcpt8</span></span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>annot[annot[<span class="st">'leiden_1.4'</span>] <span class="op">==</span> <span class="st">'0'</span>] <span class="op">=</span> <span class="st">'0_mono'</span> <span class="co">#Cts3</span></span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>annot[annot[<span class="st">'leiden_1.4'</span>] <span class="op">==</span> <span class="st">'1'</span>] <span class="op">=</span> <span class="st">'1_gran'</span> <span class="co">#Ltf</span></span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>annot[annot[<span class="st">'leiden_1.4'</span>] <span class="op">==</span> <span class="st">'9'</span>] <span class="op">=</span> <span class="st">'9_gran'</span></span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>annot[annot[<span class="st">'leiden_1.4'</span>] <span class="op">==</span> <span class="st">'14'</span>] <span class="op">=</span> <span class="st">'14_TC'</span> <span class="co">#Cd3e</span></span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>annot[annot[<span class="st">'leiden_1.4'</span>] <span class="op">==</span> <span class="st">'16'</span>] <span class="op">=</span> <span class="st">'16_BC'</span> <span class="co">#Ms4a1</span></span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a>annot[annot[<span class="st">'leiden_1.4'</span>] <span class="op">==</span> <span class="st">'8'</span>] <span class="op">=</span> <span class="st">'8_progen'</span>  <span class="co"># Cd34</span></span>
+<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a>annot[annot[<span class="st">'leiden_1.4'</span>] <span class="op">==</span> <span class="st">'4'</span>] <span class="op">=</span> <span class="st">'4_progen'</span> </span>
+<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a>annot[annot[<span class="st">'leiden_1.4'</span>] <span class="op">==</span> <span class="st">'5'</span>] <span class="op">=</span> <span class="st">'5_progen'</span></span>
+<span id="cb12-17"><a href="#cb12-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-18"><a href="#cb12-18" aria-hidden="true" tabindex="-1"></a>adata.obs[<span class="st">'annot'</span>]<span class="op">=</span>annot[<span class="st">'leiden_1.4'</span>].astype(<span class="st">'category'</span>)</span>
+<span id="cb12-19"><a href="#cb12-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-20"><a href="#cb12-20" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, color <span class="op">=</span> <span class="st">'annot'</span>,legend_loc <span class="op">=</span> <span class="st">'on data'</span>, legend_fontsize <span class="op">=</span> <span class="st">'xx-small'</span>, ncols <span class="op">=</span><span class="dv">2</span>)</span>
+<span id="cb12-21"><a href="#cb12-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-22"><a href="#cb12-22" aria-hidden="true" tabindex="-1"></a>annot.value_counts()</span>
+<span id="cb12-23"><a href="#cb12-23" aria-hidden="true" tabindex="-1"></a><span class="co">#type(annot)</span></span>
+<span id="cb12-24"><a href="#cb12-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-25"><a href="#cb12-25" aria-hidden="true" tabindex="-1"></a><span class="co"># astype('category')</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="scanpy_07_trajectory_files/figure-html/cell-11-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-8"><img src="scanpy_07_trajectory_files/figure-html/cell-11-output-1.png" class="img-fluid figure-img"></a></p>
+<p><a href="scanpy_07_trajectory_files/figure-html/cell-10-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-8"><img src="scanpy_07_trajectory_files/figure-html/cell-10-output-1.png" class="img-fluid figure-img"></a></p>
 </figure>
 </div>
 </div>
-<div class="cell-output cell-output-display" data-execution_count="10">
+<div class="cell-output cell-output-display" data-execution_count="9">
 <pre><code>leiden_1.4  
 0_mono          509
 1_gran          487
@@ -601,27 +609,27 @@ running Leiden clustering
 Name: count, dtype: int64</code></pre>
 </div>
 </div>
-<div class="cell" data-execution_count="11">
-<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="co"># plot onto the Seurat embedding:</span></span>
-<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>sc.pl.embedding(adata, basis<span class="op">=</span><span class="st">'X_umap_old'</span>, color <span class="op">=</span> <span class="st">'annot'</span>,legend_loc <span class="op">=</span> <span class="st">'on data'</span>, legend_fontsize <span class="op">=</span> <span class="st">'xx-small'</span>, ncols <span class="op">=</span><span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell" data-execution_count="10">
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="co"># plot onto the Seurat embedding:</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>sc.pl.embedding(adata, basis<span class="op">=</span><span class="st">'X_umap_old'</span>, color <span class="op">=</span> <span class="st">'annot'</span>,legend_loc <span class="op">=</span> <span class="st">'on data'</span>, legend_fontsize <span class="op">=</span> <span class="st">'xx-small'</span>, ncols <span class="op">=</span><span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="scanpy_07_trajectory_files/figure-html/cell-12-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-9"><img src="scanpy_07_trajectory_files/figure-html/cell-12-output-1.png" class="img-fluid figure-img"></a></p>
+<p><a href="scanpy_07_trajectory_files/figure-html/cell-11-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-9"><img src="scanpy_07_trajectory_files/figure-html/cell-11-output-1.png" class="img-fluid figure-img"></a></p>
 </figure>
 </div>
 </div>
 </div>
 </section>
-<section id="run-paga" class="level2" data-number="5">
-<h2 data-number="5" class="anchored" data-anchor-id="run-paga"><span class="header-section-number">5</span> Run PAGA</h2>
+<section id="run-paga" class="level2" data-number="6">
+<h2 data-number="6" class="anchored" data-anchor-id="run-paga"><span class="header-section-number">6</span> Run PAGA</h2>
 <p>Use the clusters from leiden clustering with leiden_1.4 and run PAGA. First we create the graph and initialize the positions using the umap.</p>
-<div class="cell" data-execution_count="12">
-<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="co"># use the umap to initialize the graph layout.</span></span>
-<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>sc.tl.draw_graph(adata, init_pos<span class="op">=</span><span class="st">'X_umap'</span>)</span>
-<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>sc.pl.draw_graph(adata, color<span class="op">=</span><span class="st">'annot'</span>, legend_loc<span class="op">=</span><span class="st">'on data'</span>, legend_fontsize <span class="op">=</span> <span class="st">'xx-small'</span>)</span>
-<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>sc.tl.paga(adata, groups<span class="op">=</span><span class="st">'annot'</span>)</span>
-<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>sc.pl.paga(adata, color<span class="op">=</span><span class="st">'annot'</span>, edge_width_scale <span class="op">=</span> <span class="fl">0.3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell" data-execution_count="11">
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="co"># use the umap to initialize the graph layout.</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>sc.tl.draw_graph(adata, init_pos<span class="op">=</span><span class="st">'X_umap'</span>)</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>sc.pl.draw_graph(adata, color<span class="op">=</span><span class="st">'annot'</span>, legend_loc<span class="op">=</span><span class="st">'on data'</span>, legend_fontsize <span class="op">=</span> <span class="st">'xx-small'</span>)</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>sc.tl.paga(adata, groups<span class="op">=</span><span class="st">'annot'</span>)</span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>sc.pl.paga(adata, color<span class="op">=</span><span class="st">'annot'</span>, edge_width_scale <span class="op">=</span> <span class="fl">0.3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>drawing single-cell graph using layout 'fa'
 WARNING: Package 'fa2' is not installed, falling back to layout 'fr'.To use the faster and better ForceAtlas2 layout, install package 'fa2' (`pip install fa2`).
@@ -636,37 +644,37 @@ running PAGA
 <div class="cell-output cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="scanpy_07_trajectory_files/figure-html/cell-13-output-2.png" class="lightbox" data-gallery="quarto-lightbox-gallery-10"><img src="scanpy_07_trajectory_files/figure-html/cell-13-output-2.png" class="img-fluid figure-img"></a></p>
+<p><a href="scanpy_07_trajectory_files/figure-html/cell-12-output-2.png" class="lightbox" data-gallery="quarto-lightbox-gallery-10"><img src="scanpy_07_trajectory_files/figure-html/cell-12-output-2.png" class="img-fluid figure-img"></a></p>
 </figure>
 </div>
 </div>
 <div class="cell-output cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="scanpy_07_trajectory_files/figure-html/cell-13-output-3.png" class="lightbox" data-gallery="quarto-lightbox-gallery-11"><img src="scanpy_07_trajectory_files/figure-html/cell-13-output-3.png" class="img-fluid figure-img"></a></p>
+<p><a href="scanpy_07_trajectory_files/figure-html/cell-12-output-3.png" class="lightbox" data-gallery="quarto-lightbox-gallery-11"><img src="scanpy_07_trajectory_files/figure-html/cell-12-output-3.png" class="img-fluid figure-img"></a></p>
 </figure>
 </div>
 </div>
 </div>
 <p>As you can see, we have edges between many clusters that we know are are unrelated, so we may need to clean up the data a bit more.</p>
 </section>
-<section id="data-pre-processing-prior-trajectory-inference" class="level2" data-number="6">
-<h2 data-number="6" class="anchored" data-anchor-id="data-pre-processing-prior-trajectory-inference"><span class="header-section-number">6</span> Data pre-processing prior trajectory inference</h2>
+<section id="filtering-graph-edges" class="level2" data-number="7">
+<h2 data-number="7" class="anchored" data-anchor-id="filtering-graph-edges"><span class="header-section-number">7</span> Filtering graph edges</h2>
 <p>First, lets explore the graph a bit. So we plot the umap with the graph connections on top.</p>
-<div class="cell" data-execution_count="13">
-<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, edges<span class="op">=</span><span class="va">True</span>, color <span class="op">=</span> <span class="st">'annot'</span>, legend_loc<span class="op">=</span> <span class="st">'on data'</span>, legend_fontsize<span class="op">=</span> <span class="st">'xx-small'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell" data-execution_count="12">
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, edges<span class="op">=</span><span class="va">True</span>, color <span class="op">=</span> <span class="st">'annot'</span>, legend_loc<span class="op">=</span> <span class="st">'on data'</span>, legend_fontsize<span class="op">=</span> <span class="st">'xx-small'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="scanpy_07_trajectory_files/figure-html/cell-14-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-12"><img src="scanpy_07_trajectory_files/figure-html/cell-14-output-1.png" class="img-fluid figure-img"></a></p>
+<p><a href="scanpy_07_trajectory_files/figure-html/cell-13-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-12"><img src="scanpy_07_trajectory_files/figure-html/cell-13-output-1.png" class="img-fluid figure-img"></a></p>
 </figure>
 </div>
 </div>
 </div>
 <p>We have many edges in the graph between unrelated clusters, so lets try with fewer neighbors.</p>
-<div class="cell" data-execution_count="14">
-<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>sc.pp.neighbors(adata, n_neighbors<span class="op">=</span><span class="dv">5</span>,  use_rep <span class="op">=</span> <span class="st">'X_harmony_Phase'</span>, n_pcs <span class="op">=</span> <span class="dv">30</span>)</span>
-<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, edges<span class="op">=</span><span class="va">True</span>, color <span class="op">=</span> <span class="st">'annot'</span>, legend_loc<span class="op">=</span> <span class="st">'on data'</span>, legend_fontsize<span class="op">=</span> <span class="st">'xx-small'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell" data-execution_count="13">
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>sc.pp.neighbors(adata, n_neighbors<span class="op">=</span><span class="dv">5</span>,  use_rep <span class="op">=</span> <span class="st">'X_harmony_Phase'</span>, n_pcs <span class="op">=</span> <span class="dv">30</span>)</span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, edges<span class="op">=</span><span class="va">True</span>, color <span class="op">=</span> <span class="st">'annot'</span>, legend_loc<span class="op">=</span> <span class="st">'on data'</span>, legend_fontsize<span class="op">=</span> <span class="st">'xx-small'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>computing neighbors
     finished: added to `.uns['neighbors']`
@@ -676,17 +684,16 @@ running PAGA
 <div class="cell-output cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="scanpy_07_trajectory_files/figure-html/cell-15-output-2.png" class="lightbox" data-gallery="quarto-lightbox-gallery-13"><img src="scanpy_07_trajectory_files/figure-html/cell-15-output-2.png" class="img-fluid figure-img"></a></p>
+<p><a href="scanpy_07_trajectory_files/figure-html/cell-14-output-2.png" class="lightbox" data-gallery="quarto-lightbox-gallery-13"><img src="scanpy_07_trajectory_files/figure-html/cell-14-output-2.png" class="img-fluid figure-img"></a></p>
 </figure>
 </div>
 </div>
 </div>
-</section>
-<section id="rerun-paga-again-on-the-data" class="level2" data-number="7">
-<h2 data-number="7" class="anchored" data-anchor-id="rerun-paga-again-on-the-data"><span class="header-section-number">7</span> Rerun PAGA again on the data</h2>
-<div class="cell" data-execution_count="15">
-<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>sc.tl.draw_graph(adata, init_pos<span class="op">=</span><span class="st">'X_umap'</span>)</span>
-<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>sc.pl.draw_graph(adata, color<span class="op">=</span><span class="st">'annot'</span>, legend_loc<span class="op">=</span><span class="st">'on data'</span>, legend_fontsize <span class="op">=</span> <span class="st">'xx-small'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<section id="rerun-paga-again-on-the-data" class="level3" data-number="7.1">
+<h3 data-number="7.1" class="anchored" data-anchor-id="rerun-paga-again-on-the-data"><span class="header-section-number">7.1</span> Rerun PAGA again on the data</h3>
+<div class="cell" data-execution_count="14">
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>sc.tl.draw_graph(adata, init_pos<span class="op">=</span><span class="st">'X_umap'</span>)</span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>sc.pl.draw_graph(adata, color<span class="op">=</span><span class="st">'annot'</span>, legend_loc<span class="op">=</span><span class="st">'on data'</span>, legend_fontsize <span class="op">=</span> <span class="st">'xx-small'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>drawing single-cell graph using layout 'fa'
 WARNING: Package 'fa2' is not installed, falling back to layout 'fr'.To use the faster and better ForceAtlas2 layout, install package 'fa2' (`pip install fa2`).
@@ -696,14 +703,14 @@ WARNING: Package 'fa2' is not installed, falling back to layout 'fr'.To use the 
 <div class="cell-output cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="scanpy_07_trajectory_files/figure-html/cell-16-output-2.png" class="lightbox" data-gallery="quarto-lightbox-gallery-14"><img src="scanpy_07_trajectory_files/figure-html/cell-16-output-2.png" class="img-fluid figure-img"></a></p>
+<p><a href="scanpy_07_trajectory_files/figure-html/cell-15-output-2.png" class="lightbox" data-gallery="quarto-lightbox-gallery-14"><img src="scanpy_07_trajectory_files/figure-html/cell-15-output-2.png" class="img-fluid figure-img"></a></p>
 </figure>
 </div>
 </div>
 </div>
-<div class="cell" data-execution_count="16">
-<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>sc.tl.paga(adata, groups<span class="op">=</span><span class="st">'annot'</span>)</span>
-<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>sc.pl.paga(adata, color<span class="op">=</span><span class="st">'annot'</span>, edge_width_scale <span class="op">=</span> <span class="fl">0.3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell" data-execution_count="15">
+<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>sc.tl.paga(adata, groups<span class="op">=</span><span class="st">'annot'</span>)</span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>sc.pl.paga(adata, color<span class="op">=</span><span class="st">'annot'</span>, edge_width_scale <span class="op">=</span> <span class="fl">0.3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>running PAGA
     finished: added
@@ -714,59 +721,61 @@ WARNING: Package 'fa2' is not installed, falling back to layout 'fr'.To use the 
 <div class="cell-output cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="scanpy_07_trajectory_files/figure-html/cell-17-output-2.png" class="lightbox" data-gallery="quarto-lightbox-gallery-15"><img src="scanpy_07_trajectory_files/figure-html/cell-17-output-2.png" class="img-fluid figure-img"></a></p>
+<p><a href="scanpy_07_trajectory_files/figure-html/cell-16-output-2.png" class="lightbox" data-gallery="quarto-lightbox-gallery-15"><img src="scanpy_07_trajectory_files/figure-html/cell-16-output-2.png" class="img-fluid figure-img"></a></p>
 </figure>
 </div>
 </div>
 </div>
 </section>
-<section id="recomputing-the-embedding-using-paga-initialization" class="level2" data-number="8">
-<h2 data-number="8" class="anchored" data-anchor-id="recomputing-the-embedding-using-paga-initialization"><span class="header-section-number">8</span> Recomputing the embedding using PAGA-initialization</h2>
-<p>The following is just as well possible for a UMAP.</p>
-<div class="cell" data-execution_count="17">
-<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>sc.tl.draw_graph(adata, init_pos<span class="op">=</span><span class="st">'paga'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+<section id="embedding-using-paga-initialization" class="level2" data-number="8">
+<h2 data-number="8" class="anchored" data-anchor-id="embedding-using-paga-initialization"><span class="header-section-number">8</span> Embedding using PAGA-initialization</h2>
+<p>We can now redraw the graph using another starting position from the paga layout. The following is just as well possible for a UMAP.</p>
+<div class="cell" data-execution_count="16">
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>sc.tl.draw_graph(adata, init_pos<span class="op">=</span><span class="st">'paga'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>drawing single-cell graph using layout 'fa'
 WARNING: Package 'fa2' is not installed, falling back to layout 'fr'.To use the faster and better ForceAtlas2 layout, install package 'fa2' (`pip install fa2`).
     finished: added
-    'X_draw_graph_fr', graph_drawing coordinates (adata.obsm) (0:00:15)</code></pre>
+    'X_draw_graph_fr', graph_drawing coordinates (adata.obsm) (0:00:16)</code></pre>
 </div>
 </div>
 <p>Now we can see all marker genes also at single-cell resolution in a meaningful layout.</p>
-<div class="cell" data-execution_count="18">
-<div class="sourceCode cell-code" id="cb27"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>sc.pl.draw_graph(adata, color<span class="op">=</span>[<span class="st">'annot'</span>], legend_loc<span class="op">=</span><span class="st">'on data'</span>, legend_fontsize<span class="op">=</span>  <span class="st">'xx-small'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell" data-execution_count="17">
+<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>sc.pl.draw_graph(adata, color<span class="op">=</span>[<span class="st">'annot'</span>], legend_loc<span class="op">=</span><span class="st">'on data'</span>, legend_fontsize<span class="op">=</span>  <span class="st">'xx-small'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="scanpy_07_trajectory_files/figure-html/cell-19-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-16"><img src="scanpy_07_trajectory_files/figure-html/cell-19-output-1.png" class="img-fluid figure-img"></a></p>
+<p><a href="scanpy_07_trajectory_files/figure-html/cell-18-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-16"><img src="scanpy_07_trajectory_files/figure-html/cell-18-output-1.png" class="img-fluid figure-img"></a></p>
 </figure>
 </div>
 </div>
 </div>
 <p>Compare the 2 graphs</p>
-<div class="cell" data-execution_count="19">
-<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>sc.pl.paga_compare(</span>
-<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>    adata, threshold<span class="op">=</span><span class="fl">0.03</span>, title<span class="op">=</span><span class="st">''</span>, right_margin<span class="op">=</span><span class="fl">0.2</span>, size<span class="op">=</span><span class="dv">10</span>, edge_width_scale<span class="op">=</span><span class="fl">0.5</span>,</span>
-<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a>    legend_fontsize<span class="op">=</span><span class="dv">12</span>, fontsize<span class="op">=</span><span class="dv">12</span>, frameon<span class="op">=</span><span class="va">False</span>, edges<span class="op">=</span><span class="va">True</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell" data-execution_count="18">
+<div class="sourceCode cell-code" id="cb27"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>sc.pl.paga_compare(</span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>    adata, threshold<span class="op">=</span><span class="fl">0.03</span>, title<span class="op">=</span><span class="st">''</span>, right_margin<span class="op">=</span><span class="fl">0.2</span>, size<span class="op">=</span><span class="dv">10</span>, edge_width_scale<span class="op">=</span><span class="fl">0.5</span>,</span>
+<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a>    legend_fontsize<span class="op">=</span><span class="dv">12</span>, fontsize<span class="op">=</span><span class="dv">12</span>, frameon<span class="op">=</span><span class="va">False</span>, edges<span class="op">=</span><span class="va">True</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>--&gt; added 'pos', the PAGA positions (adata.uns['paga'])</code></pre>
 </div>
 <div class="cell-output cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="scanpy_07_trajectory_files/figure-html/cell-20-output-2.png" class="lightbox" data-gallery="quarto-lightbox-gallery-17"><img src="scanpy_07_trajectory_files/figure-html/cell-20-output-2.png" class="img-fluid figure-img"></a></p>
+<p><a href="scanpy_07_trajectory_files/figure-html/cell-19-output-2.png" class="lightbox" data-gallery="quarto-lightbox-gallery-17"><img src="scanpy_07_trajectory_files/figure-html/cell-19-output-2.png" class="img-fluid figure-img"></a></p>
 </figure>
 </div>
 </div>
 </div>
 </section>
-<section id="reconstructing-gene-changes-along-paga-paths-for-a-given-set-of-genes" class="level2" data-number="9">
-<h2 data-number="9" class="anchored" data-anchor-id="reconstructing-gene-changes-along-paga-paths-for-a-given-set-of-genes"><span class="header-section-number">9</span> Reconstructing gene changes along PAGA paths for a given set of genes</h2>
+<section id="gene-changes" class="level2" data-number="9">
+<h2 data-number="9" class="anchored" data-anchor-id="gene-changes"><span class="header-section-number">9</span> Gene changes</h2>
+<p>We can reconstruct gene changes along PAGA paths for a given set of genes</p>
 <p>Choose a root cell for diffusion pseudotime. We have 3 progenitor clusters, but cluster 5 seems the most clear.</p>
-<div class="cell" data-execution_count="20">
-<div class="sourceCode cell-code" id="cb30"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>adata.uns[<span class="st">'iroot'</span>] <span class="op">=</span> np.flatnonzero(adata.obs[<span class="st">'annot'</span>]  <span class="op">==</span> <span class="st">'5_progen'</span>)[<span class="dv">0</span>]</span>
-<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a>sc.tl.dpt(adata)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell" data-execution_count="19">
+<div class="sourceCode cell-code" id="cb29"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>adata.uns[<span class="st">'iroot'</span>] <span class="op">=</span> np.flatnonzero(adata.obs[<span class="st">'annot'</span>]  <span class="op">==</span> <span class="st">'5_progen'</span>)[<span class="dv">0</span>]</span>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a>sc.tl.dpt(adata)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>WARNING: Trying to run `tl.dpt` without prior call of `tl.diffmap`. Falling back to `tl.diffmap` with default parameters.
 computing Diffusion Maps using n_comps=15(=n_dcs)
@@ -778,72 +787,72 @@ computing transitions
      0.9851118  0.9845008  0.9839531 ]
     finished: added
     'X_diffmap', diffmap coordinates (adata.obsm)
-    'diffmap_evals', eigenvalues of transition matrix (adata.uns) (0:00:01)
+    'diffmap_evals', eigenvalues of transition matrix (adata.uns) (0:00:03)
 computing Diffusion Pseudotime using n_dcs=10
     finished: added
     'dpt_pseudotime', the pseudotime (adata.obs) (0:00:00)</code></pre>
 </div>
 </div>
 <p>Use the full raw data for visualization.</p>
-<div class="cell" data-execution_count="21">
-<div class="sourceCode cell-code" id="cb32"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>sc.pl.draw_graph(adata, color<span class="op">=</span>[<span class="st">'annot'</span>, <span class="st">'dpt_pseudotime'</span>], legend_loc<span class="op">=</span><span class="st">'on data'</span>, legend_fontsize<span class="op">=</span> <span class="st">'x-small'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell" data-execution_count="20">
+<div class="sourceCode cell-code" id="cb31"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>sc.pl.draw_graph(adata, color<span class="op">=</span>[<span class="st">'annot'</span>, <span class="st">'dpt_pseudotime'</span>], legend_loc<span class="op">=</span><span class="st">'on data'</span>, legend_fontsize<span class="op">=</span> <span class="st">'x-small'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="scanpy_07_trajectory_files/figure-html/cell-22-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-18"><img src="scanpy_07_trajectory_files/figure-html/cell-22-output-1.png" class="img-fluid figure-img"></a></p>
+<p><a href="scanpy_07_trajectory_files/figure-html/cell-21-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-18"><img src="scanpy_07_trajectory_files/figure-html/cell-21-output-1.png" class="img-fluid figure-img"></a></p>
 </figure>
 </div>
 </div>
 </div>
-<p>By looking at the different know lineages and the layout of the graph we define manually some paths to the graph that corresponds to spcific lineages.</p>
-<div class="cell" data-execution_count="22">
-<div class="sourceCode cell-code" id="cb33"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Define paths</span></span>
-<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a>paths <span class="op">=</span> [(<span class="st">'erythrocytes'</span>, [<span class="st">'5_progen'</span>, <span class="st">'8_progen'</span>, <span class="st">'6'</span>, <span class="st">'3'</span>, <span class="st">'7'</span>, <span class="st">'11_eryth'</span>]),</span>
-<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a>         (<span class="st">'lympoid'</span>, [<span class="st">'5_progen'</span>, <span class="st">'12'</span>, <span class="st">'16_BC'</span>, <span class="st">'14_TC'</span>]),</span>
-<span id="cb33-5"><a href="#cb33-5" aria-hidden="true" tabindex="-1"></a>         (<span class="st">'granulo'</span>, [<span class="st">'5_progen'</span>, <span class="st">'4_progen'</span>, <span class="st">'2'</span>, <span class="st">'9_gran'</span>, <span class="st">'1_gran'</span>]),</span>
-<span id="cb33-6"><a href="#cb33-6" aria-hidden="true" tabindex="-1"></a>         (<span class="st">'mono'</span>, [<span class="st">'5_progen'</span>, <span class="st">'4_progen'</span>, <span class="st">'0_mono'</span>, <span class="st">'18_dend'</span>, <span class="st">'17_macro'</span>])</span>
-<span id="cb33-7"><a href="#cb33-7" aria-hidden="true" tabindex="-1"></a>         ]</span>
-<span id="cb33-8"><a href="#cb33-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb33-9"><a href="#cb33-9" aria-hidden="true" tabindex="-1"></a>adata.obs[<span class="st">'distance'</span>] <span class="op">=</span> adata.obs[<span class="st">'dpt_pseudotime'</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>By looking at the different know lineages and the layout of the graph we define manually some paths to the graph that corresponds to specific lineages.</p>
+<div class="cell" data-execution_count="21">
+<div class="sourceCode cell-code" id="cb32"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Define paths</span></span>
+<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a>paths <span class="op">=</span> [(<span class="st">'erythrocytes'</span>, [<span class="st">'5_progen'</span>, <span class="st">'8_progen'</span>, <span class="st">'6'</span>, <span class="st">'3'</span>, <span class="st">'7'</span>, <span class="st">'11_eryth'</span>]),</span>
+<span id="cb32-4"><a href="#cb32-4" aria-hidden="true" tabindex="-1"></a>         (<span class="st">'lympoid'</span>, [<span class="st">'5_progen'</span>, <span class="st">'12'</span>, <span class="st">'16_BC'</span>, <span class="st">'14_TC'</span>]),</span>
+<span id="cb32-5"><a href="#cb32-5" aria-hidden="true" tabindex="-1"></a>         (<span class="st">'granulo'</span>, [<span class="st">'5_progen'</span>, <span class="st">'4_progen'</span>, <span class="st">'2'</span>, <span class="st">'9_gran'</span>, <span class="st">'1_gran'</span>]),</span>
+<span id="cb32-6"><a href="#cb32-6" aria-hidden="true" tabindex="-1"></a>         (<span class="st">'mono'</span>, [<span class="st">'5_progen'</span>, <span class="st">'4_progen'</span>, <span class="st">'0_mono'</span>, <span class="st">'18_dend'</span>, <span class="st">'17_macro'</span>])</span>
+<span id="cb32-7"><a href="#cb32-7" aria-hidden="true" tabindex="-1"></a>         ]</span>
+<span id="cb32-8"><a href="#cb32-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-9"><a href="#cb32-9" aria-hidden="true" tabindex="-1"></a>adata.obs[<span class="st">'distance'</span>] <span class="op">=</span> adata.obs[<span class="st">'dpt_pseudotime'</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Then we select some genes that can vary in the lineages and plot onto the paths.</p>
-<div class="cell" data-execution_count="23">
-<div class="sourceCode cell-code" id="cb34"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a>gene_names <span class="op">=</span> [<span class="st">'Gata2'</span>, <span class="st">'Gata1'</span>, <span class="st">'Klf1'</span>, <span class="st">'Epor'</span>, <span class="st">'Hba-a2'</span>,  <span class="co"># erythroid</span></span>
-<span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a>              <span class="st">'Elane'</span>, <span class="st">'Cebpe'</span>, <span class="st">'Gfi1'</span>,                    <span class="co"># neutrophil</span></span>
-<span id="cb34-3"><a href="#cb34-3" aria-hidden="true" tabindex="-1"></a>              <span class="st">'Irf8'</span>, <span class="st">'Csf1r'</span>, <span class="st">'Ctsg'</span>,                     <span class="co"># monocyte</span></span>
-<span id="cb34-4"><a href="#cb34-4" aria-hidden="true" tabindex="-1"></a>              <span class="st">'Itga2b'</span>,<span class="st">'Prss34'</span>,<span class="st">'Cma1'</span>,<span class="st">'Procr'</span>,            <span class="co"># Megakaryo,Basophil,Mast,HPC</span></span>
-<span id="cb34-5"><a href="#cb34-5" aria-hidden="true" tabindex="-1"></a>              <span class="st">'C1qc'</span>,<span class="st">'Siglech'</span>,<span class="st">'Ms4a1'</span>,<span class="st">'Cd3e'</span>,<span class="st">'Cd34'</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell" data-execution_count="22">
+<div class="sourceCode cell-code" id="cb33"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>gene_names <span class="op">=</span> [<span class="st">'Gata2'</span>, <span class="st">'Gata1'</span>, <span class="st">'Klf1'</span>, <span class="st">'Epor'</span>, <span class="st">'Hba-a2'</span>,  <span class="co"># erythroid</span></span>
+<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>              <span class="st">'Elane'</span>, <span class="st">'Cebpe'</span>, <span class="st">'Gfi1'</span>,                    <span class="co"># neutrophil</span></span>
+<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a>              <span class="st">'Irf8'</span>, <span class="st">'Csf1r'</span>, <span class="st">'Ctsg'</span>,                     <span class="co"># monocyte</span></span>
+<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a>              <span class="st">'Itga2b'</span>,<span class="st">'Prss34'</span>,<span class="st">'Cma1'</span>,<span class="st">'Procr'</span>,            <span class="co"># Megakaryo,Basophil,Mast,HPC</span></span>
+<span id="cb33-5"><a href="#cb33-5" aria-hidden="true" tabindex="-1"></a>              <span class="st">'C1qc'</span>,<span class="st">'Siglech'</span>,<span class="st">'Ms4a1'</span>,<span class="st">'Cd3e'</span>,<span class="st">'Cd34'</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<div class="cell" data-execution_count="24">
-<div class="sourceCode cell-code" id="cb35"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>_, axs <span class="op">=</span> pl.subplots(ncols<span class="op">=</span><span class="dv">4</span>, figsize<span class="op">=</span>(<span class="dv">10</span>, <span class="dv">4</span>), gridspec_kw<span class="op">=</span>{</span>
-<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a>                     <span class="st">'wspace'</span>: <span class="fl">0.05</span>, <span class="st">'left'</span>: <span class="fl">0.12</span>})</span>
-<span id="cb35-3"><a href="#cb35-3" aria-hidden="true" tabindex="-1"></a>pl.subplots_adjust(left<span class="op">=</span><span class="fl">0.05</span>, right<span class="op">=</span><span class="fl">0.98</span>, top<span class="op">=</span><span class="fl">0.82</span>, bottom<span class="op">=</span><span class="fl">0.2</span>)</span>
-<span id="cb35-4"><a href="#cb35-4" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> ipath, (descr, path) <span class="kw">in</span> <span class="bu">enumerate</span>(paths):</span>
-<span id="cb35-5"><a href="#cb35-5" aria-hidden="true" tabindex="-1"></a>    _, data <span class="op">=</span> sc.pl.paga_path(</span>
-<span id="cb35-6"><a href="#cb35-6" aria-hidden="true" tabindex="-1"></a>        adata, path, gene_names,</span>
-<span id="cb35-7"><a href="#cb35-7" aria-hidden="true" tabindex="-1"></a>        show_node_names<span class="op">=</span><span class="va">False</span>,</span>
-<span id="cb35-8"><a href="#cb35-8" aria-hidden="true" tabindex="-1"></a>        ax<span class="op">=</span>axs[ipath],</span>
-<span id="cb35-9"><a href="#cb35-9" aria-hidden="true" tabindex="-1"></a>        ytick_fontsize<span class="op">=</span><span class="dv">12</span>,</span>
-<span id="cb35-10"><a href="#cb35-10" aria-hidden="true" tabindex="-1"></a>        left_margin<span class="op">=</span><span class="fl">0.15</span>,</span>
-<span id="cb35-11"><a href="#cb35-11" aria-hidden="true" tabindex="-1"></a>        n_avg<span class="op">=</span><span class="dv">50</span>,</span>
-<span id="cb35-12"><a href="#cb35-12" aria-hidden="true" tabindex="-1"></a>        annotations<span class="op">=</span>[<span class="st">'distance'</span>],</span>
-<span id="cb35-13"><a href="#cb35-13" aria-hidden="true" tabindex="-1"></a>        show_yticks<span class="op">=</span><span class="va">True</span> <span class="cf">if</span> ipath <span class="op">==</span> <span class="dv">0</span> <span class="cf">else</span> <span class="va">False</span>,</span>
-<span id="cb35-14"><a href="#cb35-14" aria-hidden="true" tabindex="-1"></a>        show_colorbar<span class="op">=</span><span class="va">False</span>,</span>
-<span id="cb35-15"><a href="#cb35-15" aria-hidden="true" tabindex="-1"></a>        color_map<span class="op">=</span><span class="st">'Greys'</span>,</span>
-<span id="cb35-16"><a href="#cb35-16" aria-hidden="true" tabindex="-1"></a>        groups_key<span class="op">=</span><span class="st">'annot'</span>,</span>
-<span id="cb35-17"><a href="#cb35-17" aria-hidden="true" tabindex="-1"></a>        color_maps_annotations<span class="op">=</span>{<span class="st">'distance'</span>: <span class="st">'viridis'</span>},</span>
-<span id="cb35-18"><a href="#cb35-18" aria-hidden="true" tabindex="-1"></a>        title<span class="op">=</span><span class="st">'</span><span class="sc">{}</span><span class="st"> path'</span>.<span class="bu">format</span>(descr),</span>
-<span id="cb35-19"><a href="#cb35-19" aria-hidden="true" tabindex="-1"></a>        return_data<span class="op">=</span><span class="va">True</span>,</span>
-<span id="cb35-20"><a href="#cb35-20" aria-hidden="true" tabindex="-1"></a>        use_raw<span class="op">=</span><span class="va">False</span>,</span>
-<span id="cb35-21"><a href="#cb35-21" aria-hidden="true" tabindex="-1"></a>        show<span class="op">=</span><span class="va">False</span>)</span>
-<span id="cb35-22"><a href="#cb35-22" aria-hidden="true" tabindex="-1"></a>    data.to_csv(<span class="st">'data/trajectory/paga_path_</span><span class="sc">{}</span><span class="st">.csv'</span>.<span class="bu">format</span>(descr))</span>
-<span id="cb35-23"><a href="#cb35-23" aria-hidden="true" tabindex="-1"></a>pl.savefig(<span class="st">'data/trajectory/paga_path.pdf'</span>)</span>
-<span id="cb35-24"><a href="#cb35-24" aria-hidden="true" tabindex="-1"></a>pl.show()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell" data-execution_count="23">
+<div class="sourceCode cell-code" id="cb34"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a>_, axs <span class="op">=</span> pl.subplots(ncols<span class="op">=</span><span class="dv">4</span>, figsize<span class="op">=</span>(<span class="dv">10</span>, <span class="dv">4</span>), gridspec_kw<span class="op">=</span>{</span>
+<span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a>                     <span class="st">'wspace'</span>: <span class="fl">0.05</span>, <span class="st">'left'</span>: <span class="fl">0.12</span>})</span>
+<span id="cb34-3"><a href="#cb34-3" aria-hidden="true" tabindex="-1"></a>pl.subplots_adjust(left<span class="op">=</span><span class="fl">0.05</span>, right<span class="op">=</span><span class="fl">0.98</span>, top<span class="op">=</span><span class="fl">0.82</span>, bottom<span class="op">=</span><span class="fl">0.2</span>)</span>
+<span id="cb34-4"><a href="#cb34-4" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> ipath, (descr, path) <span class="kw">in</span> <span class="bu">enumerate</span>(paths):</span>
+<span id="cb34-5"><a href="#cb34-5" aria-hidden="true" tabindex="-1"></a>    _, data <span class="op">=</span> sc.pl.paga_path(</span>
+<span id="cb34-6"><a href="#cb34-6" aria-hidden="true" tabindex="-1"></a>        adata, path, gene_names,</span>
+<span id="cb34-7"><a href="#cb34-7" aria-hidden="true" tabindex="-1"></a>        show_node_names<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb34-8"><a href="#cb34-8" aria-hidden="true" tabindex="-1"></a>        ax<span class="op">=</span>axs[ipath],</span>
+<span id="cb34-9"><a href="#cb34-9" aria-hidden="true" tabindex="-1"></a>        ytick_fontsize<span class="op">=</span><span class="dv">12</span>,</span>
+<span id="cb34-10"><a href="#cb34-10" aria-hidden="true" tabindex="-1"></a>        left_margin<span class="op">=</span><span class="fl">0.15</span>,</span>
+<span id="cb34-11"><a href="#cb34-11" aria-hidden="true" tabindex="-1"></a>        n_avg<span class="op">=</span><span class="dv">50</span>,</span>
+<span id="cb34-12"><a href="#cb34-12" aria-hidden="true" tabindex="-1"></a>        annotations<span class="op">=</span>[<span class="st">'distance'</span>],</span>
+<span id="cb34-13"><a href="#cb34-13" aria-hidden="true" tabindex="-1"></a>        show_yticks<span class="op">=</span><span class="va">True</span> <span class="cf">if</span> ipath <span class="op">==</span> <span class="dv">0</span> <span class="cf">else</span> <span class="va">False</span>,</span>
+<span id="cb34-14"><a href="#cb34-14" aria-hidden="true" tabindex="-1"></a>        show_colorbar<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb34-15"><a href="#cb34-15" aria-hidden="true" tabindex="-1"></a>        color_map<span class="op">=</span><span class="st">'Greys'</span>,</span>
+<span id="cb34-16"><a href="#cb34-16" aria-hidden="true" tabindex="-1"></a>        groups_key<span class="op">=</span><span class="st">'annot'</span>,</span>
+<span id="cb34-17"><a href="#cb34-17" aria-hidden="true" tabindex="-1"></a>        color_maps_annotations<span class="op">=</span>{<span class="st">'distance'</span>: <span class="st">'viridis'</span>},</span>
+<span id="cb34-18"><a href="#cb34-18" aria-hidden="true" tabindex="-1"></a>        title<span class="op">=</span><span class="st">'</span><span class="sc">{}</span><span class="st"> path'</span>.<span class="bu">format</span>(descr),</span>
+<span id="cb34-19"><a href="#cb34-19" aria-hidden="true" tabindex="-1"></a>        return_data<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb34-20"><a href="#cb34-20" aria-hidden="true" tabindex="-1"></a>        use_raw<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb34-21"><a href="#cb34-21" aria-hidden="true" tabindex="-1"></a>        show<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb34-22"><a href="#cb34-22" aria-hidden="true" tabindex="-1"></a>    data.to_csv(<span class="st">'data/trajectory/paga_path_</span><span class="sc">{}</span><span class="st">.csv'</span>.<span class="bu">format</span>(descr))</span>
+<span id="cb34-23"><a href="#cb34-23" aria-hidden="true" tabindex="-1"></a>pl.savefig(<span class="st">'data/trajectory/paga_path.pdf'</span>)</span>
+<span id="cb34-24"><a href="#cb34-24" aria-hidden="true" tabindex="-1"></a>pl.show()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="scanpy_07_trajectory_files/figure-html/cell-25-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-19"><img src="scanpy_07_trajectory_files/figure-html/cell-25-output-1.png" class="img-fluid figure-img"></a></p>
+<p><a href="scanpy_07_trajectory_files/figure-html/cell-24-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-19"><img src="scanpy_07_trajectory_files/figure-html/cell-24-output-1.png" class="img-fluid figure-img"></a></p>
 </figure>
 </div>
 </div>
@@ -869,8 +878,8 @@ Discuss
 <summary>
 Click here
 </summary>
-<div class="cell" data-execution_count="25">
-<div class="sourceCode cell-code" id="cb36"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a>sc.logging.print_versions()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell" data-execution_count="24">
+<div class="sourceCode cell-code" id="cb35"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>sc.logging.print_versions()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>-----
 anndata     0.10.3
@@ -990,9 +999,9 @@ jupyterlab          4.0.1
 notebook            6.5.4
 -----
 Python 3.10.11 | packaged by conda-forge | (main, May 10 2023, 18:58:44) [GCC 11.3.0]
-Linux-6.5.11-linuxkit-x86_64-with-glibc2.35
+Linux-6.4.16-linuxkit-x86_64-with-glibc2.35
 -----
-Session information updated at 2024-01-16 23:26</code></pre>
+Session information updated at 2024-01-23 15:17</code></pre>
 </div>
 </div>
 </details>
@@ -1244,7 +1253,7 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
     <div class="nav-footer-right">Published with <a href="https://quarto.org/">Quarto</a> v1.3.450</div>
   </div>
 </footer>
-<script>var lightboxQuarto = GLightbox({"openEffect":"zoom","descPosition":"bottom","selector":".lightbox","loop":true,"closeEffect":"zoom"});</script>
+<script>var lightboxQuarto = GLightbox({"selector":".lightbox","loop":true,"closeEffect":"zoom","descPosition":"bottom","openEffect":"zoom"});</script>
 
 
 

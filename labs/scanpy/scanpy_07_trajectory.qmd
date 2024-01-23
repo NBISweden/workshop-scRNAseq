@@ -10,7 +10,7 @@ engine: jupyter
 Code chunks run Python commands unless it starts with `%%bash`, in which case, those chunks run shell commands.
 :::
 
-Partly following [this tutorial](https://scanpy-tutorials.readthedocs.io/en/latest/paga-paul15.html).
+Partly following this PAGA [tutorial](https://scanpy-tutorials.readthedocs.io/en/latest/paga-paul15.html) with some modifications.
 
 ## Loading libraries
 
@@ -33,29 +33,32 @@ sc.settings.verbosity = 3
 sc.settings.set_figure_params(dpi=100, frameon=False, figsize=(5, 5), facecolor='white', color_map = 'viridis_r') 
 ```
 
-## Loading data
+## Preparing data
 
-In order to speed up the computations during the exercises, we will be using a subset of a bone marrow dataset (originally containing about
-100K cells). The bone marrow is the source of adult immune cells, and contains virtually all differentiation stages of cell from the immune
-system which later circulate in the blood to all other organs.
+In order to speed up the computations during the exercises, we will be using a subset of a bone marrow dataset (originally containing about 100K cells). The bone marrow is the source of adult immune cells, and contains virtually all differentiation stages of cell from the immune system which later circulate in the blood to all other organs.
 
 ![](../figs/hematopoiesis.png)
 
-All the data has been preprocessed with Seurat. The file trajectory_scanpy_filtered.h5ad was converted from the Seurat object
-using the SeuratDisk package. For more information on how it was done, have a look at the script: convert_to_h5ad.R in the github repo.
+If you have been using the **Seurat**, **Bioconductor** or **Scanpy** toolkits with your own data, you need to reach to the point where can find get:
+
+- A dimensionality reduction where to perform the trajectory (for example: PCA, ICA, MNN, harmony, Diffusion Maps, UMAP)
+- The cell clustering information (for example: from Louvain, k-means)
+- A KNN/SNN graph (this is useful to inspect and sanity-check your trajectories)
+
+
+
+In this case, all the data has been preprocessed with Seurat with standard pipelines. In addition there was some manual filtering done to remove clusters that are disconnected and cells that are hard to cluster, which can be seen in this [script](https://github.com/NBISweden/workshop-scRNAseq/blob/master/scripts/data_processing/slingshot_preprocessing.Rmd) 
+
+
+The file trajectory_scanpy_filtered.h5ad was converted from the Seurat object using the SeuratDisk package. For more information on how it was done, have a look at the script: [convert_to_h5ad.R](https://github.com/NBISweden/workshop-scRNAseq/blob/master/scripts/data_processing/convert_to_h5ad.R) in the github repo.
+
+You can download the data with the commands:
 
 ```{python}
 import os
+import urllib.request
 
 path_data = "https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"
-
-path_trajectory = "./data/trajectory"
-if not os.path.exists(path_trajectory):
-    os.makedirs(path_trajectory, exist_ok=True)
-```
-
-```{python}
-import urllib.request
 
 path_results = "data/trajectory"
 if not os.path.exists(path_results):
@@ -68,7 +71,9 @@ if not os.path.exists(path_file):
     urllib.request.urlretrieve(file_url, path_file)
 ```
 
-Check that the variable names are correct.
+## Reading data
+
+We already have pre-computed and subsetted the dataset (with 6688 cells and 3585 genes) following the analysis steps in this course. We then saved the objects, so you can use common tools to open and start to work with them (either in R or Python).
 
 ```{python}
 adata = sc.read_h5ad("data/trajectory/trajectory_seurat_filtered.h5ad")
@@ -88,9 +93,7 @@ There is a umap and clusters provided with the object, first plot some informati
 sc.pl.umap(adata, color = ['clusters','dataset','batches','Phase'],legend_loc = 'on data', legend_fontsize = 'xx-small', ncols = 2)
 ```
 
-It is crucial that you performing analysis of a dataset understands what is going on, what are the clusters you see in your data and most
-importantly How are the clusters related to each other?. Well, let’s explore the data a bit. With the help of this table, write down which
-cluster numbers in your dataset express these key markers.
+It is crucial that you performing analysis of a dataset understands what is going on, what are the clusters you see in your data and most importantly How are the clusters related to each other?. Well, let’s explore the data a bit. With the help of this table, write down which cluster numbers in your dataset express these key markers.
 
 |Marker  |Cell Type|
 |--------|----------------------------|
@@ -185,7 +188,7 @@ sc.pl.paga(adata, color='annot', edge_width_scale = 0.3)
 
 As you can see, we have edges between many clusters that we know are are unrelated, so we may need to clean up the data a bit more.
 
-## Data pre-processing prior trajectory inference
+## Filtering graph edges
 
 First, lets explore the graph a bit. So we plot the umap with the graph connections on top.
 
@@ -200,7 +203,7 @@ sc.pp.neighbors(adata, n_neighbors=5,  use_rep = 'X_harmony_Phase', n_pcs = 30)
 sc.pl.umap(adata, edges=True, color = 'annot', legend_loc= 'on data', legend_fontsize= 'xx-small')
 ```
 
-## Rerun PAGA again on the data
+### Rerun PAGA again on the data
 
 ```{python}
 sc.tl.draw_graph(adata, init_pos='X_umap')
@@ -212,9 +215,9 @@ sc.tl.paga(adata, groups='annot')
 sc.pl.paga(adata, color='annot', edge_width_scale = 0.3)
 ```
 
-## Recomputing the embedding using PAGA-initialization
+## Embedding using PAGA-initialization
 
-The following is just as well possible for a UMAP.
+We can now redraw the graph using another starting position from the paga layout. The following is just as well possible for a UMAP.
 
 ```{python}
 sc.tl.draw_graph(adata, init_pos='paga')
@@ -234,7 +237,9 @@ sc.pl.paga_compare(
     legend_fontsize=12, fontsize=12, frameon=False, edges=True)
 ```
 
-## Reconstructing gene changes along PAGA paths for a given set of genes
+## Gene changes
+
+We can reconstruct gene changes along PAGA paths for a given set of genes
 
 Choose a root cell for diffusion pseudotime. We have 3 progenitor clusters, but cluster 5 seems the most clear.
 
@@ -250,8 +255,7 @@ Use the full raw data for visualization.
 sc.pl.draw_graph(adata, color=['annot', 'dpt_pseudotime'], legend_loc='on data', legend_fontsize= 'x-small')
 ```
 
-By looking at the different know lineages and the layout of the graph we define manually some paths to the graph that corresponds to spcific
-lineages.
+By looking at the different know lineages and the layout of the graph we define manually some paths to the graph that corresponds to specific lineages.
 
 ```{python}
 # Define paths
@@ -303,11 +307,9 @@ pl.show()
 ```
 
 :::{.callout-note title="Discuss"}
-As you can see, we can manipulate the trajectory quite a bit by selecting different number of neighbors, components etc. to fit with our
-assumptions on the development of these celltypes.
+As you can see, we can manipulate the trajectory quite a bit by selecting different number of neighbors, components etc. to fit with our assumptions on the development of these celltypes.
 
-Please explore further how you can tweak the trajectory. For instance, can you create a PAGA trajectory using the orignial umap from Seurat
-instead? Hint, you first need to compute the neighbors on the umap.
+Please explore further how you can tweak the trajectory. For instance, can you create a PAGA trajectory using the orignial umap from Seurat instead? Hint, you first need to compute the neighbors on the umap.
 :::
 
 ## Session info
