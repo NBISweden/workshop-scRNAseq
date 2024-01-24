@@ -98,11 +98,16 @@ ctrl.19 <- Seurat::Read10X_h5(
 
 ## Collate
 
-We can now load the expression matrices and merge them into a single
-object. Each analysis workflow (Seurat, Scater, Scanpy, etc) has its own
-way of storing data. We will add dataset labels as **cell.ids** just in
-case you have overlapping barcodes between the datasets. After that we
-add a column **Chemistry** in the metadata for plotting later on.
+We can now merge them objects into a single object. Each analysis
+workflow (Seurat, Scater, Scanpy, etc) has its own way of storing data.
+We will add dataset labels as **cell.ids** just in case you have
+overlapping barcodes between the datasets. After that we add a column
+**type** in the metadata to define covid and ctrl samples.
+
+But first, we need to create Seurat objects using each of the expression
+matrices we loaded. We define each sample in the `project` slot, so in
+each object, the sample id can be found in the metadata slot
+`orig.ident`.
 
 ``` {r}
 sdata.cov1 <- CreateSeuratObject(cov.1, project = "covid_1")
@@ -201,12 +206,12 @@ VlnPlot(alldata, group.by = "orig.ident", features = feats, pt.size = 0.1, ncol 
 ```
 
 As you can see, there is quite some difference in quality for the 4
-datasets, with for instance the covid_15 sample having fewer cells with
-many detected genes and more mitochondrial content. As the ribosomal
-proteins are highly expressed they will make up a larger proportion of
-the transcriptional landscape when fewer of the lowly expressed genes
-are detected. And we can plot the different QC-measures as scatter
-plots.
+datasets, with for instance the covid_15 and covid_16 samples having
+fewer cells with many detected genes and more mitochondrial content. As
+the ribosomal proteins are highly expressed they will make up a larger
+proportion of the transcriptional landscape when fewer of the lowly
+expressed genes are detected. We can also plot the different QC-measures
+as scatter plots.
 
 ``` {r}
 #| fig-height: 8
@@ -333,7 +338,8 @@ VlnPlot(data.filt, group.by = "orig.ident", features = feats, pt.size = 0.1, nco
 
 As the level of expression of mitochondrial and MALAT1 genes are judged
 as mainly technical, it can be wise to remove them from the dataset
-before any further analysis.
+before any further analysis. In this case we will also remove the HB
+genes.
 
 ``` {r}
 dim(data.filt)
@@ -348,7 +354,7 @@ data.filt <- data.filt[!grepl("^MT-", rownames(data.filt)), ]
 # data.filt <- data.filt[ ! grepl("^RP[SL]", rownames(data.filt)), ]
 
 # Filter Hemoglobin gene (optional if that is a problem on your data)
-data.filt <- data.filt[!grepl("^HB[^(P)]", rownames(data.filt)), ]
+data.filt <- data.filt[!grepl("^HB[^(PES)]", rownames(data.filt)), ]
 
 dim(data.filt)
 ```
@@ -388,7 +394,7 @@ genes_table <- try(biomaRt::getBM(attributes = c(
     "description", "gene_biotype", "chromosome_name", "start_position"
 ), mart = mart, useCache = F))
 
-write.csv(genes_table, file = "data/results/genes_table.csv")
+write.csv(genes_table, file = "data/covid/results/genes_table.csv")
 ```
 
 ``` {r}
@@ -422,10 +428,16 @@ Plot as violins.
 VlnPlot(data.filt, features = c("XIST", "pct_chrY"))
 ```
 
-Here, we can see clearly that we have two males and 4 females, can you
-see which samples they are? Do you think this will cause any problems
-for downstream analysis? Discuss with your group: what would be the best
-way to deal with this type of sex bias?
+<div>
+
+> **Discuss**
+>
+> Here, we can see clearly that we have three males and five females,
+> can you see which samples they are? Do you think this will cause any
+> problems for downstream analysis? Discuss with your group: what would
+> be the best way to deal with this type of sex bias?
+
+</div>
 
 ## Cell cycle state
 
