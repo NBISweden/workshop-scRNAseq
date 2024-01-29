@@ -18,7 +18,7 @@ cat 1>&2 <<END
 
 1. SSH tunnel from your workstation using the following command:
 
-   ssh -N -L 8888:$(hostname):${PORT} ${APPTAINERENV_USER}@${HOSTNAME}
+   ssh -N -L 8888:$(hostname):${PORT} ${APPTAINERENV_USER}@rackham.uppmax.uu.se
 
    point your web browser to http://localhost:8888/lab
 
