@@ -35,7 +35,6 @@ import warnings
 
 warnings.simplefilter(action="ignore", category=Warning)
 
-#sc.logging.print_versions() # gives errror!!
 sc.set_figure_params(facecolor="white", figsize=(8, 8))
 sc.settings.verbosity = 3
 ```
@@ -309,7 +308,7 @@ for i, library in enumerate(
             for k, v in clusters_colors.items()
             if k in ad.obs.clusters.unique().tolist()
         ],
-        legend_loc="on data",
+        legend_loc=None,
         show=False,
         ax=axs[i],
     )
@@ -369,6 +368,10 @@ with open('data/spatial/visium/scanpy_spatialde.pkl', 'wb') as file:
 ```
 
 ```{python}
+# | results: hide
+# | eval: false
+# skip for now
+
 import urllib.request
 import os
 
@@ -382,12 +385,19 @@ if not os.path.exists(path_file):
 ```
 
 ```{python}
+# | results: hide
+# | eval: false
+# skip for now
+
 import pickle
 with open('data/spatial/visium/scanpy_spatialde.pkl', 'rb') as file:
     results = pickle.load(file)
 ```
 
 ```{python}
+# | results: hide
+# | eval: false
+# skip for now.
 
 # We concatenate the results with the DataFrame of annotations of variables: `adata.var`.
 results.index = results["g"]
@@ -423,9 +433,20 @@ adata_cortex = sc.read_h5ad("data/spatial/visium/allen_cortex.h5ad")
 adata_cortex
 ```
 
+Here is the metadata for the cell annotation:
+
 ```{python}
 adata_cortex.obs
 ```
+
+There is an issue with the raw matrix in this object that the gene names are not in the index, so we will put them back in.
+
+```{python}
+adata_cortex.raw.var.index = adata_cortex.raw.var._index
+adata_cortex.raw.var
+```
+
+Then we run the regular pipline with normalization and dimensionality reduction.
 
 ```{python}
 sc.pp.normalize_total(adata_cortex, target_sum=1e5)
@@ -485,7 +506,7 @@ adata_anterior_subset = counts_adata[
 ].copy()
 
 # select also the cortex clusters
-adata_anterior_subset = adata_anterior_subset[adata_anterior_subset.obs.clusters.isin(['3','4','6','7']),:]
+adata_anterior_subset = adata_anterior_subset[adata_anterior_subset.obs.clusters.isin(['3','5','6']),:]
 
 # plot to check that we have the correct regions
 
@@ -509,7 +530,7 @@ Here, we will use deconvolution with Stereoscope implemented in the SCVI-tools p
 {{< meta st_deconv_genes_1 >}}
 
 ```{python}
-sc.tl.rank_genes_groups(adata_cortex, 'subclass', method = "t-test", n_genes=100)
+sc.tl.rank_genes_groups(adata_cortex, 'subclass', method = "t-test", n_genes=100, use_raw=False)
 sc.pl.rank_genes_groups_dotplot(adata_cortex, n_genes=3)
 ```
 
@@ -529,37 +550,23 @@ deg = np.intersect1d(deg,adata_anterior_subset.var.index).tolist()
 print(len(deg))
 ```
 
-Train the model
+### Train the model
 
 First, train the model using scRNAseq data.
 
 Stereoscope requires the data to be in counts, earlier in this tutorial we saved the spatial counts in a separate object counts_adata.
 
-However, the single cell dataset that we dowloaded only has the lognormalized data in the adata.X slot, hence we will have to recalculate the count matrix.
+In the single cell data we have the raw counts in the `raw.X` matrix so that one will be used. So here we create a new object with all the correct slots for scVI. 
 
-```{python}
-# first do exponent and subtract pseudocount
-E = np.exp(adata_cortex.X)-1
-n = np.sum(E,1)
-print(np.min(n), np.max(n))
-# all sums to 1.7M
-factor = np.mean(n)
-nC = np.array(adata_cortex.obs.nCount_RNA) # true number of counts
-scaleF = nC/factor
-C = E * scaleF[:,None]
-C = C.astype("int")
-```
 
 ```{python}
 sc_adata = adata_cortex.copy()
-sc_adata.X = C
+sc_adata.X = adata_cortex.raw.X.copy()
 ```
 
 Setup the anndata, the implementation requires the counts matrix to be in the "counts" layer as a copy.
 
 ```{python}
-# | eval: false
-# this chunk has issues and therefore not evaluated
 
 import scvi
 # from scvi.data import register_tensor_from_anndata
@@ -576,8 +583,6 @@ RNAStereoscope.setup_anndata(sc_adata, layer="counts", labels_key="subclass")
 ```
 
 ```{python}
-# | eval: false
-# this chunk has issues and therefore not evaluated
 
 # the model is saved to a file, so if is slow to run, you can simply reload it from disk by setting train = False
 
@@ -592,13 +597,11 @@ else:
     print("Loaded RNA model from file!")
 ```
 
-Predict propritions on the spatial data
+### Predict proportions on the spatial data
 
 First create a new st object with the correct genes and counts as a layer.
 
 ```{python}
-# | eval: false
-# this chunk has issues and therefore not evaluated
 
 st_adata = adata_anterior_subset.copy()
 
@@ -609,8 +612,6 @@ SpatialStereoscope.setup_anndata(st_adata, layer="counts")
 ```
 
 ```{python}
-#| eval: false
-# this chunk has issues and therefore not evaluated
 
 train=True
 if train:
@@ -626,8 +627,6 @@ else:
 Get the results from the model, also put them in the .obs slot.
 
 ```{python}
-# | eval: false
-# this chunk has issues and therefore not evaluated
 
 st_adata.obsm["deconvolution"] = spatial_model.get_proportions()
 
@@ -639,8 +638,6 @@ for ct in st_adata.obsm["deconvolution"].columns:
 We are then able to explore how cell types in the scRNA-seq dataset are predicted onto the visium dataset. Let's first visualize the neurons cortical layers.
 
 ```{python}
-# | eval: false
-# this chunk has issues and therefore not evaluated
 
 sc.pl.spatial(
     st_adata,
@@ -655,8 +652,6 @@ sc.pl.spatial(
 We can go ahead an visualize astrocytes and oligodendrocytes as well.
 
 ```{python}
-# | eval: false
-# this chunk has issues and therefore not evaluated
 
 sc.pl.spatial(
     st_adata, img_key="hires", color=["Oligo", "Astro"], size=1.5, library_id=lib_a
@@ -666,8 +661,6 @@ sc.pl.spatial(
 {{< meta st_2 >}}
 
 ```{python}
-# | eval: false
-# this chunk has issues and therefore not evaluated
 
 sc.pl.violin(st_adata, ["L2/3 IT", "L6 CT","Oligo","Astro"],
             jitter=0.4, groupby = 'clusters', rotation= 45)
@@ -677,8 +670,6 @@ sc.pl.violin(st_adata, ["L2/3 IT", "L6 CT","Oligo","Astro"],
 {{< meta st_3 >}}
 
 ```{python}
-# | eval: false
-# this chunk has issues and therefore not evaluated
 
 lib_p = "V1_Mouse_Brain_Sagittal_Posterior"
 

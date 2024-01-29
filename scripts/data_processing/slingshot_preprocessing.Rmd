@@ -1,0 +1,399 @@
+---
+author: "Åsa Björklund  &  Paulo Czarnewski"
+date: '`r format(Sys.Date(), "%B %d, %Y")`'
+output:
+  html_document:
+    self_contained: true
+    highlight: tango
+    df_print: paged
+    toc: yes
+    toc_float:
+      collapsed: false
+      smooth_scroll: true
+    toc_depth: 3
+    keep_md: yes
+    fig_caption: true
+  html_notebook:
+    self_contained: true
+    highlight: tango
+    df_print: paged
+    toc: yes
+    toc_float:
+      collapsed: false
+      smooth_scroll: true
+    toc_depth: 3
+editor_options:
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(message=FALSE, warning=FALSE, result='hold',fig.width=12, fig.height=12,tidy=TRUE)
+```
+
+# Trajectory inference analysis: Slingshot
+
+
+### Loading libraries
+
+```{r}
+suppressPackageStartupMessages({
+  library(Seurat)
+  library(rafalib)
+  library(cowplot)
+  library(plotly)
+  options(rgl.printRglwidget = TRUE)
+  library(Matrix)
+  library(sparseMatrixStats)
+  library(slingshot)
+})
+
+#Define some color palette
+pal <- c(scales::hue_pal()(8),RColorBrewer::brewer.pal(9,"Set1"),RColorBrewer::brewer.pal(8,"Set2") )
+set.seed(1); pal <- rep( sample( pal , length(pal) ) , 200 )
+```
+
+Nice function to easily draw a graph:
+
+```{r}
+#Add graph to the base R graphics plot
+draw_graph <- function( layout , graph , lwd = 0.2 , col = "grey" ){
+  res <- rep(x = 1:(length(graph@p)-1) , times = (graph@p[-1] - graph@p[-length(graph@p)]) )
+  segments(x0 = layout[graph@i+1,1], x1=layout[res,1],
+           y0 = layout[graph@i+1,2], y1=layout[res,2], lwd=lwd , col=col )}
+```
+
+### Loading data
+
+In order to speed up the computations during the exercises, we will be using a subset of a bone marrow dataset (originally containing about 100K cells). The bone marrow is the source of adult immune cells, and contains virtually all differentiation stages of cell from the **immune** system which later circulate in the blood to all other organs.
+
+![](Hematopoiesis.png)
+
+You can download the files we prepared with these commands:
+
+```{r}
+webpath <- "https://github.com/NBISweden/workshop-scRNAseq/blob/master/labs/data/bone_marrow/"
+file_list <- c("trajectory_seurat.rds",
+               "trajectory_scran.rds")
+for(i in file_list){  download.file( url = paste0(webpath,i,"?raw=true") , destfile = paste0(i))}
+```
+
+If you have been using the `scran/scater` , `Seurat` or `Scanpy` pipelines with your own data, you need to reach to the point where can find get:
+
+* A dimensionality reduction where to perform the trajectory (for example: PCA, ICA, MNN, harmony, Diffusion Maps, UMAP)
+* The cell clustering information (for example: from Louvain, k-means)
+* A KNN/SNN graph (this is useful to inspect and sanity-check your trajectories)
+
+
+### Loading the dataset
+***
+
+We already have pre-computed and subseted the dataset (with 6688 cells and 3585 genes) following the analysis steps in this course. We then saved the objects, so you can use common tools to open and start to work with them (either in R or Python).
+
+```{r }
+obj <- readRDS("trajectory_seurat.rds")
+```
+
+Lets visualize which clusters we have in our dataset:
+
+```{r}
+vars <- c("batches","dataset","clusters","Phase") ; pl <- list()
+
+for(i in vars){ pl[[i]] <- DimPlot( obj , group.by = i ,label = T) + theme_void() + NoLegend()  }
+plot_grid(plotlist = pl)
+```
+
+You can check, for example how many cells are in each cluster:
+
+```{r}
+table(obj$clusters)
+```
+
+
+### Exploring the data
+***
+
+It is crucial that you performing analysis of a dataset understands what is going on, what are the clusters you see in your data and most importantly **How are the clusters related to each other?**. Well, let's explore the data a bit. With the help of this table, write down which cluster numbers in your dataset express these key markers.
+
+| Marker  | Cell Type               |
+|---------|-------------------------|
+| Cd34    | HSC progenitor          |
+| Ms4a1   | B cell lineage          |
+| Cd3e    | T cell lineage          |
+| Ltf     | Granulocyte lineage     |
+| Cst3    | Monocyte lineage        |
+| Mcpt8   | Mast Cell lineage       |
+| Alas2   | RBC lineage             |
+| Siglech | Dendritic cell lineage  |
+| C1qc    | Macrophage cell lineage |
+| Pf4     | Megakaryocyte cell lineage |
+
+
+```{r}
+vars <- c("Cd34","Ms4a1","Cd3e","Ltf","Cst3","Mcpt8","Alas2","Siglech","C1qc","Pf4"); pl <- list()
+
+pl <- list( DimPlot( obj , group.by = "clusters" , label = T) + theme_void() + NoLegend() )
+for(i in vars){ pl[[i]] <- FeaturePlot( obj , features =  i , order = T) + theme_void() + NoLegend()  }
+plot_grid(plotlist = pl)
+```
+
+Another way to better explore your data is look in higher dimensions, to really get a sense for what is right or wrong. As mentioned in the dimensionality reduction exercises, here we ran UMAP with **3** dimensions (**IMPORTANT: the UMAP needs to be computed to results in _exactly_ 3 dimensions**).
+
+Since the steps below are identical to both `Seurat` and `Scran` pipelines, we ill extract the matrices from both, so it is clear what is being used where and to remove long lines of code used to get those matrices. We will use them all.
+
+```{r}
+#SEURAT
+NORM_COUNTS      <- obj@assays$RNA@data
+UMAP2            <- obj@reductions$umap@cell.embeddings
+UMAP3            <- obj@reductions$umap3d@cell.embeddings
+HARMONY          <- obj@reductions$harmony_Phase@cell.embeddings
+PCA              <- obj@reductions$pca@cell.embeddings
+PCA_loadings     <- obj@reductions$pca@feature.loadings
+clustering       <- factor(obj$clusters)
+KNN              <- obj@graphs$knn
+
+# Calculate cluster centroids (for plotting the labels later)
+mm <- sparse.model.matrix( ~ 0 + factor( clustering ) ) ; colnames(mm) <- levels( factor( clustering ) )
+centroids3d <- as.matrix( t( t(UMAP3) %*% mm  ) / Matrix::colSums(mm) )
+centroids2d <- as.matrix( t( t(UMAP2) %*% mm  ) / Matrix::colSums(mm) )
+```
+
+Plot in 3D with `Plotly`:
+
+```{r}
+df <- data.frame( UMAP3 , variable=clustering )
+colnames(df)[1:3] <- c("UMAP_1","UMAP_2","UMAP_3")
+p_State <- plot_ly(df,x = ~UMAP_1, y = ~UMAP_2, z=~UMAP_3,color = ~variable, colors = pal, size=.5)
+try(htmlwidgets::saveWidget(p_State,
+    selfcontained = T,"umap_3d_clustering_plotly.html"),silent = T)
+browseURL("umap_3d_clustering_plotly.html")
+p_State
+```
+
+
+### Data pre-processing prior trajectory inference
+
+Before we take a dive into trajectory itself, we need to clean up the data a bit, so we can get nice figures later. This dataset is already clean in terms of quality of the cells and so on, but as you probably noticed in the clustering exercise, there is always some outlier cells in the "wrong" part of the plot (as in, far away from cell from the same cluster ).
+
+In reality, this is distortion caused by the graph layout algorithm (UMAP in this case) that tries to **force the data to be shown in 2 dimensions**. If you check the 3D plots, the data points are in the "correct" position closer to other points in the same clusters (there is not a single misplaced point). Still, in most cases not even 3 dimensions is enough to represent the data correctly.
+
+In most cases this doesn't affect any results, but it affects the trajectories. As there are many ways to handle this, but the simplest is just change of the outlier cells to be closer its "cluster-mates".
+
+```{r}
+# calculate the distance from every cell to its neighbors
+expected_U2d <- t( t(UMAP2) %*% KNN ) / colSums2(KNN)
+d <- rowSums( (expected_U2d - UMAP2)^2 ) ^ (1/2)
+cutoff <- mean(d) + 5 * sd(d)
+to_keep <- ( d < cutoff )
+
+new_UMAP2 <- UMAP2
+res <- as.matrix( t( t(UMAP2) %*% KNN ) / colSums2(KNN) )
+new_UMAP2[ !to_keep , ] <- res[ !to_keep , ]
+
+new_centroids2d <- as.matrix( t( t(new_UMAP2) %*% mm  ) / Matrix::colSums(mm) )
+```
+
+And let's plot the UMAP again:
+
+```{r}
+# Check the UMAP in 2D
+mypar()
+plot( new_UMAP2 , type="n")
+draw_graph( layout = new_UMAP2 , graph = KNN )
+points( new_UMAP2 , cex = ifelse(!to_keep,1,0.3) ,
+                lwd = ifelse(!to_keep,2,0) ,
+                bg = pal[ clustering ], pch=21 )
+text(new_centroids2d,labels = rownames(new_centroids2d),cex=1,font=2)
+```
+
+Much better!
+
+
+#### Trajectory inference with Slingshot
+***
+
+Until up to this point, the steps above have been somewhat covered in the previous lectures. From now on, we will start using that clustering and data reduction techniques for trajectory inference.
+
+#### Which dimensionality reduction to use?
+
+Here, the choice upon which dimension to use have a great impact on your results. Ideally, we should use other multidimensional representations (more than 2D) for the calculations and only later then *visualize* in your UMAP 2D. For example, we could run even some other additional dimensionality reduction methods (`ICA` and `DiffusionMaps`) on top of the integrated harmony embedding, where the batch effects were corrected.
+
+#### Defining cell lineages with Slingshot
+
+Let run default `Slingshot` lineage identification on the **2D UMAP** to get a first impression about it (for the sake of simplicity), but you are welcome to explore **different embedding** and use **more dimensions**. The whole process can be done using a single function named `slingshot`, which is simply a wrapper for the 2 main steps for trajectory inference. The first step of the process is to define the lineages and then fit a curve through the data that defines a trajectory. These steps are break down below for clarity.
+
+
+```{r, fig.height=6}
+# Run Slingshot
+set.seed(1)
+lineages <- as.SlingshotDataSet(getLineages( data = new_UMAP2 , clusterLabels = clustering ))
+
+# Change the reduction (FOR VISUALISATION ONLY, in case you use another dimension for calculations)
+lineages
+lineages@reducedDim <- new_UMAP2
+
+#Plot the lineages
+mypar(1,2) ; plot(new_UMAP2, col = pal[clustering],  cex=.5,pch = 16)
+lines(lineages, lwd = 2, col = 'black', cex=3 )
+text(new_centroids2d,labels = rownames(new_centroids2d),cex=0.8,font=2,col = "white")
+
+# Check the UMAP in 2D
+plot( new_UMAP2 , type="n")
+draw_graph( layout = new_UMAP2 , graph = KNN )
+points( new_UMAP2 , cex = ifelse(!to_keep,1,0.3) ,
+                lwd = ifelse(!to_keep,2,0) ,
+                bg = pal[ clustering ], pch=21 )
+text(new_centroids2d,labels = rownames(new_centroids2d),cex=0.8,font=2)
+```
+
+Now take a closer look on the object, which lineages you see? Which is the starting cell cluster?
+
+```{r}
+print(lineages)
+```
+
+Here we see one central issue with trajectory analysis: where does the trajectory begin? Without any extra information, this is nearly an **impossible** task for any T.I. method. We need **prior biological** information to be able to define where the trajectory starts and where it should end.
+
+First, we need to make sure to identify which cluster is the progenitor cell. In this case, they express the marker CD34.
+
+| Marker  | Cell Type               |
+|---------|-------------------------|
+| Cd34    | HSC progenitor          |
+| Ms4a1   | B cell lineage          |
+| Cd3e    | T cell lineage          |
+| Ltf     | Granulocyte lineage     |
+| Cst3    | Monocyte lineage        |
+| Mcpt8   | Mast Cell lineage       |
+| Alas2   | RBC lineage             |
+| Siglech | Dendritic cell lineage  |
+
+
+```{r, fig.height=6}
+#SEURAT
+plot_grid(plotlist = list(
+  DimPlot( obj, group.by = "clusters",label = T) + theme_void() + NoLegend() ,
+  FeaturePlot(obj,features = "Cd34",order = T) +  theme_void() + NoLegend()))
+```
+
+Then, we can insert that information on **where the trajectory** starts on the `getLineages` function.
+
+```{r, fig.width=6, fig.height=6}
+# Run Slingshot
+set.seed(1)
+lineages <- as.SlingshotDataSet(getLineages(data = new_UMAP2,
+                        clusterLabels = clustering,
+                        #end.clus = c("4","3","13","9"), # You can also define the ENDS!
+                        start.clus = "57"))               # define where to START the trajectories
+
+# Change the reduction (FOR VISUALISATION ONLY, in case you use another dimension for calculations)
+lineages@reducedDim <- new_UMAP2
+
+
+#Plot the lineages
+mypar() ; plot(new_UMAP2, col = pal[clustering],  cex=.5,pch = 16)
+lines(lineages, lwd = 2, col = 'black', cex=3 )
+text(new_centroids2d,labels = rownames(new_centroids2d),cex=0.8,font=2,col = "white")
+```
+
+If you compare this plot with the previous, you will not notice many differences, but let's check
+
+```{r}
+print(lineages)
+```
+
+What changed?
+
+
+#### The issue with unconnected clusters
+
+As you have probably noticed, there are many other small clusters in the dataset that do not express those markers. Those are other less abundant cell types, which the **intermediate cell states were NOT present** (because there were not enough cells captured)! Slingshot tries to fit a **model / MST** (minimum spanning tree) on the whole data, so for this example, we can look at the KNN graph to help us filter out some cells that can't estimate trajectories with confidence.
+
+Here, we will also remove some other small clusters just for the sake of simplicity on the steps below. In practice, sometimes it is easier to work with parts of the dataset at a time, in order to explore trajectories in more details.
+
+```{r, fig.width=6, fig.height=6}
+mypar() ; plot(new_UMAP2, col = pal[clustering],  cex=.5,pch = 16)
+draw_graph( layout = new_UMAP2 , graph = KNN )
+text(new_centroids2d,labels = rownames(new_centroids2d),cex=1,font=2)
+
+
+# Define clusters to filter
+sort( table(clustering) )
+clusters_to_remove <- c("71","65","73","66","56","74","42","69","62","40","30","68","70",
+"64","67","51","24","63","48","3","10","4","31","72","39")
+cell_to_keep <- !( clustering %in% clusters_to_remove )
+
+# Filtering clusters
+filt_new_UMAP2    <- new_UMAP2[ cell_to_keep, ]
+filt_UMAP3        <- UMAP3[ cell_to_keep ,]
+filt_NORM_COUNTS  <- NORM_COUNTS[ ,cell_to_keep ]
+filt_PCA          <- PCA[ cell_to_keep, ]
+filt_HARMONY      <- HARMONY[ cell_to_keep, ]
+filt_KNN          <- KNN[ cell_to_keep , cell_to_keep]
+filt_clustering   <- factor( clustering [ cell_to_keep ] )
+filt_new_centroids2d   <- as.matrix(new_centroids2d[ !( rownames(new_centroids2d) %in% clusters_to_remove ) , ])
+filtcentroids3d   <- as.matrix(centroids3d[ !( rownames(centroids3d) %in% clusters_to_remove ) , ])
+
+
+
+# Plot
+mypar() ; plot(filt_new_UMAP2,type="n") ; draw_graph( layout = filt_new_UMAP2 , graph = filt_KNN )
+points(filt_new_UMAP2, col = pal[filt_clustering],  cex=.5,pch = 16)
+text(filt_new_centroids2d[,1:2],labels = rownames(filt_new_centroids2d),cex=1,font=1)
+```
+
+#### The issue with very similar undistinguishible clusters
+
+Another issue is related to the clustering resolution used. For trajectories, it is better to use fine-grain resolution to separate intermediate cell types. Again, there are many approaches to that, and here we will use the KNN graph to compute the amount of connections between clusters. If the amount of connections is above a certain threshold, we then merge those clusters. **IMPORTANT: The code below is very useful in many other single cell data analysis occasions!**
+
+```{r, fig.width=6, fig.height=6}
+# Compute connections between clusters on a graph
+filt_mm <- sparse.model.matrix( ~ 0 + factor( filt_clustering ) )
+colnames(filt_mm) <- levels( factor( filt_clustering ) )
+d <- t( filt_KNN %*% filt_mm ) %*% filt_mm / ( t( t( colSums(filt_mm) ) ) %*% t(colSums(filt_mm)) )^(1/2)
+diag(d) <- 0 ; d <- drop0(d)
+pheatmap::pheatmap(d,clustering_method = "ward.D2")
+
+
+
+# Merging similar clusters clusters
+hist( d@x , breaks = 50) ; cutoff <- 1.2*(sum( (d@x^2) )/(length(d@x)-1) )^(1/2)
+abline(v=(cutoff),col="red",xpd=F) ; cutoff
+to_merge <- drop0( ( d > cutoff )*1 )
+to_merge <- to_merge * lower.tri(to_merge)
+diag(to_merge)[ rowSums(to_merge) == 0 ] <- 1
+# Plot cluster mappings
+pheatmap::pheatmap(to_merge,cluster_rows = F,cluster_cols = F)
+
+
+
+# Merge the cluster labels
+mappings <- cbind( from = colnames(to_merge) [ to_merge@i+1 ] ,
+                   to=colnames(to_merge) [rep(x = 1:(length(to_merge@p)-1) ,
+                   times = (to_merge@p[-1] - to_merge@p[-length(to_merge@p)]) )] )
+merged_filt_clustering <- factor( mappings[match(filt_clustering,mappings[,1]),2] )
+merged_filt_mm <- sparse.model.matrix( ~ 0 + factor( merged_filt_clustering ) )
+colnames(merged_filt_mm) <- levels( factor( merged_filt_clustering ) )
+merged_filt_new_centroids2d <- as.matrix( t( t(filt_new_UMAP2) %*% merged_filt_mm  ) / Matrix::colSums(merged_filt_mm))
+
+
+
+# Plot the new clusterings
+mypar() ; plot(filt_new_UMAP2,type="n") ; draw_graph( layout = filt_new_UMAP2 , graph = filt_KNN )
+points(filt_new_UMAP2, col = pal[merged_filt_clustering],  cex=.5,pch = 16)
+text(merged_filt_new_centroids2d, labels = rownames(merged_filt_new_centroids2d),cex=1,font=1)
+
+
+
+```
+
+We can now save our object.
+
+```{r}
+obj_new <- obj[,cell_to_keep]
+obj_new@graphs <- list( KNN = filt_KNN )
+obj_new$clusters_use <- factor(merged_filt_clustering)
+saveRDS(obj_new , "trajectory_seurat_filtered.rds")
+```
+
+
+# END
+
