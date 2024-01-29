@@ -12,6 +12,7 @@ RUN /scripts/install_scanpy.sh
 
 RUN mamba install --yes --channel conda-forge --channel bioconda \
     bbknn=1.6.0 \
+    fa2=0.3.5 \
     gseapy=1.0.6 \
     matplotlib-venn=0.11.9 \
     openpyxl=3.1.2 \
