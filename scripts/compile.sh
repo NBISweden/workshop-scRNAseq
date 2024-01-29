@@ -59,10 +59,21 @@ docker run --rm --platform=linux/amd64 -v ${PWD}:/work $docker_site quarto rende
 # Read an md/qmd, remove unnecessary lines from yaml, and write to the original file
 echo "Slimming yaml across all .md files ..."
 slim_yaml() {
-    awk '/^---$/ && !in_yaml {in_yaml=1; print; next} 
-         /^---$/ && in_yaml {in_yaml=0; print; next} 
-         !in_yaml {print} 
-         in_yaml {if (/^(title:|subtitle:|description:)/) {print}}' "$1" > "tmp"
+    awk '
+        /^---$/ && !in_yaml {in_yaml=1; print; next} 
+        /^---$/ && in_yaml {in_yaml=0; print; next} 
+        !in_yaml {print} 
+        in_yaml {
+            if (/^(title:|subtitle:|description:)/) {
+                print;
+                continue_capture=1;
+            } else if (continue_capture && !(/^[a-zA-Z0-9_-]+:/)) {
+                print;
+            } else {
+                continue_capture=0;
+            }
+        }
+    ' "$1" > "tmp"
 
     mv "tmp" "$1"
 }
