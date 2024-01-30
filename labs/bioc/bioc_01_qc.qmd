@@ -92,10 +92,10 @@ ctrl.19 <- Seurat::Read10X_h5(
 {{< meta qc_collate_1 >}}
 
 ```{r}
-sce <- SingleCellExperiment(assays = list(counts = cbind(cov.1, cov.15, cov.17, ctrl.5, ctrl.13, ctrl.14)))
+sce <- SingleCellExperiment(assays = list(counts = cbind(cov.1, cov.15, cov.16, cov.17, ctrl.5, ctrl.13, ctrl.14,ctrl.19)))
 dim(sce)
 # Adding metadata
-sce@colData$sample <- unlist(sapply(c("cov.1", "cov.15", "cov.17", "ctrl.5", "ctrl.13", "ctrl.14"), function(x) rep(x, ncol(get(x)))))
+sce@colData$sample <- unlist(sapply(c("cov.1", "cov.15", "cov.16", "cov.17", "ctrl.5", "ctrl.13", "ctrl.14","ctrl.19"), function(x) rep(x, ncol(get(x)))))
 sce@colData$type <- ifelse(grepl("cov", sce@colData$sample), "Covid", "Control")
 ```
 
@@ -103,7 +103,7 @@ sce@colData$type <- ifelse(grepl("cov", sce@colData$sample), "Covid", "Control")
 
 ```{r}
 # remove all objects that will not be used.
-rm(cov.15, cov.1, cov.17, ctrl.5, ctrl.13, ctrl.14)
+rm(cov.15, cov.1, cov.17, cov.16, ctrl.5, ctrl.13, ctrl.14, ctrl.19)
 # run garbage collect to free up memory
 gc()
 ```
@@ -127,7 +127,7 @@ mito_genes <- rownames(sce)[grep("^MT-", rownames(sce))]
 # Ribosomal genes
 ribo_genes <- rownames(sce)[grep("^RP[SL]", rownames(sce))]
 # Hemoglobin genes - includes all genes starting with HB except HBP.
-hb_genes <- rownames(sce)[grep("^HB[^(P)]", rownames(sce))]
+hb_genes <- rownames(sce)[grep("^HB[^(P|E|S)]", rownames(sce))]
 ```
 
 First, let Scran calculate some general qc-stats for genes and cells with the function `perCellQCMetrics`. It can also calculate proportion of counts for specific gene subsets, so first we need to define which genes are mitochondrial, ribosomal and hemoglobin.
@@ -222,7 +222,7 @@ In Scater, you can also use the function `plotHighestExprs()` to plot the gene c
 # Compute the relative expression of each gene per cell
 # Use sparse matrix operations, if your dataset is large, doing matrix devisions the regular way will take a very long time.
 C <- counts(sce)
-C@x <- C@x / rep.int(colSums(C), diff(C@p))
+C@x <- C@x / rep.int(colSums(C), diff(C@p)) * 100
 most_expressed <- order(Matrix::rowSums(C), decreasing = T)[20:1]
 boxplot(as.matrix(t(C[most_expressed, ])), cex = .1, las = 1, xlab = "% total count per cell", col = scales::hue_pal()(20)[20:1], horizontal = TRUE)
 
@@ -238,7 +238,7 @@ rm(C)
 {{< meta qc_filter_mr_1 >}}
 
 ```{r}
-selected_mito <- sce.filt$subsets_mt_percent < 30
+selected_mito <- sce.filt$subsets_mt_percent < 20
 selected_ribo <- sce.filt$subsets_ribo_percent > 5
 
 # and subset the object to only keep those cells
@@ -282,8 +282,8 @@ sce.filt <- sce.filt[!grepl("^MT-", rownames(sce.filt)), ]
 # Filter Ribossomal gene (optional if that is a problem on your data)
 # sce.filt <- sce.filt[ ! grepl("^RP[SL]", rownames(sce.filt)), ]
 
-# Filter Hemoglobin gene
-sce.filt <- sce.filt[!grepl("^HB[^(PES)]", rownames(sce.filt)), ]
+# Filter Hemoglobin gene  (optional if that is a problem on your data)
+#sce.filt <- sce.filt[!grepl("^HB[^(P|E|S)]", rownames(sce.filt)), ]
 
 dim(sce.filt)
 ```
@@ -385,6 +385,7 @@ assignments <- cyclone(sce.filt[ensembl %in% cc.ensembl, ], hs.pairs, gene.names
 sce.filt$G1.score <- assignments$scores$G1
 sce.filt$G2M.score <- assignments$scores$G2M
 sce.filt$S.score <- assignments$scores$S
+sce.filt$phase <- assignments$phases
 ```
 
 {{< meta qc_cellcycle_2 >}}
@@ -394,7 +395,7 @@ sce.filt$S.score <- assignments$scores$S
 #| fig-width: 14
 
 wrap_plots(
-    plotColData(sce.filt, y = "G2M.score", x = "G1.score", colour_by = "sample"),
+    plotColData(sce.filt, y = "G2M.score", x = "G1.score", colour_by = "phase"),
     plotColData(sce.filt, y = "G2M.score", x = "sample", colour_by = "sample"),
     plotColData(sce.filt, y = "G1.score", x = "sample", colour_by = "sample"),
     plotColData(sce.filt, y = "S.score", x = "sample", colour_by = "sample"),
@@ -403,6 +404,8 @@ wrap_plots(
 ```
 
 Cyclone predicts most cells as G1, but also quite a lot of cells with high S-Phase scores. Compare to results with Seurat and Scanpy and see how different predictors will give clearly different results.
+
+Cyclone does an automatic prediction of cell cycle phase with a default cutoff of the scores at 0.5 As you can see this does not fit this data very well, so be cautious with using these predictions. Instead we suggest that you look at the scores.
 
 ## {{< meta qc_doublet >}}
 

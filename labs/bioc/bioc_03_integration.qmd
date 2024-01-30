@@ -22,7 +22,12 @@ Code chunks run R commands unless otherwise specified.
 
 {{< meta int_prep_1 >}}
 
+
 ```{r}
+# Activate scanorama Python venv
+reticulate::use_virtualenv("/opt/venv/scanorama")
+reticulate::py_discover_config()
+
 suppressPackageStartupMessages({
     library(scater)
     library(scran)
@@ -33,9 +38,7 @@ suppressPackageStartupMessages({
     library(reticulate)
 })
 
-# Activate scanorama Python venv
-reticulate::use_virtualenv("/opt/venv/scanorama")
-reticulate::py_discover_config()
+
 ```
 
 ```{r}
@@ -155,10 +158,10 @@ for (i in c("CD3E", "CD4", "CD8A", "NKG7", "GNLY", "MS4A1", "CD14", "LYZ", "MS4A
 }
 wrap_plots(plotlist = plotlist, ncol = 3)
 ```
+## {{< meta dimred_harmony >}}
 
-INTEG_R1:
+{{< meta dimred_harmony_1 >}}
 
-INTEG_R2:
 
 ```{r}
 #| fig-height: 5
@@ -180,9 +183,13 @@ sce <- RunHarmony(
 sce <- runUMAP(sce, dimred = "harmony", n_dimred = 50, ncomponents = 2, name = "UMAP_on_Harmony")
 ```
 
-INTEG_R3:
+## {{< meta dimred_scanorama >}}
 
-INTEG_R4:
+{{< meta dimred_scanorama_1 >}}
+
+{{< meta dimred_scanorama_2 >}}
+
+
 
 ```{r}
 #| fig-height: 5
@@ -200,7 +207,7 @@ for (i in 1:length(sce.list)) {
 lapply(scelist, dim)
 ```
 
-INTEG_R5:
+Now we can run scanorama:
 
 ```{r}
 #| fig-height: 5
@@ -215,7 +222,7 @@ intdimred <- do.call(rbind, integrated.data[[1]])
 colnames(intdimred) <- paste0("PC_", 1:100)
 rownames(intdimred) <- colnames(logcounts(sce))
 
-# Add standard deviations in order to draw Elbow Plots in Seurat
+# Add standard deviations in order to draw Elbow Plots 
 stdevs <- apply(intdimred, MARGIN = 2, FUN = sd)
 attr(intdimred, "varExplained") <- stdevs
 
@@ -223,9 +230,14 @@ reducedDim(sce, "Scanorama_PCA") <- intdimred
 
 # Here we use all PCs computed from Scanorama for UMAP calculation
 sce <- runUMAP(sce, dimred = "Scanorama_PCA", n_dimred = 50, ncomponents = 2, name = "UMAP_on_Scanorama")
+
+plotReducedDim(sce, dimred = "UMAP_on_Scanorama", colour_by = "sample", point_size = 0.6) + ggplot2::ggtitle(label = "UMAP_on_Scanorama")
 ```
 
-INTEG_R6:
+## Overview all methods
+
+Now we will plot UMAPS with all three integration methods side by side.
+
 
 ```{r}
 #| fig-height: 8
@@ -241,7 +253,6 @@ wrap_plots(p1, p2, p3, p4, nrow = 2) +
     plot_layout(guides = "collect")
 ```
 
-INTEG_R7:
 
 {{< meta int_save >}}
 
