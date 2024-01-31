@@ -36,6 +36,12 @@ suppressPackageStartupMessages({
 The package `SeuratData` has some seurat objects for different datasets. Among those are spatial transcriptomics data from mouse brain and kidney. Here we will download and process sections from the mouse brain. 
 
 ```{r load}
+# download pre-computed data if missing or long compute
+fetch_data <- FALSE
+
+# url for source and intermediate data
+path_data <- "https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"
+
 outdir <- "data/spatial/"
 if (!dir.exists(outdir)) dir.create(outdir, showWarnings = F)
 
@@ -312,8 +318,6 @@ Takes a long time to run, so skip this step for now!
 First download the seurat data:
 
 ```{r}
-path_data <- "https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"
-
 if (!dir.exists("data/spatial/visium")) dir.create("data/spatial/visium")
 path_file <- "data/spatial/visium/allen_cortex.rds"
 if (!file.exists(path_file)) download.file(url = file.path(path_data, "spatial/visium/allen_cortex.rds"), destfile = path_file)
@@ -454,26 +458,38 @@ eset_ST <- ExpressionSet(assayData = as.matrix(cortex@assays$Spatial@counts[m_fe
 We then run the deconvolution defining the celltype of interest as "subclass" column in the single cell data.
 
 ::: {.callout-caution}
-This step is slow to run, so it's better to skip it for now and use the pre-computed file in the next step.
-:::
+
+This is a slow compute intensive step, we will not run this now and instead use a pre-computed file in the step below.
 
 ```{r}
 #| results: hide
 #| eval: false
-deconvolution_crc <- SCDC::SCDC_prop(
+
+# fetch_data is defined at the top of this document
+if (!fetch_data) {
+  deconvolution_crc <- SCDC::SCDC_prop(
     bulk.eset = eset_ST,
     sc.eset = eset_SC,
     ct.varname = "subclass",
     ct.sub = as.character(unique(eset_SC$subclass))
-)
-saveRDS(deconvolution_crc, "data/spatial/visium/seurat_scdc.rds")
+  )
+  saveRDS(deconvolution_crc, "data/spatial/visium/seurat_scdc.rds")
+}
 ```
+
+:::
 
 Download the precomputed file.
 
 ```{r}
-path_file <- "data/spatial/visium/seurat_scdc.rds"
-if (!file.exists(path_file)) download.file(url = file.path(path_data, "spatial/visium/results/seurat_scdc.rds"), destfile = path_file)
+# fetch_data is defined at the top of this document
+if (fetch_data) {
+  path_file <- "data/spatial/visium/seurat_scdc.rds"
+  if (!file.exists(path_file)) download.file(url = file.path(path_data, "spatial/visium/results/seurat_scdc.rds"), destfile = path_file)
+}
+```
+
+```{r}
 deconvolution_crc <- readRDS(path_file)
 ```
 
