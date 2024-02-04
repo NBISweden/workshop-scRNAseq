@@ -20,16 +20,16 @@ git push -u origin <branch_name>
 
 ```
 # for seurat labs
-docker pull ghcr.io/nbisweden/workshop-scrnaseq:2024-seurat-r4.3.0
-docker pull ghcr.io/nbisweden/workshop-scrnaseq:2024-seurat_spatial-r4.3.0
+docker pull --platform=linux/amd64 ghcr.io/nbisweden/workshop-scrnaseq:2024-seurat-r4.3.0
+docker pull --platform=linux/amd64 ghcr.io/nbisweden/workshop-scrnaseq:2024-seurat_spatial-r4.3.0
 
 # for bioconductor labs
-docker pull ghcr.io/nbisweden/workshop-scrnaseq:2024-bioconductor-r4.3.0
-docker pull ghcr.io/nbisweden/workshop-scrnaseq:2024-bioconductor_spatial-r4.3.0
+docker pull --platform=linux/amd64 ghcr.io/nbisweden/workshop-scrnaseq:2024-bioconductor-r4.3.0
+docker pull --platform=linux/amd64 ghcr.io/nbisweden/workshop-scrnaseq:2024-bioconductor_spatial-r4.3.0
 
 # for python labs
-docker pull ghcr.io/nbisweden/workshop-scrnaseq:2024-scanpy-py3.10
-docker pull ghcr.io/nbisweden/workshop-scrnaseq:2024-scanpy_spatial-py3.10
+docker pull --platform=linux/amd64 ghcr.io/nbisweden/workshop-scrnaseq:2024-scanpy-py3.10
+docker pull --platform=linux/amd64 ghcr.io/nbisweden/workshop-scrnaseq:2024-scanpy_spatial-py3.10
 ```
 
 ## Run labs interactively (locally)
