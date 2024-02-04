@@ -58,17 +58,17 @@ docker run --rm --platform=linux/amd64 -p 8787:8787 -e PASSWORD=scrnaseq -v ${PW
 duration_bioc=$(echo "$(date +%s.%N) - $start_bioc" | bc) && echo "Bioc time elapsed: $duration_bioc seconds"
 
 ## scanpy
-## on linux, add -u root
+## on linux, add -u 1000:1000
 echo "Rendering Scanpy files..."
 start_scanpy=$(date +%s.%N)
-docker run --rm --platform=linux/amd64 -u root -p 8888:8888 -v ${PWD}:/work $docker_scanpy quarto render /work/labs/scanpy/scanpy_01_qc.qmd
-docker run --rm --platform=linux/amd64 -u root -p 8888:8888 -v ${PWD}:/work $docker_scanpy quarto render /work/labs/scanpy/scanpy_02_dimred.qmd
-docker run --rm --platform=linux/amd64 -u root -p 8888:8888 -v ${PWD}:/work $docker_scanpy quarto render /work/labs/scanpy/scanpy_03_integration.qmd
-docker run --rm --platform=linux/amd64 -u root -p 8888:8888 -v ${PWD}:/work $docker_scanpy quarto render /work/labs/scanpy/scanpy_04_clustering.qmd
-docker run --rm --platform=linux/amd64 -u root -p 8888:8888 -v ${PWD}:/work $docker_scanpy quarto render /work/labs/scanpy/scanpy_05_dge.qmd
-docker run --rm --platform=linux/amd64 -u root -p 8888:8888 -v ${PWD}:/work $docker_scanpy quarto render /work/labs/scanpy/scanpy_06_celltyping.qmd
-docker run --rm --platform=linux/amd64 -u root -p 8888:8888 -v ${PWD}:/work $docker_scanpy quarto render /work/labs/scanpy/scanpy_07_trajectory.qmd
-docker run --rm --platform=linux/amd64 -u root -p 8888:8888 -v ${PWD}:/work $docker_scanpy_spatial quarto render /work/labs/scanpy/scanpy_08_spatial.qmd
+docker run --rm --platform=linux/amd64 -u 1000:1000 -p 8888:8888 -v ${PWD}:/work $docker_scanpy quarto render /work/labs/scanpy/scanpy_01_qc.qmd
+docker run --rm --platform=linux/amd64 -u 1000:1000 -p 8888:8888 -v ${PWD}:/work $docker_scanpy quarto render /work/labs/scanpy/scanpy_02_dimred.qmd
+docker run --rm --platform=linux/amd64 -u 1000:1000 -p 8888:8888 -v ${PWD}:/work $docker_scanpy quarto render /work/labs/scanpy/scanpy_03_integration.qmd
+docker run --rm --platform=linux/amd64 -u 1000:1000 -p 8888:8888 -v ${PWD}:/work $docker_scanpy quarto render /work/labs/scanpy/scanpy_04_clustering.qmd
+docker run --rm --platform=linux/amd64 -u 1000:1000 -p 8888:8888 -v ${PWD}:/work $docker_scanpy quarto render /work/labs/scanpy/scanpy_05_dge.qmd
+docker run --rm --platform=linux/amd64 -u 1000:1000 -p 8888:8888 -v ${PWD}:/work $docker_scanpy quarto render /work/labs/scanpy/scanpy_06_celltyping.qmd
+docker run --rm --platform=linux/amd64 -u 1000:1000 -p 8888:8888 -v ${PWD}:/work $docker_scanpy quarto render /work/labs/scanpy/scanpy_07_trajectory.qmd
+docker run --rm --platform=linux/amd64 -u 1000:1000 -p 8888:8888 -v ${PWD}:/work $docker_scanpy_spatial quarto render /work/labs/scanpy/scanpy_08_spatial.qmd
 duration_scanpy=$(echo "$(date +%s.%N) - $start_scanpy" | bc) && echo "Scanpy time elapsed: $duration_scanpy seconds"
 
 ## site
