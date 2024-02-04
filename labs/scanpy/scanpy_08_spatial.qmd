@@ -32,6 +32,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import scanorama
 import warnings
+import os
 
 warnings.simplefilter(action="ignore", category=Warning)
 
@@ -47,7 +48,12 @@ The function `datasets.visium_sge()` downloads the dataset from 10x genomics and
 When using your own Visium data, use Scanpy's read_visium() function to import it.
 
 ```{python}
-import os
+# download pre-computed data if missing or long compute
+fetch_data = False
+
+# url for source and intermediate data
+path_data = "https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"
+
 if not os.path.exists("./data/spatial/visium"):
     os.makedirs("./data/spatial/visium")
 ```
@@ -343,42 +349,39 @@ Spatial transcriptomics allows researchers to investigate how gene expression tr
 
 We use SpatialDE Svensson et al., a Gaussian process-based statistical framework that aims to identify spatially variable genes.
 
-::: {callout-warning}
-Takes a long time to run, so skip this step for now and download the precomputed file.
-:::
+::: {.callout-caution}
+
+This is a slow compute intensive step, we will not run this now and instead use a pre-computed file in the step below.
 
 ```{python}
 # | results: hide
-# | eval: false
-# slow step
 
-import NaiveDE
-import SpatialDE
+if not fetch_data:
+    import NaiveDE
+    import SpatialDE
 
-counts = sc.get.obs_df(adata, keys=list(adata.var_names), use_raw=True)
-total_counts = sc.get.obs_df(adata, keys=["total_counts"])
-norm_expr = NaiveDE.stabilize(counts.T).T
-resid_expr = NaiveDE.regress_out(
-    total_counts, norm_expr.T, "np.log(total_counts)").T
-results = SpatialDE.run(adata.obsm["spatial"], resid_expr)
+    counts = sc.get.obs_df(adata, keys=list(adata.var_names), use_raw=True)
+    total_counts = sc.get.obs_df(adata, keys=["total_counts"])
+    norm_expr = NaiveDE.stabilize(counts.T).T
+    resid_expr = NaiveDE.regress_out(
+        total_counts, norm_expr.T, "np.log(total_counts)").T
+    results = SpatialDE.run(adata.obsm["spatial"], resid_expr)
 
-import pickle
-with open('data/spatial/visium/scanpy_spatialde.pkl', 'wb') as file:
-    pickle.dump(results, file)
+    import pickle
+    with open('data/spatial/visium/scanpy_spatialde.pkl', 'wb') as file:
+        pickle.dump(results, file)
 ```
 
+:::
+
+Download precomputed file.
+
 ```{python}
 # | results: hide
-# | eval: false
-# skip for now
 
-import urllib.request
-import os
-
-path_data = "https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"
-
-path_file = "data/spatial/visium/scanpy_spatialde.pkl"
-if not os.path.exists(path_file):
+if fetch_data and not os.path.exists(path_file):
+    import urllib.request
+    path_file = "data/spatial/visium/scanpy_spatialde.pkl"
     file_url = os.path.join(
         path_data, "spatial/visium/results/scanpy_spatialde.pkl")
     urllib.request.urlretrieve(file_url, path_file)
@@ -386,8 +389,6 @@ if not os.path.exists(path_file):
 
 ```{python}
 # | results: hide
-# | eval: false
-# skip for now
 
 import pickle
 with open('data/spatial/visium/scanpy_spatialde.pkl', 'rb') as file:
@@ -418,8 +419,6 @@ Conveniently, you can also download the pre-processed dataset in h5ad format fro
 ```{python}
 import urllib.request
 import os
-
-path_data = "https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"
 
 path_file = "data/spatial/visium/allen_cortex.h5ad"
 if not os.path.exists(path_file):
