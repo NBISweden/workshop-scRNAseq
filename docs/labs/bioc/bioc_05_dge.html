@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.3.353">
+<meta name="generator" content="quarto-1.3.450">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -100,7 +100,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     "search-more-matches-text": "more matches in this document",
     "search-clear-button-title": "Clear",
     "search-detached-cancel-button-title": "Cancel",
-    "search-submit-button-title": "Submit"
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
   }
 }</script>
 <style>html{ scroll-behavior: smooth; }</style>
@@ -131,7 +132,7 @@ background-size: cover;
       <div class="navbar-container container-fluid">
       <div class="navbar-brand-container">
     <a href="../../index.html" class="navbar-brand navbar-brand-logo">
-    <img src="../../assets/logos/nbis-scilifelab.png" alt="nbis-scilifelab-logo." class="navbar-logo">
+    <img src="../../assets/logos/nbis-scilifelab.png" alt="nbis-scilifelab-logo" class="navbar-logo">
     </a>
   </div>
             <div id="quarto-search" class="" title="Search"></div>
@@ -163,6 +164,11 @@ background-size: cover;
   <li class="nav-item">
     <a class="nav-link" href="../../home_info.html" rel="" target="">
  <span class="menu-text">Info</span></a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/NBISweden/workshop-scRNAseq/" rel="" target=""><i class="bi bi-github" role="img">
+</i> 
+ <span class="menu-text"></span></a>
   </li>  
 </ul>
             <div class="quarto-navbar-tools">
@@ -201,7 +207,7 @@ background-size: cover;
       <div>
       <div class="quarto-title-meta-heading">Published</div>
       <div class="quarto-title-meta-contents">
-        <p class="date">03-Jan-2024</p>
+        <p class="date">16-Jan-2024</p>
       </div>
     </div>
     
@@ -252,136 +258,165 @@ Note
 <p>We can first load the data from the clustering session. Moreover, we can already decide which clustering resolution to use. First let’s define using the <code>louvain</code> clustering to identifying differentially expressed genes.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">suppressPackageStartupMessages</span>({</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">library</span>(scater)</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">library</span>(scran)</span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="co">#library(venn)</span></span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">library</span>(cowplot)</span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">library</span>(ggplot2)</span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  <span class="co"># library(rafalib)</span></span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">library</span>(pheatmap)</span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">library</span>(igraph)</span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">library</span>(dplyr)</span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>})</span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>sce <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="st">"data/results/covid_qc_dr_int_cl.rds"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">library</span>(scater)</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">library</span>(scran)</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="co"># library(venn)</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">library</span>(patchwork)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">library</span>(ggplot2)</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="fu">library</span>(pheatmap)</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="fu">library</span>(igraph)</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    <span class="fu">library</span>(dplyr)</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>})</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>path_data <span class="ot">&lt;-</span> <span class="st">"https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>path_file <span class="ot">&lt;-</span> <span class="st">"data/covid/results/bioc_covid_qc_dr_int_cl.rds"</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">dir.exists</span>(<span class="fu">dirname</span>(path_file))) <span class="fu">dir.create</span>(<span class="fu">dirname</span>(path_file), <span class="at">recursive =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">file.exists</span>(path_file)) <span class="fu">download.file</span>(<span class="at">url =</span> <span class="fu">file.path</span>(path_data, <span class="st">"covid/results/bioc_covid_qc_dr_int_cl.rds"</span>), <span class="at">destfile =</span> path_file)</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>sce <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(path_file)</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(<span class="fu">reducedDims</span>(sce))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>List of length 14
+names(14): PCA UMAP tSNE_on_PCA UMAP_on_PCA ... harmony UMAP_on_Harmony SNN</code></pre>
+</div>
 </div>
 <section id="meta-dge_cmg" class="level2" data-number="1">
 <h2 data-number="1" class="anchored" data-anchor-id="meta-dge_cmg"><span class="header-section-number">1</span> Cell marker genes</h2>
 <p>Let us first compute a ranking for the highly differential genes in each cluster. There are many different tests and parameters to be chosen that can be used to refine your results. When looking for marker genes, we want genes that are positivelly expressed in a cell type and possibly not expressed in the others.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Compute differentiall expression</span></span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>markers_genes <span class="ot">&lt;-</span> scran<span class="sc">::</span><span class="fu">findMarkers</span>(</span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">x =</span> sce,</span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">groups =</span> <span class="fu">as.character</span>(sce<span class="sc">$</span>louvain_SNNk15),</span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">lfc=</span>.<span class="dv">5</span>,</span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">pval.type =</span> <span class="st">"all"</span>,</span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">direction =</span> <span class="st">"up"</span></span>
-<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="co">#List of dataFrames with the results for each cluster</span></span>
-<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>markers_genes</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Compute differentiall expression</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>markers_genes <span class="ot">&lt;-</span> scran<span class="sc">::</span><span class="fu">findMarkers</span>(</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> sce,</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">groups =</span> <span class="fu">as.character</span>(sce<span class="sc">$</span>louvain_SNNk15),</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">lfc =</span> .<span class="dv">5</span>,</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">pval.type =</span> <span class="st">"all"</span>,</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">direction =</span> <span class="st">"up"</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="co"># List of dataFrames with the results for each cluster</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>markers_genes</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>List of length 8
-names(8): 1 2 3 4 5 6 7 8</code></pre>
+<pre><code>List of length 9
+names(9): 1 2 3 4 5 6 7 8 9</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Visualizing the expression of one</span></span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>markers_genes[[<span class="st">"1"</span>]]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Visualizing the expression of one</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>markers_genes[[<span class="st">"1"</span>]]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>DataFrame with 18121 rows and 10 columns
-                p.value          FDR summary.logFC     logFC.2     logFC.3
-              &lt;numeric&gt;    &lt;numeric&gt;     &lt;numeric&gt;   &lt;numeric&gt;   &lt;numeric&gt;
-MS4A1      1.02396e-242 1.85551e-238       2.34959     2.38450     2.36704
-LINC00926  5.36234e-129 4.85855e-125       1.89816     1.91150     1.91990
-TNFRSF13C  2.53084e-122 1.52871e-118       2.04513     2.10115     2.03385
-CD79A      7.63204e-121 3.45750e-117       3.29171     3.49678     3.49429
-IGHD       1.20445e-120 4.36516e-117       2.28701     2.34277     2.34045
-...                 ...          ...           ...         ...         ...
-AC011043.1            1            1    0.00384653  0.00384653  0.00431173
-AC007325.4            1            1   -0.00683724 -0.00683724 -0.00357836
-AL354822.1            1            1    0.01429843  0.01429843  0.01092670
-AC233755.1            1            1    0.00406989  0.00406989  0.00406989
-AC240274.1            1            1    0.00866138  0.00866138  0.00776217
-               logFC.4     logFC.5     logFC.6     logFC.7     logFC.8
-             &lt;numeric&gt;   &lt;numeric&gt;   &lt;numeric&gt;   &lt;numeric&gt;   &lt;numeric&gt;
-MS4A1          2.39761     2.36420     2.34959     2.35680     2.38095
-LINC00926      1.89816     1.88146     1.89860     1.88374     1.91415
-TNFRSF13C      2.04513     2.07056     2.06474     2.08338     2.08575
-CD79A          3.29171     3.38750     3.48303     3.42763     3.48375
-IGHD           2.28701     2.28558     2.34073     2.32213     2.34707
-...                ...         ...         ...         ...         ...
-AC011043.1  0.00431173  0.00431173  0.00194004  0.00228393  0.00431173
-AC007325.4  0.00136016 -0.01013483 -0.00338451 -0.00529190 -0.00190024
-AL354822.1  0.01582537  0.01398317  0.01062004  0.01375049  0.00091889
-AC233755.1  0.00406989  0.00406989  0.00406989  0.00406989  0.00406989
-AC240274.1 -0.00853061  0.00546812  0.00862573  0.00613482  0.01275548</code></pre>
+<pre><code>DataFrame with 18186 rows and 11 columns
+                p.value          FDR summary.logFC     logFC.2      logFC.3
+              &lt;numeric&gt;    &lt;numeric&gt;     &lt;numeric&gt;   &lt;numeric&gt;    &lt;numeric&gt;
+S100A12    1.57321e-139 2.86104e-135       2.34116     4.13134      2.34116
+S100A8      1.35706e-64  1.23397e-60       6.52478     7.66360      3.33664
+S100A9      1.40449e-61  8.51405e-58       6.19181     7.33443      2.41140
+PLBD1       3.89784e-49  1.77215e-45       1.28043     2.32483      1.28043
+NAMPT       7.45257e-38  2.71065e-34       1.27817     2.67891      1.27817
+...                 ...          ...           ...         ...          ...
+AC007325.4            1            1    0.00966451  0.00966451  0.000585433
+AL354822.1            1            1   -0.00710162 -0.00710162  0.000697440
+AC004556.1            1            1   -0.04593904 -0.05277778 -0.107041903
+AC233755.1            1            1   -0.00643585 -0.00643585  0.000000000
+AC240274.1            1            1   -0.00464419 -0.00464419 -0.003523507
+               logFC.4     logFC.5      logFC.6      logFC.7     logFC.8
+             &lt;numeric&gt;   &lt;numeric&gt;    &lt;numeric&gt;    &lt;numeric&gt;   &lt;numeric&gt;
+S100A12        4.17448     4.16371      4.16654      4.16271     4.11649
+S100A8         7.78141     7.69505      7.80820      7.76011     6.52478
+S100A9         7.42537     7.40085      7.47624      7.47041     6.19181
+PLBD1          2.32076     2.33067      2.33183      2.32822     2.28943
+NAMPT          2.76442     2.68668      2.75854      2.86208     2.81797
+...                ...         ...          ...          ...         ...
+AC007325.4 -0.00472268  0.00533155  0.003317156  0.007609982  0.00966451
+AL354822.1 -0.00667383 -0.00850239 -0.008013634 -0.012927623 -0.01634707
+AC004556.1 -0.04331115 -0.01255718 -0.045939045 -0.042512552  0.01815203
+AC233755.1  0.00000000  0.00000000  0.000000000  0.000000000  0.00000000
+AC240274.1 -0.00702685 -0.00810242  0.000772945 -0.000256299 -0.01576446
+              logFC.9
+            &lt;numeric&gt;
+S100A12       4.12539
+S100A8        6.89910
+S100A9        5.25571
+PLBD1         1.85508
+NAMPT         1.62395
+...               ...
+AC007325.4 -0.0146342
+AL354822.1 -0.0131441
+AC004556.1 -0.1608256
+AC233755.1  0.0000000
+AC240274.1 -0.0229031</code></pre>
 </div>
 </div>
 <p>We can now select the top 25 up regulated genes for plotting.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Colect the top 25 genes for each cluster and put the into a single table</span></span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>top25 <span class="ot">&lt;-</span> <span class="fu">lapply</span>( <span class="fu">names</span>(markers_genes), <span class="cf">function</span>(x) { temp <span class="ot">&lt;-</span> markers_genes[[x]][<span class="dv">1</span><span class="sc">:</span><span class="dv">25</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">2</span>] ; temp<span class="sc">$</span>gene <span class="ot">&lt;-</span> <span class="fu">rownames</span>(markers_genes[[x]])[<span class="dv">1</span><span class="sc">:</span><span class="dv">25</span>] ; temp<span class="sc">$</span>cluster <span class="ot">&lt;-</span> x ; <span class="fu">return</span>(temp) } )</span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>top25 <span class="ot">&lt;-</span> <span class="fu">as_tibble</span>(<span class="fu">do.call</span>(rbind, top25))</span>
-<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>top25<span class="sc">$</span>p.value[top25<span class="sc">$</span>p.value<span class="sc">==</span><span class="dv">0</span>] <span class="ot">&lt;-</span> <span class="fl">1e-300</span></span>
-<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>top25</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Colect the top 25 genes for each cluster and put the into a single table</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>top25 <span class="ot">&lt;-</span> <span class="fu">lapply</span>(<span class="fu">names</span>(markers_genes), <span class="cf">function</span>(x) {</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    temp <span class="ot">&lt;-</span> markers_genes[[x]][<span class="dv">1</span><span class="sc">:</span><span class="dv">25</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">2</span>]</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>    temp<span class="sc">$</span>gene <span class="ot">&lt;-</span> <span class="fu">rownames</span>(markers_genes[[x]])[<span class="dv">1</span><span class="sc">:</span><span class="dv">25</span>]</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>    temp<span class="sc">$</span>cluster <span class="ot">&lt;-</span> x</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">return</span>(temp)</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>top25 <span class="ot">&lt;-</span> <span class="fu">as_tibble</span>(<span class="fu">do.call</span>(rbind, top25))</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>top25<span class="sc">$</span>p.value[top25<span class="sc">$</span>p.value <span class="sc">==</span> <span class="dv">0</span>] <span class="ot">&lt;-</span> <span class="fl">1e-300</span></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>top25</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 
 <div data-pagedtable="false">
   <script data-pagedtable-source="" type="application/json">
-{"columns":[{"label":["p.value"],"name":[1],"type":["dbl"],"align":["right"]},{"label":["FDR"],"name":[2],"type":["dbl"],"align":["right"]},{"label":["gene"],"name":[3],"type":["chr"],"align":["left"]},{"label":["cluster"],"name":[4],"type":["chr"],"align":["left"]}],"data":[{"1":"1.023957e-242","2":"1.855513e-238","3":"MS4A1","4":"1"},{"1":"5.362344e-129","2":"4.858552e-125","3":"LINC00926","4":"1"},{"1":"2.530845e-122","2":"1.528715e-118","3":"TNFRSF13C","4":"1"},{"1":"7.632039e-121","2":"3.457505e-117","3":"CD79A","4":"1"},{"1":"1.204448e-120","2":"4.365159e-117","3":"IGHD","4":"1"},{"1":"1.347023e-80","2":"4.068234e-77","3":"IGHM","4":"1"},{"1":"8.272097e-60","2":"2.141410e-56","3":"CD37","4":"1"},{"1":"2.666387e-57","2":"6.039699e-54","3":"CD83","4":"1"},{"1":"2.263015e-56","2":"4.556454e-53","3":"CD74","4":"1"},{"1":"2.568423e-56","2":"4.654240e-53","3":"RALGPS2","4":"1"},{"1":"2.142407e-55","2":"3.529323e-52","3":"CD79B","4":"1"},{"1":"7.987243e-51","2":"1.206140e-47","3":"JUND","4":"1"},{"1":"1.152455e-50","2":"1.606434e-47","3":"BANK1","4":"1"},{"1":"5.289234e-43","2":"6.846157e-40","3":"CD22","4":"1"},{"1":"2.179289e-39","2":"2.632727e-36","3":"NFKBID","4":"1"},{"1":"1.290029e-35","2":"1.461039e-32","3":"AFF3","4":"1"},{"1":"1.959312e-34","2":"2.088512e-31","3":"VPREB3","4":"1"},{"1":"6.533777e-31","2":"6.577698e-28","3":"TCL1A","4":"1"},{"1":"6.800295e-28","2":"6.485692e-25","3":"TCF4","4":"1"},{"1":"6.471916e-25","2":"5.863880e-22","3":"P2RX5","4":"1"},{"1":"1.198763e-24","2":"1.034419e-21","3":"BLK","4":"1"},{"1":"9.233024e-22","2":"7.605074e-19","3":"FAM129C","4":"1"},{"1":"1.431162e-20","2":"1.127569e-17","3":"FCER2","4":"1"},{"1":"1.589452e-18","2":"1.200103e-15","3":"TAGAP","4":"1"},{"1":"6.043722e-13","2":"4.380732e-10","3":"EZR","4":"1"},{"1":"4.215236e-74","2":"7.638428e-70","3":"S100A8","4":"2"},{"1":"1.254027e-67","2":"1.136211e-63","3":"S100A12","4":"2"},{"1":"9.820759e-67","2":"5.932066e-63","3":"S100A9","4":"2"},{"1":"6.061194e-27","2":"2.745872e-23","3":"PLBD1","4":"2"},{"1":"2.628163e-20","2":"9.524988e-17","3":"CXCL8","4":"2"},{"1":"1.464484e-15","2":"4.422987e-12","3":"CTSD","4":"2"},{"1":"1.835569e-14","2":"4.751765e-11","3":"SELL","4":"2"},{"1":"7.223386e-13","2":"1.636187e-09","3":"NAMPT","4":"2"},{"1":"9.018671e-12","2":"1.815859e-08","3":"SERPINB1","4":"2"},{"1":"1.423069e-10","2":"2.578743e-07","3":"RETN","4":"2"},{"1":"1.169927e-09","2":"1.927296e-06","3":"VCAN","4":"2"},{"1":"1.699484e-08","2":"2.566362e-05","3":"GCA","4":"2"},{"1":"8.013138e-08","2":"1.116970e-04","3":"HP","4":"2"},{"1":"1.134230e-07","2":"1.468099e-04","3":"SLC2A3","4":"2"},{"1":"7.488648e-06","2":"9.046787e-03","3":"MCEMP1","4":"2"},{"1":"4.373872e-04","2":"4.953683e-01","3":"MNDA","4":"2"},{"1":"1.754567e-03","2":"1.000000e+00","3":"RNASE2","4":"2"},{"1":"3.539874e-03","2":"1.000000e+00","3":"CYP1B1","4":"2"},{"1":"5.563943e-03","2":"1.000000e+00","3":"G0S2","4":"2"},{"1":"4.249302e-02","2":"1.000000e+00","3":"FPR1","4":"2"},{"1":"9.056918e-02","2":"1.000000e+00","3":"CKAP4","4":"2"},{"1":"9.492886e-02","2":"1.000000e+00","3":"PGD","4":"2"},{"1":"3.474614e-01","2":"1.000000e+00","3":"LGALS1","4":"2"},{"1":"3.784935e-01","2":"1.000000e+00","3":"ACSL1","4":"2"},{"1":"5.099813e-01","2":"1.000000e+00","3":"RFLNB","4":"2"},{"1":"5.609294e-47","2":"1.016460e-42","3":"IL7R","4":"3"},{"1":"3.399518e-23","2":"3.080134e-19","3":"SARAF","4":"3"},{"1":"2.846674e-21","2":"1.719486e-17","3":"RCAN3","4":"3"},{"1":"4.079265e-17","2":"1.848009e-13","3":"MAL","4":"3"},{"1":"4.462649e-16","2":"1.617353e-12","3":"LDHB","4":"3"},{"1":"1.202884e-15","2":"3.632911e-12","3":"NOSIP","4":"3"},{"1":"7.941186e-15","2":"2.055746e-11","3":"PIK3IP1","4":"3"},{"1":"8.914734e-11","2":"2.019299e-07","3":"TCF7","4":"3"},{"1":"1.450188e-07","2":"2.919872e-04","3":"TPT1","4":"3"},{"1":"3.502563e-07","2":"6.346994e-04","3":"LEPROTL1","4":"3"},{"1":"7.081595e-04","2":"1.000000e+00","3":"LEF1","4":"3"},{"1":"5.120184e-03","2":"1.000000e+00","3":"PRKCA","4":"3"},{"1":"1.296255e-02","2":"1.000000e+00","3":"AP3M2","4":"3"},{"1":"1.671909e-02","2":"1.000000e+00","3":"LTB","4":"3"},{"1":"7.010518e-02","2":"1.000000e+00","3":"RPS14","4":"3"},{"1":"9.104085e-02","2":"1.000000e+00","3":"FXYD5","4":"3"},{"1":"1.180489e-01","2":"1.000000e+00","3":"RPL4","4":"3"},{"1":"1.373242e-01","2":"1.000000e+00","3":"TRABD2A","4":"3"},{"1":"2.366283e-01","2":"1.000000e+00","3":"SERINC5","4":"3"},{"1":"3.100826e-01","2":"1.000000e+00","3":"KLF2","4":"3"},{"1":"3.279125e-01","2":"1.000000e+00","3":"RPS4X","4":"3"},{"1":"3.813936e-01","2":"1.000000e+00","3":"ARHGAP15","4":"3"},{"1":"4.558148e-01","2":"1.000000e+00","3":"IKZF1","4":"3"},{"1":"6.221300e-01","2":"1.000000e+00","3":"GIMAP7","4":"3"},{"1":"6.397415e-01","2":"1.000000e+00","3":"EEF1A1","4":"3"},{"1":"2.447522e-18","2":"4.435154e-14","3":"PF4","4":"4"},{"1":"8.555213e-12","2":"7.751450e-08","3":"PPBP","4":"4"},{"1":"8.351917e-10","2":"5.044836e-06","3":"GNG11","4":"4"},{"1":"3.401792e-09","2":"1.541097e-05","3":"NRGN","4":"4"},{"1":"6.227863e-09","2":"2.257102e-05","3":"HIST1H2AC","4":"4"},{"1":"3.207902e-08","2":"9.688399e-05","3":"OST4","4":"4"},{"1":"6.024783e-07","2":"1.559644e-03","3":"GP9","4":"4"},{"1":"6.966187e-07","2":"1.577929e-03","3":"MYL9","4":"4"},{"1":"1.176725e-06","2":"2.369269e-03","3":"CAVIN2","4":"4"},{"1":"1.362345e-06","2":"2.386171e-03","3":"HIST1H3H","4":"4"},{"1":"1.448479e-06","2":"2.386171e-03","3":"TSC22D1","4":"4"},{"1":"1.795087e-06","2":"2.710731e-03","3":"TREML1","4":"4"},{"1":"6.294823e-06","2":"8.774500e-03","3":"TUBB1","4":"4"},{"1":"7.652064e-06","2":"9.904503e-03","3":"ACRBP","4":"4"},{"1":"8.437806e-06","2":"1.019343e-02","3":"PDLIM1","4":"4"},{"1":"1.486869e-05","2":"1.683972e-02","3":"CA2","4":"4"},{"1":"1.684712e-05","2":"1.795803e-02","3":"CMTM5","4":"4"},{"1":"2.212881e-05","2":"2.227756e-02","3":"CLEC1B","4":"4"},{"1":"5.003429e-05","2":"4.587282e-02","3":"MTURN","4":"4"},{"1":"5.062945e-05","2":"4.587282e-02","3":"SNCA","4":"4"},{"1":"9.077681e-05","2":"7.833174e-02","3":"RGS18","4":"4"},{"1":"3.308050e-04","2":"2.724781e-01","3":"HIST1H2BJ","4":"4"},{"1":"3.827355e-04","2":"3.015457e-01","3":"RSU1","4":"4"},{"1":"5.231825e-04","2":"3.950246e-01","3":"ITGA2B","4":"4"},{"1":"9.857106e-04","2":"7.144824e-01","3":"HIST1H4H","4":"4"},{"1":"4.266441e-31","2":"7.731219e-27","3":"CDKN1C","4":"5"},{"1":"2.162920e-06","2":"1.959713e-02","3":"SMIM25","4":"5"},{"1":"1.229021e-05","2":"7.423694e-02","3":"LST1","4":"5"},{"1":"7.879558e-04","2":"1.000000e+00","3":"MS4A7","4":"5"},{"1":"3.933448e-03","2":"1.000000e+00","3":"RHOC","4":"5"},{"1":"2.983619e-02","2":"1.000000e+00","3":"COTL1","4":"5"},{"1":"4.134132e-02","2":"1.000000e+00","3":"CSF1R","4":"5"},{"1":"1.150329e-01","2":"1.000000e+00","3":"RRAS","4":"5"},{"1":"1.284544e-01","2":"1.000000e+00","3":"FCGR3A","4":"5"},{"1":"1.372071e-01","2":"1.000000e+00","3":"LYPD2","4":"5"},{"1":"1.745266e-01","2":"1.000000e+00","3":"DRAP1","4":"5"},{"1":"2.278159e-01","2":"1.000000e+00","3":"LRRC25","4":"5"},{"1":"3.057888e-01","2":"1.000000e+00","3":"CTSC","4":"5"},{"1":"3.238763e-01","2":"1.000000e+00","3":"TCF7L2","4":"5"},{"1":"3.510875e-01","2":"1.000000e+00","3":"HES4","4":"5"},{"1":"4.474998e-01","2":"1.000000e+00","3":"PECAM1","4":"5"},{"1":"5.485043e-01","2":"1.000000e+00","3":"UNC119","4":"5"},{"1":"8.439343e-01","2":"1.000000e+00","3":"IFITM3","4":"5"},{"1":"9.340718e-01","2":"1.000000e+00","3":"SLC2A6","4":"5"},{"1":"9.447169e-01","2":"1.000000e+00","3":"AIF1","4":"5"},{"1":"9.735852e-01","2":"1.000000e+00","3":"SPN","4":"5"},{"1":"9.867635e-01","2":"1.000000e+00","3":"PKN1","4":"5"},{"1":"9.873346e-01","2":"1.000000e+00","3":"CKB","4":"5"},{"1":"9.883428e-01","2":"1.000000e+00","3":"FAM110A","4":"5"},{"1":"9.915692e-01","2":"1.000000e+00","3":"SERPINA1","4":"5"},{"1":"8.339891e-24","2":"1.511272e-19","3":"CD8A","4":"6"},{"1":"8.851581e-19","2":"8.019975e-15","3":"GZMK","4":"6"},{"1":"4.365347e-17","2":"2.636815e-13","3":"DUSP2","4":"6"},{"1":"1.667577e-15","2":"7.554540e-12","3":"TRGC2","4":"6"},{"1":"2.280457e-12","2":"8.264833e-09","3":"LYAR","4":"6"},{"1":"1.727666e-07","2":"5.217839e-04","3":"KLRG1","4":"6"},{"1":"5.755847e-06","2":"1.490024e-02","3":"CD8B","4":"6"},{"1":"3.068889e-02","2":"1.000000e+00","3":"CD3D","4":"6"},{"1":"1.207693e-01","2":"1.000000e+00","3":"IL32","4":"6"},{"1":"4.730237e-01","2":"1.000000e+00","3":"TNFAIP3","4":"6"},{"1":"6.261967e-01","2":"1.000000e+00","3":"PIK3R1","4":"6"},{"1":"7.838923e-01","2":"1.000000e+00","3":"CD3G","4":"6"},{"1":"9.487679e-01","2":"1.000000e+00","3":"SRSF7","4":"6"},{"1":"9.889322e-01","2":"1.000000e+00","3":"PTPRC","4":"6"},{"1":"9.926816e-01","2":"1.000000e+00","3":"CCL5","4":"6"},{"1":"9.985109e-01","2":"1.000000e+00","3":"TUBA4A","4":"6"},{"1":"9.996093e-01","2":"1.000000e+00","3":"RPS26","4":"6"},{"1":"9.999604e-01","2":"1.000000e+00","3":"LINC01871","4":"6"},{"1":"9.999991e-01","2":"1.000000e+00","3":"CD2","4":"6"},{"1":"9.999997e-01","2":"1.000000e+00","3":"CD3E","4":"6"},{"1":"9.999998e-01","2":"1.000000e+00","3":"HSP90AA1","4":"6"},{"1":"1.000000e+00","2":"1.000000e+00","3":"SELENOK","4":"6"},{"1":"1.000000e+00","2":"1.000000e+00","3":"TERF2IP","4":"6"},{"1":"1.000000e+00","2":"1.000000e+00","3":"CD99","4":"6"},{"1":"1.000000e+00","2":"1.000000e+00","3":"A2M-AS1","4":"6"},{"1":"9.657603e-46","2":"1.750054e-41","3":"LGALS2","4":"7"},{"1":"1.870140e-05","2":"1.694441e-01","3":"CPVL","4":"7"},{"1":"5.976868e-03","2":"1.000000e+00","3":"AP1S2","4":"7"},{"1":"2.569471e-02","2":"1.000000e+00","3":"TNFAIP2","4":"7"},{"1":"2.232039e-01","2":"1.000000e+00","3":"DUSP6","4":"7"},{"1":"3.036709e-01","2":"1.000000e+00","3":"LGALS3","4":"7"},{"1":"4.185150e-01","2":"1.000000e+00","3":"FGL2","4":"7"},{"1":"4.383911e-01","2":"1.000000e+00","3":"FCGRT","4":"7"},{"1":"4.674494e-01","2":"1.000000e+00","3":"ID2","4":"7"},{"1":"7.513470e-01","2":"1.000000e+00","3":"AHNAK","4":"7"},{"1":"9.613000e-01","2":"1.000000e+00","3":"S100A10","4":"7"},{"1":"9.618001e-01","2":"1.000000e+00","3":"PCBP2","4":"7"},{"1":"9.621890e-01","2":"1.000000e+00","3":"CTSH","4":"7"},{"1":"9.793858e-01","2":"1.000000e+00","3":"ZFP36L1","4":"7"},{"1":"9.884106e-01","2":"1.000000e+00","3":"TGFBI","4":"7"},{"1":"9.897757e-01","2":"1.000000e+00","3":"VAMP8","4":"7"},{"1":"9.943999e-01","2":"1.000000e+00","3":"GSTP1","4":"7"},{"1":"9.954535e-01","2":"1.000000e+00","3":"HLA-DRB5","4":"7"},{"1":"9.967126e-01","2":"1.000000e+00","3":"CD44","4":"7"},{"1":"9.974169e-01","2":"1.000000e+00","3":"CST3","4":"7"},{"1":"9.977150e-01","2":"1.000000e+00","3":"ZNF385A","4":"7"},{"1":"9.990675e-01","2":"1.000000e+00","3":"ADA2","4":"7"},{"1":"9.994750e-01","2":"1.000000e+00","3":"MARCKS","4":"7"},{"1":"9.995800e-01","2":"1.000000e+00","3":"PFDN5","4":"7"},{"1":"9.997465e-01","2":"1.000000e+00","3":"IFI30","4":"7"},{"1":"1.646650e-101","2":"2.983894e-97","3":"KLRF1","4":"8"},{"1":"6.711820e-101","2":"6.081245e-97","3":"GNLY","4":"8"},{"1":"1.249715e-82","2":"7.548693e-79","3":"GZMB","4":"8"},{"1":"5.154014e-72","2":"2.334897e-68","3":"PRF1","4":"8"},{"1":"1.973073e-63","2":"7.150811e-60","3":"SPON2","4":"8"},{"1":"2.521322e-60","2":"7.614814e-57","3":"CD247","4":"8"},{"1":"6.293946e-38","2":"1.629323e-34","3":"FGFBP2","4":"8"},{"1":"3.058982e-32","2":"6.928976e-29","3":"CLIC3","4":"8"},{"1":"3.492533e-32","2":"7.032021e-29","3":"TRDC","4":"8"},{"1":"6.929692e-26","2":"1.255729e-22","3":"KLRD1","4":"8"},{"1":"4.274415e-22","2":"7.041516e-19","3":"CTSW","4":"8"},{"1":"2.177081e-14","2":"3.287574e-11","3":"MYOM2","4":"8"},{"1":"1.024977e-12","2":"1.428739e-09","3":"NKG7","4":"8"},{"1":"6.507233e-09","2":"8.422684e-06","3":"CD7","4":"8"},{"1":"7.279700e-06","2":"8.794363e-03","3":"KLRB1","4":"8"},{"1":"2.162146e-03","2":"1.000000e+00","3":"HOPX","4":"8"},{"1":"2.228458e-03","2":"1.000000e+00","3":"IL2RB","4":"8"},{"1":"1.026002e-02","2":"1.000000e+00","3":"APMAP","4":"8"},{"1":"1.734931e-02","2":"1.000000e+00","3":"PTGDS","4":"8"},{"1":"3.763955e-02","2":"1.000000e+00","3":"ABHD17A","4":"8"},{"1":"1.441877e-01","2":"1.000000e+00","3":"CST7","4":"8"},{"1":"1.452059e-01","2":"1.000000e+00","3":"GNPTAB","4":"8"},{"1":"2.343774e-01","2":"1.000000e+00","3":"CEP78","4":"8"},{"1":"4.301734e-01","2":"1.000000e+00","3":"SYNGR1","4":"8"},{"1":"4.630103e-01","2":"1.000000e+00","3":"PRSS23","4":"8"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
+{"columns":[{"label":["p.value"],"name":[1],"type":["dbl"],"align":["right"]},{"label":["FDR"],"name":[2],"type":["dbl"],"align":["right"]},{"label":["gene"],"name":[3],"type":["chr"],"align":["left"]},{"label":["cluster"],"name":[4],"type":["chr"],"align":["left"]}],"data":[{"1":"1.573211e-139","2":"2.861041e-135","3":"S100A12","4":"1"},{"1":"1.357055e-64","2":"1.233970e-60","3":"S100A8","4":"1"},{"1":"1.404495e-61","2":"8.514047e-58","3":"S100A9","4":"1"},{"1":"3.897844e-49","2":"1.772155e-45","3":"PLBD1","4":"1"},{"1":"7.452569e-38","2":"2.710648e-34","3":"NAMPT","4":"1"},{"1":"6.836057e-31","2":"2.072009e-27","3":"VCAN","4":"1"},{"1":"4.934845e-28","2":"1.282073e-24","3":"CXCL8","4":"1"},{"1":"1.839552e-26","2":"4.181762e-23","3":"MNDA","4":"1"},{"1":"2.944248e-21","2":"5.949344e-18","3":"CTSD","4":"1"},{"1":"2.249866e-18","2":"4.091606e-15","3":"G0S2","4":"1"},{"1":"3.836479e-18","2":"6.342745e-15","3":"GCA","4":"1"},{"1":"2.193409e-16","2":"3.324111e-13","3":"SELL","4":"1"},{"1":"6.311832e-15","2":"8.829768e-12","3":"SERPINB1","4":"1"},{"1":"2.488560e-12","2":"3.232639e-09","3":"RETN","4":"1"},{"1":"3.454486e-12","2":"4.188218e-09","3":"SLC2A3","4":"1"},{"1":"2.581754e-11","2":"2.934486e-08","3":"MCEMP1","4":"1"},{"1":"1.262275e-10","2":"1.350337e-07","3":"HP","4":"1"},{"1":"3.214284e-10","2":"3.247499e-07","3":"FPR1","4":"1"},{"1":"1.306922e-07","2":"1.250931e-04","3":"RNASE2","4":"1"},{"1":"1.464504e-07","2":"1.331673e-04","3":"NCF1","4":"1"},{"1":"2.345354e-07","2":"2.031076e-04","3":"CKAP4","4":"1"},{"1":"2.462918e-07","2":"2.035938e-04","3":"IL1B","4":"1"},{"1":"3.330715e-05","2":"2.633582e-02","3":"IFI27","4":"1"},{"1":"4.007048e-05","2":"3.036341e-02","3":"PGD","4":"1"},{"1":"1.187350e-04","2":"8.637258e-02","3":"SRGN","4":"1"},{"1":"2.738449e-04","2":"1.000000e+00","3":"IGKC","4":"2"},{"1":"9.945227e-01","2":"1.000000e+00","3":"IGHD","4":"2"},{"1":"9.946975e-01","2":"1.000000e+00","3":"IGHM","4":"2"},{"1":"9.993719e-01","2":"1.000000e+00","3":"YBX3","4":"2"},{"1":"9.999226e-01","2":"1.000000e+00","3":"BCL11A","4":"2"},{"1":"9.999492e-01","2":"1.000000e+00","3":"TCL1A","4":"2"},{"1":"9.999810e-01","2":"1.000000e+00","3":"SNX2","4":"2"},{"1":"9.999846e-01","2":"1.000000e+00","3":"FOXP1","4":"2"},{"1":"9.999870e-01","2":"1.000000e+00","3":"HLA-DMB","4":"2"},{"1":"9.999908e-01","2":"1.000000e+00","3":"TSC22D3","4":"2"},{"1":"9.999938e-01","2":"1.000000e+00","3":"RBM38","4":"2"},{"1":"9.999949e-01","2":"1.000000e+00","3":"VPREB3","4":"2"},{"1":"9.999976e-01","2":"1.000000e+00","3":"HLA-DQA1","4":"2"},{"1":"9.999977e-01","2":"1.000000e+00","3":"FCER2","4":"2"},{"1":"9.999985e-01","2":"1.000000e+00","3":"RCSD1","4":"2"},{"1":"9.999988e-01","2":"1.000000e+00","3":"CD79A","4":"2"},{"1":"9.999990e-01","2":"1.000000e+00","3":"PLPP5","4":"2"},{"1":"9.999995e-01","2":"1.000000e+00","3":"IL4R","4":"2"},{"1":"9.999995e-01","2":"1.000000e+00","3":"JUN","4":"2"},{"1":"9.999996e-01","2":"1.000000e+00","3":"PAX5","4":"2"},{"1":"9.999997e-01","2":"1.000000e+00","3":"CD69","4":"2"},{"1":"9.999997e-01","2":"1.000000e+00","3":"BCLAF1","4":"2"},{"1":"9.999999e-01","2":"1.000000e+00","3":"HLA-DPB1","4":"2"},{"1":"9.999999e-01","2":"1.000000e+00","3":"TAGAP","4":"2"},{"1":"9.999999e-01","2":"1.000000e+00","3":"CXXC5","4":"2"},{"1":"2.071180e-21","2":"3.766648e-17","3":"LGALS2","4":"3"},{"1":"5.912751e-01","2":"1.000000e+00","3":"CPVL","4":"3"},{"1":"6.427074e-01","2":"1.000000e+00","3":"HLA-DRB5","4":"3"},{"1":"8.655718e-01","2":"1.000000e+00","3":"AP1S2","4":"3"},{"1":"9.894068e-01","2":"1.000000e+00","3":"TNFAIP2","4":"3"},{"1":"9.977038e-01","2":"1.000000e+00","3":"ID2","4":"3"},{"1":"9.981083e-01","2":"1.000000e+00","3":"AHNAK","4":"3"},{"1":"9.997610e-01","2":"1.000000e+00","3":"PCBP2","4":"3"},{"1":"9.997921e-01","2":"1.000000e+00","3":"DUSP6","4":"3"},{"1":"9.999903e-01","2":"1.000000e+00","3":"CTSH","4":"3"},{"1":"1.000000e+00","2":"1.000000e+00","3":"FGL2","4":"3"},{"1":"1.000000e+00","2":"1.000000e+00","3":"ZFP36L1","4":"3"},{"1":"1.000000e+00","2":"1.000000e+00","3":"VAMP8","4":"3"},{"1":"1.000000e+00","2":"1.000000e+00","3":"TGFBI","4":"3"},{"1":"1.000000e+00","2":"1.000000e+00","3":"CD44","4":"3"},{"1":"1.000000e+00","2":"1.000000e+00","3":"IRF1","4":"3"},{"1":"1.000000e+00","2":"1.000000e+00","3":"FCGRT","4":"3"},{"1":"1.000000e+00","2":"1.000000e+00","3":"ZNF385A","4":"3"},{"1":"1.000000e+00","2":"1.000000e+00","3":"OGFRL1","4":"3"},{"1":"1.000000e+00","2":"1.000000e+00","3":"GPX4","4":"3"},{"1":"1.000000e+00","2":"1.000000e+00","3":"MYADM","4":"3"},{"1":"1.000000e+00","2":"1.000000e+00","3":"ARF5","4":"3"},{"1":"1.000000e+00","2":"1.000000e+00","3":"CRTAP","4":"3"},{"1":"1.000000e+00","2":"1.000000e+00","3":"ADA2","4":"3"},{"1":"1.000000e+00","2":"1.000000e+00","3":"LGALS3","4":"3"},{"1":"1.957815e-49","2":"3.560483e-45","3":"IL7R","4":"4"},{"1":"3.952551e-23","2":"3.594055e-19","3":"NOSIP","4":"4"},{"1":"6.060234e-23","2":"3.673714e-19","3":"MAL","4":"4"},{"1":"1.834893e-20","2":"8.342340e-17","3":"SARAF","4":"4"},{"1":"4.609265e-19","2":"1.676482e-15","3":"RCAN3","4":"4"},{"1":"3.227584e-14","2":"9.782807e-11","3":"LDHB","4":"4"},{"1":"1.983462e-11","2":"5.153035e-08","3":"PIK3IP1","4":"4"},{"1":"8.357611e-09","2":"1.899894e-05","3":"TCF7","4":"4"},{"1":"1.377736e-08","2":"2.783944e-05","3":"LEPROTL1","4":"4"},{"1":"2.831569e-04","2":"5.149492e-01","3":"TPT1","4":"4"},{"1":"2.777223e-03","2":"1.000000e+00","3":"AP3M2","4":"4"},{"1":"1.063830e-02","2":"1.000000e+00","3":"LEF1","4":"4"},{"1":"8.333855e-02","2":"1.000000e+00","3":"LTB","4":"4"},{"1":"9.966263e-02","2":"1.000000e+00","3":"PRKCA","4":"4"},{"1":"1.167790e-01","2":"1.000000e+00","3":"TRABD2A","4":"4"},{"1":"2.207272e-01","2":"1.000000e+00","3":"KLF2","4":"4"},{"1":"2.213194e-01","2":"1.000000e+00","3":"ARHGAP15","4":"4"},{"1":"3.680085e-01","2":"1.000000e+00","3":"RPS14","4":"4"},{"1":"3.806105e-01","2":"1.000000e+00","3":"IKZF1","4":"4"},{"1":"5.467818e-01","2":"1.000000e+00","3":"RPL4","4":"4"},{"1":"6.378497e-01","2":"1.000000e+00","3":"CAMK4","4":"4"},{"1":"6.416417e-01","2":"1.000000e+00","3":"SERINC5","4":"4"},{"1":"6.555261e-01","2":"1.000000e+00","3":"RPS4X","4":"4"},{"1":"7.309718e-01","2":"1.000000e+00","3":"SATB1","4":"4"},{"1":"7.516316e-01","2":"1.000000e+00","3":"FLT3LG","4":"4"},{"1":"1.743120e-16","2":"3.170037e-12","3":"IGLC3","4":"5"},{"1":"2.018533e-08","2":"1.835452e-04","3":"IGLC2","4":"5"},{"1":"9.967007e-01","2":"1.000000e+00","3":"CD69","4":"5"},{"1":"9.986363e-01","2":"1.000000e+00","3":"PPP1R15A","4":"5"},{"1":"9.998976e-01","2":"1.000000e+00","3":"JUN","4":"5"},{"1":"9.998993e-01","2":"1.000000e+00","3":"NFKBID","4":"5"},{"1":"9.999301e-01","2":"1.000000e+00","3":"JUNB","4":"5"},{"1":"9.999658e-01","2":"1.000000e+00","3":"HSP90AB1","4":"5"},{"1":"9.999705e-01","2":"1.000000e+00","3":"XAF1","4":"5"},{"1":"9.999736e-01","2":"1.000000e+00","3":"MTRNR2L12","4":"5"},{"1":"9.999810e-01","2":"1.000000e+00","3":"HERPUD1","4":"5"},{"1":"9.999871e-01","2":"1.000000e+00","3":"RPS4Y1","4":"5"},{"1":"9.999887e-01","2":"1.000000e+00","3":"CD83","4":"5"},{"1":"9.999902e-01","2":"1.000000e+00","3":"EAF2","4":"5"},{"1":"9.999969e-01","2":"1.000000e+00","3":"PMAIP1","4":"5"},{"1":"9.999969e-01","2":"1.000000e+00","3":"ZNF331","4":"5"},{"1":"9.999973e-01","2":"1.000000e+00","3":"HLA-DQB1","4":"5"},{"1":"9.999978e-01","2":"1.000000e+00","3":"NR4A2","4":"5"},{"1":"9.999984e-01","2":"1.000000e+00","3":"GPBP1","4":"5"},{"1":"9.999987e-01","2":"1.000000e+00","3":"BTG2","4":"5"},{"1":"9.999993e-01","2":"1.000000e+00","3":"IGHM","4":"5"},{"1":"9.999994e-01","2":"1.000000e+00","3":"HLA-DQA2","4":"5"},{"1":"9.999994e-01","2":"1.000000e+00","3":"UBALD2","4":"5"},{"1":"9.999995e-01","2":"1.000000e+00","3":"EIF5A","4":"5"},{"1":"9.999997e-01","2":"1.000000e+00","3":"CXCR4","4":"5"},{"1":"6.473855e-27","2":"1.177335e-22","3":"CD8A","4":"6"},{"1":"5.055552e-25","2":"4.597013e-21","3":"TRGC2","4":"6"},{"1":"1.061696e-19","2":"6.436000e-16","3":"GZMK","4":"6"},{"1":"8.867964e-13","2":"4.031820e-09","3":"LYAR","4":"6"},{"1":"4.601351e-11","2":"1.673603e-07","3":"KLRG1","4":"6"},{"1":"3.847028e-08","2":"1.166034e-04","3":"DUSP2","4":"6"},{"1":"1.808267e-02","2":"1.000000e+00","3":"CD8B","4":"6"},{"1":"3.753736e-01","2":"1.000000e+00","3":"IL32","4":"6"},{"1":"4.747186e-01","2":"1.000000e+00","3":"TNFAIP3","4":"6"},{"1":"5.126808e-01","2":"1.000000e+00","3":"CD3D","4":"6"},{"1":"8.892472e-01","2":"1.000000e+00","3":"CCL5","4":"6"},{"1":"9.791632e-01","2":"1.000000e+00","3":"PIK3R1","4":"6"},{"1":"9.929423e-01","2":"1.000000e+00","3":"SRSF7","4":"6"},{"1":"9.931404e-01","2":"1.000000e+00","3":"CD3G","4":"6"},{"1":"9.994580e-01","2":"1.000000e+00","3":"RPS26","4":"6"},{"1":"9.996986e-01","2":"1.000000e+00","3":"TUBA4A","4":"6"},{"1":"9.998347e-01","2":"1.000000e+00","3":"LINC01871","4":"6"},{"1":"9.998671e-01","2":"1.000000e+00","3":"GZMH","4":"6"},{"1":"9.999915e-01","2":"1.000000e+00","3":"CD2","4":"6"},{"1":"9.999994e-01","2":"1.000000e+00","3":"PTPRC","4":"6"},{"1":"1.000000e+00","2":"1.000000e+00","3":"A2M-AS1","4":"6"},{"1":"1.000000e+00","2":"1.000000e+00","3":"SUB1","4":"6"},{"1":"1.000000e+00","2":"1.000000e+00","3":"CD99","4":"6"},{"1":"1.000000e+00","2":"1.000000e+00","3":"TERF2IP","4":"6"},{"1":"1.000000e+00","2":"1.000000e+00","3":"PTMS","4":"6"},{"1":"3.166918e-96","2":"5.759357e-92","3":"GNLY","4":"7"},{"1":"3.219084e-89","2":"2.927113e-85","3":"KLRF1","4":"7"},{"1":"3.573391e-78","2":"2.166189e-74","3":"GZMB","4":"7"},{"1":"1.620109e-71","2":"7.365826e-68","3":"CD247","4":"7"},{"1":"2.963158e-69","2":"1.077760e-65","3":"PRF1","4":"7"},{"1":"1.224592e-68","2":"3.711738e-65","3":"SPON2","4":"7"},{"1":"9.096653e-43","2":"2.363310e-39","3":"FGFBP2","4":"7"},{"1":"2.596819e-37","2":"5.903218e-34","3":"CLIC3","4":"7"},{"1":"2.046126e-21","2":"4.134539e-18","3":"TRDC","4":"7"},{"1":"3.466262e-21","2":"6.303744e-18","3":"CD7","4":"7"},{"1":"1.355687e-20","2":"2.241321e-17","3":"KLRD1","4":"7"},{"1":"1.454823e-18","2":"2.204784e-15","3":"CTSW","4":"7"},{"1":"1.610275e-18","2":"2.252650e-15","3":"MYOM2","4":"7"},{"1":"2.166804e-09","2":"2.814679e-06","3":"NKG7","4":"7"},{"1":"1.121222e-07","2":"1.359370e-04","3":"KLRB1","4":"7"},{"1":"6.015627e-06","2":"6.837512e-03","3":"IL2RB","4":"7"},{"1":"9.773591e-03","2":"1.000000e+00","3":"HOPX","4":"7"},{"1":"3.795480e-02","2":"1.000000e+00","3":"APMAP","4":"7"},{"1":"4.684338e-02","2":"1.000000e+00","3":"PTGDS","4":"7"},{"1":"8.161073e-02","2":"1.000000e+00","3":"ABHD17A","4":"7"},{"1":"9.403244e-02","2":"1.000000e+00","3":"CST7","4":"7"},{"1":"1.925463e-01","2":"1.000000e+00","3":"SYNGR1","4":"7"},{"1":"2.216133e-01","2":"1.000000e+00","3":"GNPTAB","4":"7"},{"1":"3.786240e-01","2":"1.000000e+00","3":"CEP78","4":"7"},{"1":"4.642353e-01","2":"1.000000e+00","3":"IGFBP7","4":"7"},{"1":"1.934729e-18","2":"3.518498e-14","3":"PF4","4":"8"},{"1":"1.279573e-13","2":"1.163516e-09","3":"PPBP","4":"8"},{"1":"7.711566e-11","2":"4.674751e-07","3":"GNG11","4":"8"},{"1":"1.031793e-10","2":"4.691049e-07","3":"NRGN","4":"8"},{"1":"2.047241e-10","2":"7.446225e-07","3":"HIST1H2AC","4":"8"},{"1":"2.245263e-08","2":"6.805392e-05","3":"OST4","4":"8"},{"1":"6.013928e-08","2":"1.375987e-04","3":"HIST1H3H","4":"8"},{"1":"6.052950e-08","2":"1.375987e-04","3":"TSC22D1","4":"8"},{"1":"1.090011e-07","2":"2.202548e-04","3":"GP9","4":"8"},{"1":"2.492140e-07","2":"4.532207e-04","3":"CLEC1B","4":"8"},{"1":"3.311721e-07","2":"5.475178e-04","3":"CMTM5","4":"8"},{"1":"4.986366e-07","2":"7.556838e-04","3":"ACRBP","4":"8"},{"1":"9.460679e-07","2":"1.323476e-03","3":"PDLIM1","4":"8"},{"1":"1.475613e-06","2":"1.916821e-03","3":"RGS18","4":"8"},{"1":"2.023166e-06","2":"2.452887e-03","3":"TREML1","4":"8"},{"1":"2.680498e-06","2":"3.046721e-03","3":"RGS10","4":"8"},{"1":"3.029705e-06","2":"3.241072e-03","3":"TMEM40","4":"8"},{"1":"4.678143e-06","2":"4.726484e-03","3":"MTURN","4":"8"},{"1":"5.756916e-06","2":"5.510278e-03","3":"CAVIN2","4":"8"},{"1":"6.928047e-06","2":"6.299673e-03","3":"CA2","4":"8"},{"1":"1.561814e-05","2":"1.352531e-02","3":"TUBB1","4":"8"},{"1":"2.172159e-05","2":"1.795586e-02","3":"C2orf88","4":"8"},{"1":"2.560435e-05","2":"2.024525e-02","3":"HIST1H2BJ","4":"8"},{"1":"3.764045e-05","2":"2.852205e-02","3":"GRAP2","4":"8"},{"1":"4.128051e-05","2":"3.002910e-02","3":"MYL9","4":"8"},{"1":"6.949944e-71","2":"1.263917e-66","3":"CDKN1C","4":"9"},{"1":"8.674609e-65","2":"7.887822e-61","3":"LST1","4":"9"},{"1":"2.675060e-49","2":"1.621622e-45","3":"FCGR3A","4":"9"},{"1":"3.004172e-36","2":"1.365847e-32","3":"SMIM25","4":"9"},{"1":"1.004868e-27","2":"3.654905e-24","3":"COTL1","4":"9"},{"1":"2.027409e-26","2":"6.145077e-23","3":"MS4A7","4":"9"},{"1":"3.981092e-25","2":"1.034288e-21","3":"AIF1","4":"9"},{"1":"9.226084e-18","2":"2.097320e-14","3":"LRRC25","4":"9"},{"1":"1.589964e-17","2":"3.212787e-14","3":"DRAP1","4":"9"},{"1":"7.489759e-17","2":"1.362088e-13","3":"CSF1R","4":"9"},{"1":"7.928441e-15","2":"1.310788e-11","3":"PECAM1","4":"9"},{"1":"9.726848e-15","2":"1.474104e-11","3":"TCF7L2","4":"9"},{"1":"1.598644e-14","2":"2.236380e-11","3":"HES4","4":"9"},{"1":"6.042318e-14","2":"7.848971e-11","3":"RHOC","4":"9"},{"1":"2.918501e-12","2":"3.538390e-09","3":"SERPINA1","4":"9"},{"1":"4.354126e-12","2":"4.949009e-09","3":"CTSC","4":"9"},{"1":"5.433142e-12","2":"5.812184e-09","3":"MBD2","4":"9"},{"1":"2.433719e-11","2":"2.458868e-08","3":"UNC119","4":"9"},{"1":"6.077317e-10","2":"5.816952e-07","3":"IFITM3","4":"9"},{"1":"1.170535e-08","2":"1.064368e-05","3":"FCER1G","4":"9"},{"1":"1.767141e-08","2":"1.530344e-05","3":"VSIR","4":"9"},{"1":"1.682333e-07","2":"1.390677e-04","3":"SIGLEC10","4":"9"},{"1":"2.570844e-07","2":"2.032755e-04","3":"RRAS","4":"9"},{"1":"3.618528e-07","2":"2.741939e-04","3":"LYN","4":"9"},{"1":"4.889642e-06","2":"3.556921e-03","3":"HMOX1","4":"9"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
   </script>
 </div>
 </div>
 </div>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mfrow =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">5</span>), <span class="at">mar =</span> <span class="fu">c</span>(<span class="dv">4</span>, <span class="dv">6</span>, <span class="dv">3</span>, <span class="dv">1</span>))</span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (i <span class="cf">in</span> <span class="fu">unique</span>(top25<span class="sc">$</span>cluster)) {</span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">barplot</span>(<span class="fu">sort</span>(<span class="fu">setNames</span>(<span class="sc">-</span><span class="fu">log10</span>(top25<span class="sc">$</span>p.value), top25<span class="sc">$</span>gene)[top25<span class="sc">$</span>cluster <span class="sc">==</span> i], F),</span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>        <span class="at">horiz =</span> T, <span class="at">las =</span> <span class="dv">1</span>, <span class="at">main =</span> <span class="fu">paste0</span>(i, <span class="st">" vs. rest"</span>), <span class="at">border =</span> <span class="st">"white"</span>, <span class="at">yaxs =</span> <span class="st">"i"</span>, <span class="at">xlab =</span> <span class="st">"-log10FC"</span></span>
-<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">abline</span>(<span class="at">v =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="sc">-</span><span class="fu">log10</span>(<span class="fl">0.05</span>)), <span class="at">lty =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">2</span>))</span>
-<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mfrow =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">5</span>), <span class="at">mar =</span> <span class="fu">c</span>(<span class="dv">4</span>, <span class="dv">6</span>, <span class="dv">3</span>, <span class="dv">1</span>))</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (i <span class="cf">in</span> <span class="fu">unique</span>(top25<span class="sc">$</span>cluster)) {</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">barplot</span>(<span class="fu">sort</span>(<span class="fu">setNames</span>(<span class="sc">-</span><span class="fu">log10</span>(top25<span class="sc">$</span>p.value), top25<span class="sc">$</span>gene)[top25<span class="sc">$</span>cluster <span class="sc">==</span> i], F),</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>        <span class="at">horiz =</span> T, <span class="at">las =</span> <span class="dv">1</span>, <span class="at">main =</span> <span class="fu">paste0</span>(i, <span class="st">" vs. rest"</span>), <span class="at">border =</span> <span class="st">"white"</span>, <span class="at">yaxs =</span> <span class="st">"i"</span>, <span class="at">xlab =</span> <span class="st">"-log10FC"</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">abline</span>(<span class="at">v =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="sc">-</span><span class="fu">log10</span>(<span class="fl">0.05</span>)), <span class="at">lty =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">2</span>))</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="bioc_05_dge_files/figure-html/unnamed-chunk-4-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-2"><img src="bioc_05_dge_files/figure-html/unnamed-chunk-4-1.png" class="img-fluid figure-img" width="768"></a></p>
+<p><a href="bioc_05_dge_files/figure-html/unnamed-chunk-5-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-2"><img src="bioc_05_dge_files/figure-html/unnamed-chunk-5-1.png" class="img-fluid figure-img" width="672"></a></p>
 </figure>
 </div>
 </div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="bioc_05_dge_files/figure-html/unnamed-chunk-4-2.png" class="lightbox" data-gallery="quarto-lightbox-gallery-3"><img src="bioc_05_dge_files/figure-html/unnamed-chunk-4-2.png" class="img-fluid figure-img" width="768"></a></p>
+<p><a href="bioc_05_dge_files/figure-html/unnamed-chunk-5-2.png" class="lightbox" data-gallery="quarto-lightbox-gallery-3"><img src="bioc_05_dge_files/figure-html/unnamed-chunk-5-2.png" class="img-fluid figure-img" width="672"></a></p>
 </figure>
 </div>
 </div>
 </div>
 <p>We can visualize them as a heatmap. Here we are selecting the top 5.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">as_tibble</span>(top25) <span class="sc">%&gt;%</span> <span class="fu">group_by</span>(cluster)  <span class="sc">%&gt;%</span> <span class="fu">top_n</span>(<span class="sc">-</span><span class="dv">5</span>, p.value) <span class="ot">-&gt;</span> top5</span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>scater<span class="sc">::</span><span class="fu">plotHeatmap</span>(sce[, <span class="fu">order</span>(sce<span class="sc">$</span>louvain_SNNk15)],</span>
-<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">features =</span> <span class="fu">unique</span>(top5<span class="sc">$</span>gene),</span>
-<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">center =</span> T, <span class="at">zlim =</span> <span class="fu">c</span>(<span class="sc">-</span><span class="dv">3</span>, <span class="dv">3</span>),</span>
-<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">colour_columns_by =</span> <span class="st">"louvain_SNNk15"</span>,</span>
-<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">show_colnames =</span> F, <span class="at">cluster_cols =</span> F,</span>
-<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">fontsize_row =</span> <span class="dv">6</span>,</span>
-<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">color =</span> <span class="fu">colorRampPalette</span>(<span class="fu">c</span>(<span class="st">"purple"</span>, <span class="st">"black"</span>, <span class="st">"yellow"</span>))(<span class="dv">90</span>)</span>
-<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">as_tibble</span>(top25) <span class="sc">%&gt;%</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">group_by</span>(cluster) <span class="sc">%&gt;%</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">top_n</span>(<span class="sc">-</span><span class="dv">5</span>, p.value) <span class="ot">-&gt;</span> top5</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>scater<span class="sc">::</span><span class="fu">plotHeatmap</span>(sce[, <span class="fu">order</span>(sce<span class="sc">$</span>louvain_SNNk15)],</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">features =</span> <span class="fu">unique</span>(top5<span class="sc">$</span>gene),</span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">center =</span> T, <span class="at">zlim =</span> <span class="fu">c</span>(<span class="sc">-</span><span class="dv">3</span>, <span class="dv">3</span>),</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">colour_columns_by =</span> <span class="st">"louvain_SNNk15"</span>,</span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">show_colnames =</span> F, <span class="at">cluster_cols =</span> F,</span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">fontsize_row =</span> <span class="dv">6</span>,</span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">color =</span> <span class="fu">colorRampPalette</span>(<span class="fu">c</span>(<span class="st">"purple"</span>, <span class="st">"black"</span>, <span class="st">"yellow"</span>))(<span class="dv">90</span>)</span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="bioc_05_dge_files/figure-html/unnamed-chunk-5-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-4"><img src="bioc_05_dge_files/figure-html/unnamed-chunk-5-1.png" class="img-fluid figure-img" width="768"></a></p>
+<p><a href="bioc_05_dge_files/figure-html/unnamed-chunk-6-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-4"><img src="bioc_05_dge_files/figure-html/unnamed-chunk-6-1.png" class="img-fluid figure-img" width="768"></a></p>
 </figure>
 </div>
 </div>
 </div>
 <p>We can also plot a violin plot for each gene.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>scater<span class="sc">::</span><span class="fu">plotExpression</span>(sce, <span class="at">features =</span> <span class="fu">unique</span>(top5<span class="sc">$</span>gene), <span class="at">x =</span> <span class="st">"louvain_SNNk15"</span>, <span class="at">ncol =</span> <span class="dv">5</span>, <span class="at">colour_by =</span> <span class="st">"louvain_SNNk15"</span>, <span class="at">scales=</span><span class="st">"free"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>scater<span class="sc">::</span><span class="fu">plotExpression</span>(sce, <span class="at">features =</span> <span class="fu">unique</span>(top5<span class="sc">$</span>gene), <span class="at">x =</span> <span class="st">"louvain_SNNk15"</span>, <span class="at">ncol =</span> <span class="dv">5</span>, <span class="at">colour_by =</span> <span class="st">"louvain_SNNk15"</span>, <span class="at">scales =</span> <span class="st">"free"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="bioc_05_dge_files/figure-html/unnamed-chunk-6-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-5"><img src="bioc_05_dge_files/figure-html/unnamed-chunk-6-1.png" class="img-fluid figure-img" width="1248"></a></p>
+<p><a href="bioc_05_dge_files/figure-html/unnamed-chunk-7-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-5"><img src="bioc_05_dge_files/figure-html/unnamed-chunk-7-1.png" class="img-fluid figure-img" width="1248"></a></p>
 </figure>
 </div>
 </div>
@@ -391,57 +426,57 @@ AC240274.1 -0.00853061  0.00546812  0.00862573  0.00613482  0.01275548</code></p
 <h2 data-number="2" class="anchored" data-anchor-id="meta-dge_cond"><span class="header-section-number">2</span> DGE across conditions</h2>
 <p>The second way of computing differential expression is to answer which genes are differentially expressed within a cluster. For example, in our case we have libraries comming from patients and controls and we would like to know which genes are influenced the most in a particular cell type. For this end, we will first subset our data for the desired cell cluster, then change the cell identities to the variable of comparison (which now in our case is the “type”, e.g.&nbsp;Covid/Ctrl).</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Filter cells from that cluster</span></span>
-<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>cell_selection <span class="ot">&lt;-</span> sce[, sce<span class="sc">$</span>louvain_SNNk15 <span class="sc">==</span> <span class="dv">8</span>]</span>
-<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Compute differentiall expression</span></span>
-<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>DGE_cell_selection <span class="ot">&lt;-</span> <span class="fu">findMarkers</span>(</span>
-<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> cell_selection,</span>
-<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">groups =</span> cell_selection<span class="sc">@</span>colData<span class="sc">$</span>type,</span>
-<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">lfc =</span> .<span class="dv">25</span>,</span>
-<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">pval.type =</span> <span class="st">"all"</span>,</span>
-<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">direction =</span> <span class="st">"any"</span></span>
-<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>top5_cell_selection <span class="ot">&lt;-</span> <span class="fu">lapply</span>(<span class="fu">names</span>(DGE_cell_selection), <span class="cf">function</span>(x) {</span>
-<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>    temp <span class="ot">&lt;-</span> DGE_cell_selection[[x]][<span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">2</span>]</span>
-<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>    temp<span class="sc">$</span>gene <span class="ot">&lt;-</span> <span class="fu">rownames</span>(DGE_cell_selection[[x]])[<span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>]</span>
-<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>    temp<span class="sc">$</span>cluster <span class="ot">&lt;-</span> x</span>
-<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a>    <span class="fu">return</span>(temp)</span>
-<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a>})</span>
-<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a>top5_cell_selection <span class="ot">&lt;-</span> <span class="fu">as_tibble</span>(<span class="fu">do.call</span>(rbind, top5_cell_selection))</span>
-<span id="cb10-19"><a href="#cb10-19" aria-hidden="true" tabindex="-1"></a>top5_cell_selection</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Filter cells from that cluster</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>cell_selection <span class="ot">&lt;-</span> sce[, sce<span class="sc">$</span>louvain_SNNk15 <span class="sc">==</span> <span class="dv">8</span>]</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Compute differentiall expression</span></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>DGE_cell_selection <span class="ot">&lt;-</span> <span class="fu">findMarkers</span>(</span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> cell_selection,</span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">groups =</span> cell_selection<span class="sc">@</span>colData<span class="sc">$</span>type,</span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">lfc =</span> .<span class="dv">25</span>,</span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">pval.type =</span> <span class="st">"all"</span>,</span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">direction =</span> <span class="st">"any"</span></span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>top5_cell_selection <span class="ot">&lt;-</span> <span class="fu">lapply</span>(<span class="fu">names</span>(DGE_cell_selection), <span class="cf">function</span>(x) {</span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>    temp <span class="ot">&lt;-</span> DGE_cell_selection[[x]][<span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">2</span>]</span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a>    temp<span class="sc">$</span>gene <span class="ot">&lt;-</span> <span class="fu">rownames</span>(DGE_cell_selection[[x]])[<span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>]</span>
+<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a>    temp<span class="sc">$</span>cluster <span class="ot">&lt;-</span> x</span>
+<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a>    <span class="fu">return</span>(temp)</span>
+<span id="cb12-17"><a href="#cb12-17" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb12-18"><a href="#cb12-18" aria-hidden="true" tabindex="-1"></a>top5_cell_selection <span class="ot">&lt;-</span> <span class="fu">as_tibble</span>(<span class="fu">do.call</span>(rbind, top5_cell_selection))</span>
+<span id="cb12-19"><a href="#cb12-19" aria-hidden="true" tabindex="-1"></a>top5_cell_selection</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 
 <div data-pagedtable="false">
   <script data-pagedtable-source="" type="application/json">
-{"columns":[{"label":["p.value"],"name":[1],"type":["dbl"],"align":["right"]},{"label":["FDR"],"name":[2],"type":["dbl"],"align":["right"]},{"label":["gene"],"name":[3],"type":["chr"],"align":["left"]},{"label":["cluster"],"name":[4],"type":["chr"],"align":["left"]}],"data":[{"1":"8.758917e-35","2":"1.587203e-30","3":"XIST","4":"Control"},{"1":"6.671079e-25","2":"6.044331e-21","3":"ISG20","4":"Control"},{"1":"1.814405e-23","2":"1.095961e-19","3":"RPS4Y1","4":"Control"},{"1":"1.984634e-22","2":"8.990886e-19","3":"XAF1","4":"Control"},{"1":"1.023894e-20","2":"3.710798e-17","3":"JUN","4":"Control"},{"1":"8.758917e-35","2":"1.587203e-30","3":"XIST","4":"Covid"},{"1":"6.671079e-25","2":"6.044331e-21","3":"ISG20","4":"Covid"},{"1":"1.814405e-23","2":"1.095961e-19","3":"RPS4Y1","4":"Covid"},{"1":"1.984634e-22","2":"8.990886e-19","3":"XAF1","4":"Covid"},{"1":"1.023894e-20","2":"3.710798e-17","3":"JUN","4":"Covid"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
+{"columns":[{"label":["p.value"],"name":[1],"type":["dbl"],"align":["right"]},{"label":["FDR"],"name":[2],"type":["dbl"],"align":["right"]},{"label":["gene"],"name":[3],"type":["chr"],"align":["left"]},{"label":["cluster"],"name":[4],"type":["chr"],"align":["left"]}],"data":[{"1":"2.918286e-10","2":"5.307195e-06","3":"S100A8","4":"Control"},{"1":"3.768162e-08","2":"3.426390e-04","3":"RPS2","4":"Control"},{"1":"1.159292e-07","2":"7.027628e-04","3":"OST4","4":"Control"},{"1":"2.512053e-07","2":"1.142105e-03","3":"RPL28","4":"Control"},{"1":"2.219336e-06","2":"7.147791e-03","3":"CA2","4":"Control"},{"1":"2.918286e-10","2":"5.307195e-06","3":"S100A8","4":"Covid"},{"1":"3.768162e-08","2":"3.426390e-04","3":"RPS2","4":"Covid"},{"1":"1.159292e-07","2":"7.027628e-04","3":"OST4","4":"Covid"},{"1":"2.512053e-07","2":"1.142105e-03","3":"RPL28","4":"Covid"},{"1":"2.219336e-06","2":"7.147791e-03","3":"CA2","4":"Covid"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
   </script>
 </div>
 </div>
 </div>
 <p>We can now plot the expression across the <strong>type</strong>.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>scater<span class="sc">::</span><span class="fu">plotExpression</span>(cell_selection, <span class="at">features =</span> <span class="fu">unique</span>(top5_cell_selection<span class="sc">$</span>gene), <span class="at">x =</span> <span class="st">"type"</span>, <span class="at">ncol =</span> <span class="dv">5</span>, <span class="at">colour_by =</span> <span class="st">"type"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>scater<span class="sc">::</span><span class="fu">plotExpression</span>(cell_selection, <span class="at">features =</span> <span class="fu">unique</span>(top5_cell_selection<span class="sc">$</span>gene), <span class="at">x =</span> <span class="st">"type"</span>, <span class="at">ncol =</span> <span class="dv">5</span>, <span class="at">colour_by =</span> <span class="st">"type"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="bioc_05_dge_files/figure-html/unnamed-chunk-8-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-6"><img src="bioc_05_dge_files/figure-html/unnamed-chunk-8-1.png" class="img-fluid figure-img" width="576"></a></p>
+<p><a href="bioc_05_dge_files/figure-html/unnamed-chunk-9-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-6"><img src="bioc_05_dge_files/figure-html/unnamed-chunk-9-1.png" class="img-fluid figure-img" width="576"></a></p>
 </figure>
 </div>
 </div>
 </div>
 <p>#DGE_ALL6.2:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>plotlist <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
-<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (i <span class="cf">in</span> <span class="fu">unique</span>(top5_cell_selection<span class="sc">$</span>gene)) {</span>
-<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>    plotlist[[i]] <span class="ot">&lt;-</span> <span class="fu">plotReducedDim</span>(sce, <span class="at">dimred =</span> <span class="st">"UMAP_on_MNN"</span>, <span class="at">colour_by =</span> i, <span class="at">by_exprs_values =</span> <span class="st">"logcounts"</span>) <span class="sc">+</span></span>
-<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>        <span class="fu">ggtitle</span>(<span class="at">label =</span> i) <span class="sc">+</span> <span class="fu">theme</span>(<span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">20</span>))</span>
-<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_grid</span>(<span class="at">ncol =</span> <span class="dv">3</span>, <span class="at">plotlist =</span> plotlist)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>plotlist <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (i <span class="cf">in</span> <span class="fu">unique</span>(top5_cell_selection<span class="sc">$</span>gene)) {</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>    plotlist[[i]] <span class="ot">&lt;-</span> <span class="fu">plotReducedDim</span>(sce, <span class="at">dimred =</span> <span class="st">"UMAP_on_MNN"</span>, <span class="at">colour_by =</span> i, <span class="at">by_exprs_values =</span> <span class="st">"logcounts"</span>) <span class="sc">+</span></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>        <span class="fu">ggtitle</span>(<span class="at">label =</span> i) <span class="sc">+</span> <span class="fu">theme</span>(<span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">20</span>))</span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a><span class="fu">wrap_plots</span>(plotlist, <span class="at">ncol =</span> <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="bioc_05_dge_files/figure-html/unnamed-chunk-9-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-7"><img src="bioc_05_dge_files/figure-html/unnamed-chunk-9-1.png" class="img-fluid figure-img" width="1248"></a></p>
+<p><a href="bioc_05_dge_files/figure-html/unnamed-chunk-10-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-7"><img src="bioc_05_dge_files/figure-html/unnamed-chunk-10-1.png" class="img-fluid figure-img" width="1248"></a></p>
 </figure>
 </div>
 </div>
@@ -453,11 +488,11 @@ AC240274.1 -0.00853061  0.00546812  0.00862573  0.00613482  0.01275548</code></p
 <h3 data-number="3.1" class="anchored" data-anchor-id="meta-dge_gsa_hyper"><span class="header-section-number">3.1</span> Hypergeometric enrichment test</h3>
 <p>Having a defined list of differentially expressed genes, you can now look for their combined function using hypergeometric test.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Load additional packages</span></span>
-<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(enrichR)</span>
-<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Check available databases to perform enrichment (then choose one)</span></span>
-<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>enrichR<span class="sc">::</span><span class="fu">listEnrichrDbs</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Load additional packages</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(enrichR)</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Check available databases to perform enrichment (then choose one)</span></span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>enrichR<span class="sc">::</span><span class="fu">listEnrichrDbs</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 
 <div data-pagedtable="false">
@@ -466,12 +501,13 @@ AC240274.1 -0.00853061  0.00546812  0.00862573  0.00613482  0.01275548</code></p
   </script>
 </div>
 </div>
-<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Perform enrichment</span></span>
-<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>top_DGE <span class="ot">&lt;-</span> DGE_cell_selection<span class="sc">$</span>Covid[ (DGE_cell_selection<span class="sc">$</span>Covid<span class="sc">$</span>p.value <span class="sc">&lt;</span> <span class="fl">0.01</span>) <span class="sc">&amp;</span> (<span class="fu">abs</span>(DGE_cell_selection<span class="sc">$</span>Covid[,<span class="fu">grep</span>(<span class="st">"logFC.C"</span>,<span class="fu">colnames</span>(DGE_cell_selection<span class="sc">$</span>Covid))])<span class="sc">&gt;</span><span class="fl">0.25</span>), ]</span>
-<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>enrich_results <span class="ot">&lt;-</span> <span class="fu">enrichr</span>(</span>
-<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a> <span class="at">genes     =</span> <span class="fu">rownames</span>(top_DGE),</span>
-<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a> <span class="at">databases =</span> <span class="st">"GO_Biological_Process_2017b"</span> )[[<span class="dv">1</span>]]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Perform enrichment</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>top_DGE <span class="ot">&lt;-</span> DGE_cell_selection<span class="sc">$</span>Covid[(DGE_cell_selection<span class="sc">$</span>Covid<span class="sc">$</span>p.value <span class="sc">&lt;</span> <span class="fl">0.01</span>) <span class="sc">&amp;</span> (<span class="fu">abs</span>(DGE_cell_selection<span class="sc">$</span>Covid[, <span class="fu">grep</span>(<span class="st">"logFC.C"</span>, <span class="fu">colnames</span>(DGE_cell_selection<span class="sc">$</span>Covid))]) <span class="sc">&gt;</span> <span class="fl">0.25</span>), ]</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>enrich_results <span class="ot">&lt;-</span> <span class="fu">enrichr</span>(</span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">genes     =</span> <span class="fu">rownames</span>(top_DGE),</span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">databases =</span> <span class="st">"GO_Biological_Process_2017b"</span></span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>)[[<span class="dv">1</span>]]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Uploading data to Enrichr... Done.
   Querying GO_Biological_Process_2017b... Done.
@@ -482,21 +518,23 @@ Parsing results... Done.</code></pre>
 <code>GO_Biological_Process_2017b</code><code>KEGG_2019_Human</code><code>KEGG_2019_Mouse</code><code>WikiPathways_2019_Human</code><code>WikiPathways_2019_Mouse</code><br>
 You visualize your results using a simple barplot, for example:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mfrow =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">1</span>), <span class="at">mar =</span> <span class="fu">c</span>(<span class="dv">3</span>, <span class="dv">25</span>, <span class="dv">2</span>, <span class="dv">1</span>))</span>
-<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a><span class="fu">barplot</span>(</span>
-<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">height =</span> <span class="sc">-</span><span class="fu">log10</span>(enrich_results<span class="sc">$</span>P.value)[<span class="dv">10</span><span class="sc">:</span><span class="dv">1</span>],</span>
-<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">names.arg =</span> enrich_results<span class="sc">$</span>Term[<span class="dv">10</span><span class="sc">:</span><span class="dv">1</span>],</span>
-<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">horiz =</span> <span class="cn">TRUE</span>,</span>
-<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">las =</span> <span class="dv">1</span>,</span>
-<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">border =</span> <span class="cn">FALSE</span>,</span>
-<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">cex.names =</span> .<span class="dv">6</span></span>
-<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a><span class="fu">abline</span>(<span class="at">v =</span> <span class="fu">c</span>(<span class="sc">-</span><span class="fu">log10</span>(<span class="fl">0.05</span>)), <span class="at">lty =</span> <span class="dv">2</span>)</span>
-<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a><span class="fu">abline</span>(<span class="at">v =</span> <span class="dv">0</span>, <span class="at">lty =</span> <span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>{</span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">par</span>(<span class="at">mfrow =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">1</span>), <span class="at">mar =</span> <span class="fu">c</span>(<span class="dv">3</span>, <span class="dv">25</span>, <span class="dv">2</span>, <span class="dv">1</span>))</span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">barplot</span>(</span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>        <span class="at">height =</span> <span class="sc">-</span><span class="fu">log10</span>(enrich_results<span class="sc">$</span>P.value)[<span class="dv">10</span><span class="sc">:</span><span class="dv">1</span>],</span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>        <span class="at">names.arg =</span> enrich_results<span class="sc">$</span>Term[<span class="dv">10</span><span class="sc">:</span><span class="dv">1</span>],</span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>        <span class="at">horiz =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>        <span class="at">las =</span> <span class="dv">1</span>,</span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>        <span class="at">border =</span> <span class="cn">FALSE</span>,</span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a>        <span class="at">cex.names =</span> .<span class="dv">6</span></span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a>    <span class="fu">abline</span>(<span class="at">v =</span> <span class="fu">c</span>(<span class="sc">-</span><span class="fu">log10</span>(<span class="fl">0.05</span>)), <span class="at">lty =</span> <span class="dv">2</span>)</span>
+<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a>    <span class="fu">abline</span>(<span class="at">v =</span> <span class="dv">0</span>, <span class="at">lty =</span> <span class="dv">1</span>)</span>
+<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="bioc_05_dge_files/figure-html/unnamed-chunk-11-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-8"><img src="bioc_05_dge_files/figure-html/unnamed-chunk-11-1.png" class="img-fluid figure-img" width="672"></a></p>
+<p><a href="bioc_05_dge_files/figure-html/unnamed-chunk-12-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-8"><img src="bioc_05_dge_files/figure-html/unnamed-chunk-12-1.png" class="img-fluid figure-img" width="672"></a></p>
 </figure>
 </div>
 </div>
@@ -507,19 +545,19 @@ You visualize your results using a simple barplot, for example:</p>
 <h2 data-number="4" class="anchored" data-anchor-id="meta-dge_gsea"><span class="header-section-number">4</span> Gene Set Enrichment Analysis (GSEA)</h2>
 <p>Besides the enrichment using hypergeometric test, we can also perform gene set enrichment analysis (GSEA), which scores ranked genes list (usually based on fold changes) and computes permutation test to check if a particular gene set is more present in the Up-regulated genes, among the DOWN_regulated genes or not differentially regulated.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Create a gene rank based on the gene expression fold change</span></span>
-<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>gene_rank <span class="ot">&lt;-</span> <span class="fu">setNames</span>(DGE_cell_selection<span class="sc">$</span>Covid[, <span class="fu">grep</span>(<span class="st">"logFC.C"</span>, <span class="fu">colnames</span>(DGE_cell_selection<span class="sc">$</span>Covid))], <span class="fu">casefold</span>(<span class="fu">rownames</span>(DGE_cell_selection<span class="sc">$</span>Covid), <span class="at">upper =</span> T))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Create a gene rank based on the gene expression fold change</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>gene_rank <span class="ot">&lt;-</span> <span class="fu">setNames</span>(DGE_cell_selection<span class="sc">$</span>Covid[, <span class="fu">grep</span>(<span class="st">"logFC.C"</span>, <span class="fu">colnames</span>(DGE_cell_selection<span class="sc">$</span>Covid))], <span class="fu">casefold</span>(<span class="fu">rownames</span>(DGE_cell_selection<span class="sc">$</span>Covid), <span class="at">upper =</span> T))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Once our list of genes are sorted, we can proceed with the enrichment itself. We can use the package to get gene set from the Molecular Signature Database (MSigDB) and select KEGG pathways as an example.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(msigdbr)</span>
-<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Download gene sets</span></span>
-<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>msigdbgmt <span class="ot">&lt;-</span> msigdbr<span class="sc">::</span><span class="fu">msigdbr</span>(<span class="st">"Homo sapiens"</span>)</span>
-<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>msigdbgmt <span class="ot">&lt;-</span> <span class="fu">as.data.frame</span>(msigdbgmt)</span>
-<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a><span class="co"># List available gene sets</span></span>
-<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a><span class="fu">unique</span>(msigdbgmt<span class="sc">$</span>gs_subcat)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(msigdbr)</span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Download gene sets</span></span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>msigdbgmt <span class="ot">&lt;-</span> msigdbr<span class="sc">::</span><span class="fu">msigdbr</span>(<span class="st">"Homo sapiens"</span>)</span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>msigdbgmt <span class="ot">&lt;-</span> <span class="fu">as.data.frame</span>(msigdbgmt)</span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a><span class="co"># List available gene sets</span></span>
+<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a><span class="fu">unique</span>(msigdbgmt<span class="sc">$</span>gs_subcat)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code> [1] "MIR:MIR_Legacy"  "TFT:TFT_Legacy"  "CGP"             "TFT:GTRD"       
  [5] ""                "VAX"             "CP:BIOCARTA"     "CGN"            
@@ -527,31 +565,33 @@ You visualize your results using a simple barplot, for example:</p>
 [13] "HPO"             "CP:KEGG"         "MIR:MIRDB"       "CM"             
 [17] "CP"              "CP:PID"          "CP:REACTOME"     "CP:WIKIPATHWAYS"</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Subset which gene set you want to use.</span></span>
-<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>msigdbgmt_subset <span class="ot">&lt;-</span> msigdbgmt[msigdbgmt<span class="sc">$</span>gs_subcat <span class="sc">==</span> <span class="st">"CP:WIKIPATHWAYS"</span>, ]</span>
-<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>gmt <span class="ot">&lt;-</span> <span class="fu">lapply</span>(<span class="fu">unique</span>(msigdbgmt_subset<span class="sc">$</span>gs_name), <span class="cf">function</span>(x) {</span>
-<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>    msigdbgmt_subset[msigdbgmt_subset<span class="sc">$</span>gs_name <span class="sc">==</span> x, <span class="st">"gene_symbol"</span>]</span>
-<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>})</span>
-<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a><span class="fu">names</span>(gmt) <span class="ot">&lt;-</span> <span class="fu">unique</span>(<span class="fu">paste0</span>(msigdbgmt_subset<span class="sc">$</span>gs_name, <span class="st">"_"</span>, msigdbgmt_subset<span class="sc">$</span>gs_exact_source))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Subset which gene set you want to use.</span></span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>msigdbgmt_subset <span class="ot">&lt;-</span> msigdbgmt[msigdbgmt<span class="sc">$</span>gs_subcat <span class="sc">==</span> <span class="st">"CP:WIKIPATHWAYS"</span>, ]</span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>gmt <span class="ot">&lt;-</span> <span class="fu">lapply</span>(<span class="fu">unique</span>(msigdbgmt_subset<span class="sc">$</span>gs_name), <span class="cf">function</span>(x) {</span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>    msigdbgmt_subset[msigdbgmt_subset<span class="sc">$</span>gs_name <span class="sc">==</span> x, <span class="st">"gene_symbol"</span>]</span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a><span class="fu">names</span>(gmt) <span class="ot">&lt;-</span> <span class="fu">unique</span>(<span class="fu">paste0</span>(msigdbgmt_subset<span class="sc">$</span>gs_name, <span class="st">"_"</span>, msigdbgmt_subset<span class="sc">$</span>gs_exact_source))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Next, we will be using the GSEA. This will result in a table containing information for several pathways. We can then sort and filter those pathways to visualize only the top ones. You can select/filter them by either <code>p-value</code> or normalized enrichment score (<code>NES</code>).</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(fgsea)</span>
-<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Perform enrichemnt analysis</span></span>
-<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>fgseaRes <span class="ot">&lt;-</span> <span class="fu">fgsea</span>(<span class="at">pathways =</span> gmt, <span class="at">stats =</span> gene_rank, <span class="at">minSize =</span> <span class="dv">15</span>, <span class="at">maxSize =</span> <span class="dv">500</span>, <span class="at">nperm =</span> <span class="dv">10000</span>)</span>
-<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>fgseaRes <span class="ot">&lt;-</span> fgseaRes[<span class="fu">order</span>(fgseaRes<span class="sc">$</span>NES, <span class="at">decreasing =</span> T), ]</span>
-<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Filter the results table to show only the top 10 UP or DOWN regulated processes (optional)</span></span>
-<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a>top10_UP <span class="ot">&lt;-</span> fgseaRes<span class="sc">$</span>pathway[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>]</span>
-<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Nice summary table (shown as a plot)</span></span>
-<span id="cb21-11"><a href="#cb21-11" aria-hidden="true" tabindex="-1"></a><span class="fu">dev.off</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>null device 
-          1 </code></pre>
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(fgsea)</span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Perform enrichemnt analysis</span></span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>fgseaRes <span class="ot">&lt;-</span> <span class="fu">fgsea</span>(<span class="at">pathways =</span> gmt, <span class="at">stats =</span> gene_rank, <span class="at">minSize =</span> <span class="dv">15</span>, <span class="at">maxSize =</span> <span class="dv">500</span>, <span class="at">nperm =</span> <span class="dv">10000</span>)</span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>fgseaRes <span class="ot">&lt;-</span> fgseaRes[<span class="fu">order</span>(fgseaRes<span class="sc">$</span>NES, <span class="at">decreasing =</span> T), ]</span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Filter the results table to show only the top 10 UP or DOWN regulated processes (optional)</span></span>
+<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a>top10_UP <span class="ot">&lt;-</span> fgseaRes<span class="sc">$</span>pathway[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>]</span>
+<span id="cb23-9"><a href="#cb23-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-10"><a href="#cb23-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Nice summary table (shown as a plot)</span></span>
+<span id="cb23-11"><a href="#cb23-11" aria-hidden="true" tabindex="-1"></a><span class="fu">plotGseaTable</span>(gmt[top10_UP], gene_rank, fgseaRes, <span class="at">gseaParam =</span> <span class="fl">0.5</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-left">
+<figure class="figure">
+<p><a href="bioc_05_dge_files/figure-html/unnamed-chunk-15-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-9"><img src="bioc_05_dge_files/figure-html/unnamed-chunk-15-1.png" class="img-fluid figure-img" width="1152"></a></p>
+</figure>
 </div>
-<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plotGseaTable</span>(gmt[top10_UP], gene_rank, fgseaRes, <span class="at">gseaParam =</span> <span class="fl">0.5</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
 </div>
 <div class="callout callout-style-default callout-note callout-titled" title="Discuss">
 <div class="callout-header d-flex align-content-center">
@@ -569,7 +609,7 @@ Change the pathway source to another gene set (e.g.&nbsp;“CP:WIKIPATHWAYS” o
 </div>
 <p>Finally, lets save the integrated data for further analysis.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(sce,<span class="st">"data/results/covid_qc_dr_int_cl_dge.rds"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(sce, <span class="st">"data/covid/results/bioc_covid_qc_dr_int_cl_dge.rds"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 <section id="meta-session" class="level2" data-number="5">
@@ -608,11 +648,11 @@ other attached packages:
  [1] fgsea_1.28.0                msigdbr_7.5.1              
  [3] enrichR_3.2                 dplyr_1.1.2                
  [5] igraph_1.4.3                pheatmap_1.0.12            
- [7] cowplot_1.1.1               scran_1.30.0               
+ [7] patchwork_1.1.2             scran_1.30.0               
  [9] scater_1.30.1               ggplot2_3.4.2              
 [11] scuttle_1.12.0              SingleCellExperiment_1.24.0
 [13] SummarizedExperiment_1.32.0 Biobase_2.62.0             
-[15] GenomicRanges_1.54.1        GenomeInfoDb_1.38.2        
+[15] GenomicRanges_1.54.1        GenomeInfoDb_1.38.5        
 [17] IRanges_2.36.0              S4Vectors_0.40.2           
 [19] BiocGenerics_0.48.1         MatrixGenerics_1.14.0      
 [21] matrixStats_1.0.0          
@@ -644,21 +684,22 @@ loaded via a namespace (and not attached):
 [47] sparseMatrixStats_1.14.0  munsell_0.5.0            
 [49] scales_1.2.1              glue_1.6.2               
 [51] metapod_1.10.1            tools_4.3.0              
-[53] data.table_1.14.8         BiocNeighbors_1.20.1     
+[53] data.table_1.14.8         BiocNeighbors_1.20.2     
 [55] ScaledMatrix_1.10.0       locfit_1.5-9.8           
 [57] babelgene_22.9            fastmatch_1.1-3          
-[59] grid_4.3.0                edgeR_4.0.3              
-[61] colorspace_2.1-0          GenomeInfoDbData_1.2.11  
-[63] beeswarm_0.4.0            BiocSingular_1.18.0      
-[65] vipor_0.4.5               cli_3.6.1                
-[67] rsvd_1.0.5                fansi_1.0.4              
-[69] S4Arrays_1.2.0            viridisLite_0.4.2        
-[71] gtable_0.3.3              digest_0.6.31            
-[73] SparseArray_1.2.3         ggrepel_0.9.3            
-[75] dqrng_0.3.0               rjson_0.2.21             
-[77] htmlwidgets_1.6.2         farver_2.1.1             
-[79] htmltools_0.5.5           lifecycle_1.0.3          
-[81] httr_1.4.6                statmod_1.5.0            </code></pre>
+[59] cowplot_1.1.1             grid_4.3.0               
+[61] edgeR_4.0.7               colorspace_2.1-0         
+[63] GenomeInfoDbData_1.2.11   beeswarm_0.4.0           
+[65] BiocSingular_1.18.0       vipor_0.4.5              
+[67] cli_3.6.1                 rsvd_1.0.5               
+[69] fansi_1.0.4               S4Arrays_1.2.0           
+[71] viridisLite_0.4.2         gtable_0.3.3             
+[73] digest_0.6.31             SparseArray_1.2.3        
+[75] ggrepel_0.9.3             dqrng_0.3.0              
+[77] rjson_0.2.21              htmlwidgets_1.6.2        
+[79] farver_2.1.1              htmltools_0.5.5          
+[81] lifecycle_1.0.3           httr_1.4.6               
+[83] statmod_1.5.0            </code></pre>
 </div>
 </div>
 </details>
@@ -907,10 +948,10 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
     <div class="nav-footer-center">
       &nbsp;
     </div>
-    <div class="nav-footer-right">Published with <a href="https://quarto.org/">Quarto</a> v1.3.353</div>
+    <div class="nav-footer-right">Published with <a href="https://quarto.org/">Quarto</a> v1.3.450</div>
   </div>
 </footer>
-<script>var lightboxQuarto = GLightbox({"selector":".lightbox","closeEffect":"zoom","descPosition":"bottom","loop":true,"openEffect":"zoom"});</script>
+<script>var lightboxQuarto = GLightbox({"selector":".lightbox","closeEffect":"zoom","openEffect":"zoom","descPosition":"bottom","loop":true});</script>
 
 
 

@@ -26,27 +26,32 @@ genes.
 
 ``` {r}
 suppressPackageStartupMessages({
-  library(Seurat)
-  library(dplyr)
-  library(cowplot)
-  library(ggplot2)
-  library(pheatmap)
-  library(enrichR)
-  library(rafalib)
-  library(Matrix)
-  library(edgeR)
-  library(MAST)
+    library(Seurat)
+    library(dplyr)
+    library(patchwork)
+    library(ggplot2)
+    library(pheatmap)
+    library(enrichR)
+    library(Matrix)
+    library(edgeR)
+    library(MAST)
 })
+```
 
-alldata <- readRDS("data/results/covid_qc_dr_int_cl.rds")
+``` {r}
+path_data <- "https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"
+path_file <- "data/covid/results/seurat_covid_qc_dr_int_cl.rds"
+if (!dir.exists(dirname(path_file))) dir.create(dirname(path_file), recursive = TRUE)
+if (!file.exists(path_file)) download.file(url = file.path(path_data, "covid/results/seurat_covid_qc_dr_int_cl.rds"), destfile = path_file)
+alldata <- readRDS(path_file)
 ```
 
 ``` {r}
 #| fig-height: 5
 #| fig-width: 12
 
-#Set the identity as louvain with resolution 0.5
-sel.clust = "CCA_snn_res.0.5"
+# Set the identity as louvain with resolution 0.5
+sel.clust <- "CCA_snn_res.0.5"
 
 alldata <- SetIdent(alldata, value = sel.clust)
 table(alldata@active.ident)
@@ -57,10 +62,12 @@ table(alldata@active.ident)
 #| fig-width: 12
 
 # plot this clustering
-plot_grid(ncol = 3,
-  DimPlot(alldata, label = T) + NoAxes(),
-  DimPlot(alldata, group.by = "orig.ident") + NoAxes(),
-  DimPlot(alldata, group.by = "type") + NoAxes() )
+wrap_plots(
+    DimPlot(alldata, label = T) + NoAxes(),
+    DimPlot(alldata, group.by = "orig.ident") + NoAxes(),
+    DimPlot(alldata, group.by = "type") + NoAxes(),
+    ncol = 3
+)
 ```
 
 ## Cell marker genes
@@ -72,7 +79,7 @@ want genes that are positivelly expressed in a cell type and possibly
 not expressed in the others.
 
 ``` {r}
-#Compute differentiall expression
+# Compute differentiall expression
 markers_genes <- FindAllMarkers(
     alldata,
     log2FC.threshold = 0.2,
@@ -88,16 +95,19 @@ markers_genes <- FindAllMarkers(
 We can now select the top 25 up regulated genes for plotting.
 
 ``` {r}
-markers_genes %>% group_by(cluster)  %>% top_n(-25, p_val_adj) -> top25
+markers_genes %>%
+    group_by(cluster) %>%
+    top_n(-25, p_val_adj) -> top25
 head(top25)
 ```
 
 ``` {r}
-mypar(2,5,mar=c(4,6,3,1))
-for(i in unique(top25$cluster)){
-  barplot( sort( setNames(top25$avg_log2FC, top25$gene) [top25$cluster == i], F),
-           horiz = T,las=1 ,main=paste0(i," vs. rest"),border = "white", yaxs="i" )
-  abline(v=c(0,0.25),lty=c(1,2))
+par(mfrow = c(2, 5), mar = c(4, 6, 3, 1))
+for (i in unique(top25$cluster)) {
+    barplot(sort(setNames(top25$avg_log2FC, top25$gene)[top25$cluster == i], F),
+        horiz = T, las = 1, main = paste0(i, " vs. rest"), border = "white", yaxs = "i"
+    )
+    abline(v = c(0, 0.25), lty = c(1, 2))
 }
 ```
 
@@ -107,10 +117,12 @@ We can visualize them as a heatmap. Here we are selecting the top 5.
 #| fig-height: 8
 #| fig-width: 8
 
-markers_genes %>% group_by(cluster)  %>% slice_min(p_val_adj,n=5, with_ties = FALSE) -> top5
+markers_genes %>%
+    group_by(cluster) %>%
+    slice_min(p_val_adj, n = 5, with_ties = FALSE) -> top5
 # create a scale.data slot for the selected genes
 alldata <- ScaleData(alldata, features = as.character(unique(top5$gene)), assay = "RNA")
-DoHeatmap(alldata, features = as.character(unique(top5$gene)),group.by = sel.clust, assay = "RNA")
+DoHeatmap(alldata, features = as.character(unique(top5$gene)), group.by = sel.clust, assay = "RNA")
 ```
 
 Another way is by representing the overal group expression and detection
@@ -120,7 +132,7 @@ rates in a dot-plot.
 #| fig-height: 8
 #| fig-width: 8
 
-DotPlot(alldata, features = rev(as.character(unique(top5$gene))),group.by = sel.clust,assay = "RNA")+coord_flip()
+DotPlot(alldata, features = rev(as.character(unique(top5$gene))), group.by = sel.clust, assay = "RNA") + coord_flip()
 ```
 
 We can also plot a violin plot for each gene.
@@ -130,7 +142,9 @@ We can also plot a violin plot for each gene.
 #| fig-width: 10
 
 # take top 3 genes per cluster/
-top5 %>% group_by(cluster)  %>% top_n(-3, p_val) -> top3
+top5 %>%
+    group_by(cluster) %>%
+    top_n(-3, p_val) -> top3
 
 # set pt.size to zero if you do not want all the points to hide the violin shapes, or to a small value like 0.1
 VlnPlot(alldata, features = as.character(unique(top3$gene)), ncol = 5, group.by = sel.clust, assay = "RNA", pt.size = 0)
@@ -162,17 +176,18 @@ cluster, then change the cell identities to the variable of comparison
 
 ``` {r}
 # select all cells in cluster 1
-cell_selection <- subset(alldata, cells = colnames(alldata)[ alldata@meta.data[,sel.clust] == 3])
+cell_selection <- subset(alldata, cells = colnames(alldata)[alldata@meta.data[, sel.clust] == 3])
 cell_selection <- SetIdent(cell_selection, value = "type")
-#Compute differentiall expression
+# Compute differentiall expression
 DGE_cell_selection <- FindAllMarkers(cell_selection,
-                               log2FC.threshold = 0.2,
-                               test.use = "wilcox",
-                               min.pct = 0.1,
-                               min.diff.pct = 0.2,
-                               only.pos = TRUE,
-                               max.cells.per.ident = 50,
-                               assay = "RNA")
+    log2FC.threshold = 0.2,
+    test.use = "wilcox",
+    min.pct = 0.1,
+    min.diff.pct = 0.2,
+    only.pos = TRUE,
+    max.cells.per.ident = 50,
+    assay = "RNA"
+)
 ```
 
 We can now plot the expression across the **type**.
@@ -181,19 +196,23 @@ We can now plot the expression across the **type**.
 #| fig-height: 6
 #| fig-width: 8
 
-DGE_cell_selection %>% group_by(cluster)  %>% top_n(-5, p_val) -> top5_cell_selection
-VlnPlot(cell_selection, features = as.character(unique(top5_cell_selection$gene)), ncol = 5,group.by = "type",assay = "RNA", pt.size = .1)
+DGE_cell_selection %>%
+    group_by(cluster) %>%
+    top_n(-5, p_val) -> top5_cell_selection
+VlnPlot(cell_selection, features = as.character(unique(top5_cell_selection$gene)), ncol = 5, group.by = "type", assay = "RNA", pt.size = .1)
 ```
 
 We can also plot these genes across all clusters, but split by "type",
 to check if the genes are also up/downregulated in other celltypes.
 
 ``` {r}
-#| fig-height: 6
-#| fig-width: 16
+#| fig-height: 3
+#| fig-width: 12
 
-VlnPlot(alldata, features = as.character(unique(top5_cell_selection$gene)),
-        ncol = 5, split.by = "type",assay = "RNA", pt.size = 0)
+VlnPlot(alldata,
+    features = as.character(unique(top5_cell_selection$gene)),
+    ncol = 4, split.by = "type", assay = "RNA", pt.size = 0
+)
 ```
 
 As you can see, we hwve many sex chromosome related genes among the top
@@ -207,16 +226,21 @@ To remove some of the bias due to inbalanced sex in the subjects we can
 remove the sex chromosome related genes.
 
 ``` {r}
-gene.info = read.csv("data/results/genes.table.csv") #was created in the QC exercise
+genes_file <- file.path("data/covid/results/genes_table.csv")
+if (!file.exists(genes_file)) download.file(file.path(path_data, "covid/results/genes_table.csv"), destfile = genes_file)
+```
 
-auto.genes = gene.info$external_gene_name[!(gene.info$chromosome_name %in% c("X", "Y"))]
+``` {r}
+gene.info <- read.csv(genes_file) # was created in the QC exercise
 
-cell_selection@active.assay = "RNA"
-keep.genes = intersect(rownames(cell_selection), auto.genes)
-cell_selection = cell_selection[keep.genes,]
+auto.genes <- gene.info$external_gene_name[!(gene.info$chromosome_name %in% c("X", "Y"))]
+
+cell_selection@active.assay <- "RNA"
+keep.genes <- intersect(rownames(cell_selection), auto.genes)
+cell_selection <- cell_selection[keep.genes, ]
 
 # then renormalize the data
-cell_selection = NormalizeData(cell_selection)
+cell_selection <- NormalizeData(cell_selection)
 ```
 
 Rerun differential expression:
@@ -225,23 +249,32 @@ Rerun differential expression:
 #| fig-height: 6
 #| fig-width: 10
 
-#Compute differentiall expression
-DGE_cell_selection <- FindMarkers(cell_selection, ident.1 = "Covid", ident.2 = "Ctrl",
-                       logfc.threshold = 0.2, test.use = "wilcox",  min.pct = 0.1,
-                       min.diff.pct = 0.2, assay = "RNA")
+# Compute differential expression
+DGE_cell_selection <- FindMarkers(cell_selection,
+    ident.1 = "Covid", ident.2 = "Ctrl",
+    logfc.threshold = 0.2, test.use = "wilcox", min.pct = 0.1,
+    min.diff.pct = 0.2, assay = "RNA"
+)
 
 # Define as Covid or Ctrl in the df and add a gene column
-DGE_cell_selection$direction = ifelse(DGE_cell_selection$avg_log2FC > 0, "Covid", "Ctrl")
-DGE_cell_selection$gene = rownames(DGE_cell_selection)
+DGE_cell_selection$direction <- ifelse(DGE_cell_selection$avg_log2FC > 0, "Covid", "Ctrl")
+DGE_cell_selection$gene <- rownames(DGE_cell_selection)
 
 
 DGE_cell_selection %>%
     group_by(direction) %>%
     top_n(-5, p_val) %>%
     arrange(direction) -> top5_cell_selection
+```
 
-VlnPlot(cell_selection, features = as.character(unique(top5_cell_selection$gene)),
-        ncol = 5,group.by = "type",assay = "RNA", pt.size = .1)
+``` {r}
+#| fig-height: 3
+#| fig-width: 12
+
+VlnPlot(cell_selection,
+    features = as.character(unique(top5_cell_selection$gene)),
+    ncol = 5, group.by = "type", assay = "RNA", pt.size = .1
+)
 ```
 
 We can also plot these genes across all clusters, but split by "type",
@@ -249,11 +282,13 @@ to check if the genes are also up/downregulated in other
 celltypes/clusters.
 
 ``` {r}
-#| fig-height: 6
-#| fig-width: 15
+#| fig-height: 3
+#| fig-width: 12
 
-VlnPlot(alldata, features = as.character(unique(top5_cell_selection$gene)),
-        ncol = 5, split.by = "type",assay = "RNA", pt.size = 0)
+VlnPlot(alldata,
+    features = as.character(unique(top5_cell_selection$gene)),
+    ncol = 4, split.by = "type", assay = "RNA", pt.size = 0
+)
 ```
 
 ## Patient Batch effects
@@ -264,10 +299,10 @@ unless we find a way to control for it. So first, lets check how the top
 DGEs are expressed across the individuals within cluster 3:
 
 ``` {r}
-#| fig-height: 6
-#| fig-width: 15
+#| fig-height: 3
+#| fig-width: 12
 
-VlnPlot(cell_selection, group.by = "orig.ident", features =  as.character(unique(top5_cell_selection$gene)), ncol = 5, assay = "RNA", pt.size = 0)
+VlnPlot(cell_selection, group.by = "orig.ident", features = as.character(unique(top5_cell_selection$gene)), ncol = 4, assay = "RNA", pt.size = 0)
 ```
 
 As you can see, many of the genes detected as DGE in Covid are unique to
@@ -282,7 +317,7 @@ We can examine more genes with a DotPlot:
 DGE_cell_selection %>%
     group_by(direction) %>%
     top_n(-20, p_val) -> top20_cell_selection
-DotPlot(cell_selection, features = rev(as.character(unique(top20_cell_selection$gene))), group.by = "orig.ident",    assay = "RNA") + coord_flip() + RotatedAxis()
+DotPlot(cell_selection, features = rev(as.character(unique(top20_cell_selection$gene))), group.by = "orig.ident", assay = "RNA") + coord_flip() + RotatedAxis()
 ```
 
 As you can see, most of the DGEs are driven by the `covid_17` patient.
@@ -315,14 +350,16 @@ And now we run DGE analysis again:
 
 sub_data <- SetIdent(sub_data, value = "type")
 
-#Compute differentiall expression
-DGE_sub <- FindMarkers(sub_data, ident.1 = "Covid", ident.2 = "Ctrl",
-                       logfc.threshold = 0.2, test.use = "wilcox",  min.pct = 0.1,
-                       min.diff.pct = 0.2, assay = "RNA")
+# Compute differentiall expression
+DGE_sub <- FindMarkers(sub_data,
+    ident.1 = "Covid", ident.2 = "Ctrl",
+    logfc.threshold = 0.2, test.use = "wilcox", min.pct = 0.1,
+    min.diff.pct = 0.2, assay = "RNA"
+)
 
 # Define as Covid or Ctrl in the df and add a gene column
-DGE_sub$direction = ifelse(DGE_sub$avg_log2FC > 0, "Covid", "Ctrl")
-DGE_sub$gene = rownames(DGE_sub)
+DGE_sub$direction <- ifelse(DGE_sub$avg_log2FC > 0, "Covid", "Ctrl")
+DGE_sub$gene <- rownames(DGE_sub)
 
 
 DGE_sub %>%
@@ -330,8 +367,10 @@ DGE_sub %>%
     top_n(-5, p_val) %>%
     arrange(direction) -> top5_sub
 
-VlnPlot(sub_data, features = as.character(unique(top5_sub$gene)),
-        ncol = 5,group.by = "type",assay = "RNA", pt.size = .1)
+VlnPlot(sub_data,
+    features = as.character(unique(top5_sub$gene)),
+    ncol = 5, group.by = "type", assay = "RNA", pt.size = .1
+)
 ```
 
 Plot as dotplot, but in the full (not subsampled) data, still only
@@ -345,7 +384,7 @@ DGE_sub %>%
     group_by(direction) %>%
     top_n(-20, p_val) -> top20_sub
 DotPlot(cell_selection, features = rev(as.character(unique(top20_sub$gene))), group.by = "orig.ident", assay = "RNA") +
-  coord_flip() + RotatedAxis()
+    coord_flip() + RotatedAxis()
 ```
 
 It looks much better now. But if we look per patient you can see that we
@@ -372,7 +411,7 @@ when we create the pseudobulk, so we will use the subsampled object.
 DGE_DATA <- sub_data@assays$RNA@counts
 
 # Compute pseudobulk
-mm <- Matrix::sparse.model.matrix(~0 + sub_data$orig.ident)
+mm <- Matrix::sparse.model.matrix(~ 0 + sub_data$orig.ident)
 pseudobulk <- DGE_DATA %*% mm
 ```
 
@@ -380,14 +419,14 @@ Then run edgeR:
 
 ``` {r}
 # define the groups
-bulk.labels = c("Covid", "Covid", "Covid", "Covid", "Ctrl", "Ctrl", "Ctrl", "Ctrl")
+bulk.labels <- c("Covid", "Covid", "Covid", "Covid", "Ctrl", "Ctrl", "Ctrl", "Ctrl")
 
 dge.list <- DGEList(counts = pseudobulk, group = factor(bulk.labels))
 keep <- filterByExpr(dge.list)
 dge.list <- dge.list[keep, , keep.lib.sizes = FALSE]
 
 dge.list <- calcNormFactors(dge.list)
-design = model.matrix(~bulk.labels)
+design <- model.matrix(~bulk.labels)
 
 dge.list <- estimateDisp(dge.list, design)
 
@@ -406,16 +445,18 @@ Again as dotplot including top 10 genes:
 #| fig-width: 6
 
 res.edgeR <- topTags(qlf, 100)$table
-res.edgeR$dir = ifelse(res.edgeR$logFC > 0, "Covid", "Ctrl")
-res.edgeR$gene = rownames(res.edgeR)
+res.edgeR$dir <- ifelse(res.edgeR$logFC > 0, "Covid", "Ctrl")
+res.edgeR$gene <- rownames(res.edgeR)
 
 res.edgeR %>%
     group_by(dir) %>%
     top_n(-10, PValue) %>%
     arrange(dir) -> top.edgeR
 
-DotPlot(cell_selection, features = as.character(unique(top.edgeR$gene)), group.by = "orig.ident",
-    assay = "RNA") + coord_flip() + ggtitle("EdgeR pseudobulk") + RotatedAxis()
+DotPlot(cell_selection,
+    features = as.character(unique(top.edgeR$gene)), group.by = "orig.ident",
+    assay = "RNA"
+) + coord_flip() + ggtitle("EdgeR pseudobulk") + RotatedAxis()
 ```
 
 As you can see, even if we get few genes detected the seem to make sense
@@ -438,13 +479,15 @@ controls.
 
 ``` {r}
 # select genes that are expressed in at least 2 patients or 2 ctrls with > 2 reads.
-nPatient = sapply(unique(cell_selection$orig.ident), function(x) rowSums(cell_selection@assays$RNA@counts[, cell_selection$orig.ident
-== x] > 2))
-nCovid = rowSums(nPatient[,1:3]>2)
-nCtrl = rowSums(nPatient[,4:6]>2)
+nPatient <- sapply(unique(cell_selection$orig.ident), function(x) {
+    rowSums(cell_selection@assays$RNA@counts[, cell_selection$orig.ident
+    == x] > 2)
+})
+nCovid <- rowSums(nPatient[, 1:3] > 2)
+nCtrl <- rowSums(nPatient[, 4:6] > 2)
 
-sel = nCovid >= 2 | nCtrl >= 2
-cell_selection_sub = cell_selection[sel, ]
+sel <- nCovid >= 2 | nCtrl >= 2
+cell_selection_sub <- cell_selection[sel, ]
 ```
 
 Set up the MAST object.
@@ -452,29 +495,31 @@ Set up the MAST object.
 ``` {r}
 # create the feature data
 fData <- data.frame(primerid = rownames(cell_selection_sub))
-m = cell_selection_sub@meta.data
-m$wellKey = rownames(m)
+m <- cell_selection_sub@meta.data
+m$wellKey <- rownames(m)
 
 # make sure type and orig.ident are factors
-m$orig.ident = factor(m$orig.ident)
-m$type = factor(m$type)
+m$orig.ident <- factor(m$orig.ident)
+m$type <- factor(m$type)
 
-sca <- MAST::FromMatrix(exprsArray = as.matrix(x = cell_selection_sub@assays$RNA@data),
-    check_sanity = FALSE, cData = m, fData = fData)
+sca <- MAST::FromMatrix(
+    exprsArray = as.matrix(x = cell_selection_sub@assays$RNA@data),
+    check_sanity = FALSE, cData = m, fData = fData
+)
 ```
 
 First, run the regular MAST analysis without random effects
 
 ``` {r}
 # takes a while to run, so save a file to tmpdir in case you have to rerun the code
-tmpdir = "tmp_dge"
+tmpdir <- "data/covid/results/tmp_dge"
 dir.create(tmpdir, showWarnings = F)
 
-tmpfile1 = file.path(tmpdir, "mast_bayesglm_cl3.Rds")
+tmpfile1 <- file.path(tmpdir, "mast_bayesglm_cl3.Rds")
 if (file.exists(tmpfile1)) {
-    fcHurdle1 = readRDS(tmpfile1)
+    fcHurdle1 <- readRDS(tmpfile1)
 } else {
-    zlmCond <- suppressMessages(MAST::zlm(~type + nFeature_RNA, sca, method = "bayesglm", ebayes = T))
+    zlmCond <- suppressMessages(MAST::zlm(~ type + nFeature_RNA, sca, method = "bayesglm", ebayes = T))
     summaryCond <- suppressMessages(MAST::summary(zlmCond, doLRT = "typeCtrl"))
     summaryDt <- summaryCond$datatable
     fcHurdle <- merge(summaryDt[summaryDt$contrast == "typeCtrl" & summaryDt$component ==
@@ -488,14 +533,18 @@ if (file.exists(tmpfile1)) {
 Then run MAST with glmer and random effect.
 
 ``` {r}
+#| results: hide
+
 library(lme4)
 
-tmpfile2 = file.path(tmpdir, "mast_glme_cl3.Rds")
+tmpfile2 <- file.path(tmpdir, "mast_glme_cl3.Rds")
 if (file.exists(tmpfile2)) {
-    fcHurdle2 = readRDS(tmpfile2)
+    fcHurdle2 <- readRDS(tmpfile2)
 } else {
-    zlmCond <- suppressMessages(MAST::zlm(~type + nFeature_RNA + (1 | orig.ident), sca, method = "glmer",
-        ebayes = F, strictConvergence = FALSE))
+    zlmCond <- suppressMessages(MAST::zlm(~ type + nFeature_RNA + (1 | orig.ident), sca,
+        method = "glmer",
+        ebayes = F, strictConvergence = FALSE
+    ))
 
     summaryCond <- suppressMessages(MAST::summary(zlmCond, doLRT = "typeCtrl"))
     summaryDt <- summaryCond$datatable
@@ -510,33 +559,33 @@ if (file.exists(tmpfile2)) {
 Top genes with normal MAST:
 
 ``` {r}
-top1 = head(fcHurdle1[order(fcHurdle1$`Pr(>Chisq)`), ], 10)
+top1 <- head(fcHurdle1[order(fcHurdle1$`Pr(>Chisq)`), ], 10)
 top1
 
-fcHurdle1$pval = fcHurdle1$`Pr(>Chisq)`
-fcHurdle1$dir = ifelse(fcHurdle1$z > 0, "up", "down")
+fcHurdle1$pval <- fcHurdle1$`Pr(>Chisq)`
+fcHurdle1$dir <- ifelse(fcHurdle1$z > 0, "up", "down")
 fcHurdle1 %>%
     group_by(dir) %>%
     top_n(-10, pval) %>%
     arrange(z) -> mastN
 
-mastN = mastN$primerid
+mastN <- mastN$primerid
 ```
 
 Top genes with random effect:
 
 ``` {r}
-top2 = head(fcHurdle2[order(fcHurdle2$`Pr(>Chisq)`), ], 10)
+top2 <- head(fcHurdle2[order(fcHurdle2$`Pr(>Chisq)`), ], 10)
 top2
 
-fcHurdle2$pval = fcHurdle2$`Pr(>Chisq)`
-fcHurdle2$dir = ifelse(fcHurdle2$z > 0, "up", "down")
+fcHurdle2$pval <- fcHurdle2$`Pr(>Chisq)`
+fcHurdle2$dir <- ifelse(fcHurdle2$z > 0, "up", "down")
 fcHurdle2 %>%
     group_by(dir) %>%
     top_n(-10, pval) %>%
     arrange(z) -> mastR
 
-mastR = mastR$primerid
+mastR <- mastR$primerid
 ```
 
 As you can see, we have lower significance for the genes with the random
@@ -548,10 +597,10 @@ Dotplot for top10 genes in each direction:
 #| fig-height: 6
 #| fig-width: 14
 
-p1 = DotPlot(cell_selection, features = mastN, group.by = "orig.ident", assay = "RNA") +
+p1 <- DotPlot(cell_selection, features = mastN, group.by = "orig.ident", assay = "RNA") +
     coord_flip() + RotatedAxis() + ggtitle("Regular MAST")
 
-p2 = DotPlot(cell_selection, features = mastR, group.by = "orig.ident", assay = "RNA") +
+p2 <- DotPlot(cell_selection, features = mastR, group.by = "orig.ident", assay = "RNA") +
     coord_flip() + RotatedAxis() + ggtitle("With random effect")
 
 p1 + p2
@@ -588,8 +637,9 @@ enrichR::listEnrichrDbs()
 
 # Perform enrichment
 enrich_results <- enrichr(
- genes     = fcHurdle2$primerid[fcHurdle2$z < 0 & fcHurdle2$pval < 0.05],
- databases = "GO_Biological_Process_2017b" )[[1]]
+    genes     = fcHurdle2$primerid[fcHurdle2$z < 0 & fcHurdle2$pval < 0.05],
+    databases = "GO_Biological_Process_2017b"
+)[[1]]
 ```
 
 Some databases of interest:\
@@ -597,13 +647,15 @@ Some databases of interest:\
 You visualize your results using a simple barplot, for example:
 
 ``` {r}
-par(mfrow=c(1,1),mar = c(3, 25, 2, 1))
-barplot( height    = -log10(enrich_results$P.value)[10:1],
-        names.arg = enrich_results$Term[10:1],
-        horiz     = TRUE,
-        las       = 1,
-        border    = FALSE,
-        cex.names = .6 )
+par(mfrow = c(1, 1), mar = c(3, 25, 2, 1))
+barplot(
+    height = -log10(enrich_results$P.value)[10:1],
+    names.arg = enrich_results$Term[10:1],
+    horiz = TRUE,
+    las = 1,
+    border = FALSE,
+    cex.names = .6
+)
 abline(v = c(-log10(0.05)), lty = 2)
 abline(v = 0, lty = 1)
 ```
@@ -622,7 +674,7 @@ on a larger set of genes, so we will have to rerun the test with more
 lenient cutoffs.
 
 ``` {r}
-sub_data = SetIdent(sub_data, value = "type")
+sub_data <- SetIdent(sub_data, value = "type")
 
 DGE_cell_selection2 <- FindMarkers(
     sub_data,
@@ -637,7 +689,7 @@ DGE_cell_selection2 <- FindMarkers(
 )
 
 # Create a gene rank based on the gene expression fold change
-gene_rank <- setNames( DGE_cell_selection2$avg_log2FC, casefold(rownames(DGE_cell_selection2),upper=T) )
+gene_rank <- setNames(DGE_cell_selection2$avg_log2FC, casefold(rownames(DGE_cell_selection2), upper = T))
 ```
 
 Once our list of genes are sorted, we can proceed with the enrichment
@@ -647,17 +699,19 @@ Signature Database (MSigDB) and select KEGG pathways as an example.
 ``` {r}
 library(msigdbr)
 
-#Download gene sets
+# Download gene sets
 msigdbgmt <- msigdbr::msigdbr("Homo sapiens")
 msigdbgmt <- as.data.frame(msigdbgmt)
 
-#List available gene sets
+# List available gene sets
 unique(msigdbgmt$gs_subcat)
 
-#Subset which gene set you want to use.
-msigdbgmt_subset <- msigdbgmt[msigdbgmt$gs_subcat == "CP:WIKIPATHWAYS",]
-gmt <- lapply( unique(msigdbgmt_subset$gs_name),function(x){msigdbgmt_subset [msigdbgmt_subset$gs_name == x ,"gene_symbol"]} )
-names(gmt) <- unique(paste0(msigdbgmt_subset$gs_name,"_",msigdbgmt_subset$gs_exact_source))
+# Subset which gene set you want to use.
+msigdbgmt_subset <- msigdbgmt[msigdbgmt$gs_subcat == "CP:WIKIPATHWAYS", ]
+gmt <- lapply(unique(msigdbgmt_subset$gs_name), function(x) {
+    msigdbgmt_subset[msigdbgmt_subset$gs_name == x, "gene_symbol"]
+})
+names(gmt) <- unique(paste0(msigdbgmt_subset$gs_name, "_", msigdbgmt_subset$gs_exact_source))
 ```
 
 Next, we will be using the GSEA. This will result in a table containing
@@ -672,11 +726,11 @@ either `p-value` or normalized enrichment score (`NES`).
 library(fgsea)
 
 # Perform enrichemnt analysis
-fgseaRes <- fgsea( pathways=gmt, stats=gene_rank, minSize=15, maxSize=500)
-fgseaRes <- fgseaRes[ order(fgseaRes$pval, decreasing = T) ,]
+fgseaRes <- fgsea(pathways = gmt, stats = gene_rank, minSize = 15, maxSize = 500)
+fgseaRes <- fgseaRes[order(fgseaRes$pval, decreasing = T), ]
 
 # Filter the results table to show only the top 10 UP or DOWN regulated processes (optional)
-top10_UP <- fgseaRes$pathway [1:10]
+top10_UP <- fgseaRes$pathway[1:10]
 
 # Nice summary table (shown as a plot)
 plotGseaTable(gmt[top10_UP], gene_rank, fgseaRes, gseaParam = 0.5)

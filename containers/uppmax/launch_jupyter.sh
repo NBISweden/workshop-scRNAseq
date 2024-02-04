@@ -18,7 +18,7 @@ cat 1>&2 <<END
 
 1. SSH tunnel from your workstation using the following command:
 
-   ssh -N -L 8888:${HOSTNAME}:${PORT} ${APPTAINERENV_USER}@${HOSTNAME}
+   ssh -N -L 8888:$(hostname):${PORT} ${APPTAINERENV_USER}@rackham.uppmax.uu.se
 
    point your web browser to http://localhost:8888/lab
 
@@ -35,7 +35,7 @@ When done using Jupyter, terminate the job by:
 
 END
 
-apptainer exec --bind /home/susanner/projects/workshop-scrnaseq:/run/user ${SIF} \
+apptainer exec --bind ${PWD}:/run/user ${SIF} \
     /usr/local/bin/start.sh \
     jupyter lab \
         --no-browser \

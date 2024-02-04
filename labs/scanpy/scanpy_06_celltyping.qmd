@@ -28,20 +28,37 @@ import pandas as pd
 import scanpy as sc
 import matplotlib.pyplot as plt
 import warnings
+import os
+import urllib.request
 
 warnings.simplefilter(action="ignore", category=Warning)
 
 # verbosity: errors (0), warnings (1), info (2), hints (3)
-sc.settings.verbosity = 2             
+sc.settings.verbosity = 2
 sc.settings.set_figure_params(dpi=80)
 ```
 
 {{< meta ct_read_2 >}}
 
 ```{python}
-adata = sc.read_h5ad('./data/results/scanpy_clustered_covid.h5ad')
-adata.uns['log1p']['base']=None
+path_data = "https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"
 
+path_results = "data/covid/results"
+if not os.path.exists(path_results):
+    os.makedirs(path_results, exist_ok=True)
+
+# path_file = "data/covid/results/scanpy_covid_qc_dr_scanorama_cl.h5ad"
+path_file = "data/covid/results/scanpy_covid_qc_dr_scanorama_cl.h5ad"
+if not os.path.exists(path_file):
+    urllib.request.urlretrieve(os.path.join(
+        path_data, 'covid/results/scanpy_covid_qc_dr_scanorama_cl.h5ad'), path_file)
+
+adata = sc.read_h5ad(path_file)
+adata
+```
+
+```{python}
+adata.uns['log1p']['base']=None
 print(adata.shape)
 print(adata.raw.shape)
 ```
@@ -52,6 +69,17 @@ print(adata.raw.shape)
 adata = adata[adata.obs["sample"] == "ctrl_13",:]
 print(adata.shape)
 ```
+
+```{python}
+adata.obs["louvain_0.6"].value_counts()
+```
+
+As you can see, we have only one cell from cluster 10 in this sample, so lets remove that cell for now.
+
+```{python}
+adata = adata[adata.obs["louvain_0.6"] != "10",:]
+```
+
 
 ```{python}
 sc.pl.umap(
@@ -189,6 +217,15 @@ sc.pl.umap(adata_merged, color=["sample","louvain",'predicted'])
 sc.pl.umap(adata_merged[adata_merged.obs['sample']=='ctrl'], color='predicted')
 ```
 
+Now plot how many cells of each celltypes can be found in each cluster.
+
+```{python}
+tmp = pd.crosstab(adata.obs['louvain_0.6'],adata.obs['predicted'], normalize='index')
+tmp.plot.bar(stacked=True).legend(bbox_to_anchor=(1.8, 1),loc='upper right')
+
+```
+
+
 ## Ingest
 
 Another method for celltype prediction is Ingest, for more information, please look at
@@ -198,6 +235,15 @@ https://scanpy-tutorials.readthedocs.io/en/latest/integrating-data-using-ingest.
 sc.tl.ingest(adata, adata_ref, obs='louvain')
 sc.pl.umap(adata, color=['louvain','louvain_0.6'], wspace=0.5)
 ```
+
+Now plot how many cells of each celltypes can be found in each cluster.
+
+```{python}
+tmp = pd.crosstab(adata.obs['louvain_0.6'],adata.obs['louvain'], normalize='index')
+tmp.plot.bar(stacked=True).legend(bbox_to_anchor=(1.8, 1),loc='upper right')
+
+```
+
 
 ## Compare results
 
@@ -220,16 +266,21 @@ for the tissue you are working on.
 You can either run it with a marker list from the ontology or a list of your choice as in the example below.
 
 ```{python}
-df = pd.read_table('./data/cellmarker/Human_cell_markers.txt')
-df
+path_file = 'data/human_cell_markers.txt'
+if not os.path.exists(path_file):
+    urllib.request.urlretrieve(os.path.join(
+        path_data, 'human_cell_markers.txt'), path_file)
 ```
 
 ```{python}
-# Filter for number of genes per celltype
+df = pd.read_table(path_file)
+df
+
 print(df.shape)
 ```
 
 ```{python}
+# Filter for number of genes per celltype
 df['nG'] = df.geneSymbol.str.split(",").str.len()
 
 df = df[df['nG'] > 5]
@@ -241,14 +292,15 @@ print(df.shape)
 ```{python}
 df.index = df.cellName
 gene_dict = df.geneSymbol.str.split(",").to_dict()
+```
 
+```{python}
 # run differential expression per cluster
 sc.tl.rank_genes_groups(adata, 'louvain_0.6', method='wilcoxon', key_added = "wilcoxon")
 ```
 
 ```{python}
 # do gene set overlap to the groups in the gene list and top 300 DEGs.
-
 import gseapy
 
 gsea_res = dict()
@@ -256,18 +308,20 @@ pred = dict()
 
 for cl in adata.obs['louvain_0.6'].cat.categories.tolist():
     print(cl)
-    glist = sc.get.rank_genes_groups_df(adata, group=cl, key='wilcoxon')['names'].squeeze().str.strip().tolist()    
+    glist = sc.get.rank_genes_groups_df(adata, group=cl, key='wilcoxon')[
+        'names'].squeeze().str.strip().tolist()
     enr_res = gseapy.enrichr(gene_list=glist[:300],
-                      organism='Human',
-                      gene_sets=gene_dict,
-                      background = adata.raw.shape[1],    
-                      cutoff = 1)
+                             organism='Human',
+                             gene_sets=gene_dict,
+                             background=adata.raw.shape[1],
+                             cutoff=1)
     if enr_res.results.shape[0] == 0:
         pred[cl] = "Unass"
     else:
-        enr_res.results.sort_values(by="P-value",axis=0, ascending=True, inplace=True)
+        enr_res.results.sort_values(
+            by="P-value", axis=0, ascending=True, inplace=True)
         print(enr_res.results.head(2))
-        gsea_res[cl]=enr_res
+        gsea_res[cl] = enr_res
         pred[cl] = enr_res.results["Term"][0]
 ```
 

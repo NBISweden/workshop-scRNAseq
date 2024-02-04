@@ -129,7 +129,7 @@ background-size: cover;
       <div class="navbar-container container-fluid">
       <div class="navbar-brand-container">
     <a href="../../index.html" class="navbar-brand navbar-brand-logo">
-    <img src="../../assets/logos/nbis-scilifelab.png" alt="nbis-scilifelab-logo." class="navbar-logo">
+    <img src="../../assets/logos/nbis-scilifelab.png" alt="nbis-scilifelab-logo" class="navbar-logo">
     </a>
   </div>
             <div id="quarto-search" class="" title="Search"></div>
@@ -161,6 +161,11 @@ background-size: cover;
   <li class="nav-item">
     <a class="nav-link" href="../../home_info.html" rel="" target="">
  <span class="menu-text">Info</span></a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/NBISweden/workshop-scRNAseq/" rel="" target=""><i class="bi bi-github" role="img">
+</i> 
+ <span class="menu-text"></span></a>
   </li>  
 </ul>
             <div class="quarto-navbar-tools">
@@ -199,7 +204,7 @@ background-size: cover;
       <div>
       <div class="quarto-title-meta-heading">Published</div>
       <div class="quarto-title-meta-contents">
-        <p class="date">03-Jan-2024</p>
+        <p class="date">19-Jan-2024</p>
       </div>
     </div>
     
@@ -222,7 +227,8 @@ background-size: cover;
   </ul></li>
   <li><a href="#meta-clust_kmean" id="toc-meta-clust_kmean" class="nav-link" data-scroll-target="#meta-clust_kmean"><span class="header-section-number">2</span> K-means clustering</a></li>
   <li><a href="#meta-clust_hier" id="toc-meta-clust_hier" class="nav-link" data-scroll-target="#meta-clust_hier"><span class="header-section-number">3</span> Hierarchical clustering</a></li>
-  <li><a href="#meta-session" id="toc-meta-session" class="nav-link" data-scroll-target="#meta-session"><span class="header-section-number">4</span> Session info</a></li>
+  <li><a href="#meta-clust_distribution" id="toc-meta-clust_distribution" class="nav-link" data-scroll-target="#meta-clust_distribution"><span class="header-section-number">4</span> Distribution of clusters</a></li>
+  <li><a href="#meta-session" id="toc-meta-session" class="nav-link" data-scroll-target="#meta-session"><span class="header-section-number">5</span> Session info</a></li>
   </ul>
 </nav>
     </div>
@@ -254,25 +260,34 @@ Note
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> scanpy <span class="im">as</span> sc</span>
 <span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
 <span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> warnings</span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>warnings.simplefilter(action<span class="op">=</span><span class="st">"ignore"</span>, category<span class="op">=</span><span class="pp">Warning</span>)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> urllib.request</span>
 <span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co"># verbosity: errors (0), warnings (1), info (2), hints (3)</span></span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>sc.settings.verbosity <span class="op">=</span> <span class="dv">3</span>             </span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>sc.settings.set_figure_params(dpi<span class="op">=</span><span class="dv">80</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>warnings.simplefilter(action<span class="op">=</span><span class="st">"ignore"</span>, category<span class="op">=</span><span class="pp">Warning</span>)</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="co"># verbosity: errors (0), warnings (1), info (2), hints (3)</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>sc.settings.verbosity <span class="op">=</span> <span class="dv">3</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>sc.settings.set_figure_params(dpi<span class="op">=</span><span class="dv">80</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <div class="cell" data-execution_count="2">
-<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># select the scanorama integration data.</span></span>
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>path_data <span class="op">=</span> <span class="st">"https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"</span></span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>save_file <span class="op">=</span> <span class="st">'./data/results/scanpy_scanorama_corrected_covid.h5ad'</span></span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>adata <span class="op">=</span> sc.read_h5ad(save_file)</span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>adata</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>path_results <span class="op">=</span> <span class="st">"data/covid/results"</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(path_results):</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    os.makedirs(path_results, exist_ok<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>path_file <span class="op">=</span> <span class="st">"data/covid/results/scanpy_covid_qc_dr_scanorama.h5ad"</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(path_file):</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    urllib.request.urlretrieve(os.path.join(</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>        path_data, <span class="st">'covid/results/scanpy_covid_qc_dr_scanorama.h5ad'</span>), path_file)</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>adata <span class="op">=</span> sc.read_h5ad(path_file)</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>adata</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="2">
-<pre><code>AnnData object with n_obs × n_vars = 5646 × 3090
-    obs: 'type', 'sample', 'batch', 'percent_mt2', 'n_counts', 'n_genes_by_counts', 'total_counts', 'total_counts_mt', 'pct_counts_mt', 'total_counts_ribo', 'pct_counts_ribo', 'total_counts_hb', 'pct_counts_hb', 'n_genes', 'percent_chrY', 'XIST-counts', 'S_score', 'G2M_score', 'phase', 'doublet_scores', 'predicted_doublets', 'doublet_info'
+<pre><code>AnnData object with n_obs × n_vars = 7222 × 2626
+    obs: 'type', 'sample', 'batch', 'n_genes_by_counts', 'total_counts', 'total_counts_mt', 'pct_counts_mt', 'total_counts_ribo', 'pct_counts_ribo', 'total_counts_hb', 'pct_counts_hb', 'percent_mt2', 'n_counts', 'n_genes', 'percent_chrY', 'XIST-counts', 'S_score', 'G2M_score', 'phase', 'doublet_scores', 'predicted_doublets', 'doublet_info'
     var: 'gene_ids', 'feature_types', 'genome', 'mt', 'ribo', 'hb', 'n_cells_by_counts', 'mean_counts', 'pct_dropout_by_counts', 'total_counts', 'n_cells', 'highly_variable', 'means', 'dispersions', 'dispersions_norm', 'mean', 'std'
-    uns: 'doublet_info_colors', 'hvg', 'log1p', 'neighbors', 'pca', 'sample_colors', 'tsne', 'umap'
+    uns: 'doublet_info_colors', 'hvg', 'log1p', 'neighbors', 'pca', 'phase_colors', 'sample_colors', 'tsne', 'umap'
     obsm: 'Scanorama', 'X_pca', 'X_tsne', 'X_umap'
     varm: 'PCs'
     obsp: 'connectivities', 'distances'</code></pre>
@@ -292,16 +307,16 @@ Note
 <span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>sc.tl.leiden(adata, resolution <span class="op">=</span> <span class="fl">1.4</span>, key_added <span class="op">=</span> <span class="st">"leiden_1.4"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>running Leiden clustering
-    finished: found 17 clusters and added
-    'leiden_1.0', the cluster labels (adata.obs, categorical) (0:00:03)
+    finished: found 20 clusters and added
+    'leiden_1.0', the cluster labels (adata.obs, categorical) (0:00:02)
 running Leiden clustering
-    finished: found 12 clusters and added
+    finished: found 16 clusters and added
     'leiden_0.6', the cluster labels (adata.obs, categorical) (0:00:01)
 running Leiden clustering
-    finished: found 9 clusters and added
+    finished: found 13 clusters and added
     'leiden_0.4', the cluster labels (adata.obs, categorical) (0:00:01)
 running Leiden clustering
-    finished: found 19 clusters and added
+    finished: found 23 clusters and added
     'leiden_1.4', the cluster labels (adata.obs, categorical) (0:00:02)</code></pre>
 </div>
 </div>
@@ -342,12 +357,42 @@ Storing dendrogram info using `.uns['dendrogram_leiden_0.6']`</code></pre>
 </div>
 </div>
 </div>
-<p>Plot proportion of cells from each condition per cluster.</p>
+</section>
+<section id="louvain" class="level3" data-number="1.2">
+<h3 data-number="1.2" class="anchored" data-anchor-id="louvain"><span class="header-section-number">1.2</span> Louvain</h3>
 <div class="cell" data-execution_count="6">
-<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>tmp <span class="op">=</span> pd.crosstab(adata.obs[<span class="st">'leiden_0.6'</span>],adata.obs[<span class="st">'type'</span>], normalize<span class="op">=</span><span class="st">'index'</span>)</span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>tmp.plot.bar(stacked<span class="op">=</span><span class="va">True</span>).legend(loc<span class="op">=</span><span class="st">'upper right'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="6">
-<pre><code>&lt;matplotlib.legend.Legend at 0x7fff64f6db40&gt;</code></pre>
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>sc.tl.louvain(adata, key_added <span class="op">=</span> <span class="st">"louvain_1.0"</span>) <span class="co"># default resolution in 1.0</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>sc.tl.louvain(adata, resolution <span class="op">=</span> <span class="fl">0.6</span>, key_added <span class="op">=</span> <span class="st">"louvain_0.6"</span>)</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>sc.tl.louvain(adata, resolution <span class="op">=</span> <span class="fl">0.4</span>, key_added <span class="op">=</span> <span class="st">"louvain_0.4"</span>)</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>sc.tl.louvain(adata, resolution <span class="op">=</span> <span class="fl">1.4</span>, key_added <span class="op">=</span> <span class="st">"louvain_1.4"</span>)</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, color<span class="op">=</span>[<span class="st">'louvain_0.4'</span>, <span class="st">'louvain_0.6'</span>, <span class="st">'louvain_1.0'</span>,<span class="st">'louvain_1.4'</span>])</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>sc.tl.dendrogram(adata, groupby <span class="op">=</span> <span class="st">"louvain_0.6"</span>)</span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>sc.pl.dendrogram(adata, groupby <span class="op">=</span> <span class="st">"louvain_0.6"</span>)</span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>genes  <span class="op">=</span> [<span class="st">"CD3E"</span>, <span class="st">"CD4"</span>, <span class="st">"CD8A"</span>, <span class="st">"GNLY"</span>,<span class="st">"NKG7"</span>, <span class="st">"MS4A1"</span>,<span class="st">"FCGR3A"</span>,<span class="st">"CD14"</span>,<span class="st">"LYZ"</span>,<span class="st">"CST3"</span>,<span class="st">"MS4A7"</span>,<span class="st">"FCGR1A"</span>]</span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>sc.pl.dotplot(adata, genes, groupby<span class="op">=</span><span class="st">'louvain_0.6'</span>, dendrogram<span class="op">=</span><span class="va">True</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>running Louvain clustering
+    using the "louvain" package of Traag (2017)
+    finished: found 15 clusters and added
+    'louvain_1.0', the cluster labels (adata.obs, categorical) (0:00:00)
+running Louvain clustering
+    using the "louvain" package of Traag (2017)
+    finished: found 11 clusters and added
+    'louvain_0.6', the cluster labels (adata.obs, categorical) (0:00:00)
+running Louvain clustering
+    using the "louvain" package of Traag (2017)
+    finished: found 8 clusters and added
+    'louvain_0.4', the cluster labels (adata.obs, categorical) (0:00:00)
+running Louvain clustering
+    using the "louvain" package of Traag (2017)
+    finished: found 20 clusters and added
+    'louvain_1.4', the cluster labels (adata.obs, categorical) (0:00:00)
+    using 'X_pca' with n_pcs = 50
+Storing dendrogram info using `.uns['dendrogram_louvain_0.6']`</code></pre>
 </div>
 <div class="cell-output cell-output-display">
 <div class="quarto-figure quarto-figure-left">
@@ -356,62 +401,17 @@ Storing dendrogram info using `.uns['dendrogram_leiden_0.6']`</code></pre>
 </figure>
 </div>
 </div>
-</div>
-</section>
-<section id="louvain" class="level3" data-number="1.2">
-<h3 data-number="1.2" class="anchored" data-anchor-id="louvain"><span class="header-section-number">1.2</span> Louvain</h3>
-<div class="cell" data-execution_count="7">
-<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>sc.tl.louvain(adata, key_added <span class="op">=</span> <span class="st">"louvain_1.0"</span>) <span class="co"># default resolution in 1.0</span></span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>sc.tl.louvain(adata, resolution <span class="op">=</span> <span class="fl">0.6</span>, key_added <span class="op">=</span> <span class="st">"louvain_0.6"</span>)</span>
-<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>sc.tl.louvain(adata, resolution <span class="op">=</span> <span class="fl">0.4</span>, key_added <span class="op">=</span> <span class="st">"louvain_0.4"</span>)</span>
-<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>sc.tl.louvain(adata, resolution <span class="op">=</span> <span class="fl">1.4</span>, key_added <span class="op">=</span> <span class="st">"louvain_1.4"</span>)</span>
-<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, color<span class="op">=</span>[<span class="st">'louvain_0.4'</span>, <span class="st">'louvain_0.6'</span>, <span class="st">'louvain_1.0'</span>,<span class="st">'louvain_1.4'</span>])</span>
-<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>sc.tl.dendrogram(adata, groupby <span class="op">=</span> <span class="st">"louvain_0.6"</span>)</span>
-<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>sc.pl.dendrogram(adata, groupby <span class="op">=</span> <span class="st">"louvain_0.6"</span>)</span>
-<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>genes  <span class="op">=</span> [<span class="st">"CD3E"</span>, <span class="st">"CD4"</span>, <span class="st">"CD8A"</span>, <span class="st">"GNLY"</span>,<span class="st">"NKG7"</span>, <span class="st">"MS4A1"</span>,<span class="st">"FCGR3A"</span>,<span class="st">"CD14"</span>,<span class="st">"LYZ"</span>,<span class="st">"CST3"</span>,<span class="st">"MS4A7"</span>,<span class="st">"FCGR1A"</span>]</span>
-<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a>sc.pl.dotplot(adata, genes, groupby<span class="op">=</span><span class="st">'louvain_0.6'</span>, dendrogram<span class="op">=</span><span class="va">True</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>running Louvain clustering
-    using the "louvain" package of Traag (2017)
-    finished: found 15 clusters and added
-    'louvain_1.0', the cluster labels (adata.obs, categorical) (0:00:00)
-running Louvain clustering
-    using the "louvain" package of Traag (2017)
-    finished: found 9 clusters and added
-    'louvain_0.6', the cluster labels (adata.obs, categorical) (0:00:00)
-running Louvain clustering
-    using the "louvain" package of Traag (2017)
-    finished: found 8 clusters and added
-    'louvain_0.4', the cluster labels (adata.obs, categorical) (0:00:00)
-running Louvain clustering
-    using the "louvain" package of Traag (2017)
-    finished: found 18 clusters and added
-    'louvain_1.4', the cluster labels (adata.obs, categorical) (0:00:00)
-    using 'X_pca' with n_pcs = 50
-Storing dendrogram info using `.uns['dendrogram_louvain_0.6']`</code></pre>
-</div>
 <div class="cell-output cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="scanpy_04_clustering_files/figure-html/cell-8-output-2.png" class="lightbox" data-gallery="quarto-lightbox-gallery-6"><img src="scanpy_04_clustering_files/figure-html/cell-8-output-2.png" class="img-fluid figure-img"></a></p>
+<p><a href="scanpy_04_clustering_files/figure-html/cell-7-output-3.png" class="lightbox" data-gallery="quarto-lightbox-gallery-6"><img src="scanpy_04_clustering_files/figure-html/cell-7-output-3.png" class="img-fluid figure-img"></a></p>
 </figure>
 </div>
 </div>
 <div class="cell-output cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="scanpy_04_clustering_files/figure-html/cell-8-output-3.png" class="lightbox" data-gallery="quarto-lightbox-gallery-7"><img src="scanpy_04_clustering_files/figure-html/cell-8-output-3.png" class="img-fluid figure-img"></a></p>
-</figure>
-</div>
-</div>
-<div class="cell-output cell-output-display">
-<div class="quarto-figure quarto-figure-left">
-<figure class="figure">
-<p><a href="scanpy_04_clustering_files/figure-html/cell-8-output-4.png" class="lightbox" data-gallery="quarto-lightbox-gallery-8"><img src="scanpy_04_clustering_files/figure-html/cell-8-output-4.png" class="img-fluid figure-img"></a></p>
+<p><a href="scanpy_04_clustering_files/figure-html/cell-7-output-4.png" class="lightbox" data-gallery="quarto-lightbox-gallery-7"><img src="scanpy_04_clustering_files/figure-html/cell-7-output-4.png" class="img-fluid figure-img"></a></p>
 </figure>
 </div>
 </div>
@@ -421,36 +421,36 @@ Storing dendrogram info using `.uns['dendrogram_louvain_0.6']`</code></pre>
 <section id="meta-clust_kmean" class="level2" data-number="2">
 <h2 data-number="2" class="anchored" data-anchor-id="meta-clust_kmean"><span class="header-section-number">2</span> K-means clustering</h2>
 <p>K-means is a generic clustering algorithm that has been used in many application areas. In R, it can be applied via the kmeans function. Typically, it is applied to a reduced dimension representation of the expression data (most often PCA, because of the interpretability of the low-dimensional distances). We need to define the number of clusters in advance. Since the results depend on the initialization of the cluster centers, it is typically recommended to run K-means with multiple starting configurations (via the nstart argument).</p>
-<div class="cell" data-execution_count="8">
-<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.cluster <span class="im">import</span> KMeans</span>
-<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.metrics <span class="im">import</span> adjusted_rand_score</span>
-<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a><span class="co"># extract pca coordinates</span></span>
-<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>X_pca <span class="op">=</span> adata.obsm[<span class="st">'Scanorama'</span>] </span>
-<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a><span class="co"># kmeans with k=5</span></span>
-<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>kmeans <span class="op">=</span> KMeans(n_clusters<span class="op">=</span><span class="dv">5</span>, random_state<span class="op">=</span><span class="dv">0</span>).fit(X_pca) </span>
-<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>adata.obs[<span class="st">'kmeans5'</span>] <span class="op">=</span> kmeans.labels_.astype(<span class="bu">str</span>)</span>
-<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a><span class="co"># kmeans with k=10</span></span>
-<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a>kmeans <span class="op">=</span> KMeans(n_clusters<span class="op">=</span><span class="dv">10</span>, random_state<span class="op">=</span><span class="dv">0</span>).fit(X_pca) </span>
-<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a>adata.obs[<span class="st">'kmeans10'</span>] <span class="op">=</span> kmeans.labels_.astype(<span class="bu">str</span>)</span>
-<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb13-15"><a href="#cb13-15" aria-hidden="true" tabindex="-1"></a><span class="co"># kmeans with k=15</span></span>
-<span id="cb13-16"><a href="#cb13-16" aria-hidden="true" tabindex="-1"></a>kmeans <span class="op">=</span> KMeans(n_clusters<span class="op">=</span><span class="dv">15</span>, random_state<span class="op">=</span><span class="dv">0</span>).fit(X_pca)</span>
-<span id="cb13-17"><a href="#cb13-17" aria-hidden="true" tabindex="-1"></a>adata.obs[<span class="st">'kmeans15'</span>] <span class="op">=</span> kmeans.labels_.astype(<span class="bu">str</span>)</span>
-<span id="cb13-18"><a href="#cb13-18" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb13-19"><a href="#cb13-19" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, color<span class="op">=</span>[<span class="st">'kmeans5'</span>, <span class="st">'kmeans10'</span>, <span class="st">'kmeans15'</span>])</span>
-<span id="cb13-20"><a href="#cb13-20" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb13-21"><a href="#cb13-21" aria-hidden="true" tabindex="-1"></a>adata.obsm</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell" data-execution_count="7">
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.cluster <span class="im">import</span> KMeans</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.metrics <span class="im">import</span> adjusted_rand_score</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a><span class="co"># extract pca coordinates</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>X_pca <span class="op">=</span> adata.obsm[<span class="st">'Scanorama'</span>] </span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a><span class="co"># kmeans with k=5</span></span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>kmeans <span class="op">=</span> KMeans(n_clusters<span class="op">=</span><span class="dv">5</span>, random_state<span class="op">=</span><span class="dv">0</span>).fit(X_pca) </span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>adata.obs[<span class="st">'kmeans5'</span>] <span class="op">=</span> kmeans.labels_.astype(<span class="bu">str</span>)</span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a><span class="co"># kmeans with k=10</span></span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a>kmeans <span class="op">=</span> KMeans(n_clusters<span class="op">=</span><span class="dv">10</span>, random_state<span class="op">=</span><span class="dv">0</span>).fit(X_pca) </span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a>adata.obs[<span class="st">'kmeans10'</span>] <span class="op">=</span> kmeans.labels_.astype(<span class="bu">str</span>)</span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a><span class="co"># kmeans with k=15</span></span>
+<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a>kmeans <span class="op">=</span> KMeans(n_clusters<span class="op">=</span><span class="dv">15</span>, random_state<span class="op">=</span><span class="dv">0</span>).fit(X_pca)</span>
+<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a>adata.obs[<span class="st">'kmeans15'</span>] <span class="op">=</span> kmeans.labels_.astype(<span class="bu">str</span>)</span>
+<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-19"><a href="#cb11-19" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, color<span class="op">=</span>[<span class="st">'kmeans5'</span>, <span class="st">'kmeans10'</span>, <span class="st">'kmeans15'</span>])</span>
+<span id="cb11-20"><a href="#cb11-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-21"><a href="#cb11-21" aria-hidden="true" tabindex="-1"></a>adata.obsm</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="scanpy_04_clustering_files/figure-html/cell-9-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-9"><img src="scanpy_04_clustering_files/figure-html/cell-9-output-1.png" class="img-fluid figure-img"></a></p>
+<p><a href="scanpy_04_clustering_files/figure-html/cell-8-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-8"><img src="scanpy_04_clustering_files/figure-html/cell-8-output-1.png" class="img-fluid figure-img"></a></p>
 </figure>
 </div>
 </div>
-<div class="cell-output cell-output-display" data-execution_count="8">
+<div class="cell-output cell-output-display" data-execution_count="7">
 <pre><code>AxisArrays with keys: Scanorama, X_pca, X_tsne, X_umap</code></pre>
 </div>
 </div>
@@ -468,30 +468,76 @@ As you already know, correlation range from -1 to 1, where 1 indicates that two 
 [adj = ]<br>
 Once we transformed the correlations to a 0-1 scale, we can simply convert it to a distance object using <code>as.dist</code> function. The transformation does not need to have a maximum of 1, but it is more intuitive to have it at 1, rather than at any other number.</p>
 <p>The function <code>AgglomerativeClustering</code> has the option of running with disntance metrics “euclidean”, “l1”, “l2”, “manhattan”, “cosine”, or “precomputed”. However, with ward linkage only euklidean distances works. Here we will try out euclidean distance and ward linkage calculated in PCA space.</p>
-<div class="cell" data-execution_count="9">
-<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.cluster <span class="im">import</span> AgglomerativeClustering</span>
-<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>cluster <span class="op">=</span> AgglomerativeClustering(n_clusters<span class="op">=</span><span class="dv">5</span>, affinity<span class="op">=</span><span class="st">'euclidean'</span>, linkage<span class="op">=</span><span class="st">'ward'</span>)</span>
-<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>adata.obs[<span class="st">'hclust_5'</span>] <span class="op">=</span> cluster.fit_predict(X_pca).astype(<span class="bu">str</span>)</span>
-<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>cluster <span class="op">=</span> AgglomerativeClustering(n_clusters<span class="op">=</span><span class="dv">10</span>, affinity<span class="op">=</span><span class="st">'euclidean'</span>, linkage<span class="op">=</span><span class="st">'ward'</span>)</span>
-<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>adata.obs[<span class="st">'hclust_10'</span>] <span class="op">=</span> cluster.fit_predict(X_pca).astype(<span class="bu">str</span>)</span>
-<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a>cluster <span class="op">=</span> AgglomerativeClustering(n_clusters<span class="op">=</span><span class="dv">15</span>, affinity<span class="op">=</span><span class="st">'euclidean'</span>, linkage<span class="op">=</span><span class="st">'ward'</span>)</span>
-<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a>adata.obs[<span class="st">'hclust_15'</span>] <span class="op">=</span> cluster.fit_predict(X_pca).astype(<span class="bu">str</span>)</span>
-<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb15-12"><a href="#cb15-12" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, color<span class="op">=</span>[<span class="st">'hclust_5'</span>, <span class="st">'hclust_10'</span>, <span class="st">'hclust_15'</span>])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell" data-execution_count="8">
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.cluster <span class="im">import</span> AgglomerativeClustering</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>cluster <span class="op">=</span> AgglomerativeClustering(n_clusters<span class="op">=</span><span class="dv">5</span>, affinity<span class="op">=</span><span class="st">'euclidean'</span>, linkage<span class="op">=</span><span class="st">'ward'</span>)</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>adata.obs[<span class="st">'hclust_5'</span>] <span class="op">=</span> cluster.fit_predict(X_pca).astype(<span class="bu">str</span>)</span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>cluster <span class="op">=</span> AgglomerativeClustering(n_clusters<span class="op">=</span><span class="dv">10</span>, affinity<span class="op">=</span><span class="st">'euclidean'</span>, linkage<span class="op">=</span><span class="st">'ward'</span>)</span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>adata.obs[<span class="st">'hclust_10'</span>] <span class="op">=</span> cluster.fit_predict(X_pca).astype(<span class="bu">str</span>)</span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>cluster <span class="op">=</span> AgglomerativeClustering(n_clusters<span class="op">=</span><span class="dv">15</span>, affinity<span class="op">=</span><span class="st">'euclidean'</span>, linkage<span class="op">=</span><span class="st">'ward'</span>)</span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>adata.obs[<span class="st">'hclust_15'</span>] <span class="op">=</span> cluster.fit_predict(X_pca).astype(<span class="bu">str</span>)</span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, color<span class="op">=</span>[<span class="st">'hclust_5'</span>, <span class="st">'hclust_10'</span>, <span class="st">'hclust_15'</span>])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="scanpy_04_clustering_files/figure-html/cell-10-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-10"><img src="scanpy_04_clustering_files/figure-html/cell-10-output-1.png" class="img-fluid figure-img"></a></p>
+<p><a href="scanpy_04_clustering_files/figure-html/cell-9-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-9"><img src="scanpy_04_clustering_files/figure-html/cell-9-output-1.png" class="img-fluid figure-img"></a></p>
 </figure>
 </div>
 </div>
 </div>
 <p>Finally, lets save the clustered data for further analysis.</p>
+<div class="cell" data-execution_count="9">
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>adata.write_h5ad(<span class="st">'./data/covid/results/scanpy_covid_qc_dr_scanorama_cl.h5ad'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="meta-clust_distribution" class="level2" data-number="4">
+<h2 data-number="4" class="anchored" data-anchor-id="meta-clust_distribution"><span class="header-section-number">4</span> Distribution of clusters</h2>
+<p>Now, we can select one of our clustering methods and compare the proportion of samples across the clusters.</p>
+<p>Select the “leiden_0.6” and plot proportion of samples per cluster and also proportion covid vs ctrl.</p>
+<p>Plot proportion of cells from each condition per cluster.</p>
 <div class="cell" data-execution_count="10">
-<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>adata.write_h5ad(<span class="st">'./data/results/scanpy_clustered_covid.h5ad'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>tmp <span class="op">=</span> pd.crosstab(adata.obs[<span class="st">'leiden_0.6'</span>],adata.obs[<span class="st">'type'</span>], normalize<span class="op">=</span><span class="st">'index'</span>)</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>tmp.plot.bar(stacked<span class="op">=</span><span class="va">True</span>).legend(bbox_to_anchor<span class="op">=</span>(<span class="fl">1.4</span>, <span class="dv">1</span>), loc<span class="op">=</span><span class="st">'upper right'</span>)</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>tmp <span class="op">=</span> pd.crosstab(adata.obs[<span class="st">'leiden_0.6'</span>],adata.obs[<span class="st">'sample'</span>], normalize<span class="op">=</span><span class="st">'index'</span>)</span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>tmp.plot.bar(stacked<span class="op">=</span><span class="va">True</span>).legend(bbox_to_anchor<span class="op">=</span>(<span class="fl">1.4</span>, <span class="dv">1</span>),loc<span class="op">=</span><span class="st">'upper right'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="10">
+<pre><code>&lt;matplotlib.legend.Legend at 0x7fff4680fbe0&gt;</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<div class="quarto-figure quarto-figure-left">
+<figure class="figure">
+<p><a href="scanpy_04_clustering_files/figure-html/cell-11-output-2.png" class="lightbox" data-gallery="quarto-lightbox-gallery-10"><img src="scanpy_04_clustering_files/figure-html/cell-11-output-2.png" class="img-fluid figure-img"></a></p>
+</figure>
+</div>
+</div>
+<div class="cell-output cell-output-display">
+<div class="quarto-figure quarto-figure-left">
+<figure class="figure">
+<p><a href="scanpy_04_clustering_files/figure-html/cell-11-output-3.png" class="lightbox" data-gallery="quarto-lightbox-gallery-11"><img src="scanpy_04_clustering_files/figure-html/cell-11-output-3.png" class="img-fluid figure-img"></a></p>
+</figure>
+</div>
+</div>
+</div>
+<p>In this case we have quite good representation of each sample in each cluster. But there are clearly some biases with more cells from one sample in some clusters and also more covid cells in some of the clusters.</p>
+<p>We can also plot it in the other direction, the proportion of each cluster per sample.</p>
+<div class="cell" data-execution_count="11">
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>tmp <span class="op">=</span> pd.crosstab(adata.obs[<span class="st">'sample'</span>],adata.obs[<span class="st">'leiden_0.6'</span>], normalize<span class="op">=</span><span class="st">'index'</span>)</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>tmp.plot.bar(stacked<span class="op">=</span><span class="va">True</span>).legend(bbox_to_anchor<span class="op">=</span>(<span class="fl">1.4</span>, <span class="dv">1</span>), loc<span class="op">=</span><span class="st">'upper right'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="11">
+<pre><code>&lt;matplotlib.legend.Legend at 0x7fff46bb3be0&gt;</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<div class="quarto-figure quarto-figure-left">
+<figure class="figure">
+<p><a href="scanpy_04_clustering_files/figure-html/cell-12-output-2.png" class="lightbox" data-gallery="quarto-lightbox-gallery-12"><img src="scanpy_04_clustering_files/figure-html/cell-12-output-2.png" class="img-fluid figure-img"></a></p>
+</figure>
+</div>
+</div>
 </div>
 <div class="callout callout-style-default callout-note callout-titled" title="Discuss">
 <div class="callout-header d-flex align-content-center">
@@ -507,14 +553,14 @@ Discuss
 </div>
 </div>
 </section>
-<section id="meta-session" class="level2" data-number="4">
-<h2 data-number="4" class="anchored" data-anchor-id="meta-session"><span class="header-section-number">4</span> Session info</h2>
+<section id="meta-session" class="level2" data-number="5">
+<h2 data-number="5" class="anchored" data-anchor-id="meta-session"><span class="header-section-number">5</span> Session info</h2>
 <details>
 <summary>
 Click here
 </summary>
-<div class="cell" data-execution_count="11">
-<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>sc.logging.print_versions()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell" data-execution_count="12">
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>sc.logging.print_versions()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>-----
 anndata     0.10.3
@@ -630,7 +676,7 @@ notebook            6.5.4
 Python 3.10.11 | packaged by conda-forge | (main, May 10 2023, 18:58:44) [GCC 11.3.0]
 Linux-6.5.11-linuxkit-x86_64-with-glibc2.35
 -----
-Session information updated at 2024-01-04 16:09</code></pre>
+Session information updated at 2024-01-23 11:28</code></pre>
 </div>
 </div>
 </details>
@@ -882,7 +928,7 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
     <div class="nav-footer-right">Published with <a href="https://quarto.org/">Quarto</a> v1.3.450</div>
   </div>
 </footer>
-<script>var lightboxQuarto = GLightbox({"selector":".lightbox","loop":true,"descPosition":"bottom","closeEffect":"zoom","openEffect":"zoom"});</script>
+<script>var lightboxQuarto = GLightbox({"selector":".lightbox","closeEffect":"zoom","descPosition":"bottom","openEffect":"zoom","loop":true});</script>
 
 
 

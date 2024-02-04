@@ -70,16 +70,19 @@ py_discover_config()
 If you need to install additional R packages from `Cran`, `Bioconductor` or `GitHub`, the following scripts are available for convenience. From the _Terminal_, run the corresponding command below:
 
 * CRAN  
+
   ```bash
   install2.r --error --skipinstalled -n "$NCPUS" <PACKAGE-NAME>
   ```
 
 * Bioconductor
+
   ```bash
   installBioc.r --error --skipinstalled -n "$NCPUS" <PACKAGE-NAME>
   ```
 
 * GitHub
+
   ```bash
   installGithub.r <GITHUB-OWNER>/<GITHUB-REPOSITORY>
   ```
@@ -118,7 +121,7 @@ In the browser, go to [localhost:8888](localhost:8888).
 From the project root directory, run the following command:
 
 ```bash
-docker build -t scrnaseq:<TOOLKIT> --file containers/dockerfiles/<TOOLKIT>.Dockerfile ./containers
+docker build -t ghcr.io/nbisweden/workshop-scrnaseq:<TOOLKIT> --file containers/dockerfiles/<TOOLKIT>.Dockerfile ./containers
 ```
 
 ## Push to GitHub Container Registry
@@ -128,3 +131,32 @@ Each toolkit image comes with an associated GitHub Action that builds and pushes
 ## Build Singularity Images (Uppmax)
 
 To use these images on Uppmax, you first need to build them as Singularity images. A set of minimal Singularity definition files (`.def`) are provided in the `uppmax/` folder. A set of launch scripts, one for JupyterLab based images and one for RStudio based images are also provided in the same folder.
+
+To build singularity images, use this bash script;
+
+```
+#!/bin/bash
+## Build singularity sif containers
+
+#SBATCH -A naiss2023-22-1345
+#SBATCH -p core
+#SBATCH -n 4
+#SBATCH -t 2:00:00
+#SBATCH -J bld-sif
+
+# start date time
+starttime=`date +%s`
+
+singularity build 2024-seurat-r4.3.0.sif singularity_seurat.def
+singularity build 2024-bioconductor-r4.3.0.sif singularity_bioconductor.def
+singularity build 2024-scanpy-py3.10.sif singularity_scanpy.def
+
+singularity build 2024-seurat_spatial-r4.3.0.sif singularity_seurat_spatial.def
+singularity build 2024-bioconductor_spatial-r4.3.0.sif singularity_bioconductor_spatial.def
+singularity build 2024-scanpy_spatial-py3.10.sif singularity_scanpy_spatial.def
+
+#end date time
+endtime=`date +%s`
+echo "End of Script. Script took $(($endtime-$starttime)) seconds."
+exit 0
+```

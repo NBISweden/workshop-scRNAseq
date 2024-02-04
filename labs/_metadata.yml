@@ -12,13 +12,14 @@ qc_description: "Quality control of single cell RNA-Seq data. Inspection of QC m
 
 # get data
 qc_data: "Get data"
-qc_data_1: "In this tutorial, we will run all tutorials with a set of 6 PBMC 10x datasets from 3 covid-19 patients and 3 healthy controls, the samples have been subsampled to 1500 cells per sample. They are part of the github repo and if you have cloned the repo they should be available in folder: `labs/data/covid_data_GSE149689`. Instructions on how to download them can also be found in the Precourse material."
+qc_data_1: "In this tutorial, we will run all tutorials with a set of 8 PBMC 10x datasets from 4 covid-19 patients and 4 healthy controls, the samples have been subsampled to 1500 cells per sample. We can start by defining our paths."
 qc_data_2: "With data in place, now we can start loading libraries we will use in this tutorial."
 qc_data_3: "We can first load the data individually by reading directly from HDF5 file format (.h5)."
 
+
 # collate
 qc_collate: "Collate"
-qc_collate_1: "We can now load the expression matrices and merge them into a single object. Each analysis workflow (Seurat, Scater, Scanpy, etc) has its own way of storing data. We will add dataset labels as **cell.ids** just in case you have overlapping barcodes between the datasets. After that we add a column **Chemistry** in the metadata for plotting later on."
+qc_collate_1: "We can now merge them objects into a single object. Each analysis workflow (Seurat, Scater, Scanpy, etc) has its own way of storing data. We will add dataset labels as **cell.ids** just in case you have overlapping barcodes between the datasets. After that we add a column **type** in the metadata to define covid and ctrl samples."
 qc_collate_2: "Once you have created the merged Seurat object, the count matrices and individual count matrices and objects are not needed anymore. It is a good idea to remove them and run garbage collect to free up some memory."
 qc_collate_3: "Here is how the count matrix and the metadata look like for every cell."
 
@@ -31,7 +32,7 @@ qc_calqc_3: "Now you can see that we have additional data in the metadata slot."
 # plot qc
 qc_plotqc: "Plot QC"
 qc_plotqc_1: "Now we can plot some of the QC variables as violin plots."
-qc_plotqc_2: "As you can see, there is quite some difference in quality for the 4 datasets, with for instance the covid_15 sample having fewer cells with many detected genes and more mitochondrial content. As the ribosomal proteins are highly expressed they will make up a larger proportion of the transcriptional landscape when fewer of the lowly expressed genes are detected. And we can plot the different QC-measures as scatter plots."
+qc_plotqc_2: "As you can see, there is quite some difference in quality for the 4 datasets, with for instance the covid_15 and covid_16 samples having fewer cells with many detected genes and more mitochondrial content. As the ribosomal proteins are highly expressed they will make up a larger proportion of the transcriptional landscape when fewer of the lowly expressed genes are detected. We can also plot the different QC-measures as scatter plots."
 qc_plotqc_3: "Plot additional QC stats that we have calculated as scatter plots. How are the different measures correlated? Can you explain why?"
 
 # filtering
@@ -54,16 +55,16 @@ qc_filter_plot: "Plot filtered QC"
 qc_filter_plot_1: "Lets plot the same QC-stats another time."
 
 qc_filter_genes: "Filter genes"
-qc_filter_genes_1: "As the level of expression of mitochondrial and MALAT1 genes are judged as mainly technical, it can be wise to remove them from the dataset before any further analysis."
+qc_filter_genes_1: "As the level of expression of mitochondrial and MALAT1 genes are judged as mainly technical, it can be wise to remove them from the dataset before any further analysis. In this case we will also remove the HB genes." 
 
 # sex
 qc_sex: "Sample sex"
 qc_sex_1: "When working with human or animal samples, you should ideally constrain you experiments to a single sex to avoid including sex bias in the conclusions. However this may not always be possible. By looking at reads from chromosomeY (males) and XIST (X-inactive specific transcript) expression (mainly female) it is quite easy to determine per sample which sex it is. It can also bee a good way to detect if there has been any sample mixups, if the sample metadata sex does not agree with the computational predictions."
-qc_sex_2: "To get chromosome information for all genes, you should ideally parse the information from the gtf file that you used in the mapping pipeline as it has the exact same annotation version/gene naming. However, it may not always be available, as in this case where we have downloaded public data. Hence, we will use biomart to fetch chromosome information. As the biomart instances quite often are unresponsive, you can try the code below, but if it fails, we have the file with gene annotations on github [here](https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/labs/misc/genes.table.csv). Make sure you put it at the correct location for the path `genes.file` to work."
+qc_sex_2: "To get chromosome information for all genes, you should ideally parse the information from the gtf file that you used in the mapping pipeline as it has the exact same annotation version/gene naming. However, it may not always be available, as in this case where we have downloaded public data. R package biomaRt can be used to fetch annotation information. The code to run biomaRt is provided. As the biomart instances quite often are unresponsive, we will download and use a file that was created in advance."
 qc_sex_3: "Now that we have the chromosome information, we can calculate per cell the proportion of reads that comes from chromosome Y."
 qc_sex_4: "Then plot XIST expression vs chrY proportion. As you can see, the samples are clearly on either side, even if some cells do not have detection of either."
 qc_sex_5: "Plot as violins."
-qc_sex_6: "Here, we can see clearly that we have two males and 4 females, can you see which samples they are? Do you think this will cause any problems for downstream analysis? Discuss with your group: what would be the best way to deal with this type of sex bias?"
+qc_sex_6: "Here, we can see clearly that we have three males and five females, can you see which samples they are? Do you think this will cause any problems for downstream analysis? Discuss with your group: what would be the best way to deal with this type of sex bias?"
 
 # cellcycle
 qc_cellcycle: "Cell cycle state"
@@ -139,6 +140,13 @@ dimred_plotgenes: "Genes of interest"
 dimred_plotgenes_1: "Let's plot some marker genes for different cell types onto the embedding."
 dimred_plotgenes_2: "Select some of your dimensionality reductions and plot some of the QC stats that were calculated in the previous lab. Can you see if some of the separation in your data is driven by quality of the cells?"
 
+dimred_harmony: "Harmony"
+dimred_harmony_1: "An alternative method for integration is Harmony, for more details on the method, please se their paper  [Nat. Methods](https://www.nature.com/articles/s41592-019-0619-0). This method runs the integration on a dimensionality reduction, in most applications the PCA. So first, we will rerun scaling and PCA with the same set of genes that were used for the CCA integration."
+
+dimred_scanorama: "Scanorama"
+dimred_scanorama_1: "Another integration method is Scanorama (see [Nat. Biotech.](https://www.nature.com/articles/s41587-019-0113-3)). This method is implemented in python, but we can run it through the Reticulate package."
+dimred_scanorama_2: "We will run it with the same set of variable genes, but first we have to create a list of all the objects per sample."
+
 # save data
 dimred_save: "Save data"
 dimred_save_1: "We can finally save the object for use in future steps."
@@ -177,9 +185,10 @@ clust_2: "Let's first load all necessary libraries and also the integrated datas
 clust_graphclust: "Graph clustering"
 clust_graphclust_1: |
   The procedure of clustering on a Graph can be generalized as 3 main steps:
-  1) Build a kNN graph from the data.
-  2) Prune spurious connections from kNN graph (optional step). This is a SNN graph.
-  3) Find groups of cells that maximizes the connections within the group compared other groups.
+  \
+  - Build a kNN graph from the data. \
+  - Prune spurious connections from kNN graph (optional step). This is a SNN graph. \
+  - Find groups of cells that maximizes the connections within the group compared other groups.
 
 clust_graphclust_knn: "Building kNN / SNN graph"
 clust_graphclust_knn_1: "The first step into graph clustering is to construct a k-nn graph, in case you don't have one. For this, we will use the PCA space. Thus, as done for dimensionality reduction, we will use ony the top *N* PCA dimensions for this purpose (the same used for computing UMAP / tSNE)."
@@ -202,7 +211,7 @@ clust_hier_dist_2: |
 
   As you already know, correlation range from -1 to 1, where 1 indicates that two samples are closest, -1 indicates that two samples are the furthest and 0 is somewhat in between. This, however, creates a problem in defining distances because a distance of 0 indicates that two samples are closest, 1 indicates that two samples are the furthest and distance of -1 is not meaningful. We thus need to transform the correlations to a positive scale (a.k.a. **adjacency**):
 
-  \[adj = \frac{1- cor}{2}\]
+  $$adj = \frac{1- cor}{2}$$
 
   Once we transformed the correlations to a 0-1 scale, we can simply convert it to a distance object using `as.dist` function. The transformation does not need to have a maximum of 1, but it is more intuitive to have it at 1, rather than at any other number.
 

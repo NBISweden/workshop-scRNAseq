@@ -20,20 +20,29 @@ import pandas as pd
 import scanpy as sc
 import matplotlib.pyplot as plt
 import warnings
+import os
+import urllib.request
 
 warnings.simplefilter(action="ignore", category=Warning)
 
 # verbosity: errors (0), warnings (1), info (2), hints (3)
-sc.settings.verbosity = 3             
+sc.settings.verbosity = 3
 sc.settings.set_figure_params(dpi=80)
 ```
 
 ```{python}
-# select the scanorama integration data.
+path_data = "https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"
 
-save_file = './data/results/scanpy_scanorama_corrected_covid.h5ad'
-adata = sc.read_h5ad(save_file)
+path_results = "data/covid/results"
+if not os.path.exists(path_results):
+    os.makedirs(path_results, exist_ok=True)
 
+path_file = "data/covid/results/scanpy_covid_qc_dr_scanorama.h5ad"
+if not os.path.exists(path_file):
+    urllib.request.urlretrieve(os.path.join(
+        path_data, 'covid/results/scanpy_covid_qc_dr_scanorama.h5ad'), path_file)
+
+adata = sc.read_h5ad(path_file)
 adata
 ```
 
@@ -70,12 +79,6 @@ genes  = ["CD3E", "CD4", "CD8A", "GNLY","NKG7", "MS4A1","FCGR3A","CD14","LYZ","C
 sc.pl.dotplot(adata, genes, groupby='leiden_0.6', dendrogram=True)
 ```
 
-Plot proportion of cells from each condition per cluster.
-
-```{python}
-tmp = pd.crosstab(adata.obs['leiden_0.6'],adata.obs['type'], normalize='index')
-tmp.plot.bar(stacked=True).legend(loc='upper right')
-```
 
 ### Louvain
 
@@ -153,7 +156,35 @@ sc.pl.umap(adata, color=['hclust_5', 'hclust_10', 'hclust_15'])
 {{< meta clust_save >}}
 
 ```{python}
-adata.write_h5ad('./data/results/scanpy_clustered_covid.h5ad')
+adata.write_h5ad('./data/covid/results/scanpy_covid_qc_dr_scanorama_cl.h5ad')
+```
+
+
+## {{< meta clust_distribution >}}
+
+{{< meta clust_distribution_1 >}}
+
+Select the "leiden_0.6" and plot proportion of samples per cluster and also proportion covid vs ctrl.
+
+Plot proportion of cells from each condition per cluster.
+
+```{python}
+tmp = pd.crosstab(adata.obs['leiden_0.6'],adata.obs['type'], normalize='index')
+tmp.plot.bar(stacked=True).legend(bbox_to_anchor=(1.4, 1), loc='upper right')
+
+tmp = pd.crosstab(adata.obs['leiden_0.6'],adata.obs['sample'], normalize='index')
+tmp.plot.bar(stacked=True).legend(bbox_to_anchor=(1.4, 1),loc='upper right')
+
+```
+
+{{< meta clust_distribution_2 >}}
+
+{{< meta clust_distribution_3 >}}
+
+```{python}
+tmp = pd.crosstab(adata.obs['sample'],adata.obs['leiden_0.6'], normalize='index')
+tmp.plot.bar(stacked=True).legend(bbox_to_anchor=(1.4, 1), loc='upper right')
+
 ```
 
 :::{.callout-note title="Discuss"}

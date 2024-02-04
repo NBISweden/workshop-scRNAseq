@@ -4,6 +4,7 @@ set -e
 
 ## Build ARGs
 NCPUS=${NCPUS:--1}
+QUARTO_VERSION="1.3.450"
 
 ## Function to install apt packages only if they are not installed
 function apt_install() {
@@ -18,11 +19,18 @@ function apt_install() {
 apt_install \
     libhdf5-dev \
     libglpk-dev \
+    libxt6 \
     patch \
     python3.10-dev \
     python3-pip \
     python3.10-venv \
-    vim
+    vim \
+    curl
+
+## Install quarto cli
+curl -o quarto-linux-amd64.deb -L https://github.com/quarto-dev/quarto-cli/releases/download/v${QUARTO_VERSION}/quarto-${QUARTO_VERSION}-linux-amd64.deb \
+    && apt-get install -y ./quarto-linux-amd64.deb \
+    && rm -rf ./quarto-linux-amd64.deb \
 
 ## Install Miniconda
 wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /home/rstudio/miniconda.sh
@@ -61,7 +69,7 @@ installBioc.r --error --skipinstalled -n "$NCPUS" \
     tradeSeq
 
 ## Install R packages from GitHub
-installGithub.r \
+installGithub.r --update FALSE \
     https://github.com/chris-mcginnis-ucsf/DoubletFinder/tree/1b1d4e2d7f893a3552d9f8f791ab868ee4c782e6 \
     https://github.com/immunogenomics/harmony/tree/f054b030b5d503e7c385dac6290604013ab9f81b \
     https://github.com/powellgenomicslab/scPred/tree/af5492e778b076e529c20462c92aacd06c75bdc0

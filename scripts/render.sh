@@ -41,8 +41,8 @@ docker run --rm --platform=linux/amd64 -p 8787:8787 -e PASSWORD=scrnaseq -v ${PW
 docker run --rm --platform=linux/amd64 -p 8787:8787 -e PASSWORD=scrnaseq -v ${PWD}:/work $docker_seurat quarto render /work/labs/seurat/seurat_04_clustering.qmd
 docker run --rm --platform=linux/amd64 -p 8787:8787 -e PASSWORD=scrnaseq -v ${PWD}:/work $docker_seurat quarto render /work/labs/seurat/seurat_05_dge.qmd
 docker run --rm --platform=linux/amd64 -p 8787:8787 -e PASSWORD=scrnaseq -v ${PWD}:/work $docker_seurat quarto render /work/labs/seurat/seurat_06_celltyping.qmd
-# docker run --rm --platform=linux/amd64 -p 8787:8787 -e PASSWORD=scrnaseq -v ${PWD}:/work $docker_seurat_spatial quarto render /work/labs/seurat/seurat_07_spatial.qmd
-# docker run --rm --platform=linux/amd64 -p 8787:8787 -e PASSWORD=scrnaseq -v ${PWD}:/work $docker_seurat quarto render /work/labs/seurat/seurat_08_trajectory.qmd
+docker run --rm --platform=linux/amd64 -p 8787:8787 -e PASSWORD=scrnaseq -v ${PWD}:/work $docker_seurat quarto render /work/labs/seurat/seurat_07_trajectory.qmd
+docker run --rm --platform=linux/amd64 -p 8787:8787 -e PASSWORD=scrnaseq -v ${PWD}:/work $docker_seurat_spatial quarto render /work/labs/seurat/seurat_08_spatial.qmd
 duration_seurat=$(echo "$(date +%s.%N) - $start_seurat" | bc) && echo "Seurat time elapsed: $duration_seurat seconds"
 
 ## bioconductor
@@ -50,24 +50,25 @@ echo "Rendering Bioconductor files..."
 start_bioc=$(date +%s.%N)
 docker run --rm --platform=linux/amd64 -p 8787:8787 -e PASSWORD=scrnaseq -v ${PWD}:/work $docker_bioc quarto render /work/labs/bioc/bioc_01_qc.qmd
 docker run --rm --platform=linux/amd64 -p 8787:8787 -e PASSWORD=scrnaseq -v ${PWD}:/work $docker_bioc quarto render /work/labs/bioc/bioc_02_dimred.qmd
-# docker run --rm --platform=linux/amd64 -p 8787:8787 -e PASSWORD=scrnaseq -v ${PWD}:/work $docker_bioc quarto render /work/labs/bioc/bioc_03_integration.qmd
+docker run --rm --platform=linux/amd64 -p 8787:8787 -e PASSWORD=scrnaseq -v ${PWD}:/work $docker_bioc quarto render /work/labs/bioc/bioc_03_integration.qmd
 docker run --rm --platform=linux/amd64 -p 8787:8787 -e PASSWORD=scrnaseq -v ${PWD}:/work $docker_bioc quarto render /work/labs/bioc/bioc_04_clustering.qmd
 docker run --rm --platform=linux/amd64 -p 8787:8787 -e PASSWORD=scrnaseq -v ${PWD}:/work $docker_bioc quarto render /work/labs/bioc/bioc_05_dge.qmd
 docker run --rm --platform=linux/amd64 -p 8787:8787 -e PASSWORD=scrnaseq -v ${PWD}:/work $docker_bioc quarto render /work/labs/bioc/bioc_06_celltyping.qmd
-#docker run --rm --platform=linux/amd64 -p 8787:8787 -e PASSWORD=scrnaseq -v ${PWD}:/work $docker_bioc_spatial quarto render /work/labs/bioc/bioc_07_spatial.qmd
+docker run --rm --platform=linux/amd64 -p 8787:8787 -e PASSWORD=scrnaseq -v ${PWD}:/work $docker_bioc_spatial quarto render /work/labs/bioc/bioc_08_spatial.qmd
 duration_bioc=$(echo "$(date +%s.%N) - $start_bioc" | bc) && echo "Bioc time elapsed: $duration_bioc seconds"
 
 ## scanpy
+## on linux, add -u 1000:1000
 echo "Rendering Scanpy files..."
 start_scanpy=$(date +%s.%N)
-docker run --rm --platform=linux/amd64 -p 8888:8888 -v ${PWD}:/work $docker_scanpy quarto render /work/labs/scanpy/scanpy_01_qc.qmd
-docker run --rm --platform=linux/amd64 -p 8888:8888 -v ${PWD}:/work $docker_scanpy quarto render /work/labs/scanpy/scanpy_02_dimred.qmd
-docker run --rm --platform=linux/amd64 -p 8888:8888 -v ${PWD}:/work $docker_scanpy quarto render /work/labs/scanpy/scanpy_03_integration.qmd
-docker run --rm --platform=linux/amd64 -p 8888:8888 -v ${PWD}:/work $docker_scanpy quarto render /work/labs/scanpy/scanpy_04_clustering.qmd
-docker run --rm --platform=linux/amd64 -p 8888:8888 -v ${PWD}:/work $docker_scanpy quarto render /work/labs/scanpy/scanpy_05_dge.qmd
-docker run --rm --platform=linux/amd64 -p 8888:8888 -v ${PWD}:/work $docker_scanpy quarto render /work/labs/scanpy/scanpy_06_celltyping.qmd
-#docker run --rm --platform=linux/amd64 -p 8888:8888 -v ${PWD}:/work $docker_scanpy_spatial quarto render /work/labs/scanpy/scanpy_07_spatial.qmd
-docker run --rm --platform=linux/amd64 -p 8888:8888 -v ${PWD}:/work $docker_scanpy quarto render /work/labs/scanpy/scanpy_08_trajectory.qmd
+docker run --rm --platform=linux/amd64 -u 1000:1000 -p 8888:8888 -v ${PWD}:/work $docker_scanpy quarto render /work/labs/scanpy/scanpy_01_qc.qmd
+docker run --rm --platform=linux/amd64 -u 1000:1000 -p 8888:8888 -v ${PWD}:/work $docker_scanpy quarto render /work/labs/scanpy/scanpy_02_dimred.qmd
+docker run --rm --platform=linux/amd64 -u 1000:1000 -p 8888:8888 -v ${PWD}:/work $docker_scanpy quarto render /work/labs/scanpy/scanpy_03_integration.qmd
+docker run --rm --platform=linux/amd64 -u 1000:1000 -p 8888:8888 -v ${PWD}:/work $docker_scanpy quarto render /work/labs/scanpy/scanpy_04_clustering.qmd
+docker run --rm --platform=linux/amd64 -u 1000:1000 -p 8888:8888 -v ${PWD}:/work $docker_scanpy quarto render /work/labs/scanpy/scanpy_05_dge.qmd
+docker run --rm --platform=linux/amd64 -u 1000:1000 -p 8888:8888 -v ${PWD}:/work $docker_scanpy quarto render /work/labs/scanpy/scanpy_06_celltyping.qmd
+docker run --rm --platform=linux/amd64 -u 1000:1000 -p 8888:8888 -v ${PWD}:/work $docker_scanpy quarto render /work/labs/scanpy/scanpy_07_trajectory.qmd
+docker run --rm --platform=linux/amd64 -u 1000:1000 -p 8888:8888 -v ${PWD}:/work $docker_scanpy_spatial quarto render /work/labs/scanpy/scanpy_08_spatial.qmd
 duration_scanpy=$(echo "$(date +%s.%N) - $start_scanpy" | bc) && echo "Scanpy time elapsed: $duration_scanpy seconds"
 
 ## site
@@ -81,7 +82,12 @@ docker run --rm --platform=linux/amd64 -v ${PWD}:/work $docker_site quarto rende
 docker run --rm --platform=linux/amd64 -v ${PWD}:/work $docker_site quarto render /work/other/docker.qmd
 docker run --rm --platform=linux/amd64 -v ${PWD}:/work $docker_site quarto render /work/other/containers.qmd
 docker run --rm --platform=linux/amd64 -v ${PWD}:/work $docker_site quarto render /work/other/faq.qmd
-docker run --rm --platform=linux/amd64 -v ${PWD}:/work $docker_site quarto render /work/404.qmd
+#docker run --rm --platform=linux/amd64 -v ${PWD}:/work $docker_site quarto render /work/404.md
+docker run --rm --platform=linux/amd64 -v ${PWD}:/work $docker_site quarto render /work/labs/index.qmd
+
+# build compiled files
+bash ./scripts/compile.sh
+echo "All labs compiled successfully."
 
 echo "Seurat time elapsed: $duration_seurat seconds"
 echo "Bioc time elapsed: $duration_bioc seconds"

@@ -25,18 +25,24 @@ Code chunks run R commands unless otherwise specified.
 {{< meta int_prep_1 >}}
 
 ```{r}
+suppressPackageStartupMessages({
+    library(Seurat)
+    library(ggplot2)
+    library(patchwork)
+    library(reticulate)
+})
+
 # Activate scanorama Python venv
 reticulate::use_virtualenv("/opt/venv/scanorama")
 reticulate::py_discover_config()
+```
 
-suppressPackageStartupMessages({
-  library(Seurat)
-  library(cowplot)
-  library(ggplot2)
-  library(reticulate)
-})
-
-alldata <- readRDS("data/results/covid_qc_dr.rds")
+```{r}
+path_data <- "https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"
+path_file <- "data/covid/results/seurat_covid_qc_dr.rds"
+if(!dir.exists(dirname(path_file))) dir.create(dirname(path_file), recursive = TRUE)
+if (!file.exists(path_file)) download.file(url = file.path(path_data, "covid/results/seurat_covid_qc_dr.rds"), destfile = path_file)
+alldata <- readRDS(path_file)
 print(names(alldata@reductions))
 ```
 
@@ -121,15 +127,16 @@ alldata.int <- RunTSNE(alldata.int, dims = 1:30)
 #| fig-height: 6
 #| fig-width: 10
 
-plot_grid(ncol = 3,
+wrap_plots(
   DimPlot(alldata, reduction = "pca", group.by = "orig.ident")+NoAxes()+ggtitle("PCA raw_data"),
   DimPlot(alldata, reduction = "tsne", group.by = "orig.ident")+NoAxes()+ggtitle("tSNE raw_data"),
   DimPlot(alldata, reduction = "umap", group.by = "orig.ident")+NoAxes()+ggtitle("UMAP raw_data"),
   
   DimPlot(alldata.int, reduction = "pca", group.by = "orig.ident")+NoAxes()+ggtitle("PCA integrated"),
   DimPlot(alldata.int, reduction = "tsne", group.by = "orig.ident")+NoAxes()+ggtitle("tSNE integrated"),
-  DimPlot(alldata.int, reduction = "umap", group.by = "orig.ident")+NoAxes()+ggtitle("UMAP integrated")
-)
+  DimPlot(alldata.int, reduction = "umap", group.by = "orig.ident")+NoAxes()+ggtitle("UMAP integrated"),
+  ncol = 3
+) + plot_layout(guides = "collect")
 ```
 
 ### Clean memory
@@ -162,16 +169,13 @@ gc()
 |FCER1A, CST3|DCs|
 
 ```{r}
-#| fig-height: 10
-#| fig-width: 10
+#| fig-height: 8
+#| fig-width: 9
 
-myfeatures <- c("CD3E","CD4","CD8A","NKG7","GNLY","MS4A1","CD14","LYZ","MS4A7","FCGR3A","CST3","FCER1A")
-plot_list <- list()
-for(i in myfeatures){
-  plot_list[[i]] <- FeaturePlot(alldata.int, reduction = "umap",dims = 1:2,
-            features = i,ncol = 3,order = T) + NoLegend() + NoAxes() + NoGrid() }
-plot_grid(ncol=3, plotlist = plot_list)
+myfeatures <- c("CD3E", "CD4", "CD8A", "NKG7", "GNLY", "MS4A1", "CD14", "LYZ", "MS4A7", "FCGR3A", "CST3", "FCER1A")
+FeaturePlot(alldata.int, reduction = "umap", dims = 1:2, features = myfeatures, ncol = 4, order = T) + NoLegend() + NoAxes() + NoGrid()
 ```
+
 ## Harmony
 
 An alternative method for integration is Harmony, for more details on the method, please se their paper  [Nat. Methods](https://www.nature.com/articles/s41592-019-0619-0). 
@@ -216,7 +220,6 @@ Another integration method is Scanorama (see [Nat. Biotech.](https://www.nature.
 
 
 ```{r}
-#| eval: false
 #| fig-height: 5
 #| fig-width: 16
 
@@ -231,9 +234,9 @@ lapply(assaylist,dim)
 ```
 
 ```{r}
-#| eval: false
 #| fig-height: 5
 #| fig-width: 16
+#| eval: false
 
 # Activate scanorama Python venv
 scanorama <- reticulate::import("scanorama")
@@ -273,22 +276,14 @@ Now we will plot UMAPS with all three integration methods side by side.
 ```{r}
 #| fig-height: 8
 #| fig-width: 9
+#| eval: false
 
-p1 <- DimPlot(alldata.int, reduction = "umap_raw", group.by = "orig.ident")+ggtitle("UMAP raw_data")
-p2 <- DimPlot(alldata.int, reduction = "umap", group.by = "orig.ident")+ggtitle("UMAP CCA")
-p3 <- DimPlot(alldata.int, reduction = "umap_harmony", group.by = "orig.ident")+ggtitle("UMAP Harmony")
-#p4 <- DimPlot(alldata.int, reduction = "umap_scanorama", group.by = "orig.ident")+ggtitle("UMAP Scanorama")
-leg <- get_legend(p1)
+p1 <- DimPlot(alldata.int, reduction = "umap_raw", group.by = "orig.ident") + ggtitle("UMAP raw_data")
+p2 <- DimPlot(alldata.int, reduction = "umap", group.by = "orig.ident") + ggtitle("UMAP CCA")
+p3 <- DimPlot(alldata.int, reduction = "umap_harmony", group.by = "orig.ident") + ggtitle("UMAP Harmony")
+p4 <- DimPlot(alldata.int, reduction = "umap_scanorama", group.by = "orig.ident")+ggtitle("UMAP Scanorama")
 
-gridExtra::grid.arrange(
-  gridExtra::arrangeGrob(
-    p1 + NoLegend() + NoAxes(),
-    p2 + NoLegend() + NoAxes(),
-    p3 + NoLegend() + NoAxes(),
-    #p4 + NoLegend() + NoAxes(), 
-    nrow=2),
-  leg, ncol=2,widths=c(8,2)
-)
+wrap_plots(p1, p2, p3, p4, nrow = 2) + plot_layout(guides = "collect")
 ```
 
 
@@ -300,7 +295,7 @@ gridExtra::grid.arrange(
 {{< meta int_save >}}
 
 ```{r}
-saveRDS(alldata.int,"data/results/covid_qc_dr_int.rds")
+saveRDS(alldata.int,"data/covid/results/seurat_covid_qc_dr_int.rds")
 ```
 
 

@@ -15,31 +15,32 @@ Code chunks run Python commands unless it starts with `%%bash`, in which case, t
 {{< meta qc_data_1 >}}
 
 ```{python}
-%%bash
+import os
 
-if [ ! -d "data/raw" ] 
-then
-  # create a data directory.
-  mkdir -p data/raw
+path_data = "https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"
 
-  # first check if the files are there
-  count=$(ls -l data/raw/*.h5 | grep -v ^d | wc -l )
-  echo $count
+path_covid = "./data/covid"
+if not os.path.exists(path_covid):
+    os.makedirs(path_covid, exist_ok=True)
 
-  # if not 4 files, fetch the files from github.
-  if (("$count" <  6)); then
-    cd data/raw
-    curl -O https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/new_dataset/labs/data/covid_data_GSE149689/sub/Normal_PBMC_13.h5
-    curl -O https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/new_dataset/labs/data/covid_data_GSE149689/sub/Normal_PBMC_14.h5
-    curl -O https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/new_dataset/labs/data/covid_data_GSE149689/sub/Normal_PBMC_5.h5
-    curl -O https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/new_dataset/labs/data/covid_data_GSE149689/sub/nCoV_PBMC_15.h5
-    curl -O https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/new_dataset/labs/data/covid_data_GSE149689/sub/nCoV_PBMC_17.h5
-    curl -O https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/new_dataset/labs/data/covid_data_GSE149689/sub/nCoV_PBMC_1.h5
-    cd ../..
-  fi
-fi
+path_results = "data/covid/results"
+if not os.path.exists(path_results):
+    os.makedirs(path_results, exist_ok=True)
+```
 
-ls -lGa data/raw
+```{python}
+import urllib.request
+
+file_list = [
+    "normal_pbmc_13.h5", "normal_pbmc_14.h5", "normal_pbmc_19.h5", "normal_pbmc_5.h5",
+    "ncov_pbmc_15.h5", "ncov_pbmc_16.h5", "ncov_pbmc_17.h5", "ncov_pbmc_1.h5"
+]
+
+for i in file_list:
+    path_file = os.path.join(path_covid, i)
+    if not os.path.exists(path_file):
+        file_url = os.path.join(path_data, "covid", i)
+        urllib.request.urlretrieve(file_url, path_file)
 ```
 
 {{< meta qc_data_2 >}}
@@ -59,22 +60,30 @@ sc.settings.set_figure_params(dpi=80)
 
 {{< meta qc_data_3 >}}
 
+In Scanpy we read them into an Anndata object with the the function `read_10x_h5`
+
 ```{python}
-data_cov1 = sc.read_10x_h5('./data/raw/nCoV_PBMC_1.h5')
+data_cov1 = sc.read_10x_h5(os.path.join(path_covid,'ncov_pbmc_1.h5'))
 data_cov1.var_names_make_unique()
-data_cov15 = sc.read_10x_h5('./data/raw/nCoV_PBMC_15.h5')
+data_cov15 = sc.read_10x_h5(os.path.join(path_covid,'ncov_pbmc_15.h5'))
 data_cov15.var_names_make_unique()
-data_cov17 = sc.read_10x_h5('./data/raw/nCoV_PBMC_17.h5')
+data_cov16 = sc.read_10x_h5(os.path.join(path_covid,'ncov_pbmc_16.h5'))
+data_cov16.var_names_make_unique()
+data_cov17 = sc.read_10x_h5(os.path.join(path_covid,'ncov_pbmc_17.h5'))
 data_cov17.var_names_make_unique()
-data_ctrl5 = sc.read_10x_h5('./data/raw/Normal_PBMC_5.h5')
+data_ctrl5 = sc.read_10x_h5(os.path.join(path_covid,'normal_pbmc_5.h5'))
 data_ctrl5.var_names_make_unique()
-data_ctrl13 = sc.read_10x_h5('./data/raw/Normal_PBMC_13.h5')
+data_ctrl13 = sc.read_10x_h5(os.path.join(path_covid,'normal_pbmc_13.h5'))
 data_ctrl13.var_names_make_unique()
-data_ctrl14 = sc.read_10x_h5('./data/raw/Normal_PBMC_14.h5')
+data_ctrl14 = sc.read_10x_h5(os.path.join(path_covid,'normal_pbmc_14.h5'))
 data_ctrl14.var_names_make_unique()
+data_ctrl19 = sc.read_10x_h5(os.path.join(path_covid,'normal_pbmc_19.h5'))
+data_ctrl19.var_names_make_unique()
 ```
 
 ## {{< meta qc_collate >}}
+
+{{< qc_collate_1 >}}
 
 ```{python}
 # add some metadata
@@ -82,6 +91,8 @@ data_cov1.obs['type']="Covid"
 data_cov1.obs['sample']="covid_1"
 data_cov15.obs['type']="Covid"
 data_cov15.obs['sample']="covid_15"
+data_cov16.obs['type']="Covid"
+data_cov16.obs['sample']="covid_16"
 data_cov17.obs['type']="Covid"
 data_cov17.obs['sample']="covid_17"
 data_ctrl5.obs['type']="Ctrl"
@@ -90,13 +101,15 @@ data_ctrl13.obs['type']="Ctrl"
 data_ctrl13.obs['sample']="ctrl_13"
 data_ctrl14.obs['type']="Ctrl"
 data_ctrl14.obs['sample']="ctrl_14"
+data_ctrl19.obs['type']="Ctrl"
+data_ctrl19.obs['sample']="ctrl_19"
 
 # merge into one object.
-adata = data_cov1.concatenate(data_cov15, data_cov17, data_ctrl5, data_ctrl13, data_ctrl14)
+adata = data_cov1.concatenate(data_cov15, data_cov16, data_cov17, data_ctrl5, data_ctrl13, data_ctrl14, data_ctrl19)
 
 # and delete individual datasets to save space
-del(data_cov1, data_cov15, data_cov17)
-del(data_ctrl5, data_ctrl13, data_ctrl14)
+del(data_cov1, data_cov15, data_cov16, data_cov17)
+del(data_ctrl5, data_ctrl13, data_ctrl14, data_ctrl19)
 ```
 
 You can print a summary of the datasets in the Scanpy object, or a summary of the whole object.
@@ -120,7 +133,7 @@ adata.var['mt'] = adata.var_names.str.startswith('MT-')
 # ribosomal genes
 adata.var['ribo'] = adata.var_names.str.startswith(("RPS","RPL"))
 # hemoglobin genes.
-adata.var['hb'] = adata.var_names.str.contains(("^HB[^(P)]"))
+adata.var['hb'] = adata.var_names.str.contains(("^HB[^(P|E|S)]"))
 
 adata.var
 ```
@@ -130,6 +143,8 @@ sc.pp.calculate_qc_metrics(adata, qc_vars=['mt','ribo','hb'], percent_top=None, 
 ```
 
 {{< meta qc_calqc_3 >}}
+
+Another opition to using the `calculate_qc_metrics` function is to calculate the values on your own and add to a metadata slot. An example for mito genes can be found below:
 
 ```{python}
 mito_genes = adata.var_names.str.startswith('MT-')
@@ -148,7 +163,7 @@ adata
 {{< meta qc_plotqc_1 >}}
 
 ```{python}
-sc.pl.violin(adata, ['n_genes_by_counts', 'total_counts', 'pct_counts_mt','pct_counts_ribo', 'pct_counts_hb'], jitter=0.4, groupby = 'sample', rotation= 45)
+sc.pl.violin(adata, ['n_genes_by_counts', 'total_counts', 'pct_counts_mt', 'pct_counts_ribo', 'pct_counts_hb'], jitter=0.4, groupby = 'sample', rotation= 45)
 ```
 
 {{< meta qc_plotqc_2 >}}
@@ -238,7 +253,7 @@ malat1 = adata.var_names.str.startswith('MALAT1')
 # we need to redefine the mito_genes since they were first 
 # calculated on the full object before removing low expressed genes.
 mito_genes = adata.var_names.str.startswith('MT-')
-hb_genes = adata.var_names.str.contains('^HB[^(P)]')
+hb_genes = adata.var_names.str.contains('^HB[^(P|E|S)]')
 
 remove = np.add(mito_genes, malat1)
 remove = np.add(remove, hb_genes)
@@ -299,15 +314,16 @@ sc.pl.violin(adata, ["XIST-counts", "percent_chrY"], jitter=0.4, groupby = 'samp
 
 {{< meta qc_cellcycle_1 >}}
 
-First read the file with cell cycle genes, from Regev lab and split into S and G2M phase genes. Cell cycle genes were retrieved from the scanpy_usage github site via web browser at [RegevLab Github repo](https://github.com/theislab/scanpy_usage/blob/master/180209_cell_cycle/data/regev_lab_cell_cycle_genes.txt).
+First read the file with cell cycle genes, from Regev lab and split into S and G2M phase genes. We first download the file.
 
 ```{python}
-%%bash
-if [ ! -f data/regev_lab_cell_cycle_genes.txt ]; then curl -o data/regev_lab_cell_cycle_genes.txt https://raw.githubusercontent.com/theislab/scanpy_usage/master/180209_cell_cycle/data/regev_lab_cell_cycle_genes.txt; fi
+path_file = os.path.join(path_results, 'regev_lab_cell_cycle_genes.txt')
+if not os.path.exists(path_file):
+    urllib.request.urlretrieve(os.path.join(path_data, 'regev_lab_cell_cycle_genes.txt'), path_file)
 ```
 
 ```{python}
-cell_cycle_genes = [x.strip() for x in open('./data/regev_lab_cell_cycle_genes.txt')]
+cell_cycle_genes = [x.strip() for x in open('./data/covid/results/regev_lab_cell_cycle_genes.txt')]
 print(len(cell_cycle_genes))
 
 # Split into 2 lists
@@ -351,13 +367,20 @@ sc.pl.violin(adata, ['S_score', 'G2M_score'], jitter=0.4, groupby = 'sample', ro
 
 {{< meta qc_cellcycle_3 >}}
 
+Scanpy does an automatic prediction of cell cycle phase with a default cutoff of the scores at zero. As you can see this does not fit this data very well, so be cautios with using these predictions. Instead we suggest that you look at the scores.
+
+
+```{python}
+#| fig-height: 8
+#| fig-width: 10
+
+sc.pl.scatter(adata, x='S_score', y='G2M_score', color="phase")
+```
+
 ## {{< meta qc_doublet >}}
 
 {{< meta qc_doublet_1 >}}
 
-:::{.callout-caution}
-{{< meta qc_doublet_2 >}}
-:::
 
 For doublet detection, we will use the package `Scrublet`, so first we need to get the raw counts from `adata.raw.X` and run scrublet with that matrix. Then we add in the doublet prediction info into our anndata object.
 
@@ -431,11 +454,7 @@ print(adata.shape)
 {{< meta qc_save_1 >}}
 
 ```{python}
-import os
-if not os.path.exists('data/results/'):
-    os.makedirs('data/results/', exist_ok=True)
-if not os.path.exists('data/results/scanpy_qc_filtered_covid.h5ad'):
-    adata.write_h5ad('data/results/scanpy_qc_filtered_covid.h5ad')
+adata.write_h5ad('data/covid/results/scanpy_covid_qc.h5ad')
 ```
 
 ## {{< meta session >}}

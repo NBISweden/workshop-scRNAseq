@@ -14,18 +14,24 @@ Code chunks run R commands unless otherwise specified.
 {{< meta dimred_prep_1 >}}
 
 ```{r}
-#Activate conda environment to get the correct python path
+# Activate conda environment to get the correct python path
 reticulate::use_condaenv("seurat", conda = "/opt/conda/bin/conda")
 reticulate::py_discover_config()
 
 suppressPackageStartupMessages({
-  library(Seurat)
-  library(cowplot)
-  library(ggplot2)
-  library(scran)
+    library(Seurat)
+    library(ggplot2) # plotting
+    library(patchwork) # combining figures
+    library(scran)
 })
+```
 
-alldata <- readRDS("data/results/seurat_covid_qc.rds")
+```{r}
+path_data <- "https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"
+path_file <- "data/covid/results/seurat_covid_qc.rds"
+if (!dir.exists(dirname(path_file))) dir.create(dirname(path_file), recursive = TRUE)
+if (!file.exists(path_file)) download.file(url = file.path(path_data, "covid/results/seurat_covid_qc.rds"), destfile = path_file)
+alldata <- readRDS(path_file)
 ```
 
 ## {{< meta dimred_fs >}}
@@ -33,7 +39,7 @@ alldata <- readRDS("data/results/seurat_covid_qc.rds")
 {{< meta dimred_fs_2 >}}
 
 ```{r}
-suppressWarnings(suppressMessages(alldata <- FindVariableFeatures(alldata, selection.method = "vst", nfeatures = 2000 ,verbose = FALSE,assay = "RNA")))
+suppressWarnings(suppressMessages(alldata <- FindVariableFeatures(alldata, selection.method = "vst", nfeatures = 2000, verbose = FALSE, assay = "RNA")))
 top20 <- head(VariableFeatures(alldata), 20)
 
 LabelPoints(plot = VariableFeaturePlot(alldata), points = top20, repel = TRUE)
@@ -63,11 +69,12 @@ alldata <- RunPCA(alldata, npcs = 50, verbose = F)
 #| fig-height: 4
 #| fig-width: 12
 
-plot_grid(ncol = 3,
-  DimPlot(alldata, reduction = "pca", group.by = "orig.ident",dims = 1:2),
-  DimPlot(alldata, reduction = "pca", group.by = "orig.ident",dims = 3:4),
-  DimPlot(alldata, reduction = "pca", group.by = "orig.ident",dims = 5:6)
-)
+wrap_plots(
+    DimPlot(alldata, reduction = "pca", group.by = "orig.ident", dims = 1:2),
+    DimPlot(alldata, reduction = "pca", group.by = "orig.ident", dims = 3:4),
+    DimPlot(alldata, reduction = "pca", group.by = "orig.ident", dims = 5:6),
+    ncol = 3
+) + plot_layout(guides = "collect")
 ```
 
 {{< meta dimred_pca_3 >}}
@@ -76,7 +83,7 @@ plot_grid(ncol = 3,
 #| fig-height: 6
 #| fig-width: 14
 
-VizDimLoadings(alldata, dims = 1:5, reduction = "pca",ncol = 5,balanced = T)
+VizDimLoadings(alldata, dims = 1:5, reduction = "pca", ncol = 5, balanced = T)
 ```
 
 {{< meta dimred_pca_4 >}}
@@ -85,7 +92,7 @@ VizDimLoadings(alldata, dims = 1:5, reduction = "pca",ncol = 5,balanced = T)
 #| fig-height: 4
 #| fig-width: 5
 
-ElbowPlot(alldata, reduction = "pca",ndims = 50)
+ElbowPlot(alldata, reduction = "pca", ndims = 50)
 ```
 
 {{< meta dimred_pca_5 >}}
@@ -95,20 +102,23 @@ ElbowPlot(alldata, reduction = "pca",ndims = 50)
 {{< meta dimred_tsne_1 >}}
 
 ```{r}
-alldata <- RunTSNE(alldata, reduction = "pca", dims = 1:30, 
-                   perplexity=30,
-                   max_iter=1000,
-                   theta=0.5,
-                   eta=200,
-                   num_threads=0 )
-#see ?Rtsne and ?RunTSNE for more info
+alldata <- RunTSNE(
+    alldata,
+    reduction = "pca", dims = 1:30,
+    perplexity = 30,
+    max_iter = 1000,
+    theta = 0.5,
+    eta = 200,
+    num_threads = 0
+)
+# see ?Rtsne and ?RunTSNE for more info
 ```
 
 {{< meta dimred_tsne_2 >}}
 
 ```{r}
 #| fig-height: 4.5
-#| fig-width: 5
+#| fig-width: 6
 
 DimPlot(alldata, reduction = "tsne", group.by = "orig.ident")
 ```
@@ -119,14 +129,18 @@ DimPlot(alldata, reduction = "tsne", group.by = "orig.ident")
 {{< meta dimred_umap_1 >}}
 
 ```{r}
-alldata <- RunUMAP(alldata, reduction = "pca", dims = 1:30,
-                   n.components=2,
-                   n.neighbors=30,
-                   n.epochs=200,
-                   min.dist=0.3,
-                   learning.rate=1,
-                   spread=1 )
-#see ?RunUMAP for more info
+alldata <- RunUMAP(
+    alldata,
+    reduction = "pca",
+    dims = 1:30,
+    n.components = 2,
+    n.neighbors = 30,
+    n.epochs = 200,
+    min.dist = 0.3,
+    learning.rate = 1,
+    spread = 1
+)
+# see ?RunUMAP for more info
 ```
 
 Another usefullness of UMAP is that it is not limitted by the number of dimensions the data cen be reduced into (unlike tSNE). We can simply reduce the dimentions altering the `n.components` parameter. So here we will create an UMAP with 10 dimensions.
@@ -134,43 +148,47 @@ Another usefullness of UMAP is that it is not limitted by the number of dimensio
 In Seurat we can add in additional reductions, by default they are named "pca", "umap", "tsne" etc. depending on the function you run. Here we will specify an alternative name for the umap with the `reduction.name` parameter. 
 
 ```{r}
-
-alldata <- RunUMAP(alldata, reduction.name = "UMAP10_on_PCA",
-                   reduction = "pca", 
-                   dims = 1:30,
-                   n.components=10,
-                   n.neighbors=30,
-                   n.epochs=200,
-                   min.dist=0.3,
-                   learning.rate=1,
-                   spread=1 )
-#see ?RunUMAP for more info
+alldata <- RunUMAP(
+    alldata,
+    reduction.name = "UMAP10_on_PCA",
+    reduction = "pca",
+    dims = 1:30,
+    n.components = 10,
+    n.neighbors = 30,
+    n.epochs = 200,
+    min.dist = 0.3,
+    learning.rate = 1,
+    spread = 1
+)
+# see ?RunUMAP for more info
 ```
 
 {{< meta dimred_umap_2 >}}
 
 ```{r}
 #| fig-height: 4
-#| fig-width: 14
+#| fig-width: 12
 
-plot_grid(ncol = 3,
-  DimPlot(alldata, reduction = "umap", group.by = "orig.ident")+ ggplot2::ggtitle(label ="UMAP_on_PCA"),
-  DimPlot(alldata, reduction = "UMAP10_on_PCA", group.by = "orig.ident",dims = 1:2)+ ggplot2::ggtitle(label ="UMAP10_on_PCA"),
-  DimPlot(alldata, reduction = "UMAP10_on_PCA", group.by = "orig.ident",dims = 3:4)+ ggplot2::ggtitle(label ="UMAP10_on_PCA")
-)
+wrap_plots(
+    DimPlot(alldata, reduction = "umap", group.by = "orig.ident") + ggplot2::ggtitle(label = "UMAP_on_PCA"),
+    DimPlot(alldata, reduction = "UMAP10_on_PCA", group.by = "orig.ident", dims = 1:2) + ggplot2::ggtitle(label = "UMAP10_on_PCA"),
+    DimPlot(alldata, reduction = "UMAP10_on_PCA", group.by = "orig.ident", dims = 3:4) + ggplot2::ggtitle(label = "UMAP10_on_PCA"),
+    ncol = 3
+) + plot_layout(guides = "collect")
 ```
 
 {{< meta dimred_umap_3 >}}
 
 ```{r}
 #| fig-height: 4
-#| fig-width: 14
+#| fig-width: 12
 
-plot_grid(ncol = 3,
-  DimPlot(alldata, reduction = "pca", group.by = "orig.ident"),
-  DimPlot(alldata, reduction = "tsne", group.by = "orig.ident"),
-  DimPlot(alldata, reduction = "umap", group.by = "orig.ident")
-)
+wrap_plots(
+    DimPlot(alldata, reduction = "pca", group.by = "orig.ident"),
+    DimPlot(alldata, reduction = "tsne", group.by = "orig.ident"),
+    DimPlot(alldata, reduction = "umap", group.by = "orig.ident"),
+    ncol = 3
+) + plot_layout(guides = "collect")
 ```
 
 ::: {.callout-note title="Discuss"}
@@ -186,15 +204,18 @@ plot_grid(ncol = 3,
 {{< meta dimred_zsg_zs_1 >}}
 
 ```{r}
-alldata <- RunUMAP(alldata, reduction.name = "UMAP_on_ScaleData",
-                   features = alldata@assays$RNA@var.features,
-                   assay = "RNA",
-                   n.components=2,
-                   n.neighbors=30,
-                   n.epochs=200,
-                   min.dist=0.3,
-                   learning.rate=1,
-                   spread=1 )
+alldata <- RunUMAP(
+    alldata,
+    reduction.name = "UMAP_on_ScaleData",
+    features = alldata@assays$RNA@var.features,
+    assay = "RNA",
+    n.components = 2,
+    n.neighbors = 30,
+    n.epochs = 200,
+    min.dist = 0.3,
+    learning.rate = 1,
+    spread = 1
+)
 ```
 
 ### {{< meta dimred_zsg_g >}}
@@ -202,41 +223,33 @@ alldata <- RunUMAP(alldata, reduction.name = "UMAP_on_ScaleData",
 {{< meta dimred_zsg_g_1 >}}
 
 ```{r}
-#Build Graph
+# Build Graph
 alldata <- FindNeighbors(alldata,
-                         reduction = "pca",
-                         assay = "RNA",
-                         k.param = 20,
-                         features = alldata@assays$RNA@var.features)
+    reduction = "pca",
+    assay = "RNA",
+    k.param = 20,
+    features = alldata@assays$RNA@var.features
+)
 
-alldata <- RunUMAP(alldata, 
-                   reduction.name = "UMAP_on_Graph", 
-                   umap.method = "umap-learn", 
-                   graph = "RNA_snn", 
-                   n.epochs = 200,
-                   assay = "RNA" )
-
+alldata <- RunUMAP(alldata,
+    reduction.name = "UMAP_on_Graph",
+    umap.method = "umap-learn",
+    graph = "RNA_snn",
+    n.epochs = 200,
+    assay = "RNA"
+)
 ```
 
 {{< meta dimred_zsg_g_2 >}}
 
 ```{r}
-#| fig-height: 8
-#| fig-width: 9
+#| fig-height: 4
+#| fig-width: 12
 
-p1 <- DimPlot(alldata, reduction = "umap", group.by = "orig.ident")+ ggplot2::ggtitle(label ="UMAP_on_PCA")
-p2 <- DimPlot(alldata, reduction = "UMAP_on_ScaleData", group.by = "orig.ident")+ ggplot2::ggtitle(label ="UMAP_on_ScaleData")
-p3 <- DimPlot(alldata, reduction = "UMAP_on_Graph", group.by = "orig.ident")+ ggplot2::ggtitle(label ="UMAP_on_Graph")
-leg <- get_legend(p1)
-
-gridExtra::grid.arrange(
-  gridExtra::arrangeGrob(
-    p1 + NoLegend() + NoAxes(),
-    p2 + NoLegend() + NoAxes(),
-    p3 + NoLegend() + NoAxes(), 
-    leg,nrow=2),
-  ncol=1,widths=c(1)
-)
+p1 <- DimPlot(alldata, reduction = "umap", group.by = "orig.ident") + ggplot2::ggtitle(label = "UMAP_on_PCA")
+p2 <- DimPlot(alldata, reduction = "UMAP_on_ScaleData", group.by = "orig.ident") + ggplot2::ggtitle(label = "UMAP_on_ScaleData")
+p3 <- DimPlot(alldata, reduction = "UMAP_on_Graph", group.by = "orig.ident") + ggplot2::ggtitle(label = "UMAP_on_Graph")
+wrap_plots(p1, p2, p3, nrow = 3) + plot_layout(guides = "collect")
 ```
 
 ## {{< meta dimred_plotgenes >}}
@@ -258,12 +271,9 @@ gridExtra::grid.arrange(
 #| fig-height: 9
 #| fig-width: 12
 
-myfeatures <- c("CD3E","CD4","CD8A","NKG7","GNLY","MS4A1","CD14","LYZ","MS4A7","FCGR3A","CST3","FCER1A")
-plot_list <- list()
-for(i in myfeatures){
-  plot_list[[i]] <- FeaturePlot(alldata, reduction = "umap",dims = 1:2,
-            features = i,ncol = 3,order = T) + NoLegend() + NoAxes() + NoGrid() }
-plot_grid(ncol=3, plotlist = plot_list)
+myfeatures <- c("CD3E", "CD4", "CD8A", "NKG7", "GNLY", "MS4A1", "CD14", "LYZ", "MS4A7", "FCGR3A", "CST3", "FCER1A")
+FeaturePlot(alldata, reduction = "umap", dims = 1:2, features = myfeatures, ncol = 4, order = T) +
+    NoLegend() + NoAxes() + NoGrid()
 ```
 
 :::{.callout-note title="Discuss"}
@@ -275,8 +285,7 @@ plot_grid(ncol=3, plotlist = plot_list)
 {{< meta dimred_save_1 >}}
 
 ```{r}
-path <- "data/results/covid_qc_dr.rds"
-if(!file.exists(path)) saveRDS(alldata,path)
+saveRDS(alldata, "data/covid/results/seurat_covid_qc_dr.rds")
 ```
 
 ## {{< meta session >}}

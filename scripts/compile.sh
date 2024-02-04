@@ -50,19 +50,30 @@ fi
 
 # create compiled versions of qmd to using profile "compiled"
 echo "Compiling seurat labs ..."
-docker run --rm --platform=linux/amd64 -v $PWD:/work $docker_site quarto render --profile compile /work/labs/seurat/*.qmd --to markdown-header_attributes --metadata engine:markdown --log-level warning,error
+docker run --rm --platform=linux/amd64 -v ${PWD}:/work $docker_site quarto render --profile compile /work/labs/seurat/*.qmd --to markdown-header_attributes --metadata engine:markdown --log-level warning,error
 echo "Compiling bioc labs ..."
-docker run --rm --platform=linux/amd64 -v $PWD:/work $docker_site quarto render --profile compile /work/labs/bioc/*.qmd --to markdown-header_attributes --metadata engine:markdown --log-level warning,error
+docker run --rm --platform=linux/amd64 -v ${PWD}:/work $docker_site quarto render --profile compile /work/labs/bioc/*.qmd --to markdown-header_attributes --metadata engine:markdown --log-level warning,error
 echo "Compiling scanpy labs ..."
-docker run --rm --platform=linux/amd64 -v $PWD:/work $docker_site quarto render --profile compile /work/labs/scanpy/*.qmd --to markdown-header_attributes --metadata engine:markdown --log-level warning,error
+docker run --rm --platform=linux/amd64 -v ${PWD}:/work $docker_site quarto render --profile compile /work/labs/scanpy/*.qmd --to markdown-header_attributes --metadata engine:markdown --log-level warning,error
 
 # Read an md/qmd, remove unnecessary lines from yaml, and write to the original file
 echo "Slimming yaml across all .md files ..."
 slim_yaml() {
-    awk '/^---$/ && !in_yaml {in_yaml=1; print; next} 
-         /^---$/ && in_yaml {in_yaml=0; print; next} 
-         !in_yaml {print} 
-         in_yaml {if (/^(title:|subtitle:|description:)/) {print}}' "$1" > "tmp"
+    awk '
+        /^---$/ && !in_yaml {in_yaml=1; print; next} 
+        /^---$/ && in_yaml {in_yaml=0; print; next} 
+        !in_yaml {print} 
+        in_yaml {
+            if (/^(title:|subtitle:|description:)/) {
+                print;
+                continue_capture=1;
+            } else if (continue_capture && !(/^[a-zA-Z0-9_-]+:/)) {
+                print;
+            } else {
+                continue_capture=0;
+            }
+        }
+    ' "$1" > "tmp"
 
     mv "tmp" "$1"
 }
@@ -85,11 +96,17 @@ for file in "${output_dir}"/labs/bioc/*.md; do
     rm -rf "$file"
 done
 
-# converting scanpy md files to ipynb
-echo "Converting scanpy .md files to .ipynb ..."
+echo "Converting scanpy .md files to .qmd ..."
 for file in "${output_dir}"/labs/scanpy/*.md; do
+    mv "$file" "${file%.md}.qmd"
+    rm -rf "$file"
+done
+
+# converting scanpy qmd files to ipynb
+echo "Converting scanpy .qmd files to .ipynb ..."
+for file in "${output_dir}"/labs/scanpy/*.qmd; do
     fname=$(basename "$file")
-    docker run --rm --platform=linux/amd64 -v $PWD:/work $docker_site quarto convert "/work/${file}" --output "${fname%.md}.ipynb"
+    docker run --rm --platform=linux/amd64 -v ${PWD}:/work $docker_site quarto convert "/work/${file}"
     rm -rf "$file"
 done
 

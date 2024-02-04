@@ -29,6 +29,8 @@ import pandas as pd
 import scanpy as sc
 import matplotlib.pyplot as plt
 import warnings
+import os
+import urllib.request
 
 warnings.simplefilter(action='ignore', category=Warning)
 
@@ -42,10 +44,22 @@ sc.settings.set_figure_params(dpi=80)
 Create individual **adata** objects per batch.
 
 ```{python}
-# Load the stored data object
-save_file = './data/results/scanpy_dr_covid.h5ad'
-adata = sc.read_h5ad(save_file)
+path_data = "https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"
 
+path_results = "data/covid/results"
+if not os.path.exists(path_results):
+    os.makedirs(path_results, exist_ok=True)
+
+path_file = "data/covid/results/scanpy_covid_qc_dr.h5ad"
+if not os.path.exists(path_file):
+    urllib.request.urlretrieve(os.path.join(
+        path_data, 'covid/results/scanpy_covid_qc_dr.h5ad'), path_file)
+
+adata = sc.read_h5ad(path_file)
+adata
+```
+
+```{python}
 print(adata.X.shape)
 ```
 
@@ -54,6 +68,7 @@ As the stored AnnData object contains scaled data based on variable genes, we ne
 ```{python}
 adata2 = adata.raw.to_adata() 
 
+# in some versions of Anndata there is an issue with information on the logtransformation in the slot log1p.base so we set it to None to not get errors.
 adata2.uns['log1p']['base']=None
 
 # check that the matrix looks like normalized counts
@@ -127,7 +142,7 @@ sc.pl.umap(adata, color="sample", title="Uncorrected umap", ax=axs[1,1], show=Fa
 {{< meta int_save >}}
 
 ```{python}
-save_file = './data/results/scanpy_bbknn_corrected_covid.h5ad'
+save_file = './data/covid/results/scanpy_covid_qc_dr_bbknn.h5ad'
 adata2.write_h5ad(save_file)
 ```
 
@@ -186,7 +201,7 @@ sc.pl.umap(adata_combat, color="sample", title="Combat umap", ax=axs[1,1], show=
 
 ```{python}
 #save to file
-save_file = './data/results/scanpy_combat_corrected_covid.h5ad'
+save_file = './data/covid/results/scanpy_covid_qc_dr_combat.h5ad'
 adata_combat.write_h5ad(save_file)
 ```
 
@@ -249,25 +264,24 @@ sc.tl.tsne(adata_sc, n_pcs = 30, use_rep = "Scanorama")
 
 ```{python}
 fig, axs = plt.subplots(2, 2, figsize=(10,8),constrained_layout=True)
-sc.pl.umap(adata2, color="sample", title="BBKNN tsne", ax=axs[0,0], show=False)
-sc.pl.umap(adata, color="sample", title="Scanorama tsne", ax=axs[0,1], show=False)
+sc.pl.tsne(adata2, color="sample", title="BBKNN tsne", ax=axs[0,0], show=False)
+sc.pl.tsne(adata_sc, color="sample", title="Scanorama tsne", ax=axs[0,1], show=False)
 sc.pl.umap(adata2, color="sample", title="BBKNN umap", ax=axs[1,0], show=False)
-sc.pl.umap(adata, color="sample", title="Scanorama umap", ax=axs[1,1], show=False)
+sc.pl.umap(adata_sc, color="sample", title="Scanorama umap", ax=axs[1,1], show=False)
 ```
 
 {{< meta int_save >}}
 
 ```{python}
 #save to file
-save_file = './data/results/scanpy_scanorama_corrected_covid.h5ad'
+save_file = './data/covid/results/scanpy_covid_qc_dr_scanorama.h5ad'
 adata_sc.write_h5ad(save_file)
 ```
 
-## Compare all
+## Overview all methods
 
-:::{.callout-note title="Discuss"}
-Plot umap of all the methods we tested here. Which do you think looks better and why?
-:::
+Now we will plot UMAPS with all three integration methods side by side.
+
 
 ```{python}
 fig, axs = plt.subplots(2, 2, figsize=(10,8),constrained_layout=True)
@@ -277,11 +291,16 @@ sc.pl.umap(adata_combat, color="sample", title="Combat", ax=axs[1,0], show=False
 sc.pl.umap(adata_sc, color="sample", title="Scanorama", ax=axs[1,1], show=False)
 ```
 
+
 :::{.callout-note title="Discuss"}
+{{< meta int_conclusion >}}
+:::
+
+## Extra task
+
 Have a look at the documentation for [BBKNN](https://scanpy.readthedocs.io/en/latest/generated/scanpy.external.pp.bbknn.html#scanpy-external-pp-bbknn)
 
 Try changing some of the parameteres in BBKNN, such as distance metric, number of PCs and number of neighbors. How does the results change with different parameters? Can you explain why?
-:::
 
 ## {{< meta session >}}
 

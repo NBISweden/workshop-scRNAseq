@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.3.353">
+<meta name="generator" content="quarto-1.3.450">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -100,7 +100,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     "search-more-matches-text": "more matches in this document",
     "search-clear-button-title": "Clear",
     "search-detached-cancel-button-title": "Cancel",
-    "search-submit-button-title": "Submit"
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
   }
 }</script>
 <style>html{ scroll-behavior: smooth; }</style>
@@ -131,7 +132,7 @@ background-size: cover;
       <div class="navbar-container container-fluid">
       <div class="navbar-brand-container">
     <a href="../../index.html" class="navbar-brand navbar-brand-logo">
-    <img src="../../assets/logos/nbis-scilifelab.png" alt="nbis-scilifelab-logo." class="navbar-logo">
+    <img src="../../assets/logos/nbis-scilifelab.png" alt="nbis-scilifelab-logo" class="navbar-logo">
     </a>
   </div>
             <div id="quarto-search" class="" title="Search"></div>
@@ -163,6 +164,11 @@ background-size: cover;
   <li class="nav-item">
     <a class="nav-link" href="../../home_info.html" rel="" target="">
  <span class="menu-text">Info</span></a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/NBISweden/workshop-scRNAseq/" rel="" target=""><i class="bi bi-github" role="img">
+</i> 
+ <span class="menu-text"></span></a>
   </li>  
 </ul>
             <div class="quarto-navbar-tools">
@@ -201,7 +207,7 @@ background-size: cover;
       <div>
       <div class="quarto-title-meta-heading">Published</div>
       <div class="quarto-title-meta-contents">
-        <p class="date">03-Jan-2024</p>
+        <p class="date">30-Jan-2024</p>
       </div>
     </div>
     
@@ -259,49 +265,59 @@ Note
 <p>First, let’s load all necessary libraries and the QC-filtered dataset from the previous step.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">suppressPackageStartupMessages</span>({</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">library</span>(scater)</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">library</span>(scran)</span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">library</span>(cowplot)</span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">library</span>(ggplot2)</span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">library</span>(rafalib)</span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">library</span>(umap)</span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>})</span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>sce <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="st">"data/results/covid_qc.rds"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">library</span>(scater)</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">library</span>(scran)</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">library</span>(patchwork)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">library</span>(ggplot2)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">library</span>(umap)</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>})</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>path_data <span class="ot">&lt;-</span> <span class="st">"https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>path_file <span class="ot">&lt;-</span> <span class="st">"data/covid/results/bioc_covid_qc.rds"</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">dir.exists</span>(<span class="fu">dirname</span>(path_file))) <span class="fu">dir.create</span>(<span class="fu">dirname</span>(path_file), <span class="at">recursive =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">file.exists</span>(path_file)) <span class="fu">download.file</span>(<span class="at">url =</span> <span class="fu">file.path</span>(path_data, <span class="st">"covid/results/bioc_covid_qc.rds"</span>), <span class="at">destfile =</span> path_file)</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>sce <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(path_file)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 <section id="meta-dimred_fs" class="level2" data-number="2">
 <h2 data-number="2" class="anchored" data-anchor-id="meta-dimred_fs"><span class="header-section-number">2</span> Feature selection</h2>
 <p>Next, we first need to define which features/genes are important in our dataset to distinguish cell types. For this purpose, we need to find genes that are highly variable across cells, which in turn will also provide a good separation of the cell clusters.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>sce <span class="ot">&lt;-</span> <span class="fu">computeSumFactors</span>(sce, <span class="at">sizes=</span><span class="fu">c</span>(<span class="dv">20</span>, <span class="dv">40</span>, <span class="dv">60</span>, <span class="dv">80</span>))</span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>sce <span class="ot">&lt;-</span> <span class="fu">logNormCounts</span>(sce)</span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>var.out <span class="ot">&lt;-</span> <span class="fu">modelGeneVar</span>(sce, <span class="at">method=</span><span class="st">"loess"</span>)</span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>hvgs <span class="ot">=</span> <span class="fu">getTopHVGs</span>(var.out, <span class="at">n=</span><span class="dv">2000</span>)</span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="fu">mypar</span>(<span class="dv">1</span>,<span class="dv">2</span>)</span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="co">#plot mean over TOTAL variance</span></span>
-<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Visualizing the fit:</span></span>
-<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>fit.var <span class="ot">&lt;-</span> <span class="fu">metadata</span>(var.out)</span>
-<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(fit.var<span class="sc">$</span>mean, fit.var<span class="sc">$</span>var, <span class="at">xlab=</span><span class="st">"Mean of log-expression"</span>,</span>
-<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">ylab=</span><span class="st">"Variance of log-expression"</span>)</span>
-<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="fu">curve</span>(fit.var<span class="sc">$</span><span class="fu">trend</span>(x), <span class="at">col=</span><span class="st">"dodgerblue"</span>, <span class="at">add=</span><span class="cn">TRUE</span>, <span class="at">lwd=</span><span class="dv">2</span>)</span>
-<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="co">#Select 1000 top variable genes</span></span>
-<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>hvg.out <span class="ot">&lt;-</span> <span class="fu">getTopHVGs</span>(var.out, <span class="at">n=</span><span class="dv">1000</span>)</span>
-<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a><span class="co"># highligt those cells in the plot</span></span>
-<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>cutoff <span class="ot">&lt;-</span> <span class="fu">rownames</span>(var.out) <span class="sc">%in%</span> hvg.out</span>
-<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a><span class="fu">points</span>(fit.var<span class="sc">$</span>mean[cutoff], fit.var<span class="sc">$</span>var[cutoff], <span class="at">col=</span><span class="st">"red"</span>, <span class="at">pch=</span><span class="dv">16</span>,<span class="at">cex=</span>.<span class="dv">6</span>)</span>
-<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a><span class="co">#plot mean over BIOLOGICAL variance</span></span>
-<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(var.out<span class="sc">$</span>mean, var.out<span class="sc">$</span>bio, <span class="at">pch=</span><span class="dv">16</span>, <span class="at">cex=</span><span class="fl">0.4</span>, <span class="at">xlab=</span><span class="st">"Mean log-expression"</span>, <span class="at">ylab=</span><span class="st">"Variance of log-expression"</span>)</span>
-<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a><span class="fu">lines</span>(<span class="fu">c</span>(<span class="fu">min</span>(var.out<span class="sc">$</span>mean),<span class="fu">max</span>(var.out<span class="sc">$</span>mean)), <span class="fu">c</span>(<span class="dv">0</span>,<span class="dv">0</span>), <span class="at">col=</span><span class="st">"dodgerblue"</span>, <span class="at">lwd=</span><span class="dv">2</span>)</span>
-<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a><span class="fu">points</span>(var.out<span class="sc">$</span>mean[cutoff], var.out<span class="sc">$</span>bio[cutoff], <span class="at">col=</span><span class="st">"red"</span>, <span class="at">pch=</span><span class="dv">16</span>,<span class="at">cex=</span>.<span class="dv">6</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>sce <span class="ot">&lt;-</span> <span class="fu">computeSumFactors</span>(sce, <span class="at">sizes =</span> <span class="fu">c</span>(<span class="dv">20</span>, <span class="dv">40</span>, <span class="dv">60</span>, <span class="dv">80</span>))</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>sce <span class="ot">&lt;-</span> <span class="fu">logNormCounts</span>(sce)</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>var.out <span class="ot">&lt;-</span> <span class="fu">modelGeneVar</span>(sce, <span class="at">method =</span> <span class="st">"loess"</span>)</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>hvgs <span class="ot">&lt;-</span> <span class="fu">getTopHVGs</span>(var.out, <span class="at">n =</span> <span class="dv">2000</span>)</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mfrow =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">2</span>))</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="co"># plot mean over TOTAL variance</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Visualizing the fit:</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>fit.var <span class="ot">&lt;-</span> <span class="fu">metadata</span>(var.out)</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>{</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plot</span>(fit.var<span class="sc">$</span>mean, fit.var<span class="sc">$</span>var,</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>        <span class="at">xlab =</span> <span class="st">"Mean of log-expression"</span>,</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>        <span class="at">ylab =</span> <span class="st">"Variance of log-expression"</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>    <span class="fu">curve</span>(fit.var<span class="sc">$</span><span class="fu">trend</span>(x), <span class="at">col =</span> <span class="st">"dodgerblue"</span>, <span class="at">add =</span> <span class="cn">TRUE</span>, <span class="at">lwd =</span> <span class="dv">2</span>)</span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Select 1000 top variable genes</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>    hvg.out <span class="ot">&lt;-</span> <span class="fu">getTopHVGs</span>(var.out, <span class="at">n =</span> <span class="dv">1000</span>)</span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>    <span class="co"># highligt those cells in the plot</span></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>    cutoff <span class="ot">&lt;-</span> <span class="fu">rownames</span>(var.out) <span class="sc">%in%</span> hvg.out</span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>    <span class="fu">points</span>(fit.var<span class="sc">$</span>mean[cutoff], fit.var<span class="sc">$</span>var[cutoff], <span class="at">col =</span> <span class="st">"red"</span>, <span class="at">pch =</span> <span class="dv">16</span>, <span class="at">cex =</span> .<span class="dv">6</span>)</span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>{</span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>    <span class="co"># plot mean over BIOLOGICAL variance</span></span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plot</span>(var.out<span class="sc">$</span>mean, var.out<span class="sc">$</span>bio, <span class="at">pch =</span> <span class="dv">16</span>, <span class="at">cex =</span> <span class="fl">0.4</span>, <span class="at">xlab =</span> <span class="st">"Mean log-expression"</span>, <span class="at">ylab =</span> <span class="st">"Variance of log-expression"</span>)</span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a>    <span class="fu">lines</span>(<span class="fu">c</span>(<span class="fu">min</span>(var.out<span class="sc">$</span>mean), <span class="fu">max</span>(var.out<span class="sc">$</span>mean)), <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">0</span>), <span class="at">col =</span> <span class="st">"dodgerblue"</span>, <span class="at">lwd =</span> <span class="dv">2</span>)</span>
+<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a>    <span class="fu">points</span>(var.out<span class="sc">$</span>mean[cutoff], var.out<span class="sc">$</span>bio[cutoff], <span class="at">col =</span> <span class="st">"red"</span>, <span class="at">pch =</span> <span class="dv">16</span>, <span class="at">cex =</span> .<span class="dv">6</span>)</span>
+<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="bioc_02_dimred_files/figure-html/unnamed-chunk-2-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-2"><img src="bioc_02_dimred_files/figure-html/unnamed-chunk-2-1.png" class="img-fluid figure-img" width="768"></a></p>
+<p><a href="bioc_02_dimred_files/figure-html/unnamed-chunk-3-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-2"><img src="bioc_02_dimred_files/figure-html/unnamed-chunk-3-1.png" class="img-fluid figure-img" width="768"></a></p>
 </figure>
 </div>
 </div>
@@ -312,8 +328,8 @@ Note
 <p>Now that the data is prepared, we now proceed with PCA. Since each gene has a different expression level, it means that genes with higher expression values will naturally have higher variation that will be captured by PCA. This means that we need to somehow give each gene a similar weight when performing PCA (see below). The common practice is to center and scale each gene before performing PCA. This exact scaling is called Z-score normalization it is very useful for PCA, clustering and plotting heatmaps. Additionally, we can use regression to remove any unwanted sources of variation from the dataset, such as <code>cell cycle</code>, <code>sequencing depth</code>, <code>percent mitochondria</code>. This is achieved by doing a generalized linear regression using these parameters as co-variates in the model. Then the residuals of the model are taken as the <em>regressed data</em>. Although perhaps not in the best way, batch effect regression can also be done here. By default variables are scaled in the PCA step and is not done separately. But it could be achieved by running the commands below:</p>
 <p>However, unlike the Seurat, this step is implemented inside the PCA function below. Here we will show you how to add the scaledData back to the object.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># sce@assays$data@listData$scaled.data &lt;- apply(exprs(sce)[rownames(hvg.out),,drop=FALSE],2,function(x) scale(x,T,T))</span></span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="co"># rownames(sce@assays$data@listData$scaled.data) &lt;- rownames(hvg.out)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># sce@assays$data@listData$scaled.data &lt;- apply(exprs(sce)[rownames(hvg.out),,drop=FALSE],2,function(x) scale(x,T,T))</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="co"># rownames(sce@assays$data@listData$scaled.data) &lt;- rownames(hvg.out)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 <section id="meta-dimred_pca" class="level2" data-number="4">
@@ -321,44 +337,45 @@ Note
 <p>Performing PCA has many useful applications and interpretations, which much depends on the data used. In the case of life sciences, we want to segregate samples based on gene expression patterns in the data.</p>
 <p>We use the <code>logcounts</code> and then set <code>scale_features</code> to TRUE in order to scale each gene.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co">#runPCA and specify the variable genes to use for dim reduction with subset_row</span></span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>sce <span class="ot">&lt;-</span> <span class="fu">runPCA</span>(sce, <span class="at">exprs_values =</span> <span class="st">"logcounts"</span>, <span class="at">ncomponents =</span> <span class="dv">50</span>, <span class="at">subset_row =</span> hvg.out, <span class="at">scale =</span> <span class="cn">TRUE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># runPCA and specify the variable genes to use for dim reduction with subset_row</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>sce <span class="ot">&lt;-</span> <span class="fu">runPCA</span>(sce, <span class="at">exprs_values =</span> <span class="st">"logcounts"</span>, <span class="at">ncomponents =</span> <span class="dv">50</span>, <span class="at">subset_row =</span> hvg.out, <span class="at">scale =</span> <span class="cn">TRUE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>We then plot the first principal components.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_grid</span>(<span class="at">ncol =</span> <span class="dv">3</span>,</span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">plotReducedDim</span>(sce,<span class="at">dimred =</span> <span class="st">"PCA"</span>,<span class="at">colour_by =</span> <span class="st">"sample"</span>,<span class="at">ncomponents =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">2</span>,<span class="at">point_size =</span> <span class="fl">0.6</span>),</span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">plotReducedDim</span>(sce,<span class="at">dimred =</span> <span class="st">"PCA"</span>,<span class="at">colour_by =</span> <span class="st">"sample"</span>,<span class="at">ncomponents =</span> <span class="dv">3</span><span class="sc">:</span><span class="dv">4</span>,<span class="at">point_size =</span> <span class="fl">0.6</span>),</span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">plotReducedDim</span>(sce,<span class="at">dimred =</span> <span class="st">"PCA"</span>,<span class="at">colour_by =</span> <span class="st">"sample"</span>,<span class="at">ncomponents =</span> <span class="dv">5</span><span class="sc">:</span><span class="dv">6</span>,<span class="at">point_size =</span> <span class="fl">0.6</span>)</span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">wrap_plots</span>(</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotReducedDim</span>(sce, <span class="at">dimred =</span> <span class="st">"PCA"</span>, <span class="at">colour_by =</span> <span class="st">"sample"</span>, <span class="at">ncomponents =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">2</span>, <span class="at">point_size =</span> <span class="fl">0.6</span>),</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotReducedDim</span>(sce, <span class="at">dimred =</span> <span class="st">"PCA"</span>, <span class="at">colour_by =</span> <span class="st">"sample"</span>, <span class="at">ncomponents =</span> <span class="dv">3</span><span class="sc">:</span><span class="dv">4</span>, <span class="at">point_size =</span> <span class="fl">0.6</span>),</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotReducedDim</span>(sce, <span class="at">dimred =</span> <span class="st">"PCA"</span>, <span class="at">colour_by =</span> <span class="st">"sample"</span>, <span class="at">ncomponents =</span> <span class="dv">5</span><span class="sc">:</span><span class="dv">6</span>, <span class="at">point_size =</span> <span class="fl">0.6</span>),</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">ncol =</span> <span class="dv">3</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>) <span class="sc">+</span> <span class="fu">plot_layout</span>(<span class="at">guides =</span> <span class="st">"collect"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="bioc_02_dimred_files/figure-html/unnamed-chunk-5-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-3"><img src="bioc_02_dimred_files/figure-html/unnamed-chunk-5-1.png" class="img-fluid figure-img" width="1248"></a></p>
+<p><a href="bioc_02_dimred_files/figure-html/unnamed-chunk-6-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-3"><img src="bioc_02_dimred_files/figure-html/unnamed-chunk-6-1.png" class="img-fluid figure-img" width="960"></a></p>
 </figure>
 </div>
 </div>
 </div>
 <p>To identify which genes (Seurat) or metadata parameters (Scater/Scran) contribute the most to each PC, one can retrieve the loading matrix information. Unfortunately, this is not implemented in Scater/Scran, so you will need to compute PCA using <code>logcounts</code>.</p>
+<p>Here, we can check how the different metadata variables contributes to each PC. This can be important to look at to understand different biases you may have in your data.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_grid</span>(<span class="at">ncol =</span> <span class="dv">2</span>, <span class="fu">plotExplanatoryPCs</span>(sce))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plotExplanatoryPCs</span>(sce)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="bioc_02_dimred_files/figure-html/unnamed-chunk-6-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-4"><img src="bioc_02_dimred_files/figure-html/unnamed-chunk-6-1.png" class="img-fluid figure-img" width="1536"></a></p>
+<p><a href="bioc_02_dimred_files/figure-html/unnamed-chunk-7-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-4"><img src="bioc_02_dimred_files/figure-html/unnamed-chunk-7-1.png" class="img-fluid figure-img" width="960"></a></p>
 </figure>
 </div>
 </div>
 </div>
 <p>We can also plot the amount of variance explained by each PC.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">mypar</span>()</span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(<span class="fu">attr</span>(<span class="fu">reducedDim</span>(sce,<span class="st">"PCA"</span>),<span class="st">"percentVar"</span>)[<span class="dv">1</span><span class="sc">:</span><span class="dv">50</span>]<span class="sc">*</span><span class="dv">100</span>,<span class="at">type=</span><span class="st">"l"</span>,<span class="at">ylab=</span><span class="st">"% variance"</span>,<span class="at">xlab=</span><span class="st">"Principal component #"</span>)</span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="fu">points</span>(<span class="fu">attr</span>(<span class="fu">reducedDim</span>(sce,<span class="st">"PCA"</span>),<span class="st">"percentVar"</span>)[<span class="dv">1</span><span class="sc">:</span><span class="dv">50</span>]<span class="sc">*</span><span class="dv">100</span>,<span class="at">pch=</span><span class="dv">21</span>,<span class="at">bg=</span><span class="st">"grey"</span>,<span class="at">cex=</span>.<span class="dv">5</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(<span class="fu">attr</span>(<span class="fu">reducedDim</span>(sce, <span class="st">"PCA"</span>), <span class="st">"percentVar"</span>)[<span class="dv">1</span><span class="sc">:</span><span class="dv">50</span>] <span class="sc">*</span> <span class="dv">100</span>, <span class="at">type =</span> <span class="st">"l"</span>, <span class="at">ylab =</span> <span class="st">"% variance"</span>, <span class="at">xlab =</span> <span class="st">"Principal component #"</span>)</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="fu">points</span>(<span class="fu">attr</span>(<span class="fu">reducedDim</span>(sce, <span class="st">"PCA"</span>), <span class="st">"percentVar"</span>)[<span class="dv">1</span><span class="sc">:</span><span class="dv">50</span>] <span class="sc">*</span> <span class="dv">100</span>, <span class="at">pch =</span> <span class="dv">21</span>, <span class="at">bg =</span> <span class="st">"grey"</span>, <span class="at">cex =</span> .<span class="dv">5</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="bioc_02_dimred_files/figure-html/unnamed-chunk-7-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-5"><img src="bioc_02_dimred_files/figure-html/unnamed-chunk-7-1.png" class="img-fluid figure-img" width="384"></a></p>
+<p><a href="bioc_02_dimred_files/figure-html/unnamed-chunk-8-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-5"><img src="bioc_02_dimred_files/figure-html/unnamed-chunk-8-1.png" class="img-fluid figure-img" width="384"></a></p>
 </figure>
 </div>
 </div>
@@ -369,16 +386,16 @@ Note
 <h2 data-number="5" class="anchored" data-anchor-id="meta-dimred_tsne"><span class="header-section-number">5</span> tSNE</h2>
 <p>We can now run <a href="https://arxiv.org/abs/1301.3342">BH-tSNE</a>.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">42</span>)</span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>sce <span class="ot">&lt;-</span> <span class="fu">runTSNE</span>(sce, <span class="at">dimred =</span> <span class="st">"PCA"</span>, <span class="at">n_dimred =</span> <span class="dv">30</span>, <span class="at">perplexity =</span> <span class="dv">30</span>,<span class="at">name =</span> <span class="st">"tSNE_on_PCA"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">42</span>)</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>sce <span class="ot">&lt;-</span> <span class="fu">runTSNE</span>(sce, <span class="at">dimred =</span> <span class="st">"PCA"</span>, <span class="at">n_dimred =</span> <span class="dv">30</span>, <span class="at">perplexity =</span> <span class="dv">30</span>, <span class="at">name =</span> <span class="st">"tSNE_on_PCA"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>We can now plot the tSNE colored per dataset. We can clearly see the effect of batches present in the dataset.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_grid</span>(<span class="at">ncol =</span> <span class="dv">3</span>,<span class="fu">plotReducedDim</span>(sce,<span class="at">dimred =</span> <span class="st">"tSNE_on_PCA"</span>,<span class="at">colour_by =</span> <span class="st">"sample"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plotReducedDim</span>(sce, <span class="at">dimred =</span> <span class="st">"tSNE_on_PCA"</span>, <span class="at">colour_by =</span> <span class="st">"sample"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="bioc_02_dimred_files/figure-html/unnamed-chunk-9-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-6"><img src="bioc_02_dimred_files/figure-html/unnamed-chunk-9-1.png" class="img-fluid figure-img" width="672"></a></p>
+<p><a href="bioc_02_dimred_files/figure-html/unnamed-chunk-10-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-6"><img src="bioc_02_dimred_files/figure-html/unnamed-chunk-10-1.png" class="img-fluid figure-img" width="672"></a></p>
 </figure>
 </div>
 </div>
@@ -388,28 +405,29 @@ Note
 <h2 data-number="6" class="anchored" data-anchor-id="meta-dimred_umap"><span class="header-section-number">6</span> UMAP</h2>
 <p>We can now run <a href="https://arxiv.org/abs/1802.03426">UMAP</a> for cell embeddings.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>sce <span class="ot">&lt;-</span> <span class="fu">runUMAP</span>(sce,<span class="at">dimred =</span> <span class="st">"PCA"</span>, <span class="at">n_dimred =</span> <span class="dv">30</span>,   <span class="at">ncomponents =</span> <span class="dv">2</span>,<span class="at">name =</span> <span class="st">"UMAP_on_PCA"</span>)</span>
-<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="co">#see ?umap and ?runUMAP for more info</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>sce <span class="ot">&lt;-</span> <span class="fu">runUMAP</span>(sce, <span class="at">dimred =</span> <span class="st">"PCA"</span>, <span class="at">n_dimred =</span> <span class="dv">30</span>, <span class="at">ncomponents =</span> <span class="dv">2</span>, <span class="at">name =</span> <span class="st">"UMAP_on_PCA"</span>)</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="co"># see ?umap and ?runUMAP for more info</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>UMAP is plotted colored per dataset. Although less distinct as in the tSNE, we still see quite an effect of the different batches in the data.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>sce <span class="ot">&lt;-</span> <span class="fu">runUMAP</span>(sce,<span class="at">dimred =</span> <span class="st">"PCA"</span>, <span class="at">n_dimred =</span> <span class="dv">30</span>,   <span class="at">ncomponents =</span> <span class="dv">10</span>, <span class="at">name =</span> <span class="st">"UMAP10_on_PCA"</span>)</span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="co">#see ?umap and ?runUMAP for more info</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>sce <span class="ot">&lt;-</span> <span class="fu">runUMAP</span>(sce, <span class="at">dimred =</span> <span class="st">"PCA"</span>, <span class="at">n_dimred =</span> <span class="dv">30</span>, <span class="at">ncomponents =</span> <span class="dv">10</span>, <span class="at">name =</span> <span class="st">"UMAP10_on_PCA"</span>)</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="co"># see ?umap and ?runUMAP for more info</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>We can now plot PCA, UMAP and tSNE side by side for comparison. Have a look at the UMAP and tSNE, what similarities/differences do you see, can you explain the differences based on what you learned during the lecture? Also, we can conclude from the dimensionality reductions that our dataset contains a batch effect that needs to be corrected before proceeding to clustering and differential gene expression analysis.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_grid</span>(<span class="at">ncol =</span> <span class="dv">3</span>,</span>
-<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">plotReducedDim</span>(sce,<span class="at">dimred =</span> <span class="st">"UMAP_on_PCA"</span>,<span class="at">colour_by =</span> <span class="st">"sample"</span>)<span class="sc">+</span></span>
-<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>    ggplot2<span class="sc">::</span><span class="fu">ggtitle</span>(<span class="at">label =</span><span class="st">"UMAP_on_PCA"</span>),</span>
-<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">plotReducedDim</span>(sce,<span class="at">dimred =</span> <span class="st">"UMAP10_on_PCA"</span>,<span class="at">colour_by =</span> <span class="st">"sample"</span>,<span class="at">ncomponents =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">2</span>)<span class="sc">+</span></span>
-<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>    ggplot2<span class="sc">::</span><span class="fu">ggtitle</span>(<span class="at">label =</span><span class="st">"UMAP10_on_PCA"</span>),</span>
-<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">plotReducedDim</span>(sce,<span class="at">dimred =</span> <span class="st">"UMAP10_on_PCA"</span>,<span class="at">colour_by =</span> <span class="st">"sample"</span>,<span class="at">ncomponents =</span> <span class="dv">3</span><span class="sc">:</span><span class="dv">4</span>)<span class="sc">+</span></span>
-<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>    ggplot2<span class="sc">::</span><span class="fu">ggtitle</span>(<span class="at">label =</span><span class="st">"UMAP10_on_PCA"</span>)</span>
-<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">wrap_plots</span>(</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotReducedDim</span>(sce, <span class="at">dimred =</span> <span class="st">"UMAP_on_PCA"</span>, <span class="at">colour_by =</span> <span class="st">"sample"</span>) <span class="sc">+</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>        ggplot2<span class="sc">::</span><span class="fu">ggtitle</span>(<span class="at">label =</span> <span class="st">"UMAP_on_PCA"</span>),</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotReducedDim</span>(sce, <span class="at">dimred =</span> <span class="st">"UMAP10_on_PCA"</span>, <span class="at">colour_by =</span> <span class="st">"sample"</span>, <span class="at">ncomponents =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">2</span>) <span class="sc">+</span></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>        ggplot2<span class="sc">::</span><span class="fu">ggtitle</span>(<span class="at">label =</span> <span class="st">"UMAP10_on_PCA"</span>),</span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotReducedDim</span>(sce, <span class="at">dimred =</span> <span class="st">"UMAP10_on_PCA"</span>, <span class="at">colour_by =</span> <span class="st">"sample"</span>, <span class="at">ncomponents =</span> <span class="dv">3</span><span class="sc">:</span><span class="dv">4</span>) <span class="sc">+</span></span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>        ggplot2<span class="sc">::</span><span class="fu">ggtitle</span>(<span class="at">label =</span> <span class="st">"UMAP10_on_PCA"</span>),</span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">ncol =</span> <span class="dv">3</span></span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>) <span class="sc">+</span> <span class="fu">plot_layout</span>(<span class="at">guides =</span> <span class="st">"collect"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="bioc_02_dimred_files/figure-html/unnamed-chunk-12-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-7"><img src="bioc_02_dimred_files/figure-html/unnamed-chunk-12-1.png" class="img-fluid figure-img" width="1440"></a></p>
+<p><a href="bioc_02_dimred_files/figure-html/unnamed-chunk-13-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-7"><img src="bioc_02_dimred_files/figure-html/unnamed-chunk-13-1.png" class="img-fluid figure-img" width="960"></a></p>
 </figure>
 </div>
 </div>
@@ -435,38 +453,39 @@ Discuss
 <h3 data-number="7.1" class="anchored" data-anchor-id="meta-dimred_zsg_zs"><span class="header-section-number">7.1</span> UMAP from z-scores</h3>
 <p>To run tSNE or UMAP on the scaled data, one first needs to select the number of variables to use. This is because including dimensions that do contribute to the separation of your cell types will in the end mask those differences. Another reason for it is because running with all genes/features also will take longer or might be computationally unfeasible. Therefore we will use the scaled data of the highly variable genes.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>sce <span class="ot">&lt;-</span> <span class="fu">runUMAP</span>(sce, <span class="at">exprs_values=</span><span class="st">'logcounts'</span>,<span class="at">name =</span> <span class="st">"UMAP_on_ScaleData"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>sce <span class="ot">&lt;-</span> <span class="fu">runUMAP</span>(sce, <span class="at">exprs_values =</span> <span class="st">"logcounts"</span>, <span class="at">name =</span> <span class="st">"UMAP_on_ScaleData"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 <section id="meta-dimred_zsg_g" class="level3" data-number="7.2">
 <h3 data-number="7.2" class="anchored" data-anchor-id="meta-dimred_zsg_g"><span class="header-section-number">7.2</span> UMAP from graph</h3>
 <p>To run tSNE or UMAP on the a graph, we first need to build a graph from the data. In fact, both tSNE and UMAP first build a graph from the data using a specified distance matrix and then optimize the embedding. Since a graph is just a matrix containing distances from cell to cell and as such, you can run either UMAP or tSNE using any other distance metric desired. Euclidean and Correlation are usually the most commonly used.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Build Graph</span></span>
-<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>nn <span class="ot">&lt;-</span> RANN<span class="sc">::</span><span class="fu">nn2</span>(<span class="fu">reducedDim</span>(sce,<span class="st">"PCA"</span>),<span class="at">k =</span> <span class="dv">30</span>)</span>
-<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a><span class="fu">names</span>(nn) <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"idx"</span>,<span class="st">"dist"</span>)</span>
-<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>g <span class="ot">&lt;-</span> <span class="fu">buildKNNGraph</span>(sce, <span class="at">k=</span><span class="dv">30</span>, <span class="at">use.dimred=</span><span class="st">"PCA"</span>)</span>
-<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a><span class="fu">reducedDim</span>(sce,<span class="st">"KNN"</span>) <span class="ot">&lt;-</span> igraph<span class="sc">::</span><span class="fu">as_adjacency_matrix</span>(g)</span>
-<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a><span class="co">#Run UMAP and rename it for comparisson</span></span>
-<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a><span class="co"># temp &lt;- umap::umap.defaults</span></span>
-<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a><span class="fu">try</span>(<span class="fu">reducedDim</span>(sce,<span class="st">"UMAP_on_Graph"</span>) <span class="ot">&lt;-</span> <span class="cn">NULL</span>)</span>
-<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a><span class="fu">reducedDim</span>(sce,<span class="st">"UMAP_on_Graph"</span>) <span class="ot">&lt;-</span> uwot<span class="sc">::</span><span class="fu">umap</span>(<span class="at">X=</span><span class="cn">NULL</span>, <span class="at">n_components =</span> <span class="dv">2</span>, <span class="at">nn_method=</span>nn)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Build Graph</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>nn <span class="ot">&lt;-</span> RANN<span class="sc">::</span><span class="fu">nn2</span>(<span class="fu">reducedDim</span>(sce, <span class="st">"PCA"</span>), <span class="at">k =</span> <span class="dv">30</span>)</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a><span class="fu">names</span>(nn) <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"idx"</span>, <span class="st">"dist"</span>)</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>g <span class="ot">&lt;-</span> <span class="fu">buildKNNGraph</span>(sce, <span class="at">k =</span> <span class="dv">30</span>, <span class="at">use.dimred =</span> <span class="st">"PCA"</span>)</span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a><span class="fu">reducedDim</span>(sce, <span class="st">"KNN"</span>) <span class="ot">&lt;-</span> igraph<span class="sc">::</span><span class="fu">as_adjacency_matrix</span>(g)</span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Run UMAP and rename it for comparisson</span></span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a><span class="co"># temp &lt;- umap::umap.defaults</span></span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a><span class="fu">try</span>(<span class="fu">reducedDim</span>(sce, <span class="st">"UMAP_on_Graph"</span>) <span class="ot">&lt;-</span> <span class="cn">NULL</span>)</span>
+<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a><span class="fu">reducedDim</span>(sce, <span class="st">"UMAP_on_Graph"</span>) <span class="ot">&lt;-</span> uwot<span class="sc">::</span><span class="fu">umap</span>(<span class="at">X =</span> <span class="cn">NULL</span>, <span class="at">n_components =</span> <span class="dv">2</span>, <span class="at">nn_method =</span> nn)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>We can now plot the UMAP comparing both on PCA vs ScaledSata vs Graph.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_grid</span>(<span class="at">ncol =</span> <span class="dv">3</span>,</span>
-<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">plotReducedDim</span>(sce, <span class="at">dimred =</span> <span class="st">"UMAP_on_PCA"</span>, <span class="at">colour_by =</span> <span class="st">"sample"</span>)<span class="sc">+</span></span>
-<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>    ggplot2<span class="sc">::</span><span class="fu">ggtitle</span>(<span class="at">label =</span><span class="st">"UMAP_on_PCA"</span>),</span>
-<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">plotReducedDim</span>(sce, <span class="at">dimred =</span> <span class="st">"UMAP_on_ScaleData"</span>, <span class="at">colour_by =</span> <span class="st">"sample"</span>)<span class="sc">+</span></span>
-<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>    ggplot2<span class="sc">::</span><span class="fu">ggtitle</span>(<span class="at">label =</span><span class="st">"UMAP_on_ScaleData"</span>),</span>
-<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">plotReducedDim</span>(sce, <span class="at">dimred =</span> <span class="st">"UMAP_on_Graph"</span>, <span class="at">colour_by =</span> <span class="st">"sample"</span>)<span class="sc">+</span></span>
-<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>    ggplot2<span class="sc">::</span><span class="fu">ggtitle</span>(<span class="at">label =</span><span class="st">"UMAP_on_Graph"</span>)</span>
-<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="fu">wrap_plots</span>(</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotReducedDim</span>(sce, <span class="at">dimred =</span> <span class="st">"UMAP_on_PCA"</span>, <span class="at">colour_by =</span> <span class="st">"sample"</span>) <span class="sc">+</span></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>        ggplot2<span class="sc">::</span><span class="fu">ggtitle</span>(<span class="at">label =</span> <span class="st">"UMAP_on_PCA"</span>),</span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotReducedDim</span>(sce, <span class="at">dimred =</span> <span class="st">"UMAP_on_ScaleData"</span>, <span class="at">colour_by =</span> <span class="st">"sample"</span>) <span class="sc">+</span></span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>        ggplot2<span class="sc">::</span><span class="fu">ggtitle</span>(<span class="at">label =</span> <span class="st">"UMAP_on_ScaleData"</span>),</span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotReducedDim</span>(sce, <span class="at">dimred =</span> <span class="st">"UMAP_on_Graph"</span>, <span class="at">colour_by =</span> <span class="st">"sample"</span>) <span class="sc">+</span></span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>        ggplot2<span class="sc">::</span><span class="fu">ggtitle</span>(<span class="at">label =</span> <span class="st">"UMAP_on_Graph"</span>),</span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">ncol =</span> <span class="dv">3</span></span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>) <span class="sc">+</span> <span class="fu">plot_layout</span>(<span class="at">guides =</span> <span class="st">"collect"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="bioc_02_dimred_files/figure-html/unnamed-chunk-15-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-8"><img src="bioc_02_dimred_files/figure-html/unnamed-chunk-15-1.png" class="img-fluid figure-img" width="1440"></a></p>
+<p><a href="bioc_02_dimred_files/figure-html/unnamed-chunk-16-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-8"><img src="bioc_02_dimred_files/figure-html/unnamed-chunk-16-1.png" class="img-fluid figure-img" width="960"></a></p>
 </figure>
 </div>
 </div>
@@ -519,16 +538,17 @@ Discuss
 </tbody>
 </table>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>plotlist <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
-<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span>(i <span class="cf">in</span> <span class="fu">c</span>(<span class="st">"CD3E"</span>,<span class="st">"CD4"</span>,<span class="st">"CD8A"</span>,<span class="st">"NKG7"</span>,<span class="st">"GNLY"</span>,<span class="st">"MS4A1"</span>,<span class="st">"CD14"</span>,<span class="st">"LYZ"</span>,<span class="st">"MS4A7"</span>,<span class="st">"FCGR3A"</span>,<span class="st">"CST3"</span>,<span class="st">"FCER1A"</span>)){</span>
-<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>  plotlist[[i]] <span class="ot">&lt;-</span> <span class="fu">plotReducedDim</span>(sce,<span class="at">dimred =</span> <span class="st">"UMAP_on_PCA"</span>,<span class="at">colour_by =</span> i,<span class="at">by_exprs_values =</span> <span class="st">"logcounts"</span>) <span class="sc">+</span></span>
-<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_fill_gradientn</span>(<span class="at">colours =</span> <span class="fu">colorRampPalette</span>(<span class="fu">c</span>(<span class="st">"grey90"</span>,<span class="st">"orange3"</span>,<span class="st">"firebrick"</span>,<span class="st">"firebrick"</span>,<span class="st">"red"</span>,<span class="st">"red"</span> ))(<span class="dv">10</span>)) <span class="sc">+</span></span>
-<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggtitle</span>(<span class="at">label =</span> i)<span class="sc">+</span> <span class="fu">theme</span>(<span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">size=</span><span class="dv">20</span>)) }</span>
-<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_grid</span>(<span class="at">ncol=</span><span class="dv">3</span>, <span class="at">plotlist =</span> plotlist)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>plotlist <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (i <span class="cf">in</span> <span class="fu">c</span>(<span class="st">"CD3E"</span>, <span class="st">"CD4"</span>, <span class="st">"CD8A"</span>, <span class="st">"NKG7"</span>, <span class="st">"GNLY"</span>, <span class="st">"MS4A1"</span>, <span class="st">"CD14"</span>, <span class="st">"LYZ"</span>, <span class="st">"MS4A7"</span>, <span class="st">"FCGR3A"</span>, <span class="st">"CST3"</span>, <span class="st">"FCER1A"</span>)) {</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>    plotlist[[i]] <span class="ot">&lt;-</span> <span class="fu">plotReducedDim</span>(sce, <span class="at">dimred =</span> <span class="st">"UMAP_on_PCA"</span>, <span class="at">colour_by =</span> i, <span class="at">by_exprs_values =</span> <span class="st">"logcounts"</span>) <span class="sc">+</span></span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>        <span class="fu">scale_fill_gradientn</span>(<span class="at">colours =</span> <span class="fu">colorRampPalette</span>(<span class="fu">c</span>(<span class="st">"grey90"</span>, <span class="st">"orange3"</span>, <span class="st">"firebrick"</span>, <span class="st">"firebrick"</span>, <span class="st">"red"</span>, <span class="st">"red"</span>))(<span class="dv">10</span>)) <span class="sc">+</span></span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>        <span class="fu">ggtitle</span>(<span class="at">label =</span> i) <span class="sc">+</span> <span class="fu">theme</span>(<span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">20</span>))</span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a><span class="fu">wrap_plots</span>(plotlist, <span class="at">ncol =</span> <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="bioc_02_dimred_files/figure-html/unnamed-chunk-16-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-9"><img src="bioc_02_dimred_files/figure-html/unnamed-chunk-16-1.png" class="img-fluid figure-img" width="1152"></a></p>
+<p><a href="bioc_02_dimred_files/figure-html/unnamed-chunk-17-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-9"><img src="bioc_02_dimred_files/figure-html/unnamed-chunk-17-1.png" class="img-fluid figure-img" width="1056"></a></p>
 </figure>
 </div>
 </div>
@@ -551,8 +571,7 @@ Discuss
 <h2 data-number="9" class="anchored" data-anchor-id="meta-dimred_save"><span class="header-section-number">9</span> Save data</h2>
 <p>We can finally save the object for use in future steps.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>path <span class="ot">&lt;-</span> <span class="st">"data/results/covid_qc_dm.rds"</span></span>
-<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span>(<span class="sc">!</span><span class="fu">file.exists</span>(path)) <span class="fu">saveRDS</span>(sce,path)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(sce, <span class="st">"data/covid/results/bioc_covid_qc_dr.rds"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 <section id="meta-session" class="level2" data-number="10">
@@ -562,7 +581,7 @@ Discuss
 Click here
 </summary>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>R version 4.3.0 (2023-04-21)
 Platform: x86_64-pc-linux-gnu (64-bit)
@@ -588,15 +607,14 @@ attached base packages:
 [8] base     
 
 other attached packages:
- [1] umap_0.2.10.0               rafalib_1.0.0              
- [3] cowplot_1.1.1               scran_1.30.0               
- [5] scater_1.30.1               ggplot2_3.4.2              
- [7] scuttle_1.12.0              SingleCellExperiment_1.24.0
- [9] SummarizedExperiment_1.32.0 Biobase_2.62.0             
-[11] GenomicRanges_1.54.1        GenomeInfoDb_1.38.2        
-[13] IRanges_2.36.0              S4Vectors_0.40.2           
-[15] BiocGenerics_0.48.1         MatrixGenerics_1.14.0      
-[17] matrixStats_1.0.0          
+ [1] umap_0.2.10.0               patchwork_1.1.2            
+ [3] scran_1.30.0                scater_1.30.1              
+ [5] ggplot2_3.4.2               scuttle_1.12.0             
+ [7] SingleCellExperiment_1.24.0 SummarizedExperiment_1.32.0
+ [9] Biobase_2.62.0              GenomicRanges_1.54.1       
+[11] GenomeInfoDb_1.38.5         IRanges_2.36.0             
+[13] S4Vectors_0.40.2            BiocGenerics_0.48.1        
+[15] MatrixGenerics_1.14.0       matrixStats_1.0.0          
 
 loaded via a namespace (and not attached):
  [1] bitops_1.0-7              gridExtra_2.3            
@@ -613,24 +631,24 @@ loaded via a namespace (and not attached):
 [23] DelayedArray_0.28.0       BiocParallel_1.36.0      
 [25] irlba_2.3.5.1             parallel_4.3.0           
 [27] cluster_2.1.4             R6_2.5.1                 
-[29] RColorBrewer_1.1-3        limma_3.58.1             
-[31] reticulate_1.30           Rcpp_1.0.10              
-[33] knitr_1.43                Matrix_1.5-4             
-[35] igraph_1.4.3              tidyselect_1.2.0         
-[37] rstudioapi_0.14           abind_1.4-5              
-[39] yaml_2.3.7                viridis_0.6.3            
-[41] codetools_0.2-19          lattice_0.21-8           
-[43] tibble_3.2.1              withr_2.5.0              
-[45] askpass_1.1               evaluate_0.21            
-[47] Rtsne_0.16                pillar_1.9.0             
-[49] generics_0.1.3            RCurl_1.98-1.12          
-[51] sparseMatrixStats_1.14.0  munsell_0.5.0            
-[53] scales_1.2.1              glue_1.6.2               
-[55] metapod_1.10.1            tools_4.3.0              
-[57] BiocNeighbors_1.20.1      ScaledMatrix_1.10.0      
-[59] RSpectra_0.16-1           locfit_1.5-9.8           
-[61] RANN_2.6.1                grid_4.3.0               
-[63] edgeR_4.0.3               colorspace_2.1-0         
+[29] limma_3.58.1              reticulate_1.30          
+[31] Rcpp_1.0.10               knitr_1.43               
+[33] Matrix_1.5-4              igraph_1.4.3             
+[35] tidyselect_1.2.0          rstudioapi_0.14          
+[37] abind_1.4-5               yaml_2.3.7               
+[39] viridis_0.6.3             codetools_0.2-19         
+[41] lattice_0.21-8            tibble_3.2.1             
+[43] withr_2.5.0               askpass_1.1              
+[45] evaluate_0.21             Rtsne_0.16               
+[47] pillar_1.9.0              generics_0.1.3           
+[49] RCurl_1.98-1.12           sparseMatrixStats_1.14.0 
+[51] munsell_0.5.0             scales_1.2.1             
+[53] glue_1.6.2                metapod_1.10.1           
+[55] tools_4.3.0               BiocNeighbors_1.20.2     
+[57] ScaledMatrix_1.10.0       RSpectra_0.16-1          
+[59] locfit_1.5-9.8            RANN_2.6.1               
+[61] cowplot_1.1.1             grid_4.3.0               
+[63] edgeR_4.0.7               colorspace_2.1-0         
 [65] GenomeInfoDbData_1.2.11   beeswarm_0.4.0           
 [67] BiocSingular_1.18.0       vipor_0.4.5              
 [69] cli_3.6.1                 rsvd_1.0.5               
@@ -890,10 +908,10 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
     <div class="nav-footer-center">
       &nbsp;
     </div>
-    <div class="nav-footer-right">Published with <a href="https://quarto.org/">Quarto</a> v1.3.353</div>
+    <div class="nav-footer-right">Published with <a href="https://quarto.org/">Quarto</a> v1.3.450</div>
   </div>
 </footer>
-<script>var lightboxQuarto = GLightbox({"selector":".lightbox","descPosition":"bottom","closeEffect":"zoom","loop":true,"openEffect":"zoom"});</script>
+<script>var lightboxQuarto = GLightbox({"selector":".lightbox","loop":true,"descPosition":"bottom","openEffect":"zoom","closeEffect":"zoom"});</script>
 
 
 
