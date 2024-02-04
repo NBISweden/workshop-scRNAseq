@@ -1,5 +1,7 @@
 ---
 description: Quality control of single cell RNA-Seq data. Inspection of
+  QC metrics including number of UMIs, number of genes expressed,
+  mitochondrial and ribosomal expression, sex and cell cycle state.
 subtitle:  Bioconductor Toolkit
 title:  Quality Control
 ---
@@ -20,6 +22,10 @@ have been subsampled to 1500 cells per sample. We can start by defining
 our paths.
 
 ``` {r}
+# download pre-computed annotation
+fetch_annotation <- TRUE
+
+# url for source and intermediate data
 path_data <- "https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"
 
 path_covid <- "./data/covid"
@@ -103,10 +109,10 @@ overlapping barcodes between the datasets. After that we add a column
 **type** in the metadata to define covid and ctrl samples.
 
 ``` {r}
-sce <- SingleCellExperiment(assays = list(counts = cbind(cov.1, cov.15, cov.17, ctrl.5, ctrl.13, ctrl.14)))
+sce <- SingleCellExperiment(assays = list(counts = cbind(cov.1, cov.15, cov.16, cov.17, ctrl.5, ctrl.13, ctrl.14,ctrl.19)))
 dim(sce)
 # Adding metadata
-sce@colData$sample <- unlist(sapply(c("cov.1", "cov.15", "cov.17", "ctrl.5", "ctrl.13", "ctrl.14"), function(x) rep(x, ncol(get(x)))))
+sce@colData$sample <- unlist(sapply(c("cov.1", "cov.15", "cov.16", "cov.17", "ctrl.5", "ctrl.13", "ctrl.14","ctrl.19"), function(x) rep(x, ncol(get(x)))))
 sce@colData$type <- ifelse(grepl("cov", sce@colData$sample), "Covid", "Control")
 ```
 
@@ -116,7 +122,7 @@ good idea to remove them and run garbage collect to free up some memory.
 
 ``` {r}
 # remove all objects that will not be used.
-rm(cov.15, cov.1, cov.17, ctrl.5, ctrl.13, ctrl.14)
+rm(cov.15, cov.1, cov.17, cov.16, ctrl.5, ctrl.13, ctrl.14, ctrl.19)
 # run garbage collect to free up memory
 gc()
 ```
@@ -152,7 +158,7 @@ mito_genes <- rownames(sce)[grep("^MT-", rownames(sce))]
 # Ribosomal genes
 ribo_genes <- rownames(sce)[grep("^RP[SL]", rownames(sce))]
 # Hemoglobin genes - includes all genes starting with HB except HBP.
-hb_genes <- rownames(sce)[grep("^HB[^(P)]", rownames(sce))]
+hb_genes <- rownames(sce)[grep("^HB[^(P|E|S)]", rownames(sce))]
 ```
 
 First, let Scran calculate some general qc-stats for genes and cells
@@ -275,7 +281,7 @@ the gene contribution, but the function is quite slow.
 # Compute the relative expression of each gene per cell
 # Use sparse matrix operations, if your dataset is large, doing matrix devisions the regular way will take a very long time.
 C <- counts(sce)
-C@x <- C@x / rep.int(colSums(C), diff(C@p))
+C@x <- C@x / rep.int(colSums(C), diff(C@p)) * 100
 most_expressed <- order(Matrix::rowSums(C), decreasing = T)[20:1]
 boxplot(as.matrix(t(C[most_expressed, ])), cex = .1, las = 1, xlab = "% total count per cell", col = scales::hue_pal()(20)[20:1], horizontal = TRUE)
 
@@ -307,7 +313,7 @@ cells are below 20% mitochondrial reads and that will be used as a
 cutoff. We will also remove cells with less than 5% ribosomal reads.
 
 ``` {r}
-selected_mito <- sce.filt$subsets_mt_percent < 30
+selected_mito <- sce.filt$subsets_mt_percent < 20
 selected_ribo <- sce.filt$subsets_ribo_percent > 5
 
 # and subset the object to only keep those cells
@@ -359,8 +365,8 @@ sce.filt <- sce.filt[!grepl("^MT-", rownames(sce.filt)), ]
 # Filter Ribossomal gene (optional if that is a problem on your data)
 # sce.filt <- sce.filt[ ! grepl("^RP[SL]", rownames(sce.filt)), ]
 
-# Filter Hemoglobin gene
-sce.filt <- sce.filt[!grepl("^HB[^(PES)]", rownames(sce.filt)), ]
+# Filter Hemoglobin gene  (optional if that is a problem on your data)
+#sce.filt <- sce.filt[!grepl("^HB[^(P|E|S)]", rownames(sce.filt)), ]
 
 dim(sce.filt)
 ```
@@ -385,30 +391,46 @@ code to run biomaRt is provided. As the biomart instances quite often
 are unresponsive, we will download and use a file that was created in
 advance.
 
+<div>
+
+> **Tip**
+>
+> Here is the code to download annotation data from Ensembl using
+> biomaRt. We will not run this now and instead use a pre-computed file
+> in the step below.
+>
+> ``` {r}
+> # fetch_annotation is defined at the top of this document
+> if (!fetch_annotation) {
+>   suppressMessages(library(biomaRt))
+>
+>   # initialize connection to mart, may take some time if the sites are unresponsive.
+>   mart <- useMart("ENSEMBL_MART_ENSEMBL", dataset = "hsapiens_gene_ensembl")
+>
+>   # fetch chromosome info plus some other annotations
+>   genes_table <- try(biomaRt::getBM(attributes = c(
+>     "ensembl_gene_id", "external_gene_name",
+>     "description", "gene_biotype", "chromosome_name", "start_position"
+>   ), mart = mart, useCache = F))
+>
+>   write.csv(genes_table, file = "data/covid/results/genes_table.csv")
+> }
+> ```
+
+</div>
+
+Download precomputed data.
+
 ``` {r}
-#| eval: false
-
-# this code chunk is not executed
-suppressMessages(library(biomaRt))
-
-# initialize connection to mart, may take some time if the sites are unresponsive.
-mart <- useMart("ENSEMBL_MART_ENSEMBL", dataset = "hsapiens_gene_ensembl")
-
-# fetch chromosome info plus some other annotations
-genes_table <- try(biomaRt::getBM(attributes = c(
-    "ensembl_gene_id", "external_gene_name",
-    "description", "gene_biotype", "chromosome_name", "start_position"
-), mart = mart, useCache = F))
-
-write.csv(genes_table, file = "data/covid/results/genes_table.csv")
+# fetch_annotation is defined at the top of this document
+if (fetch_annotation) {
+  genes_file <- file.path(path_results, "genes_table.csv")
+  if (!file.exists(genes_file)) download.file(file.path(path_data, "covid/results/genes_table.csv"), destfile = genes_file)
+}
 ```
 
 ``` {r}
-genes_file <- file.path(path_results, "genes_table.csv")
-
-if (!file.exists(genes_file)) download.file(file.path(path_data, "covid/results/genes_table.csv"), destfile = genes_file)
 genes.table <- read.csv(genes_file)
-
 genes.table <- genes.table[genes.table$external_gene_name %in% rownames(sce.filt), ]
 ```
 
@@ -487,6 +509,7 @@ assignments <- cyclone(sce.filt[ensembl %in% cc.ensembl, ], hs.pairs, gene.names
 sce.filt$G1.score <- assignments$scores$G1
 sce.filt$G2M.score <- assignments$scores$G2M
 sce.filt$S.score <- assignments$scores$S
+sce.filt$phase <- assignments$phases
 ```
 
 We can now plot a violin plot for the cell cycle scores as well.
@@ -496,7 +519,7 @@ We can now plot a violin plot for the cell cycle scores as well.
 #| fig-width: 14
 
 wrap_plots(
-    plotColData(sce.filt, y = "G2M.score", x = "G1.score", colour_by = "sample"),
+    plotColData(sce.filt, y = "G2M.score", x = "G1.score", colour_by = "phase"),
     plotColData(sce.filt, y = "G2M.score", x = "sample", colour_by = "sample"),
     plotColData(sce.filt, y = "G1.score", x = "sample", colour_by = "sample"),
     plotColData(sce.filt, y = "S.score", x = "sample", colour_by = "sample"),
@@ -507,6 +530,11 @@ wrap_plots(
 Cyclone predicts most cells as G1, but also quite a lot of cells with
 high S-Phase scores. Compare to results with Seurat and Scanpy and see
 how different predictors will give clearly different results.
+
+Cyclone does an automatic prediction of cell cycle phase with a default
+cutoff of the scores at 0.5 As you can see this does not fit this data
+very well, so be cautious with using these predictions. Instead we
+suggest that you look at the scores.
 
 ## Predict doublets
 

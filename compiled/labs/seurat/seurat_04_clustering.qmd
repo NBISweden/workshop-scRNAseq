@@ -1,5 +1,7 @@
 ---
 description: Grouping individual cells with similar gene expression
+  profiles to uncover distinct cell populations and their functional
+  characteristics.
 subtitle:  Seurat Toolkit
 title:  Clustering
 ---
@@ -32,10 +34,14 @@ suppressPackageStartupMessages({
 ```
 
 ``` {r}
+# download pre-computed data if missing or long compute
+fetch_data <- FALSE
+
+# url for source and intermediate data
 path_data <- "https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"
 path_file <- "data/covid/results/seurat_covid_qc_dr_int.rds"
 if (!dir.exists(dirname(path_file))) dir.create(dirname(path_file), recursive = TRUE)
-if (!file.exists(path_file)) download.file(url = file.path(path_data, "covid/results/seurat_covid_qc_dr_int.rds"), destfile = path_file)
+if (fetch_data && !file.exists(path_file)) download.file(url = file.path(path_data, "covid/results/seurat_covid_qc_dr_int.rds"), destfile = path_file)
 alldata <- readRDS(path_file)
 print(names(alldata@reductions))
 ```
@@ -43,10 +49,12 @@ print(names(alldata@reductions))
 ## Graph clustering
 
 The procedure of clustering on a Graph can be generalized as 3 main
-steps: 1) Build a kNN graph from the data. 2) Prune spurious connections
-from kNN graph (optional step). This is a SNN graph. 3) Find groups of
-cells that maximizes the connections within the group compared other
-groups.
+steps:\
+- Build a kNN graph from the data.\
+- Prune spurious connections from kNN graph (optional step). This is a
+SNN graph.\
+- Find groups of cells that maximizes the connections within the group
+compared other groups.
 
 ### Building kNN / SNN graph
 
@@ -215,7 +223,7 @@ in defining distances because a distance of 0 indicates that two samples
 are closest, 1 indicates that two samples are the furthest and distance
 of -1 is not meaningful. We thus need to transform the correlations to a
 positive scale (a.k.a. **adjacency**):\
-\[adj = `\frac{1- cor}{2}`{=tex}\]\
+$$adj = \frac{1- cor}{2}$$\
 Once we transformed the correlations to a 0-1 scale, we can simply
 convert it to a distance object using `as.dist` function. The
 transformation does not need to have a maximum of 1, but it is more
@@ -259,7 +267,7 @@ different clustering levels.
 
 ``` {r}
 #| fig-height: 8
-#| fig-width: 13
+#| fig-width: 14
 
 # euclidean distance
 alldata$hc_euclidean_5 <- cutree(h_euclidean, k = 5)
@@ -279,7 +287,7 @@ wrap_plots(
     DimPlot(alldata, reduction = "umap", group.by = "hc_corelation_10") + ggtitle("hc_cor_10"),
     DimPlot(alldata, reduction = "umap", group.by = "hc_corelation_15") + ggtitle("hc_cor_15"),
     ncol = 3
-) + plot_layout(guides = "collect")
+) + plot_layout()
 ```
 
 Finally, lets save the clustered data for further analysis.

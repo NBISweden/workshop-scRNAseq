@@ -1,5 +1,7 @@
 ---
 description: Grouping individual cells with similar gene expression
+  profiles to uncover distinct cell populations and their functional
+  characteristics.
 subtitle:  Bioconductor Toolkit
 title:  Clustering
 ---
@@ -34,10 +36,14 @@ suppressPackageStartupMessages({
 ```
 
 ``` {r}
+# download pre-computed data if missing or long compute
+fetch_data <- FALSE
+
+# url for source and intermediate data
 path_data <- "https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"
 path_file <- "data/covid/results/bioc_covid_qc_dr_int.rds"
 if (!dir.exists(dirname(path_file))) dir.create(dirname(path_file), recursive = TRUE)
-if (!file.exists(path_file)) download.file(url = file.path(path_data, "covid/results/bioc_covid_qc_dr_int.rds"), destfile = path_file)
+if (fetch_data && !file.exists(path_file)) download.file(url = file.path(path_data, "covid/results/bioc_covid_qc_dr_int.rds"), destfile = path_file)
 sce <- readRDS(path_file)
 print(reducedDims(sce))
 ```
@@ -45,10 +51,12 @@ print(reducedDims(sce))
 ## Graph clustering
 
 The procedure of clustering on a Graph can be generalized as 3 main
-steps: 1) Build a kNN graph from the data. 2) Prune spurious connections
-from kNN graph (optional step). This is a SNN graph. 3) Find groups of
-cells that maximizes the connections within the group compared other
-groups.
+steps:\
+- Build a kNN graph from the data.\
+- Prune spurious connections from kNN graph (optional step). This is a
+SNN graph.\
+- Find groups of cells that maximizes the connections within the group
+compared other groups.
 
 ### Building kNN / SNN graph
 
@@ -207,7 +215,7 @@ in defining distances because a distance of 0 indicates that two samples
 are closest, 1 indicates that two samples are the furthest and distance
 of -1 is not meaningful. We thus need to transform the correlations to a
 positive scale (a.k.a. **adjacency**):\
-\[adj = `\frac{1- cor}{2}`{=tex}\]\
+$$adj = \frac{1- cor}{2}$$\
 Once we transformed the correlations to a 0-1 scale, we can simply
 convert it to a distance object using `as.dist` function. The
 transformation does not need to have a maximum of 1, but it is more
@@ -284,6 +292,36 @@ Finally, lets save the clustered data for further analysis.
 
 ``` {r}
 saveRDS(sce, "data/covid/results/bioc_covid_qc_dr_int_cl.rds")
+```
+
+## Distribution of clusters
+
+Now, we can select one of our clustering methods and compare the
+proportion of samples across the clusters.
+
+``` {r}
+#| fig-height: 4
+#| fig-width: 9
+
+p1 <- ggplot(as.data.frame(colData(sce)), aes(x = louvain_SNNk10, fill = sample)) +
+    geom_bar(position = "fill")
+p2 <- ggplot(as.data.frame(colData(sce)), aes(x = louvain_SNNk10, fill = type)) +
+    geom_bar(position = "fill")
+
+p1 + p2
+```
+
+In this case we have quite good representation of each sample in each
+cluster. But there are clearly some biases with more cells from one
+sample in some clusters and also more covid cells in some of the
+clusters.
+
+We can also plot it in the other direction, the proportion of each
+cluster per sample.
+
+``` {r}
+ggplot(as.data.frame(colData(sce)), aes(x = sample, fill = louvain_SNNk10)) +
+    geom_bar(position = "fill")
 ```
 
 <div>

@@ -1,5 +1,7 @@
 ---
 description: Reconstructing developmental or differentiation pathways
+  from individual cell gene expression profiles to understand cellular
+  transitions and relationships.
 subtitle:  Seurat Toolkit
 title:  Trajectory inference using Slingshot
 ---
@@ -59,6 +61,10 @@ organs.
 You can download the files we prepared with these commands:
 
 ``` {r}
+# download pre-computed data if missing or long compute
+fetch_data <- FALSE
+
+# url for source and intermediate data
 path_data <- "https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"
 path_file <- "data/trajectory/trajectory_seurat_filtered.rds"
 if (!dir.exists(dirname(path_file))) dir.create(dirname(path_file), recursive = TRUE)
@@ -75,12 +81,17 @@ find get:
 -   A KNN/SNN graph (this is useful to inspect and sanity-check your
     trajectories)
 
-## Reading data
-
 We already have pre-computed and subsetted the dataset (with 6688 cells
 and 3585 genes) following the analysis steps in this course. We then
 saved the objects, so you can use common tools to open and start to work
 with them (either in R or Python).
+
+In addition there was some manual filtering done to remove clusters that
+are disconnected and cells that are hard to cluster, which can be seen
+in this
+[script](https://github.com/NBISweden/workshop-scRNAseq/blob/master/scripts/data_processing/slingshot_preprocessing.Rmd)
+
+## Reading data
 
 ``` {r }
 obj <- readRDS("data/trajectory/trajectory_seurat_filtered.rds")
@@ -346,28 +357,38 @@ Fitting the model:
 
 > **Caution**
 >
-> This step is slow to run, so it's better to skip it for now and use
-> the pre-computed file in the next step.
+> This is a slow compute intensive step, we will not run this now and
+> instead use a pre-computed file in the step below.
+>
+> ``` {r}
+> #| eval: false
+>
+> # fetch_data is defined at the top of this document
+> if (!fetch_data) {
+>   sceGAM <- fitGAM(
+>     counts = drop0(obj@assays$RNA@data[sel_genes, sel_cells]),
+>     pseudotime = pseudotime[sel_cells, ],
+>     cellWeights = cellWeights[sel_cells, ],
+>     nknots = 5, verbose = T, parallel = T, sce = TRUE,
+>     BPPARAM = BiocParallel::MulticoreParam()
+>   )
+> }
+> ```
 
 </div>
-
-``` {r}
-#| eval: false
-
-sceGAM <- fitGAM(
-  counts = drop0(obj@assays$RNA@data[sel_genes, sel_cells]),
-  pseudotime = pseudotime[sel_cells, ],
-  cellWeights = cellWeights[sel_cells, ],
-  nknots = 5, verbose = T, parallel = T, sce = TRUE,
-  BPPARAM = BiocParallel::MulticoreParam()
-)
-```
 
 Download the precomputed file.
 
 ``` {r}
-path_file <- "data/trajectory/seurat_scegam.rds"
-if (!file.exists(path_file)) download.file(url = file.path(path_data, "trajectory/results/seurat_scegam.rds"), destfile = path_file)
+# fetch_data is defined at the top of this document
+if (fetch_data) {
+  path_file <- "data/trajectory/seurat_scegam.rds"
+  if (!file.exists(path_file)) download.file(url = file.path(path_data, "trajectory/results/seurat_scegam.rds"), destfile = path_file)
+}
+```
+
+``` {r}
+# read data
 sceGAM <- readRDS(path_file)
 ```
 
@@ -541,6 +562,18 @@ Check out this
 [vignette](https://statomics.github.io/tradeSeq/articles/tradeSeq.html)
 for a more in-depth overview of tradeSeq and many other differential
 expression tests.
+
+## Generating batch-corrected data for differential gene expression
+
+Before computing differential gene expression, sometimes it is a good
+idea to make sure our dataset is somewhat homogeneous (without very
+strong batch effects). In this dataset, we actually used data from 4
+different technologies (Drop-seq, SmartSeq2 and 10X) and therefore
+massive differences in read counts can be observed:
+
+If you want to know more about how to control for this issue, please
+have a look at
+[batch_corrected_counts.Rmd](https://github.com/NBISweden/workshop-scRNAseq/blob/master/scripts/data_processing/batch_corrected_counts.Rmd)
 
 ## References
 

@@ -1,5 +1,7 @@
 ---
 description: Quality control of single cell RNA-Seq data. Inspection of
+  QC metrics including number of UMIs, number of genes expressed,
+  mitochondrial and ribosomal expression, sex and cell cycle state.
 subtitle:  Seurat Toolkit
 title:  Quality Control
 ---
@@ -20,6 +22,10 @@ have been subsampled to 1500 cells per sample. We can start by defining
 our paths.
 
 ``` {r}
+# download pre-computed annotation
+fetch_annotation <- TRUE
+
+# url for source and intermediate data
 path_data <- "https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"
 
 path_covid <- "./data/covid"
@@ -354,7 +360,7 @@ data.filt <- data.filt[!grepl("^MT-", rownames(data.filt)), ]
 # data.filt <- data.filt[ ! grepl("^RP[SL]", rownames(data.filt)), ]
 
 # Filter Hemoglobin gene (optional if that is a problem on your data)
-data.filt <- data.filt[!grepl("^HB[^(PES)]", rownames(data.filt)), ]
+# data.filt <- data.filt[!grepl("^HB[^(P|E|S)]", rownames(data.filt)), ]
 
 dim(data.filt)
 ```
@@ -379,30 +385,46 @@ code to run biomaRt is provided. As the biomart instances quite often
 are unresponsive, we will download and use a file that was created in
 advance.
 
+<div>
+
+> **Tip**
+>
+> Here is the code to download annotation data from Ensembl using
+> biomaRt. We will not run this now and instead use a pre-computed file
+> in the step below.
+>
+> ``` {r}
+> # fetch_annotation is defined at the top of this document
+> if (!fetch_annotation) {
+>   suppressMessages(library(biomaRt))
+>
+>   # initialize connection to mart, may take some time if the sites are unresponsive.
+>   mart <- useMart("ENSEMBL_MART_ENSEMBL", dataset = "hsapiens_gene_ensembl")
+>
+>   # fetch chromosome info plus some other annotations
+>   genes_table <- try(biomaRt::getBM(attributes = c(
+>     "ensembl_gene_id", "external_gene_name",
+>     "description", "gene_biotype", "chromosome_name", "start_position"
+>   ), mart = mart, useCache = F))
+>
+>   write.csv(genes_table, file = "data/covid/results/genes_table.csv")
+> }
+> ```
+
+</div>
+
+Download precomputed data.
+
 ``` {r}
-#| eval: false
-
-# this code chunk is not executed
-suppressMessages(library(biomaRt))
-
-# initialize connection to mart, may take some time if the sites are unresponsive.
-mart <- useMart("ENSEMBL_MART_ENSEMBL", dataset = "hsapiens_gene_ensembl")
-
-# fetch chromosome info plus some other annotations
-genes_table <- try(biomaRt::getBM(attributes = c(
-    "ensembl_gene_id", "external_gene_name",
-    "description", "gene_biotype", "chromosome_name", "start_position"
-), mart = mart, useCache = F))
-
-write.csv(genes_table, file = "data/covid/results/genes_table.csv")
+# fetch_annotation is defined at the top of this document
+if (fetch_annotation) {
+  genes_file <- file.path(path_results, "genes_table.csv")
+  if (!file.exists(genes_file)) download.file(file.path(path_data, "covid/results/genes_table.csv"), destfile = genes_file)
+}
 ```
 
 ``` {r}
-genes_file <- file.path(path_results, "genes_table.csv")
-
-if (!file.exists(genes_file)) download.file(file.path(path_data, "covid/results/genes_table.csv"), destfile = genes_file)
 genes.table <- read.csv(genes_file)
-
 genes.table <- genes.table[genes.table$external_gene_name %in% rownames(data.filt), ]
 ```
 
