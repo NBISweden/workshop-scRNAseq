@@ -207,7 +207,7 @@ background-size: cover;
       <div>
       <div class="quarto-title-meta-heading">Published</div>
       <div class="quarto-title-meta-contents">
-        <p class="date">19-Jan-2024</p>
+        <p class="date">05-Feb-2024</p>
       </div>
     </div>
     
@@ -265,7 +265,7 @@ Note
 <p>Code chunks run Python commands unless it starts with <code>%%bash</code>, in which case, those chunks run shell commands.</p>
 </div>
 </div>
-<p>In this tutorial we will cover about Differetial gene expression, which comprises an extensive range of topics and methods. In single cell, differential expresison can have multiple functionalities such as of identifying marker genes for cell populations, as well as differentially regulated genes across conditions (healthy vs control). We will also exercise on how to account the batch information in your test.</p>
+<p>In this tutorial we will cover differential gene expression, which comprises an extensive range of topics and methods. In single cell, differential expresison can have multiple functionalities such as identifying marker genes for cell populations, as well as identifying differentially regulated genes across conditions (healthy vs control). We will also cover controlling batch effect in your test.</p>
 <p>Differential expression is performed with the function rank_genes_group. The default method to compute differential expression is the t-test_overestim_var. Other implemented methods are: logreg, t-test and wilcoxon.</p>
 <p>By default, the .raw attribute of AnnData is used in case it has been initialized, it can be changed by setting use_raw=False.</p>
 <p>The clustering with resolution 0.6 seems to give a reasonable number of clusters, so we will use that clustering for all DE tests.</p>
@@ -289,20 +289,24 @@ Note
 </div>
 <p>Read in the clustered data object.</p>
 <div class="cell" data-execution_count="2">
-<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>path_data <span class="op">=</span> <span class="st">"https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"</span></span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>path_results <span class="op">=</span> <span class="st">"data/covid/results"</span></span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(path_results):</span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    os.makedirs(path_results, exist_ok<span class="op">=</span><span class="va">True</span>)</span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>   </span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="co"># path_file = "data/covid/results/scanpy_covid_qc_dr_scanorama_cl.h5ad"</span></span>
-<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>path_file <span class="op">=</span> <span class="st">"data/covid/results/scanpy_covid_qc_dr_scanorama_cl.h5ad"</span></span>
-<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(path_file):</span>
-<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    urllib.request.urlretrieve(os.path.join(</span>
-<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>        path_data, <span class="st">'covid/results/scanpy_covid_qc_dr_scanorama_cl.h5ad'</span>), path_file)</span>
-<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>adata <span class="op">=</span> sc.read_h5ad(path_file)</span>
-<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>adata</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># download pre-computed data if missing or long compute</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>fetch_data <span class="op">=</span> <span class="va">True</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co"># url for source and intermediate data</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>path_data <span class="op">=</span> <span class="st">"https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>path_results <span class="op">=</span> <span class="st">"data/covid/results"</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(path_results):</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    os.makedirs(path_results, exist_ok<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="co"># path_file = "data/covid/results/scanpy_covid_qc_dr_scanorama_cl.h5ad"</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>path_file <span class="op">=</span> <span class="st">"data/covid/results/scanpy_covid_qc_dr_scanorama_cl.h5ad"</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> fetch_data <span class="kw">and</span> <span class="kw">not</span> os.path.exists(path_file):</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>    urllib.request.urlretrieve(os.path.join(</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>        path_data, <span class="st">'covid/results/scanpy_covid_qc_dr_scanorama_cl.h5ad'</span>), path_file)</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>adata <span class="op">=</span> sc.read_h5ad(path_file)</span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>adata</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="2">
 <pre><code>AnnData object with n_obs × n_vars = 7222 × 2626
     obs: 'type', 'sample', 'batch', 'n_genes_by_counts', 'total_counts', 'total_counts_mt', 'pct_counts_mt', 'total_counts_ribo', 'pct_counts_ribo', 'total_counts_hb', 'pct_counts_hb', 'percent_mt2', 'n_counts', 'n_genes', 'percent_chrY', 'XIST-counts', 'S_score', 'G2M_score', 'phase', 'doublet_scores', 'predicted_doublets', 'doublet_info', 'leiden_1.0', 'leiden_0.6', 'leiden_0.4', 'leiden_1.4', 'louvain_1.0', 'louvain_0.6', 'louvain_0.4', 'louvain_1.4', 'kmeans5', 'kmeans10', 'kmeans15', 'hclust_5', 'hclust_10', 'hclust_15'
@@ -377,7 +381,7 @@ Note
 <span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>sc.pl.rank_genes_groups(adata, n_genes<span class="op">=</span><span class="dv">25</span>, sharey<span class="op">=</span><span class="va">False</span>, key <span class="op">=</span> <span class="st">"t-test_ov"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>ranking genes
-    finished (0:00:00)</code></pre>
+    finished (0:00:01)</code></pre>
 </div>
 <div class="cell-output cell-output-display">
 <div class="quarto-figure quarto-figure-left">
@@ -396,7 +400,7 @@ Note
 <span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>sc.pl.rank_genes_groups(adata, n_genes<span class="op">=</span><span class="dv">25</span>, sharey<span class="op">=</span><span class="va">False</span>, key<span class="op">=</span><span class="st">"wilcoxon"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>ranking genes
-    finished (0:00:09)</code></pre>
+    finished (0:00:08)</code></pre>
 </div>
 <div class="cell-output cell-output-display">
 <div class="quarto-figure quarto-figure-left">
@@ -415,7 +419,7 @@ Note
 <span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>sc.pl.rank_genes_groups(adata, n_genes<span class="op">=</span><span class="dv">25</span>, sharey<span class="op">=</span><span class="va">False</span>, key <span class="op">=</span> <span class="st">"logreg"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>ranking genes
-    finished (0:00:20)</code></pre>
+    finished (0:00:28)</code></pre>
 </div>
 <div class="cell-output cell-output-display">
 <div class="quarto-figure quarto-figure-left">
@@ -496,7 +500,7 @@ Note
 <span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>sc.pl.rank_genes_groups(adata, groups<span class="op">=</span>[<span class="st">'1'</span>], n_genes<span class="op">=</span><span class="dv">20</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>ranking genes
-    finished (0:00:02)</code></pre>
+    finished (0:00:01)</code></pre>
 </div>
 <div class="cell-output cell-output-display">
 <div class="quarto-figure quarto-figure-left">
@@ -533,7 +537,7 @@ Note
 </section>
 <section id="meta-dge_cond" class="level2" data-number="8">
 <h2 data-number="8" class="anchored" data-anchor-id="meta-dge_cond"><span class="header-section-number">8</span> DGE across conditions</h2>
-<p>The second way of computing differential expression is to answer which genes are differentially expressed within a cluster. For example, in our case we have libraries comming from patients and controls and we would like to know which genes are influenced the most in a particular cell type. For this end, we will first subset our data for the desired cell cluster, then change the cell identities to the variable of comparison (which now in our case is the “type”, e.g.&nbsp;Covid/Ctrl).</p>
+<p>The second way of computing differential expression is to answer which genes are differentially expressed within a cluster. For example, in our case we have libraries comming from patients and controls and we would like to know which genes are influenced the most in a particular cell type. For this end, we will first subset our data for the desired cell cluster, then change the cell identities to the variable of comparison (which now in our case is the <strong>type</strong>, e.g.&nbsp;Covid/Ctrl).</p>
 <div class="cell" data-execution_count="14">
 <div class="sourceCode cell-code" id="cb22"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>cl1 <span class="op">=</span> adata[adata.obs[<span class="st">'louvain_0.6'</span>] <span class="op">==</span> <span class="st">'4'</span>,:]</span>
 <span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>cl1.obs[<span class="st">'type'</span>].value_counts()</span>
@@ -542,7 +546,7 @@ Note
 <span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>sc.pl.rank_genes_groups(cl1, n_genes<span class="op">=</span><span class="dv">25</span>, sharey<span class="op">=</span><span class="va">False</span>, key<span class="op">=</span><span class="st">"wilcoxon"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>ranking genes
-    finished (0:00:00)</code></pre>
+    finished (0:00:01)</code></pre>
 </div>
 <div class="cell-output cell-output-display">
 <div class="quarto-figure quarto-figure-left">
@@ -622,7 +626,7 @@ Note
 <span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>sc.pl.rank_genes_groups(cl1, n_genes<span class="op">=</span><span class="dv">25</span>, sharey<span class="op">=</span><span class="va">False</span>, key<span class="op">=</span><span class="st">"wilcoxon"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>ranking genes
-    finished (0:00:00)</code></pre>
+    finished (0:00:01)</code></pre>
 </div>
 <div class="cell-output cell-output-display">
 <div class="quarto-figure quarto-figure-left">
@@ -989,7 +993,7 @@ You visualize your results using a simple barplot, for example:</p>
 <pre><code>['ARCHS4_Cell-lines', 'ARCHS4_IDG_Coexp', 'ARCHS4_Kinases_Coexp', 'ARCHS4_TFs_Coexp', 'ARCHS4_Tissues', 'Achilles_fitness_decrease', 'Achilles_fitness_increase', 'Aging_Perturbations_from_GEO_down', 'Aging_Perturbations_from_GEO_up', 'Allen_Brain_Atlas_10x_scRNA_2021', 'Allen_Brain_Atlas_down', 'Allen_Brain_Atlas_up', 'Azimuth_2023', 'Azimuth_Cell_Types_2021', 'BioCarta_2013', 'BioCarta_2015', 'BioCarta_2016', 'BioPlanet_2019', 'BioPlex_2017', 'CCLE_Proteomics_2020', 'CORUM', 'COVID-19_Related_Gene_Sets', 'COVID-19_Related_Gene_Sets_2021', 'Cancer_Cell_Line_Encyclopedia', 'CellMarker_Augmented_2021', 'ChEA_2013', 'ChEA_2015', 'ChEA_2016', 'ChEA_2022', 'Chromosome_Location', 'Chromosome_Location_hg19', 'ClinVar_2019', 'DSigDB', 'Data_Acquisition_Method_Most_Popular_Genes', 'DepMap_WG_CRISPR_Screens_Broad_CellLines_2019', 'DepMap_WG_CRISPR_Screens_Sanger_CellLines_2019', 'Descartes_Cell_Types_and_Tissue_2021', 'Diabetes_Perturbations_GEO_2022', 'DisGeNET', 'Disease_Perturbations_from_GEO_down', 'Disease_Perturbations_from_GEO_up', 'Disease_Signatures_from_GEO_down_2014', 'Disease_Signatures_from_GEO_up_2014', 'DrugMatrix', 'Drug_Perturbations_from_GEO_2014', 'Drug_Perturbations_from_GEO_down', 'Drug_Perturbations_from_GEO_up', 'ENCODE_Histone_Modifications_2013', 'ENCODE_Histone_Modifications_2015', 'ENCODE_TF_ChIP-seq_2014', 'ENCODE_TF_ChIP-seq_2015', 'ENCODE_and_ChEA_Consensus_TFs_from_ChIP-X', 'ESCAPE', 'Elsevier_Pathway_Collection', 'Enrichr_Libraries_Most_Popular_Genes', 'Enrichr_Submissions_TF-Gene_Coocurrence', 'Enrichr_Users_Contributed_Lists_2020', 'Epigenomics_Roadmap_HM_ChIP-seq', 'FANTOM6_lncRNA_KD_DEGs', 'GO_Biological_Process_2013', 'GO_Biological_Process_2015', 'GO_Biological_Process_2017', 'GO_Biological_Process_2017b', 'GO_Biological_Process_2018', 'GO_Biological_Process_2021', 'GO_Biological_Process_2023', 'GO_Cellular_Component_2013', 'GO_Cellular_Component_2015', 'GO_Cellular_Component_2017', 'GO_Cellular_Component_2017b', 'GO_Cellular_Component_2018', 'GO_Cellular_Component_2021', 'GO_Cellular_Component_2023', 'GO_Molecular_Function_2013', 'GO_Molecular_Function_2015', 'GO_Molecular_Function_2017', 'GO_Molecular_Function_2017b', 'GO_Molecular_Function_2018', 'GO_Molecular_Function_2021', 'GO_Molecular_Function_2023', 'GTEx_Aging_Signatures_2021', 'GTEx_Tissue_Expression_Down', 'GTEx_Tissue_Expression_Up', 'GTEx_Tissues_V8_2023', 'GWAS_Catalog_2019', 'GWAS_Catalog_2023', 'GeDiPNet_2023', 'GeneSigDB', 'Gene_Perturbations_from_GEO_down', 'Gene_Perturbations_from_GEO_up', 'Genes_Associated_with_NIH_Grants', 'Genome_Browser_PWMs', 'GlyGen_Glycosylated_Proteins_2022', 'HDSigDB_Human_2021', 'HDSigDB_Mouse_2021', 'HMDB_Metabolites', 'HMS_LINCS_KinomeScan', 'HomoloGene', 'HuBMAP_ASCT_plus_B_augmented_w_RNAseq_Coexpression', 'HuBMAP_ASCTplusB_augmented_2022', 'HumanCyc_2015', 'HumanCyc_2016', 'Human_Gene_Atlas', 'Human_Phenotype_Ontology', 'IDG_Drug_Targets_2022', 'InterPro_Domains_2019', 'Jensen_COMPARTMENTS', 'Jensen_DISEASES', 'Jensen_TISSUES', 'KEA_2013', 'KEA_2015', 'KEGG_2013', 'KEGG_2015', 'KEGG_2016', 'KEGG_2019_Human', 'KEGG_2019_Mouse', 'KEGG_2021_Human', 'KOMP2_Mouse_Phenotypes_2022', 'Kinase_Perturbations_from_GEO_down', 'Kinase_Perturbations_from_GEO_up', 'L1000_Kinase_and_GPCR_Perturbations_down', 'L1000_Kinase_and_GPCR_Perturbations_up', 'LINCS_L1000_CRISPR_KO_Consensus_Sigs', 'LINCS_L1000_Chem_Pert_Consensus_Sigs', 'LINCS_L1000_Chem_Pert_down', 'LINCS_L1000_Chem_Pert_up', 'LINCS_L1000_Ligand_Perturbations_down', 'LINCS_L1000_Ligand_Perturbations_up', 'Ligand_Perturbations_from_GEO_down', 'Ligand_Perturbations_from_GEO_up', 'MAGMA_Drugs_and_Diseases', 'MAGNET_2023', 'MCF7_Perturbations_from_GEO_down', 'MCF7_Perturbations_from_GEO_up', 'MGI_Mammalian_Phenotype_2013', 'MGI_Mammalian_Phenotype_2017', 'MGI_Mammalian_Phenotype_Level_3', 'MGI_Mammalian_Phenotype_Level_4', 'MGI_Mammalian_Phenotype_Level_4_2019', 'MGI_Mammalian_Phenotype_Level_4_2021', 'MSigDB_Computational', 'MSigDB_Hallmark_2020', 'MSigDB_Oncogenic_Signatures', 'Metabolomics_Workbench_Metabolites_2022', 'Microbe_Perturbations_from_GEO_down', 'Microbe_Perturbations_from_GEO_up', 'MoTrPAC_2023', 'Mouse_Gene_Atlas', 'NCI-60_Cancer_Cell_Lines', 'NCI-Nature_2015', 'NCI-Nature_2016', 'NIH_Funded_PIs_2017_AutoRIF_ARCHS4_Predictions', 'NIH_Funded_PIs_2017_GeneRIF_ARCHS4_Predictions', 'NIH_Funded_PIs_2017_Human_AutoRIF', 'NIH_Funded_PIs_2017_Human_GeneRIF', 'NURSA_Human_Endogenous_Complexome', 'OMIM_Disease', 'OMIM_Expanded', 'Old_CMAP_down', 'Old_CMAP_up', 'Orphanet_Augmented_2021', 'PFOCR_Pathways', 'PFOCR_Pathways_2023', 'PPI_Hub_Proteins', 'PanglaoDB_Augmented_2021', 'Panther_2015', 'Panther_2016', 'Pfam_Domains_2019', 'Pfam_InterPro_Domains', 'PheWeb_2019', 'PhenGenI_Association_2021', 'Phosphatase_Substrates_from_DEPOD', 'ProteomicsDB_2020', 'Proteomics_Drug_Atlas_2023', 'RNA-Seq_Disease_Gene_and_Drug_Signatures_from_GEO', 'RNAseq_Automatic_GEO_Signatures_Human_Down', 'RNAseq_Automatic_GEO_Signatures_Human_Up', 'RNAseq_Automatic_GEO_Signatures_Mouse_Down', 'RNAseq_Automatic_GEO_Signatures_Mouse_Up', 'Rare_Diseases_AutoRIF_ARCHS4_Predictions', 'Rare_Diseases_AutoRIF_Gene_Lists', 'Rare_Diseases_GeneRIF_ARCHS4_Predictions', 'Rare_Diseases_GeneRIF_Gene_Lists', 'Reactome_2013', 'Reactome_2015', 'Reactome_2016', 'Reactome_2022', 'Rummagene_kinases', 'Rummagene_signatures', 'Rummagene_transcription_factors', 'SILAC_Phosphoproteomics', 'SubCell_BarCode', 'SynGO_2022', 'SysMyo_Muscle_Gene_Sets', 'TF-LOF_Expression_from_GEO', 'TF_Perturbations_Followed_by_Expression', 'TG_GATES_2020', 'TRANSFAC_and_JASPAR_PWMs', 'TRRUST_Transcription_Factors_2019', 'Table_Mining_of_CRISPR_Studies', 'Tabula_Muris', 'Tabula_Sapiens', 'TargetScan_microRNA', 'TargetScan_microRNA_2017', 'The_Kinase_Library_2023', 'Tissue_Protein_Expression_from_Human_Proteome_Map', 'Tissue_Protein_Expression_from_ProteomicsDB', 'Transcription_Factor_PPIs', 'UK_Biobank_GWAS_v1', 'Virus-Host_PPI_P-HIPSTer_2020', 'VirusMINT', 'Virus_Perturbations_from_GEO_down', 'Virus_Perturbations_from_GEO_up', 'WikiPathway_2021_Human', 'WikiPathway_2023_Human', 'WikiPathways_2013', 'WikiPathways_2015', 'WikiPathways_2016', 'WikiPathways_2019_Human', 'WikiPathways_2019_Mouse', 'dbGaP', 'huMAP', 'lncHUB_lncRNA_Co-Expression', 'miRTarBase_2017']</code></pre>
 </div>
 </div>
-<p>Next, we will be using the GSEA. This will result in a table containing information for several pathways. We can then sort and filter those pathways to visualize only the top ones. You can select/filter them by either <code>p-value</code> or normalized enrichment score (<code>NES</code>).</p>
+<p>Next, we will run GSEA. This will result in a table containing information for several pathways. We can then sort and filter those pathways to visualize only the top ones. You can select/filter them by either <code>p-value</code> or normalized enrichment score (<code>NES</code>).</p>
 <div class="cell" data-execution_count="31">
 <div class="sourceCode cell-code" id="cb49"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb49-1"><a href="#cb49-1" aria-hidden="true" tabindex="-1"></a>res <span class="op">=</span> gseapy.prerank(rnk<span class="op">=</span>gene_rank, gene_sets<span class="op">=</span><span class="st">'KEGG_2021_Human'</span>)</span>
 <span id="cb49-2"><a href="#cb49-2" aria-hidden="true" tabindex="-1"></a></span>
@@ -1035,11 +1039,10 @@ Discuss
 </div>
 </div>
 <div class="callout-body-container callout-body">
-<p>Which KEGG pathways are upregulated in this cluster?Which KEGG pathways are dowregulated in this cluster?<br>
-Change the pathway source to another gene set (e.g.&nbsp;“CP:WIKIPATHWAYS” or “CP:REACTOME” or “CP:BIOCARTA” or “GO:BP”) and check the if you get similar results?</p>
+<p>Which KEGG pathways are upregulated in this cluster? Which KEGG pathways are dowregulated in this cluster? Change the pathway source to another gene set (e.g.&nbsp;CP:WIKIPATHWAYS or CP:REACTOME or CP:BIOCARTA or GO:BP) and check the if you get similar results?</p>
 </div>
 </div>
-<p>Finally, lets save the integrated data for further analysis.</p>
+<p>Finally, let’s save the integrated data for further analysis.</p>
 <div class="cell" data-execution_count="33">
 <div class="sourceCode cell-code" id="cb53"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb53-1"><a href="#cb53-1" aria-hidden="true" tabindex="-1"></a>adata.write_h5ad(<span class="st">'./data/covid/results/scanpy_covid_qc_dr_scanorama_cl_dge.h5ad'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
@@ -1054,7 +1057,7 @@ Click here
 <div class="sourceCode cell-code" id="cb54"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb54-1"><a href="#cb54-1" aria-hidden="true" tabindex="-1"></a>sc.logging.print_versions()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>-----
-anndata     0.10.3
+anndata     0.10.5.post1
 scanpy      1.9.6
 -----
 PIL                 10.0.0
@@ -1107,13 +1110,13 @@ mpmath              1.3.0
 natsort             8.4.0
 nbformat            5.8.0
 numba               0.58.1
-numpy               1.26.2
+numpy               1.26.3
 opt_einsum          v3.3.0
 overrides           NA
 packaging           23.1
-pandas              2.1.4
+pandas              2.2.0
 parso               0.8.3
-patsy               0.5.5
+patsy               0.5.6
 pexpect             4.8.0
 pickleshare         0.7.5
 pkg_resources       NA
@@ -1141,15 +1144,15 @@ requests            2.31.0
 requests_cache      0.4.13
 rfc3339_validator   0.1.4
 rfc3986_validator   0.1.1
-scipy               1.11.4
-seaborn             0.12.2
+scipy               1.12.0
+seaborn             0.13.2
 send2trash          NA
 session_info        1.0.0
 six                 1.16.0
-sklearn             1.3.2
+sklearn             1.4.0
 sniffio             1.3.0
 socks               1.7.1
-sparse              0.14.0
+sparse              0.15.1
 stack_data          0.6.2
 statsmodels         0.14.1
 sympy               1.12
@@ -1175,9 +1178,9 @@ jupyterlab          4.0.1
 notebook            6.5.4
 -----
 Python 3.10.11 | packaged by conda-forge | (main, May 10 2023, 18:58:44) [GCC 11.3.0]
-Linux-6.5.11-linuxkit-x86_64-with-glibc2.35
+Linux-5.15.0-92-generic-x86_64-with-glibc2.35
 -----
-Session information updated at 2024-01-23 11:29</code></pre>
+Session information updated at 2024-02-05 17:52</code></pre>
 </div>
 </div>
 </details>
@@ -1426,10 +1429,11 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
     <div class="nav-footer-center">
       &nbsp;
     </div>
-    <div class="nav-footer-right">Published with <a href="https://quarto.org/">Quarto</a> v1.3.450</div>
+    <div class="nav-footer-right">Published with <a href="https://quarto.org/">Quarto</a> v1.3.450
+</div>
   </div>
 </footer>
-<script>var lightboxQuarto = GLightbox({"descPosition":"bottom","closeEffect":"zoom","openEffect":"zoom","selector":".lightbox","loop":true});</script>
+<script>var lightboxQuarto = GLightbox({"selector":".lightbox","loop":true,"descPosition":"bottom","closeEffect":"zoom","openEffect":"zoom"});</script>
 
 
 
