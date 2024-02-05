@@ -29,7 +29,7 @@ suppressPackageStartupMessages({
 
 ```{r}
 # download pre-computed data if missing or long compute
-fetch_data <- FALSE
+fetch_data <- TRUE
 
 # url for source and intermediate data
 path_data <- "https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"
@@ -114,7 +114,7 @@ alldata <- ScaleData(alldata, features = as.character(unique(top5$gene)), assay 
 DoHeatmap(alldata, features = as.character(unique(top5$gene)), group.by = sel.clust, assay = "RNA")
 ```
 
-Another way is by representing the overal group expression and detection rates in a dot-plot.
+Another way is by representing the overall group expression and detection rates in a dot-plot.
 
 ```{r}
 #| fig-height: 8
@@ -139,7 +139,7 @@ VlnPlot(alldata, features = as.character(unique(top3$gene)), ncol = 5, group.by 
 ```
 
 :::{.callout-note title="Discuss"}
-Take a screen shot of those results and re-run the same code above with another test: "wilcox" (Wilcoxon Rank Sum test), "bimod" (Likelihood-ratio test), "roc" (Identifies 'markers' of gene expression using ROC analysis),"t" (Student's t-test),"negbinom" (negative binomial generalized linear model),"poisson" (poisson generalized linear model), "LR" (logistic regression), "MAST" (hurdle model), "DESeq2" (negative binomial distribution).
+Take a screenshot of those results and re-run the same code above with another test: "wilcox" (Wilcoxon Rank Sum test), "bimod" (Likelihood-ratio test), "roc" (Identifies 'markers' of gene expression using ROC analysis),"t" (Student's t-test),"negbinom" (negative binomial generalized linear model),"poisson" (poisson generalized linear model), "LR" (logistic regression), "MAST" (hurdle model), "DESeq2" (negative binomial distribution).
 :::
 
 ## {{< meta dge_cond >}}
@@ -174,7 +174,7 @@ DGE_cell_selection %>%
 VlnPlot(cell_selection, features = as.character(unique(top5_cell_selection$gene)), ncol = 5, group.by = "type", assay = "RNA", pt.size = .1)
 ```
 
-We can also plot these genes across all clusters, but split by "type", to check if the genes are also up/downregulated in other celltypes.
+We can also plot these genes across all clusters, but split by **type**, to check if the genes are also over/under expressed in other celltypes.
 
 ```{r}
 #| fig-height: 6
@@ -186,11 +186,11 @@ VlnPlot(alldata,
 )
 ```
 
-As you can see, we hwve many sex chromosome related genes among the top DE genes. And if you remember from the QC lab, we have inbalanced sex distribution among our subjects, so this may not be related to covid at all. 
+As you can see, we have many sex chromosome related genes among the top DE genes. And if you remember from the QC lab, we have unbalanced sex distribution among our subjects, so this may not be related to covid at all.
 
 ### Remove sex chromosome genes
 
-To remove some of the bias due to inbalanced sex in the subjects we can remove the sex chromosome related genes.
+To remove some of the bias due to unbalanced sex in the subjects, we can remove the sex chromosome related genes.
 
 ```{r}
 genes_file <- file.path("data/covid/results/genes_table.csv")
@@ -244,7 +244,7 @@ VlnPlot(cell_selection,
 )
 ```
 
-We can also plot these genes across all clusters, but split by "type", to check if the genes are also up/downregulated in other celltypes/clusters.
+We can also plot these genes across all clusters, but split by **type**, to check if the genes are also over/under expressed in other celltypes/clusters.
 
 ```{r}
 #| fig-height: 6
@@ -258,7 +258,7 @@ VlnPlot(alldata,
 
 ## Patient Batch effects
 
-When we are testing for Covid vs Control we are running a DGE test for 4 vs 4 individuals. That will be very sensitive to sample differences unless we find a way to control for it. So first, lets check how the top DGEs are expressed across the individuals within cluster 3:
+When we are testing for Covid vs Control, we are running a DGE test for 4 vs 4 individuals. That will be very sensitive to sample differences unless we find a way to control for it. So first, let's check how the top DEGs are expressed across the individuals within cluster 3:
 
 ```{r}
 #| fig-height: 6
@@ -291,7 +291,7 @@ table(cell_selection$orig.ident)
 
 So one obvious thing to consider is an equal amount of cells per individual so that the DGE results are not dominated by a single sample.
 
-So we will use the `downsample` option in the Seurat function `WhichCells` to select 30 cells per cluster:
+We will use the `downsample` option in the Seurat function `WhichCells()` to select 30 cells per cluster:
 
 ```{r}
 cell_selection <- SetIdent(cell_selection, value = "orig.ident")
@@ -386,7 +386,7 @@ qlf <- glmQLFTest(fit, coef = 2)
 topTags(qlf)
 ```
 
-As you can see, we have very few significant genes. Since we only have 4 vs 4 samples, we should not expect too many genes with this method.
+As you can see, we have very few significant genes. Since we only have 4 vs 4 samples, we should not expect to find many genes with this method.
 
 Again as dotplot including top 10 genes:
 
@@ -409,7 +409,7 @@ DotPlot(cell_selection,
 ) + coord_flip() + ggtitle("EdgeR pseudobulk") + RotatedAxis()
 ```
 
-As you can see, even if we get few genes detected the seem to make sense across all the patients.
+As you can see, even if we find few genes, they seem to make sense across all the patients.
 
 ## MAST random effect
 
@@ -532,11 +532,11 @@ mastR <- mastR$primerid
 
 As you can see, we have lower significance for the genes with the random effect added.
 
-Dotplot for top10 genes in each direction:
+Dotplot for top 10 genes in each direction:
 
 ```{r}
-#| fig-height: 6
-#| fig-width: 14
+#| fig-height: 7
+#| fig-width: 13
 
 p1 <- DotPlot(cell_selection, features = mastN, group.by = "orig.ident", assay = "RNA") +
     coord_flip() + RotatedAxis() + ggtitle("Regular MAST")
@@ -548,7 +548,7 @@ p1 + p2
 ```
 
 :::{.callout-note title="Discuss"}
-You have now run DGE analysis for Covid vs Ctrl in cluster 3 with several diffent methods. Have a look at the different results, where did you get more/less significant genes? Which results would you like to present in a paper? Discuss with a neighbor which one you think looks best and why.
+You have now run DGE analysis for Covid vs Ctrl in cluster 3 with several diffent methods. Have a look at the different results. Where did you get more/less significant genes? Which results would you like to present in a paper? Discuss with a neighbor which one you think looks best and why.
 :::
 
 
@@ -594,7 +594,7 @@ abline(v = 0, lty = 1)
 
 {{< meta dge_gsea_1 >}}
 
-Before, we ran `FindMarkers` with the default settings for reporting only significantly up/down regulated genes, but now we need statistics on a larger set of genes, so we will have to rerun the test with more lenient cutoffs.
+Before, we ran `FindMarkers()` with the default settings for reporting only significantly up/down regulated genes, but now we need statistics on a larger set of genes, so we will have to rerun the test with more lenient cutoffs.
 
 ```{r}
 sub_data <- SetIdent(sub_data, value = "type")
