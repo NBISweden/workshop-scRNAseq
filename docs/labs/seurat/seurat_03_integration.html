@@ -207,7 +207,7 @@ background-size: cover;
       <div>
       <div class="quarto-title-meta-heading">Published</div>
       <div class="quarto-title-meta-contents">
-        <p class="date">16-Jan-2024</p>
+        <p class="date">05-Feb-2024</p>
       </div>
     </div>
     
@@ -325,12 +325,16 @@ NOTE: Python version was forced by use_python function</code></pre>
 </div>
 </div>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>path_data <span class="ot">&lt;-</span> <span class="st">"https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"</span></span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>path_file <span class="ot">&lt;-</span> <span class="st">"data/covid/results/seurat_covid_qc_dr.rds"</span></span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span>(<span class="sc">!</span><span class="fu">dir.exists</span>(<span class="fu">dirname</span>(path_file))) <span class="fu">dir.create</span>(<span class="fu">dirname</span>(path_file), <span class="at">recursive =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">file.exists</span>(path_file)) <span class="fu">download.file</span>(<span class="at">url =</span> <span class="fu">file.path</span>(path_data, <span class="st">"covid/results/seurat_covid_qc_dr.rds"</span>), <span class="at">destfile =</span> path_file)</span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>alldata <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(path_file)</span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(<span class="fu">names</span>(alldata<span class="sc">@</span>reductions))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># download pre-computed data if missing or long compute</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>fetch_data <span class="ot">&lt;-</span> <span class="cn">TRUE</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="co"># url for source and intermediate data</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>path_data <span class="ot">&lt;-</span> <span class="st">"https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>path_file <span class="ot">&lt;-</span> <span class="st">"data/covid/results/seurat_covid_qc_dr.rds"</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">dir.exists</span>(<span class="fu">dirname</span>(path_file))) <span class="fu">dir.create</span>(<span class="fu">dirname</span>(path_file), <span class="at">recursive =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (fetch_data <span class="sc">&amp;&amp;</span> <span class="sc">!</span><span class="fu">file.exists</span>(path_file)) <span class="fu">download.file</span>(<span class="at">url =</span> <span class="fu">file.path</span>(path_data, <span class="st">"covid/results/seurat_covid_qc_dr.rds"</span>), <span class="at">destfile =</span> path_file)</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>alldata <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(path_file)</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(<span class="fu">names</span>(alldata<span class="sc">@</span>reductions))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] "pca"               "umap"              "tsne"             
 [4] "UMAP10_on_PCA"     "UMAP_on_ScaleData" "UMAP_on_Graph"    </code></pre>
@@ -385,15 +389,15 @@ NOTE: Python version was forced by use_python function</code></pre>
 </section>
 <section id="cca" class="level2" data-number="2">
 <h2 data-number="2" class="anchored" data-anchor-id="cca"><span class="header-section-number">2</span> CCA</h2>
-<p>We identify anchors using the <code>FindIntegrationAnchors</code> function, which takes a list of Seurat objects as input.</p>
+<p>We identify anchors using the <code>FindIntegrationAnchors()</code> function, which takes a list of Seurat objects as input.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>alldata.anchors <span class="ot">&lt;-</span> <span class="fu">FindIntegrationAnchors</span>(<span class="at">object.list =</span> alldata.list, <span class="at">dims =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">30</span>,<span class="at">reduction =</span> <span class="st">"cca"</span>, <span class="at">anchor.features =</span> hvgs_all)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>We then pass these anchors to the IntegrateData function, which returns a Seurat object.</p>
+<p>We then pass these anchors to the <code>IntegrateData()</code> function, which returns a Seurat object.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>alldata.int <span class="ot">&lt;-</span> <span class="fu">IntegrateData</span>(<span class="at">anchorset =</span> alldata.anchors, <span class="at">dims =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">30</span>, <span class="at">new.assay.name =</span> <span class="st">"CCA"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>We can observe that a new assay slot is now created under the name <code>CCA</code>. If you do not specify the assay name the default will be <code>integrated</code>.</p>
+<p>We can observe that a new assay slot is now created under the name <code>CCA</code>. If you do not specify the assay name, the default will be <code>integrated</code>.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">names</span>(alldata.int<span class="sc">@</span>assays)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
@@ -405,8 +409,8 @@ NOTE: Python version was forced by use_python function</code></pre>
 <pre><code>[1] "CCA"</code></pre>
 </div>
 </div>
-<p>After running IntegrateData, the Seurat object will contain a new Assay with the integrated (or <strong>batch-corrected</strong>) expression matrix. Note that the original (uncorrected values) are still stored in the object in the “RNA” assay, so you can switch back and forth. We can then use this new integrated matrix for downstream analysis and visualization. Here we scale the integrated data, run PCA, and visualize the results with UMAP and TSNE. The integrated datasets cluster by cell type, instead of by technology.</p>
-<p>As <code>CCA</code> is the <code>active.assay</code> now the functions will by default run on the data in that assay. But you could also specify in each of the functions to run them in a specific assay with the parameter <code>assay = "CCA"</code>.</p>
+<p>After running <code>IntegrateData()</code>, the Seurat object will contain a new Assay with the integrated (or <strong>batch-corrected</strong>) expression matrix. Note that the original (uncorrected values) are still stored in the object in the “RNA” assay, so you can switch back and forth. We can then use this new integrated matrix for downstream analysis and visualization. Here we scale the integrated data, run PCA, and visualize the results with UMAP and TSNE. The integrated datasets cluster by cell type, instead of by technology.</p>
+<p>As <code>CCA</code> is the <code>active.assay</code> now, the functions will by default run on the data in that assay. But you could also specify in each of the functions to run them in a specific assay with the parameter <code>assay = "CCA"</code>.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Run Dimensionality reduction on integrated space</span></span>
 <span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>alldata.int <span class="ot">&lt;-</span> <span class="fu">ScaleData</span>(alldata.int, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
@@ -437,7 +441,7 @@ NOTE: Python version was forced by use_python function</code></pre>
 <section id="clean-memory" class="level3" data-number="2.1">
 <h3 data-number="2.1" class="anchored" data-anchor-id="clean-memory"><span class="header-section-number">2.1</span> Clean memory</h3>
 <p>Again we have a lot of large objects in the memory. We have the original data <code>alldata</code> but also the integrated data in <code>alldata.int</code>. We also have the split objects in <code>alldata.list</code> and the anchors in <code>alldata.anchors</code>. In principle we only need the integrated object for now, but we will also keep the list for running Scanorama further down in the tutorial.</p>
-<p>We also want to keep is the orignial umap for visualization purposes, so we copy it over to the integrated object.</p>
+<p>We also want to keep the original umap for visualization purposes, so we copy it over to the integrated object.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>alldata.int<span class="sc">@</span>reductions<span class="sc">$</span>umap_raw <span class="ot">=</span> alldata<span class="sc">@</span>reductions<span class="sc">$</span>umap</span>
 <span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a></span>
@@ -447,8 +451,8 @@ NOTE: Python version was forced by use_python function</code></pre>
 <span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a><span class="fu">gc</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>            used   (Mb) gc trigger   (Mb)  max used   (Mb)
-Ncells   3414481  182.4    4989417  266.5   4989417  266.5
-Vcells 203242618 1550.7  556191914 4243.5 868979728 6629.8</code></pre>
+Ncells   3414430  182.4    4989427  266.5   4989427  266.5
+Vcells 203287230 1551.0  566105152 4319.1 882312918 6731.6</code></pre>
 </div>
 </div>
 <p>Let’s plot some marker genes for different cell types onto the embedding.</p>
@@ -500,7 +504,7 @@ Vcells 203242618 1550.7  556191914 4243.5 868979728 6629.8</code></pre>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="seurat_03_integration_files/figure-html/unnamed-chunk-11-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-5"><img src="seurat_03_integration_files/figure-html/unnamed-chunk-11-1.png" class="img-fluid figure-img" width="864"></a></p>
+<p><a href="seurat_03_integration_files/figure-html/unnamed-chunk-11-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-5"><img src="seurat_03_integration_files/figure-html/unnamed-chunk-11-1.png" class="img-fluid figure-img" width="960"></a></p>
 </figure>
 </div>
 </div>
@@ -509,8 +513,8 @@ Vcells 203242618 1550.7  556191914 4243.5 868979728 6629.8</code></pre>
 </section>
 <section id="harmony" class="level2" data-number="3">
 <h2 data-number="3" class="anchored" data-anchor-id="harmony"><span class="header-section-number">3</span> Harmony</h2>
-<p>An alternative method for integration is Harmony, for more details on the method, please se their paper <a href="https://www.nature.com/articles/s41592-019-0619-0">Nat. Methods</a>.</p>
-<p>This method runs the integration on a dimensionality reduction, in most applications the PCA. So first, we will rerun scaling and PCA with the same set of genes that were used for the CCA integration.</p>
+<p>An alternative method for integration is Harmony, for more details on the method, please see their paper <a href="https://www.nature.com/articles/s41592-019-0619-0">Nat. Methods</a>.</p>
+<p>This method runs integration on a dimensionality reduction, in most applications the PCA. So first, we will rerun scaling and PCA with the same set of genes that were used for the CCA integration.</p>
 <p>OBS! Make sure to revert back to the <code>RNA</code> assay.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>alldata.int<span class="sc">@</span>active.assay <span class="ot">=</span> <span class="st">"RNA"</span></span>
@@ -529,7 +533,7 @@ Vcells 203242618 1550.7  556191914 4243.5 868979728 6629.8</code></pre>
 <span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">dims.use =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">50</span>,</span>
 <span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">assay.use =</span> <span class="st">"RNA"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>Harmony will create another reduction slot in your seurat object with the name “harmony”, so now we can use that reduction instead of PCA to run UMAP.</p>
+<p>Harmony will create another reduction slot in your seurat object with the name <strong>harmony</strong>, so now we can use that reduction instead of PCA to run UMAP.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>alldata.int <span class="ot">&lt;-</span> <span class="fu">RunUMAP</span>(alldata.int, <span class="at">dims =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">50</span>, <span class="at">reduction =</span> <span class="st">"harmony"</span>, <span class="at">reduction.name =</span> <span class="st">"umap_harmony"</span>)</span>
 <span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a></span>
@@ -546,6 +550,7 @@ Vcells 203242618 1550.7  556191914 4243.5 868979728 6629.8</code></pre>
 <section id="scanorama" class="level2" data-number="4">
 <h2 data-number="4" class="anchored" data-anchor-id="scanorama"><span class="header-section-number">4</span> Scanorama</h2>
 <p>Another integration method is Scanorama (see <a href="https://www.nature.com/articles/s41587-019-0113-3">Nat. Biotech.</a>). This method is implemented in python, but we can run it through the Reticulate package.</p>
+<p>We will use the split list of samples and transpose the matrix as scanorama requires rows as samples and columns as genes. We also create a list with the highly variables genes for each sample.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>assaylist <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
 <span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>genelist <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
@@ -560,27 +565,28 @@ Vcells 203242618 1550.7  556191914 4243.5 868979728 6629.8</code></pre>
 [1]  873 2000
 
 [[2]]
-[1]  556 2000
+[1]  557 2000
 
 [[3]]
-[1]  358 2000
+[1]  357 2000
 
 [[4]]
-[1] 1051 2000
+[1] 1050 2000
 
 [[5]]
 [1] 1034 2000
 
 [[6]]
-[1] 1126 2000
+[1] 1125 2000
 
 [[7]]
-[1]  997 2000
+[1]  999 2000
 
 [[8]]
 [1] 1139 2000</code></pre>
 </div>
 </div>
+<p>Then, we use the <code>scanorama</code> function through reticulate. The integrated data is added back into the Seurat object as a new Reduction.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Activate scanorama Python venv</span></span>
 <span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>scanorama <span class="ot">&lt;-</span> reticulate<span class="sc">::</span><span class="fu">import</span>(<span class="st">"scanorama"</span>)</span>
@@ -608,6 +614,13 @@ Vcells 203242618 1550.7  556191914 4243.5 868979728 6629.8</code></pre>
 <span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>alldata.int <span class="ot">&lt;-</span> <span class="fu">RunUMAP</span>(alldata.int, <span class="at">dims =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">100</span>, <span class="at">reduction =</span> <span class="st">"scanorama"</span>,<span class="at">reduction.name =</span> <span class="st">"umap_scanorama"</span>)</span>
 <span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a><span class="fu">DimPlot</span>(alldata.int, <span class="at">reduction =</span> <span class="st">"umap_scanorama"</span>, <span class="at">group.by =</span> <span class="st">"orig.ident"</span>) <span class="sc">+</span> <span class="fu">NoAxes</span>() <span class="sc">+</span> <span class="fu">ggtitle</span>(<span class="st">"Harmony UMAP"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-left">
+<figure class="figure">
+<p><a href="seurat_03_integration_files/figure-html/unnamed-chunk-17-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-7"><img src="seurat_03_integration_files/figure-html/unnamed-chunk-17-1.png" class="img-fluid figure-img" width="672"></a></p>
+</figure>
+</div>
+</div>
 </div>
 </section>
 <section id="overview-all-methods" class="level2" data-number="5">
@@ -620,6 +633,13 @@ Vcells 203242618 1550.7  556191914 4243.5 868979728 6629.8</code></pre>
 <span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a>p4 <span class="ot">&lt;-</span> <span class="fu">DimPlot</span>(alldata.int, <span class="at">reduction =</span> <span class="st">"umap_scanorama"</span>, <span class="at">group.by =</span> <span class="st">"orig.ident"</span>)<span class="sc">+</span><span class="fu">ggtitle</span>(<span class="st">"UMAP Scanorama"</span>)</span>
 <span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb25-6"><a href="#cb25-6" aria-hidden="true" tabindex="-1"></a><span class="fu">wrap_plots</span>(p1, p2, p3, p4, <span class="at">nrow =</span> <span class="dv">2</span>) <span class="sc">+</span> <span class="fu">plot_layout</span>(<span class="at">guides =</span> <span class="st">"collect"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-left">
+<figure class="figure">
+<p><a href="seurat_03_integration_files/figure-html/unnamed-chunk-18-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-8"><img src="seurat_03_integration_files/figure-html/unnamed-chunk-18-1.png" class="img-fluid figure-img" width="864"></a></p>
+</figure>
+</div>
+</div>
 </div>
 <div class="callout callout-style-default callout-note callout-titled" title="Discuss">
 <div class="callout-header d-flex align-content-center">
@@ -641,7 +661,7 @@ Discuss
 </section>
 <section id="extra-task" class="level2" data-number="6">
 <h2 data-number="6" class="anchored" data-anchor-id="extra-task"><span class="header-section-number">6</span> Extra task</h2>
-<p>You have now done the Seurat integration with CCA which is quite slow. There are other options in the <code>FindIntegrationAnchors</code> function. Try rerunning the integration with <code>rpca</code> and/or <code>rlsi</code> and create a new UMAP. Compare the results.</p>
+<p>You have now done the Seurat integration with CCA which is quite slow. There are other options in the <code>FindIntegrationAnchors()</code> function. Try rerunning the integration with <code>rpca</code> and/or <code>rlsi</code> and create a new UMAP. Compare the results.</p>
 </section>
 <section id="meta-session" class="level2" data-number="7">
 <h2 data-number="7" class="anchored" data-anchor-id="meta-session"><span class="header-section-number">7</span> Session info</h2>
@@ -964,10 +984,11 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
     <div class="nav-footer-center">
       &nbsp;
     </div>
-    <div class="nav-footer-right">Published with <a href="https://quarto.org/">Quarto</a> v1.3.450</div>
+    <div class="nav-footer-right">Published with <a href="https://quarto.org/">Quarto</a> v1.3.450
+</div>
   </div>
 </footer>
-<script>var lightboxQuarto = GLightbox({"selector":".lightbox","closeEffect":"zoom","loop":true,"openEffect":"zoom","descPosition":"bottom"});</script>
+<script>var lightboxQuarto = GLightbox({"loop":true,"selector":".lightbox","closeEffect":"zoom","descPosition":"bottom","openEffect":"zoom"});</script>
 
 
 

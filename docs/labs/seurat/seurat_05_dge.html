@@ -207,7 +207,7 @@ background-size: cover;
       <div>
       <div class="quarto-title-meta-heading">Published</div>
       <div class="quarto-title-meta-contents">
-        <p class="date">30-Jan-2024</p>
+        <p class="date">05-Feb-2024</p>
       </div>
     </div>
     
@@ -261,7 +261,7 @@ Note
 <p>Code chunks run R commands unless otherwise specified.</p>
 </div>
 </div>
-<p>In this tutorial we will cover about Differetial gene expression, which comprises an extensive range of topics and methods. In single cell, differential expresison can have multiple functionalities such as of identifying marker genes for cell populations, as well as differentially regulated genes across conditions (healthy vs control). We will also exercise on how to account the batch information in your test.</p>
+<p>In this tutorial we will cover differential gene expression, which comprises an extensive range of topics and methods. In single cell, differential expresison can have multiple functionalities such as identifying marker genes for cell populations, as well as identifying differentially regulated genes across conditions (healthy vs control). We will also cover controlling batch effect in your test.</p>
 <p>We can first load the data from the clustering session. Moreover, we can already decide which clustering resolution to use. First let’s define using the <code>louvain</code> clustering to identifying differentially expressed genes.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">suppressPackageStartupMessages</span>({</span>
@@ -277,11 +277,15 @@ Note
 <span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>})</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>path_data <span class="ot">&lt;-</span> <span class="st">"https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"</span></span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>path_file <span class="ot">&lt;-</span> <span class="st">"data/covid/results/seurat_covid_qc_dr_int_cl.rds"</span></span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">dir.exists</span>(<span class="fu">dirname</span>(path_file))) <span class="fu">dir.create</span>(<span class="fu">dirname</span>(path_file), <span class="at">recursive =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">file.exists</span>(path_file)) <span class="fu">download.file</span>(<span class="at">url =</span> <span class="fu">file.path</span>(path_data, <span class="st">"covid/results/seurat_covid_qc_dr_int_cl.rds"</span>), <span class="at">destfile =</span> path_file)</span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>alldata <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(path_file)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># download pre-computed data if missing or long compute</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>fetch_data <span class="ot">&lt;-</span> <span class="cn">TRUE</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co"># url for source and intermediate data</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>path_data <span class="ot">&lt;-</span> <span class="st">"https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>path_file <span class="ot">&lt;-</span> <span class="st">"data/covid/results/seurat_covid_qc_dr_int_cl.rds"</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">dir.exists</span>(<span class="fu">dirname</span>(path_file))) <span class="fu">dir.create</span>(<span class="fu">dirname</span>(path_file), <span class="at">recursive =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (fetch_data <span class="sc">&amp;&amp;</span> <span class="sc">!</span><span class="fu">file.exists</span>(path_file)) <span class="fu">download.file</span>(<span class="at">url =</span> <span class="fu">file.path</span>(path_data, <span class="st">"covid/results/seurat_covid_qc_dr_int_cl.rds"</span>), <span class="at">destfile =</span> path_file)</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>alldata <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(path_file)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Set the identity as louvain with resolution 0.5</span></span>
@@ -291,8 +295,8 @@ Note
 <span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="fu">table</span>(alldata<span class="sc">@</span>active.ident)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>
-   0    1    2    3    4    5    6    7    8 
-2056 1259 1113  646  535  494  365  337  329 </code></pre>
+   0    1    2    3    4    5    6    7    8    9 
+2063 1370 1037  648  542  364  362  337  334   77 </code></pre>
 </div>
 </div>
 <div class="cell">
@@ -313,7 +317,7 @@ Note
 </div>
 <section id="meta-dge_cmg" class="level2" data-number="1">
 <h2 data-number="1" class="anchored" data-anchor-id="meta-dge_cmg"><span class="header-section-number">1</span> Cell marker genes</h2>
-<p>Let us first compute a ranking for the highly differential genes in each cluster. There are many different tests and parameters to be chosen that can be used to refine your results. When looking for marker genes, we want genes that are positivelly expressed in a cell type and possibly not expressed in the others.</p>
+<p>Let us first compute a ranking for the highly differential genes in each cluster. There are many different tests and parameters to be chosen that can be used to refine your results. When looking for marker genes, we want genes that are positively expressed in a cell type and possibly not expressed in others.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Compute differentiall expression</span></span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>markers_genes <span class="ot">&lt;-</span> <span class="fu">FindAllMarkers</span>(</span>
@@ -327,7 +331,7 @@ Note
 <span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">assay =</span> <span class="st">"RNA"</span></span>
 <span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>We can now select the top 25 up regulated genes for plotting.</p>
+<p>We can now select the top 25 overexpressed genes for plotting.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>markers_genes <span class="sc">%&gt;%</span></span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">group_by</span>(cluster) <span class="sc">%&gt;%</span></span>
@@ -337,7 +341,7 @@ Note
 
 <div data-pagedtable="false">
   <script data-pagedtable-source="" type="application/json">
-{"columns":[{"label":["p_val"],"name":[1],"type":["dbl"],"align":["right"]},{"label":["avg_log2FC"],"name":[2],"type":["dbl"],"align":["right"]},{"label":["pct.1"],"name":[3],"type":["dbl"],"align":["right"]},{"label":["pct.2"],"name":[4],"type":["dbl"],"align":["right"]},{"label":["p_val_adj"],"name":[5],"type":["dbl"],"align":["right"]},{"label":["cluster"],"name":[6],"type":["fct"],"align":["left"]},{"label":["gene"],"name":[7],"type":["chr"],"align":["left"]}],"data":[{"1":"1.640929e-18","2":"3.427824","3":"0.980","4":"0.071","5":"3.093315e-14","6":"0","7":"VCAN"},{"1":"2.244450e-18","2":"4.039034","3":"1.000","4":"0.247","5":"4.231013e-14","6":"0","7":"LYZ"},{"1":"2.389207e-18","2":"4.630505","3":"1.000","4":"0.334","5":"4.503894e-14","6":"0","7":"S100A9"},{"1":"8.641113e-18","2":"4.853639","3":"0.998","4":"0.242","5":"1.628936e-13","6":"0","7":"S100A8"},{"1":"1.386920e-17","2":"3.353875","3":"0.988","4":"0.109","5":"2.614482e-13","6":"0","7":"AC020656.1"},{"1":"2.552669e-17","2":"2.070720","3":"0.883","4":"0.053","5":"4.812036e-13","6":"0","7":"FPR1"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
+{"columns":[{"label":["p_val"],"name":[1],"type":["dbl"],"align":["right"]},{"label":["avg_log2FC"],"name":[2],"type":["dbl"],"align":["right"]},{"label":["pct.1"],"name":[3],"type":["dbl"],"align":["right"]},{"label":["pct.2"],"name":[4],"type":["dbl"],"align":["right"]},{"label":["p_val_adj"],"name":[5],"type":["dbl"],"align":["right"]},{"label":["cluster"],"name":[6],"type":["fct"],"align":["left"]},{"label":["gene"],"name":[7],"type":["chr"],"align":["left"]}],"data":[{"1":"2.003555e-19","2":"3.070603","3":"0.956","4":"0.053","5":"3.779306e-15","6":"0","7":"CD14"},{"1":"2.239180e-19","2":"3.345607","3":"0.987","4":"0.107","5":"4.223766e-15","6":"0","7":"AC020656.1"},{"1":"8.016580e-19","2":"4.057867","3":"1.000","4":"0.246","5":"1.512167e-14","6":"0","7":"LYZ"},{"1":"1.314325e-18","2":"4.678877","3":"1.000","4":"0.333","5":"2.479212e-14","6":"0","7":"S100A9"},{"1":"2.244395e-18","2":"3.477180","3":"0.979","4":"0.070","5":"4.233603e-14","6":"0","7":"VCAN"},{"1":"3.662490e-18","2":"3.830318","3":"0.956","4":"0.057","5":"6.908554e-14","6":"0","7":"S100A12"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
   </script>
 </div>
 </div>
@@ -374,7 +378,7 @@ Note
 </div>
 </div>
 </div>
-<p>Another way is by representing the overal group expression and detection rates in a dot-plot.</p>
+<p>Another way is by representing the overall group expression and detection rates in a dot-plot.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">DotPlot</span>(alldata, <span class="at">features =</span> <span class="fu">rev</span>(<span class="fu">as.character</span>(<span class="fu">unique</span>(top5<span class="sc">$</span>gene))), <span class="at">group.by =</span> sel.clust, <span class="at">assay =</span> <span class="st">"RNA"</span>) <span class="sc">+</span> <span class="fu">coord_flip</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
@@ -412,13 +416,13 @@ Discuss
 </div>
 </div>
 <div class="callout-body-container callout-body">
-<p>Take a screen shot of those results and re-run the same code above with another test: “wilcox” (Wilcoxon Rank Sum test), “bimod” (Likelihood-ratio test), “roc” (Identifies ‘markers’ of gene expression using ROC analysis),“t” (Student’s t-test),“negbinom” (negative binomial generalized linear model),“poisson” (poisson generalized linear model), “LR” (logistic regression), “MAST” (hurdle model), “DESeq2” (negative binomial distribution).</p>
+<p>Take a screenshot of those results and re-run the same code above with another test: “wilcox” (Wilcoxon Rank Sum test), “bimod” (Likelihood-ratio test), “roc” (Identifies ‘markers’ of gene expression using ROC analysis),“t” (Student’s t-test),“negbinom” (negative binomial generalized linear model),“poisson” (poisson generalized linear model), “LR” (logistic regression), “MAST” (hurdle model), “DESeq2” (negative binomial distribution).</p>
 </div>
 </div>
 </section>
 <section id="meta-dge_cond" class="level2" data-number="2">
 <h2 data-number="2" class="anchored" data-anchor-id="meta-dge_cond"><span class="header-section-number">2</span> DGE across conditions</h2>
-<p>The second way of computing differential expression is to answer which genes are differentially expressed within a cluster. For example, in our case we have libraries comming from patients and controls and we would like to know which genes are influenced the most in a particular cell type. For this end, we will first subset our data for the desired cell cluster, then change the cell identities to the variable of comparison (which now in our case is the “type”, e.g.&nbsp;Covid/Ctrl).</p>
+<p>The second way of computing differential expression is to answer which genes are differentially expressed within a cluster. For example, in our case we have libraries comming from patients and controls and we would like to know which genes are influenced the most in a particular cell type. For this end, we will first subset our data for the desired cell cluster, then change the cell identities to the variable of comparison (which now in our case is the <strong>type</strong>, e.g.&nbsp;Covid/Ctrl).</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co"># select all cells in cluster 1</span></span>
 <span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>cell_selection <span class="ot">&lt;-</span> <span class="fu">subset</span>(alldata, <span class="at">cells =</span> <span class="fu">colnames</span>(alldata)[alldata<span class="sc">@</span>meta.data[, sel.clust] <span class="sc">==</span> <span class="dv">3</span>])</span>
@@ -448,7 +452,7 @@ Discuss
 </div>
 </div>
 </div>
-<p>We can also plot these genes across all clusters, but split by “type”, to check if the genes are also up/downregulated in other celltypes.</p>
+<p>We can also plot these genes across all clusters, but split by <strong>type</strong>, to check if the genes are also over/under expressed in other celltypes.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="fu">VlnPlot</span>(alldata,</span>
 <span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>    <span class="at">features =</span> <span class="fu">as.character</span>(<span class="fu">unique</span>(top5_cell_selection<span class="sc">$</span>gene)),</span>
@@ -462,10 +466,10 @@ Discuss
 </div>
 </div>
 </div>
-<p>As you can see, we hwve many sex chromosome related genes among the top DE genes. And if you remember from the QC lab, we have inbalanced sex distribution among our subjects, so this may not be related to covid at all.</p>
+<p>As you can see, we have many sex chromosome related genes among the top DE genes. And if you remember from the QC lab, we have unbalanced sex distribution among our subjects, so this may not be related to covid at all.</p>
 <section id="remove-sex-chromosome-genes" class="level3" data-number="2.1">
 <h3 data-number="2.1" class="anchored" data-anchor-id="remove-sex-chromosome-genes"><span class="header-section-number">2.1</span> Remove sex chromosome genes</h3>
-<p>To remove some of the bias due to inbalanced sex in the subjects we can remove the sex chromosome related genes.</p>
+<p>To remove some of the bias due to unbalanced sex in the subjects, we can remove the sex chromosome related genes.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>genes_file <span class="ot">&lt;-</span> <span class="fu">file.path</span>(<span class="st">"data/covid/results/genes_table.csv"</span>)</span>
 <span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">file.exists</span>(genes_file)) <span class="fu">download.file</span>(<span class="fu">file.path</span>(path_data, <span class="st">"covid/results/genes_table.csv"</span>), <span class="at">destfile =</span> genes_file)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -514,7 +518,7 @@ Discuss
 </div>
 </div>
 </div>
-<p>We can also plot these genes across all clusters, but split by “type”, to check if the genes are also up/downregulated in other celltypes/clusters.</p>
+<p>We can also plot these genes across all clusters, but split by <strong>type</strong>, to check if the genes are also over/under expressed in other celltypes/clusters.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="fu">VlnPlot</span>(alldata,</span>
 <span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>    <span class="at">features =</span> <span class="fu">as.character</span>(<span class="fu">unique</span>(top5_cell_selection<span class="sc">$</span>gene)),</span>
@@ -532,7 +536,7 @@ Discuss
 </section>
 <section id="patient-batch-effects" class="level2" data-number="3">
 <h2 data-number="3" class="anchored" data-anchor-id="patient-batch-effects"><span class="header-section-number">3</span> Patient Batch effects</h2>
-<p>When we are testing for Covid vs Control we are running a DGE test for 4 vs 4 individuals. That will be very sensitive to sample differences unless we find a way to control for it. So first, lets check how the top DGEs are expressed across the individuals within cluster 3:</p>
+<p>When we are testing for Covid vs Control, we are running a DGE test for 4 vs 4 individuals. That will be very sensitive to sample differences unless we find a way to control for it. So first, let’s check how the top DEGs are expressed across the individuals within cluster 3:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="fu">VlnPlot</span>(cell_selection, <span class="at">group.by =</span> <span class="st">"orig.ident"</span>, <span class="at">features =</span> <span class="fu">as.character</span>(<span class="fu">unique</span>(top5_cell_selection<span class="sc">$</span>gene)), <span class="at">ncol =</span> <span class="dv">4</span>, <span class="at">assay =</span> <span class="st">"RNA"</span>, <span class="at">pt.size =</span> <span class="dv">0</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
@@ -564,14 +568,14 @@ Discuss
 <div class="cell-output cell-output-stdout">
 <pre><code>
  covid_1 covid_15 covid_16 covid_17  ctrl_13  ctrl_14  ctrl_19   ctrl_5 
-      95       32       37      173       64       62       37      146 </code></pre>
+      94       32       36      175       65       62       38      146 </code></pre>
 </div>
 </div>
 </section>
 <section id="subsample" class="level2" data-number="4">
 <h2 data-number="4" class="anchored" data-anchor-id="subsample"><span class="header-section-number">4</span> Subsample</h2>
 <p>So one obvious thing to consider is an equal amount of cells per individual so that the DGE results are not dominated by a single sample.</p>
-<p>So we will use the <code>downsample</code> option in the Seurat function <code>WhichCells</code> to select 30 cells per cluster:</p>
+<p>We will use the <code>downsample</code> option in the Seurat function <code>WhichCells()</code> to select 30 cells per cluster:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>cell_selection <span class="ot">&lt;-</span> <span class="fu">SetIdent</span>(cell_selection, <span class="at">value =</span> <span class="st">"orig.ident"</span>)</span>
 <span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>sub_data <span class="ot">&lt;-</span> <span class="fu">subset</span>(cell_selection, <span class="at">cells =</span> <span class="fu">WhichCells</span>(cell_selection, <span class="at">downsample =</span> <span class="dv">30</span>))</span>
@@ -666,20 +670,20 @@ Discuss
 <span id="cb29-15"><a href="#cb29-15" aria-hidden="true" tabindex="-1"></a><span class="fu">topTags</span>(qlf)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Coefficient:  bulk.labelsCtrl 
-            logFC   logCPM        F       PValue        FDR
-S100A8  -2.672605 6.972711 37.41996 6.779653e-06 0.01083389
-S100A9  -2.512717 7.374885 27.28588 5.193871e-05 0.04149903
-STAG3   -3.378653 7.540873 24.35275 8.987020e-05 0.04787086
-PIM3    -1.412489 7.839512 17.02383 6.030641e-04 0.23537510
-IGHA1   -2.676072 6.965149 16.09405 7.364678e-04 0.23537510
-DYNC1H1  1.279395 6.711434 12.94684 1.976508e-03 0.52641010
-PHACTR1 -1.207474 7.908323 11.47741 3.176723e-03 0.67568316
-CCR7    -1.301642 8.017766 11.28727 3.382644e-03 0.67568316
-WDFY2    1.172984 7.133247 10.76672 4.049332e-03 0.69392707
-MOB3A   -1.128665 7.131236 10.56187 4.342472e-03 0.69392707</code></pre>
+            logFC   logCPM         F       PValue        FDR
+S100A8 -2.4863938 7.006589 34.462605 1.942760e-05 0.01979423
+S100A9 -2.8060736 7.401199 33.402717 2.373409e-05 0.01979423
+IGHA1  -2.7740516 6.943804 17.008701 7.034543e-04 0.39112058
+TLE1   -1.1231021 7.298064 13.511449 1.926062e-03 0.69475728
+PIM3   -1.4403746 7.806830 12.753251 2.406640e-03 0.69475728
+STAG3  -2.3187464 7.374488 12.648031 2.499127e-03 0.69475728
+AHNAK   1.0310786 7.812026 11.405789 3.650736e-03 0.70360430
+SNHG15 -0.9804661 6.858538 10.014206 5.788450e-03 0.70360430
+CCR7   -1.2732118 7.973903  9.934437 5.913216e-03 0.70360430
+CEMIP2 -1.3381862 7.562814  9.729066 6.351110e-03 0.70360430</code></pre>
 </div>
 </div>
-<p>As you can see, we have very few significant genes. Since we only have 4 vs 4 samples, we should not expect too many genes with this method.</p>
+<p>As you can see, we have very few significant genes. Since we only have 4 vs 4 samples, we should not expect to find many genes with this method.</p>
 <p>Again as dotplot including top 10 genes:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb31"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>res.edgeR <span class="ot">&lt;-</span> <span class="fu">topTags</span>(qlf, <span class="dv">100</span>)<span class="sc">$</span>table</span>
@@ -703,7 +707,7 @@ MOB3A   -1.128665 7.131236 10.56187 4.342472e-03 0.69392707</code></pre>
 </div>
 </div>
 </div>
-<p>As you can see, even if we get few genes detected the seem to make sense across all the patients.</p>
+<p>As you can see, even if we find few genes, they seem to make sense across all the patients.</p>
 </section>
 <section id="mast-random-effect" class="level2" data-number="6">
 <h2 data-number="6" class="anchored" data-anchor-id="mast-random-effect"><span class="header-section-number">6</span> MAST random effect</h2>
@@ -788,7 +792,7 @@ MOB3A   -1.128665 7.131236 10.56187 4.342472e-03 0.69392707</code></pre>
 
 <div data-pagedtable="false">
   <script data-pagedtable-source="" type="application/json">
-{"columns":[{"label":[""],"name":["_rn_"],"type":[""],"align":["left"]},{"label":["primerid"],"name":[1],"type":["chr"],"align":["left"]},{"label":["coef"],"name":[2],"type":["dbl"],"align":["right"]},{"label":["ci.hi"],"name":[3],"type":["dbl"],"align":["right"]},{"label":["ci.lo"],"name":[4],"type":["dbl"],"align":["right"]},{"label":["z"],"name":[5],"type":["dbl"],"align":["right"]},{"label":["Pr(>Chisq)"],"name":[6],"type":["dbl"],"align":["right"]}],"data":[{"1":"HLA-DRB5","2":"-0.05202396","3":"0.0062855856","4":"-0.1103335","5":"-1.7486860","6":"6.956781e-57","_rn_":"363"},{"1":"CD74","2":"0.46143837","3":"0.5219380403","4":"0.4009387","5":"14.9488845","6":"1.238321e-41","_rn_":"141"},{"1":"CD69","2":"-0.21230436","3":"0.0185584311","4":"-0.4431672","5":"-1.8024078","6":"3.628079e-39","_rn_":"140"},{"1":"RPS26","2":"0.26332656","3":"0.6463862242","4":"-0.1197331","5":"1.3473373","6":"2.450608e-29","_rn_":"738"},{"1":"NFKBIA","2":"-0.18414384","3":"0.0353127252","4":"-0.4036004","5":"-1.6445865","6":"5.771763e-27","_rn_":"527"},{"1":"ISG20","2":"-0.11573280","3":"0.0095656331","4":"-0.2410312","5":"-1.8103349","6":"7.664280e-26","_rn_":"417"},{"1":"S100A9","2":"-1.02223323","3":"-0.4024180034","4":"-1.6420485","5":"-3.2324800","6":"6.976580e-25","_rn_":"762"},{"1":"RPL4","2":"0.21673051","3":"0.6926475679","4":"-0.2591866","5":"0.8925589","6":"1.016739e-23","_rn_":"710"},{"1":"IER2","2":"-0.13482545","3":"0.0009967396","4":"-0.2706476","5":"-1.9455807","6":"6.418485e-23","_rn_":"396"},{"1":"NFKBID","2":"-0.22619799","3":"-0.0163465606","4":"-0.4360494","5":"-2.1126371","6":"6.476016e-22","_rn_":"528"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
+{"columns":[{"label":[""],"name":["_rn_"],"type":[""],"align":["left"]},{"label":["primerid"],"name":[1],"type":["chr"],"align":["left"]},{"label":["coef"],"name":[2],"type":["dbl"],"align":["right"]},{"label":["ci.hi"],"name":[3],"type":["dbl"],"align":["right"]},{"label":["ci.lo"],"name":[4],"type":["dbl"],"align":["right"]},{"label":["z"],"name":[5],"type":["dbl"],"align":["right"]},{"label":["Pr(>Chisq)"],"name":[6],"type":["dbl"],"align":["right"]}],"data":[{"1":"HLA-DRB5","2":"-0.05417449","3":"0.0061172703","4":"-0.1144663","5":"-1.761104","6":"1.197182e-57","_rn_":"364"},{"1":"CD74","2":"0.45898610","3":"0.5196348376","4":"0.3983374","5":"14.832893","6":"4.206937e-41","_rn_":"141"},{"1":"CD69","2":"-0.23916981","3":"0.0153761394","4":"-0.4937158","5":"-1.841570","6":"4.343540e-40","_rn_":"140"},{"1":"RPS26","2":"0.27847208","3":"0.6760953682","4":"-0.1191512","5":"1.372644","6":"5.919891e-29","_rn_":"739"},{"1":"NFKBIA","2":"-0.18366377","3":"0.0352041646","4":"-0.4025317","5":"-1.644710","6":"6.480696e-28","_rn_":"528"},{"1":"ISG20","2":"-0.11418122","3":"0.0094625157","4":"-0.2378250","5":"-1.809967","6":"1.159440e-26","_rn_":"418"},{"1":"S100A9","2":"-1.01577430","3":"-0.3947030799","4":"-1.6368455","5":"-3.205560","6":"4.324266e-25","_rn_":"763"},{"1":"RPL4","2":"0.21515384","3":"0.6883333088","4":"-0.2580256","5":"0.891192","6":"1.696045e-24","_rn_":"711"},{"1":"IER2","2":"-0.13420192","3":"0.0008196466","4":"-0.2692235","5":"-1.948066","6":"1.162233e-23","_rn_":"397"},{"1":"NFKBID","2":"-0.24302359","3":"-0.0215956440","4":"-0.4644515","5":"-2.151117","6":"6.491165e-22","_rn_":"529"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
   </script>
 </div>
 </div>
@@ -809,7 +813,7 @@ MOB3A   -1.128665 7.131236 10.56187 4.342472e-03 0.69392707</code></pre>
 
 <div data-pagedtable="false">
   <script data-pagedtable-source="" type="application/json">
-{"columns":[{"label":[""],"name":["_rn_"],"type":[""],"align":["left"]},{"label":["primerid"],"name":[1],"type":["chr"],"align":["left"]},{"label":["coef"],"name":[2],"type":["dbl"],"align":["right"]},{"label":["ci.hi"],"name":[3],"type":["dbl"],"align":["right"]},{"label":["ci.lo"],"name":[4],"type":["dbl"],"align":["right"]},{"label":["z"],"name":[5],"type":["dbl"],"align":["right"]},{"label":["Pr(>Chisq)"],"name":[6],"type":["dbl"],"align":["right"]}],"data":[{"1":"PCSK7","2":"0.38751854","3":"0.64722345","4":"0.127813629","5":"2.924559","6":"2.322057e-05","_rn_":"564"},{"1":"HSP90AB1","2":"-0.08786692","3":"0.02201318","4":"-0.197747028","5":"-1.567308","6":"5.931748e-05","_rn_":"388"},{"1":"LIMD2","2":"0.63093383","3":"1.37221439","4":"-0.110346731","5":"1.668205","6":"9.456131e-05","_rn_":"455"},{"1":"COX6A1","2":"-0.05110376","3":"0.00789683","4":"-0.110104348","5":"-1.697636","6":"2.261282e-04","_rn_":"190"},{"1":"KLF2","2":"0.99195996","3":"1.90854303","4":"0.075376896","5":"2.121145","6":"4.902684e-04","_rn_":"435"},{"1":"S100A8","2":"-1.12003823","3":"-0.41392788","4":"-1.826148576","5":"-3.108911","6":"6.878709e-04","_rn_":"761"},{"1":"YPEL3","2":"0.19708174","3":"0.39165128","4":"0.002512209","5":"1.985270","6":"1.063985e-03","_rn_":"972"},{"1":"UCP2","2":"0.19708949","3":"0.41868984","4":"-0.024510861","5":"1.743175","6":"1.303958e-03","_rn_":"937"},{"1":"ZEB2","2":"0.04037618","3":"0.09329089","4":"-0.012538541","5":"1.495536","6":"1.742781e-03","_rn_":"982"},{"1":"SERF2","2":"-0.06737739","3":"0.03496536","4":"-0.169720129","5":"-1.290343","6":"1.853510e-03","_rn_":"779"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
+{"columns":[{"label":[""],"name":["_rn_"],"type":[""],"align":["left"]},{"label":["primerid"],"name":[1],"type":["chr"],"align":["left"]},{"label":["coef"],"name":[2],"type":["dbl"],"align":["right"]},{"label":["ci.hi"],"name":[3],"type":["dbl"],"align":["right"]},{"label":["ci.lo"],"name":[4],"type":["dbl"],"align":["right"]},{"label":["z"],"name":[5],"type":["dbl"],"align":["right"]},{"label":["Pr(>Chisq)"],"name":[6],"type":["dbl"],"align":["right"]}],"data":[{"1":"PCSK7","2":"0.40937955","3":"0.673653649","4":"0.1451054434","5":"3.0361248","6":"2.144793e-05","_rn_":"565"},{"1":"HSP90AB1","2":"-0.09355620","3":"0.022300292","4":"-0.2094127016","5":"-1.5827062","6":"7.058701e-05","_rn_":"389"},{"1":"LIMD2","2":"0.61706177","3":"1.354535172","4":"-0.1204116354","5":"1.6399491","6":"1.629988e-04","_rn_":"456"},{"1":"COX6A1","2":"-0.05292232","3":"0.008092456","4":"-0.1139371010","5":"-1.7000119","6":"2.083757e-04","_rn_":"190"},{"1":"S100A8","2":"-1.13094213","3":"-0.426709577","4":"-1.8351746902","5":"-3.1475481","6":"3.244178e-04","_rn_":"762"},{"1":"KLF2","2":"0.97436555","3":"1.880686706","4":"0.0680443925","5":"2.1071133","6":"4.550242e-04","_rn_":"437"},{"1":"ZEB2","2":"0.03990841","3":"0.091018173","4":"-0.0112013612","5":"1.5304127","6":"9.164791e-04","_rn_":"986"},{"1":"YPEL3","2":"0.19466925","3":"0.388358344","4":"0.0009801557","5":"1.9698823","6":"1.140239e-03","_rn_":"975"},{"1":"COX6B1","2":"-0.02858616","3":"0.048641658","4":"-0.1058139764","5":"-0.7254878","6":"1.227660e-03","_rn_":"191"},{"1":"UCP2","2":"0.20398553","3":"0.432848212","4":"-0.0248771484","5":"1.7469178","6":"1.228606e-03","_rn_":"940"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
   </script>
 </div>
 </div>
@@ -823,7 +827,7 @@ MOB3A   -1.128665 7.131236 10.56187 4.342472e-03 0.69392707</code></pre>
 <span id="cb39-8"><a href="#cb39-8" aria-hidden="true" tabindex="-1"></a>mastR <span class="ot">&lt;-</span> mastR<span class="sc">$</span>primerid</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>As you can see, we have lower significance for the genes with the random effect added.</p>
-<p>Dotplot for top10 genes in each direction:</p>
+<p>Dotplot for top 10 genes in each direction:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb40"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a>p1 <span class="ot">&lt;-</span> <span class="fu">DotPlot</span>(cell_selection, <span class="at">features =</span> mastN, <span class="at">group.by =</span> <span class="st">"orig.ident"</span>, <span class="at">assay =</span> <span class="st">"RNA"</span>) <span class="sc">+</span></span>
 <span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">coord_flip</span>() <span class="sc">+</span> <span class="fu">RotatedAxis</span>() <span class="sc">+</span> <span class="fu">ggtitle</span>(<span class="st">"Regular MAST"</span>)</span>
@@ -835,7 +839,7 @@ MOB3A   -1.128665 7.131236 10.56187 4.342472e-03 0.69392707</code></pre>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="seurat_05_dge_files/figure-html/unnamed-chunk-34-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-16"><img src="seurat_05_dge_files/figure-html/unnamed-chunk-34-1.png" class="img-fluid figure-img" width="1344"></a></p>
+<p><a href="seurat_05_dge_files/figure-html/unnamed-chunk-34-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-16"><img src="seurat_05_dge_files/figure-html/unnamed-chunk-34-1.png" class="img-fluid figure-img" width="1248"></a></p>
 </figure>
 </div>
 </div>
@@ -850,7 +854,7 @@ Discuss
 </div>
 </div>
 <div class="callout-body-container callout-body">
-<p>You have now run DGE analysis for Covid vs Ctrl in cluster 3 with several diffent methods. Have a look at the different results, where did you get more/less significant genes? Which results would you like to present in a paper? Discuss with a neighbor which one you think looks best and why.</p>
+<p>You have now run DGE analysis for Covid vs Ctrl in cluster 3 with several diffent methods. Have a look at the different results. Where did you get more/less significant genes? Which results would you like to present in a paper? Discuss with a neighbor which one you think looks best and why.</p>
 </div>
 </div>
 </section>
@@ -913,7 +917,7 @@ You visualize your results using a simple barplot, for example:</p>
 <section id="meta-dge_gsea" class="level2" data-number="8">
 <h2 data-number="8" class="anchored" data-anchor-id="meta-dge_gsea"><span class="header-section-number">8</span> Gene Set Enrichment Analysis (GSEA)</h2>
 <p>Besides the enrichment using hypergeometric test, we can also perform gene set enrichment analysis (GSEA), which scores ranked genes list (usually based on fold changes) and computes permutation test to check if a particular gene set is more present in the Up-regulated genes, among the DOWN_regulated genes or not differentially regulated.</p>
-<p>Before, we ran <code>FindMarkers</code> with the default settings for reporting only significantly up/down regulated genes, but now we need statistics on a larger set of genes, so we will have to rerun the test with more lenient cutoffs.</p>
+<p>Before, we ran <code>FindMarkers()</code> with the default settings for reporting only significantly up/down regulated genes, but now we need statistics on a larger set of genes, so we will have to rerun the test with more lenient cutoffs.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb45"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a>sub_data <span class="ot">&lt;-</span> <span class="fu">SetIdent</span>(sub_data, <span class="at">value =</span> <span class="st">"type"</span>)</span>
 <span id="cb45-2"><a href="#cb45-2" aria-hidden="true" tabindex="-1"></a></span>
@@ -956,7 +960,7 @@ You visualize your results using a simple barplot, for example:</p>
 <span id="cb48-5"><a href="#cb48-5" aria-hidden="true" tabindex="-1"></a>})</span>
 <span id="cb48-6"><a href="#cb48-6" aria-hidden="true" tabindex="-1"></a><span class="fu">names</span>(gmt) <span class="ot">&lt;-</span> <span class="fu">unique</span>(<span class="fu">paste0</span>(msigdbgmt_subset<span class="sc">$</span>gs_name, <span class="st">"_"</span>, msigdbgmt_subset<span class="sc">$</span>gs_exact_source))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>Next, we will be using the GSEA. This will result in a table containing information for several pathways. We can then sort and filter those pathways to visualize only the top ones. You can select/filter them by either <code>p-value</code> or normalized enrichment score (<code>NES</code>).</p>
+<p>Next, we will run GSEA. This will result in a table containing information for several pathways. We can then sort and filter those pathways to visualize only the top ones. You can select/filter them by either <code>p-value</code> or normalized enrichment score (<code>NES</code>).</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb49"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb49-1"><a href="#cb49-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(fgsea)</span>
 <span id="cb49-2"><a href="#cb49-2" aria-hidden="true" tabindex="-1"></a></span>
@@ -987,8 +991,7 @@ Discuss
 </div>
 </div>
 <div class="callout-body-container callout-body">
-<p>Which KEGG pathways are upregulated in this cluster?Which KEGG pathways are dowregulated in this cluster?<br>
-Change the pathway source to another gene set (e.g.&nbsp;“CP:WIKIPATHWAYS” or “CP:REACTOME” or “CP:BIOCARTA” or “GO:BP”) and check the if you get similar results?</p>
+<p>Which KEGG pathways are upregulated in this cluster? Which KEGG pathways are dowregulated in this cluster? Change the pathway source to another gene set (e.g.&nbsp;CP:WIKIPATHWAYS or CP:REACTOME or CP:BIOCARTA or GO:BP) and check the if you get similar results?</p>
 </div>
 </div>
 </section>
@@ -1055,33 +1058,32 @@ loaded via a namespace (and not attached):
  [40] codetools_0.2-19        DelayedArray_0.28.0     tidyselect_1.2.0       
  [43] farver_2.1.1            spatstat.explore_3.2-1  jsonlite_1.8.5         
  [46] ellipsis_0.3.2          progressr_0.13.0        ggridges_0.5.4         
- [49] survival_3.5-5          tools_4.3.0             progress_1.2.2         
- [52] ica_1.0-3               Rcpp_1.0.10             glue_1.6.2             
- [55] gridExtra_2.3           SparseArray_1.2.3       xfun_0.39              
- [58] withr_2.5.0             fastmap_1.1.1           boot_1.3-28.1          
- [61] fansi_1.0.4             digest_0.6.31           R6_2.5.1               
- [64] mime_0.12               colorspace_2.1-0        scattermore_1.2        
- [67] tensor_1.5              spatstat.data_3.0-1     utf8_1.2.3             
- [70] tidyr_1.3.0             generics_0.1.3          data.table_1.14.8      
- [73] prettyunits_1.1.1       httr_1.4.6              htmlwidgets_1.6.2      
- [76] S4Arrays_1.2.0          uwot_0.1.14             pkgconfig_2.0.3        
- [79] gtable_0.3.3            lmtest_0.9-40           XVector_0.42.0         
- [82] htmltools_0.5.5         scales_1.2.1            png_0.1-8              
- [85] knitr_1.43              rstudioapi_0.14         reshape2_1.4.4         
- [88] rjson_0.2.21            nlme_3.1-162            curl_5.0.1             
- [91] nloptr_2.0.3            zoo_1.8-12              stringr_1.5.0          
- [94] KernSmooth_2.23-20      parallel_4.3.0          miniUI_0.1.1.1         
- [97] pillar_1.9.0            grid_4.3.0              vctrs_0.6.2            
-[100] RANN_2.6.1              promises_1.2.0.1        xtable_1.8-4           
-[103] cluster_2.1.4           evaluate_0.21           cli_3.6.1              
-[106] locfit_1.5-9.8          compiler_4.3.0          rlang_1.1.1            
-[109] crayon_1.5.2            future.apply_1.11.0     labeling_0.4.2         
-[112] plyr_1.8.8              stringi_1.7.12          BiocParallel_1.36.0    
-[115] viridisLite_0.4.2       deldir_1.0-9            babelgene_22.9         
-[118] munsell_0.5.0           lazyeval_0.2.2          spatstat.geom_3.2-1    
-[121] hms_1.1.3               future_1.32.0           statmod_1.5.0          
-[124] shiny_1.7.4             ROCR_1.0-11             igraph_1.4.3           
-[127] fastmatch_1.1-3        </code></pre>
+ [49] survival_3.5-5          tools_4.3.0             ica_1.0-3              
+ [52] Rcpp_1.0.10             glue_1.6.2              gridExtra_2.3          
+ [55] SparseArray_1.2.3       xfun_0.39               withr_2.5.0            
+ [58] fastmap_1.1.1           boot_1.3-28.1           fansi_1.0.4            
+ [61] digest_0.6.31           R6_2.5.1                mime_0.12              
+ [64] colorspace_2.1-0        scattermore_1.2         tensor_1.5             
+ [67] spatstat.data_3.0-1     utf8_1.2.3              tidyr_1.3.0            
+ [70] generics_0.1.3          data.table_1.14.8       httr_1.4.6             
+ [73] htmlwidgets_1.6.2       S4Arrays_1.2.0          uwot_0.1.14            
+ [76] pkgconfig_2.0.3         gtable_0.3.3            lmtest_0.9-40          
+ [79] XVector_0.42.0          htmltools_0.5.5         scales_1.2.1           
+ [82] png_0.1-8               knitr_1.43              rstudioapi_0.14        
+ [85] reshape2_1.4.4          rjson_0.2.21            nlme_3.1-162           
+ [88] curl_5.0.1              nloptr_2.0.3            zoo_1.8-12             
+ [91] stringr_1.5.0           KernSmooth_2.23-20      parallel_4.3.0         
+ [94] miniUI_0.1.1.1          pillar_1.9.0            grid_4.3.0             
+ [97] vctrs_0.6.2             RANN_2.6.1              promises_1.2.0.1       
+[100] xtable_1.8-4            cluster_2.1.4           evaluate_0.21          
+[103] cli_3.6.1               locfit_1.5-9.8          compiler_4.3.0         
+[106] rlang_1.1.1             crayon_1.5.2            future.apply_1.11.0    
+[109] labeling_0.4.2          plyr_1.8.8              stringi_1.7.12         
+[112] BiocParallel_1.36.0     viridisLite_0.4.2       deldir_1.0-9           
+[115] babelgene_22.9          munsell_0.5.0           lazyeval_0.2.2         
+[118] spatstat.geom_3.2-1     future_1.32.0           statmod_1.5.0          
+[121] shiny_1.7.4             ROCR_1.0-11             igraph_1.4.3           
+[124] fastmatch_1.1-3        </code></pre>
 </div>
 </div>
 </details>
@@ -1330,10 +1332,11 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
     <div class="nav-footer-center">
       &nbsp;
     </div>
-    <div class="nav-footer-right">Published with <a href="https://quarto.org/">Quarto</a> v1.3.450</div>
+    <div class="nav-footer-right">Published with <a href="https://quarto.org/">Quarto</a> v1.3.450
+</div>
   </div>
 </footer>
-<script>var lightboxQuarto = GLightbox({"closeEffect":"zoom","selector":".lightbox","descPosition":"bottom","openEffect":"zoom","loop":true});</script>
+<script>var lightboxQuarto = GLightbox({"descPosition":"bottom","selector":".lightbox","closeEffect":"zoom","openEffect":"zoom","loop":true});</script>
 
 
 
