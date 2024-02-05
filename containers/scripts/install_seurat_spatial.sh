@@ -61,10 +61,10 @@ installGithub.r --update FALSE \
     https://github.com/satijalab/seurat-data/tree/d6a8ce61ccb21a3b204f194d07009772c822791d
 
 ## Get brain data
-wget seurat.nygenome.org/src/contrib/stxBrain.SeuratData_0.1.1.tar.gz \
-    && R CMD INSTALL stxBrain.SeuratData_0.1.1.tar.gz \
-    && rm -rf stxBrain.SeuratData_0.1.1.tar.gz
-    
+wget seurat.nygenome.org/src/contrib/stxBrain.SeuratData_0.1.1.tar.gz -O /tmp/brain.tar.gz \
+    && Rscript -e 'install.packages("/tmp/brain.tar.gz", repos = NULL, type="source")' \
+    && rm -rf /tmp/brain.tar.gz
+
 ## Clean up
 rm -rf /var/lib/apt/lists/*
 rm -rf /tmp/downloaded_packages
