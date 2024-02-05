@@ -207,7 +207,7 @@ background-size: cover;
       <div>
       <div class="quarto-title-meta-heading">Published</div>
       <div class="quarto-title-meta-contents">
-        <p class="date">30-Jan-2024</p>
+        <p class="date">05-Feb-2024</p>
       </div>
     </div>
     
@@ -273,16 +273,20 @@ Note
 <span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>})</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>path_data <span class="ot">&lt;-</span> <span class="st">"https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"</span></span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>path_file <span class="ot">&lt;-</span> <span class="st">"data/covid/results/bioc_covid_qc.rds"</span></span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">dir.exists</span>(<span class="fu">dirname</span>(path_file))) <span class="fu">dir.create</span>(<span class="fu">dirname</span>(path_file), <span class="at">recursive =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">file.exists</span>(path_file)) <span class="fu">download.file</span>(<span class="at">url =</span> <span class="fu">file.path</span>(path_data, <span class="st">"covid/results/bioc_covid_qc.rds"</span>), <span class="at">destfile =</span> path_file)</span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>sce <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(path_file)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># download pre-computed data if missing or long compute</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>fetch_data <span class="ot">&lt;-</span> <span class="cn">TRUE</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co"># url for source and intermediate data</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>path_data <span class="ot">&lt;-</span> <span class="st">"https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>path_file <span class="ot">&lt;-</span> <span class="st">"data/covid/results/bioc_covid_qc.rds"</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">dir.exists</span>(<span class="fu">dirname</span>(path_file))) <span class="fu">dir.create</span>(<span class="fu">dirname</span>(path_file), <span class="at">recursive =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (fetch_data <span class="sc">&amp;&amp;</span> <span class="sc">!</span><span class="fu">file.exists</span>(path_file)) <span class="fu">download.file</span>(<span class="at">url =</span> <span class="fu">file.path</span>(path_data, <span class="st">"covid/results/bioc_covid_qc.rds"</span>), <span class="at">destfile =</span> path_file)</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>sce <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(path_file)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 <section id="meta-dimred_fs" class="level2" data-number="2">
 <h2 data-number="2" class="anchored" data-anchor-id="meta-dimred_fs"><span class="header-section-number">2</span> Feature selection</h2>
-<p>Next, we first need to define which features/genes are important in our dataset to distinguish cell types. For this purpose, we need to find genes that are highly variable across cells, which in turn will also provide a good separation of the cell clusters.</p>
+<p>We first need to define which features/genes are important in our dataset to distinguish cell types. For this purpose, we need to find genes that are highly variable across cells, which in turn will also provide a good separation of the cell clusters.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>sce <span class="ot">&lt;-</span> <span class="fu">computeSumFactors</span>(sce, <span class="at">sizes =</span> <span class="fu">c</span>(<span class="dv">20</span>, <span class="dv">40</span>, <span class="dv">60</span>, <span class="dv">80</span>))</span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>sce <span class="ot">&lt;-</span> <span class="fu">logNormCounts</span>(sce)</span>
@@ -325,7 +329,7 @@ Note
 </section>
 <section id="meta-dimred_zs" class="level2" data-number="3">
 <h2 data-number="3" class="anchored" data-anchor-id="meta-dimred_zs"><span class="header-section-number">3</span> Z-score transformation</h2>
-<p>Now that the data is prepared, we now proceed with PCA. Since each gene has a different expression level, it means that genes with higher expression values will naturally have higher variation that will be captured by PCA. This means that we need to somehow give each gene a similar weight when performing PCA (see below). The common practice is to center and scale each gene before performing PCA. This exact scaling is called Z-score normalization it is very useful for PCA, clustering and plotting heatmaps. Additionally, we can use regression to remove any unwanted sources of variation from the dataset, such as <code>cell cycle</code>, <code>sequencing depth</code>, <code>percent mitochondria</code>. This is achieved by doing a generalized linear regression using these parameters as co-variates in the model. Then the residuals of the model are taken as the <em>regressed data</em>. Although perhaps not in the best way, batch effect regression can also be done here. By default variables are scaled in the PCA step and is not done separately. But it could be achieved by running the commands below:</p>
+<p>Now that the genes have been selected, we now proceed with PCA. Since each gene has a different expression level, it means that genes with higher expression values will naturally have higher variation that will be captured by PCA. This means that we need to somehow give each gene a similar weight when performing PCA (see below). The common practice is to center and scale each gene before performing PCA. This exact scaling called Z-score normalization is very useful for PCA, clustering and plotting heatmaps. Additionally, we can use regression to remove any unwanted sources of variation from the dataset, such as <code>cell cycle</code>, <code>sequencing depth</code>, <code>percent mitochondria</code> etc. This is achieved by doing a generalized linear regression using these parameters as co-variates in the model. Then the residuals of the model are taken as the <em>regressed data</em>. Although perhaps not in the best way, batch effect regression can also be done here. By default, variables are scaled in the PCA step and is not done separately. But it could be achieved by running the commands below:</p>
 <p>However, unlike the Seurat, this step is implemented inside the PCA function below. Here we will show you how to add the scaledData back to the object.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># sce@assays$data@listData$scaled.data &lt;- apply(exprs(sce)[rownames(hvg.out),,drop=FALSE],2,function(x) scale(x,T,T))</span></span>
@@ -334,7 +338,7 @@ Note
 </section>
 <section id="meta-dimred_pca" class="level2" data-number="4">
 <h2 data-number="4" class="anchored" data-anchor-id="meta-dimred_pca"><span class="header-section-number">4</span> PCA</h2>
-<p>Performing PCA has many useful applications and interpretations, which much depends on the data used. In the case of life sciences, we want to segregate samples based on gene expression patterns in the data.</p>
+<p>Performing PCA has many useful applications and interpretations, which much depends on the data used. In the case of single-cell data, we want to segregate samples based on gene expression patterns in the data.</p>
 <p>We use the <code>logcounts</code> and then set <code>scale_features</code> to TRUE in order to scale each gene.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># runPCA and specify the variable genes to use for dim reduction with subset_row</span></span>
@@ -384,12 +388,12 @@ Note
 </section>
 <section id="meta-dimred_tsne" class="level2" data-number="5">
 <h2 data-number="5" class="anchored" data-anchor-id="meta-dimred_tsne"><span class="header-section-number">5</span> tSNE</h2>
-<p>We can now run <a href="https://arxiv.org/abs/1301.3342">BH-tSNE</a>.</p>
+<p>We will now run <a href="https://arxiv.org/abs/1301.3342">BH-tSNE</a>.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">42</span>)</span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>sce <span class="ot">&lt;-</span> <span class="fu">runTSNE</span>(sce, <span class="at">dimred =</span> <span class="st">"PCA"</span>, <span class="at">n_dimred =</span> <span class="dv">30</span>, <span class="at">perplexity =</span> <span class="dv">30</span>, <span class="at">name =</span> <span class="st">"tSNE_on_PCA"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>We can now plot the tSNE colored per dataset. We can clearly see the effect of batches present in the dataset.</p>
+<p>We plot the tSNE scatterplot colored by dataset. We can clearly see the effect of batches present in the dataset.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plotReducedDim</span>(sce, <span class="at">dimred =</span> <span class="st">"tSNE_on_PCA"</span>, <span class="at">colour_by =</span> <span class="st">"sample"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
@@ -413,7 +417,7 @@ Note
 <div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>sce <span class="ot">&lt;-</span> <span class="fu">runUMAP</span>(sce, <span class="at">dimred =</span> <span class="st">"PCA"</span>, <span class="at">n_dimred =</span> <span class="dv">30</span>, <span class="at">ncomponents =</span> <span class="dv">10</span>, <span class="at">name =</span> <span class="st">"UMAP10_on_PCA"</span>)</span>
 <span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="co"># see ?umap and ?runUMAP for more info</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>We can now plot PCA, UMAP and tSNE side by side for comparison. Have a look at the UMAP and tSNE, what similarities/differences do you see, can you explain the differences based on what you learned during the lecture? Also, we can conclude from the dimensionality reductions that our dataset contains a batch effect that needs to be corrected before proceeding to clustering and differential gene expression analysis.</p>
+<p>We can now plot PCA, UMAP and tSNE side by side for comparison. Have a look at the UMAP and tSNE. What similarities/differences do you see? Can you explain the differences based on what you learned during the lecture? Also, we can conclude from the dimensionality reductions that our dataset contains a batch effect that needs to be corrected before proceeding to clustering and differential gene expression analysis.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">wrap_plots</span>(</span>
 <span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotReducedDim</span>(sce, <span class="at">dimred =</span> <span class="st">"UMAP_on_PCA"</span>, <span class="at">colour_by =</span> <span class="st">"sample"</span>) <span class="sc">+</span></span>
@@ -448,7 +452,7 @@ Discuss
 </section>
 <section id="meta-dimred_zsg" class="level2" data-number="7">
 <h2 data-number="7" class="anchored" data-anchor-id="meta-dimred_zsg"><span class="header-section-number">7</span> Z-scores &amp; DR graphs</h2>
-<p>Although running a second dimensionality reduction (i.e tSNE or UMAP) on PCA would be a standard approach (because it allows higher computation efficiency), the options are actually limitless. Below we will show a couple of other common options such as running directly on the scaled data (z-scores) (which was used for PCA) or on a graph built from scaled data. We will show from now on only UMAP, but the same applies for tSNE.</p>
+<p>Although running a second dimensionality reduction (i.e tSNE or UMAP) on PCA would be a standard approach (because it allows higher computation efficiency), the options are actually limitless. Below we will show a couple of other common options such as running directly on the scaled data (z-scores) (which was used for PCA) or on a graph built from scaled data. We will only work with UMAPs, but the same applies for tSNE.</p>
 <section id="meta-dimred_zsg_zs" class="level3" data-number="7.1">
 <h3 data-number="7.1" class="anchored" data-anchor-id="meta-dimred_zsg_zs"><span class="header-section-number">7.1</span> UMAP from z-scores</h3>
 <p>To run tSNE or UMAP on the scaled data, one first needs to select the number of variables to use. This is because including dimensions that do contribute to the separation of your cell types will in the end mask those differences. Another reason for it is because running with all genes/features also will take longer or might be computationally unfeasible. Therefore we will use the scaled data of the highly variable genes.</p>
@@ -908,7 +912,8 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
     <div class="nav-footer-center">
       &nbsp;
     </div>
-    <div class="nav-footer-right">Published with <a href="https://quarto.org/">Quarto</a> v1.3.450</div>
+    <div class="nav-footer-right">Published with <a href="https://quarto.org/">Quarto</a> v1.3.450
+</div>
   </div>
 </footer>
 <script>var lightboxQuarto = GLightbox({"selector":".lightbox","loop":true,"descPosition":"bottom","openEffect":"zoom","closeEffect":"zoom"});</script>

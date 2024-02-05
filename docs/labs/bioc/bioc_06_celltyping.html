@@ -207,7 +207,7 @@ background-size: cover;
       <div>
       <div class="quarto-title-meta-heading">Published</div>
       <div class="quarto-title-meta-contents">
-        <p class="date">16-Jan-2024</p>
+        <p class="date">05-Feb-2024</p>
       </div>
     </div>
     
@@ -261,11 +261,11 @@ Note
 <p>Code chunks run R commands unless otherwise specified.</p>
 </div>
 </div>
-<p>Celltype prediction can either be performed on indiviudal cells where each cell gets a predicted celltype label, or on the level of clusters. All methods are based on similarity to other datasets, single cell or sorted bulk RNAseq, or uses known marker genes for each celltype.<br>
+<p>Celltype prediction can either be performed on indiviudal cells where each cell gets a predicted celltype label, or on the level of clusters. All methods are based on similarity to other datasets, single cell or sorted bulk RNAseq, or uses known marker genes for each cell type.<br>
 We will select one sample from the Covid data, <code>ctrl_13</code> and predict celltype by cell on that sample.<br>
-Some methods will predict a celltype to each cell based on what it is most similar to even if the celltype of that cell is not included in the reference. Other methods include an uncertainty so that cells with low similarity scores will be unclassified.<br>
+Some methods will predict a celltype to each cell based on what it is most similar to, even if that celltype is not included in the reference. Other methods include an uncertainty so that cells with low similarity scores will be unclassified.<br>
 There are multiple different methods to predict celltypes, here we will just cover a few of those.</p>
-<p>Here we will use a reference PBMC dataset from the <code>scPred</code> package which is provided as a Seurat object with counts. And we will test classification based on the <code>scPred</code> and <code>scMap</code> methods. Finally we will use gene set enrichment predict celltype based on the DEGs of each cluster.</p>
+<p>We will use a reference PBMC dataset from the <code>scPred</code> package which is provided as a Seurat object with counts. And we will test classification based on the <code>scPred</code> and <code>scMap</code> methods. Finally we will use gene set enrichment predict celltype based on the DEGs of each cluster.</p>
 <section id="meta-ct_read" class="level2" data-number="1">
 <h2 data-number="1" class="anchored" data-anchor-id="meta-ct_read"><span class="header-section-number">1</span> Read data</h2>
 <p>First, lets load required libraries</p>
@@ -283,11 +283,15 @@ There are multiple different methods to predict celltypes, here we will just cov
 </div>
 <p>Let’s read in the saved Covid-19 data object from the clustering step.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>path_data <span class="ot">&lt;-</span> <span class="st">"https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"</span></span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>path_file <span class="ot">&lt;-</span> <span class="st">"data/covid/results/bioc_covid_qc_dr_int_cl.rds"</span></span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">dir.exists</span>(<span class="fu">dirname</span>(path_file))) <span class="fu">dir.create</span>(<span class="fu">dirname</span>(path_file), <span class="at">recursive =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">file.exists</span>(path_file)) <span class="fu">download.file</span>(<span class="at">url =</span> <span class="fu">file.path</span>(path_data, <span class="st">"covid/results/bioc_covid_qc_dr_int_cl.rds"</span>), <span class="at">destfile =</span> path_file)</span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>alldata <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(path_file)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># download pre-computed data if missing or long compute</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>fetch_data <span class="ot">&lt;-</span> <span class="cn">TRUE</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co"># url for source and intermediate data</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>path_data <span class="ot">&lt;-</span> <span class="st">"https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>path_file <span class="ot">&lt;-</span> <span class="st">"data/covid/results/bioc_covid_qc_dr_int_cl.rds"</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">dir.exists</span>(<span class="fu">dirname</span>(path_file))) <span class="fu">dir.create</span>(<span class="fu">dirname</span>(path_file), <span class="at">recursive =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (fetch_data <span class="sc">&amp;&amp;</span> <span class="sc">!</span><span class="fu">file.exists</span>(path_file)) <span class="fu">download.file</span>(<span class="at">url =</span> <span class="fu">file.path</span>(path_data, <span class="st">"covid/results/bioc_covid_qc_dr_int_cl.rds"</span>), <span class="at">destfile =</span> path_file)</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>alldata <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(path_file)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Let’s read in the saved Covid-19 data object from the clustering step.</p>
 <div class="cell">
@@ -340,7 +344,7 @@ Active assay: RNA (32838 features, 0 variable features)</code></pre>
 </div>
 </div>
 </div>
-<p>Run all steps of the analysis for the ctrl sample as well. Use the clustering from the integration lab with resolution 0.5.</p>
+<p>Run all steps of the analysis for the <strong>ctrl</strong> sample as well. Use the clustering from the integration lab with resolution 0.5.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Normalize</span></span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>ctrl.sce <span class="ot">&lt;-</span> <span class="fu">computeSumFactors</span>(ctrl.sce)</span>
@@ -414,9 +418,9 @@ Active assay: RNA (32838 features, 0 variable features)</code></pre>
 <div class="cell-output cell-output-stdout">
 <pre><code>
      B cell  CD4 T cell  CD8 T cell         cDC       cMono      ncMono 
-         69         105         124          38         215         160 
+         70         104         122          38         213         161 
     NK cell         pDC Plasma cell  unassigned 
-        294           2           1         195 </code></pre>
+        287           2           1         175 </code></pre>
 </div>
 </div>
 <p>Then add the predictions to metadata and plot UMAP.</p>
@@ -457,7 +461,7 @@ Active assay: RNA (32838 features, 0 variable features)</code></pre>
 <div class="cell-output cell-output-stdout">
 <pre><code>cell_type_pred
     B cell CD4 T cell CD8 T cell        cDC      cMono     ncMono    NK cell 
-       102        176        300         65        187        189        182 
+       100        163        275         30        199        210        194 
        pDC 
          2 </code></pre>
 </div>
@@ -494,7 +498,7 @@ Active assay: RNA (32838 features, 0 variable features)</code></pre>
 </section>
 <section id="meta-ct_scpred" class="level2" data-number="5">
 <h2 data-number="5" class="anchored" data-anchor-id="meta-ct_scpred"><span class="header-section-number">5</span> scPred</h2>
-<p>scPred will train a classifier based on all principal components. First, <code>getFeatureSpace</code> will create a scPred object stored in the <code>@misc</code> slot where it extracts the PCs that best separates the different celltypes. Then <code>trainModel</code> will do the actual training for each celltype.</p>
+<p>scPred will train a classifier based on all principal components. First, <code>getFeatureSpace()</code> will create a scPred object stored in the <code>@misc</code> slot where it extracts the PCs that best separates the different celltypes. Then <code>trainModel()</code> will do the actual training for each celltype.</p>
 <p>scPred works with Seurat objects, so we will convert both objects to seurat objects. You may see a lot of warnings about renaming things, but as long as you do not see an Error, you should be fine.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="fu">suppressPackageStartupMessages</span>(<span class="fu">library</span>(Seurat))</span>
@@ -526,7 +530,7 @@ DONE!</code></pre>
 DONE!</code></pre>
 </div>
 </div>
-<p>scPred will train a classifier based on all principal components. First, <code>getFeatureSpace</code> will create a scPred object stored in the <code>@misc</code> slot where it extracts the PCs that best separates the different celltypes. Then <code>trainModel</code> will do the actual training for each celltype.</p>
+<p>scPred will train a classifier based on all principal components. First, <code>getFeatureSpace()</code> will create a scPred object stored in the <code>@misc</code> slot where it extracts the PCs that best separates the different celltypes. Then <code>trainModel()</code> will do the actual training for each celltype.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a><span class="fu">get_scpred</span>(reference)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
@@ -549,14 +553,14 @@ Summary
 |Plasma cell |    6|       50|svmRadial | 1.000| 1.000| 1.000|</code></pre>
 </div>
 </div>
-<p>You can optimize parameters for each dataset by chaning parameters and testing different types of models, see more at: https://powellgenomicslab.github.io/scPred/articles/introduction.html. But for now, we will continue with this model. Now, lets predict celltypes on our data, where scPred will align the two datasets with Harmony and then perform classification.</p>
+<p>You can optimize parameters for each dataset by chaining parameters and testing different types of models, see more at: <a href="https://powellgenomicslab.github.io/scPred/articles/introduction.html" class="uri">https://powellgenomicslab.github.io/scPred/articles/introduction.html</a>. But for now, we will continue with this model. Now, let’s predict celltypes on our data, where scPred will align the two datasets with Harmony and then perform classification.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb31"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>ctrl <span class="ot">&lt;-</span> <span class="fu">scPredict</span>(ctrl, reference)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>●  Matching reference with new dataset...
      ─ 1000 features present in reference loadings
-     ─ 937 features shared between reference and new dataset
-     ─ 93.7% of features in the reference are present in new dataset
+     ─ 938 features shared between reference and new dataset
+     ─ 93.8% of features in the reference are present in new dataset
 ●  Aligning new data to reference...
 ●  Classifying cells...
 DONE!</code></pre>
@@ -592,14 +596,14 @@ DONE!</code></pre>
 </section>
 <section id="meta-ct_compare" class="level2" data-number="6">
 <h2 data-number="6" class="anchored" data-anchor-id="meta-ct_compare"><span class="header-section-number">6</span> Compare results</h2>
-<p>Now we will compare the output of the two methods using the convenient function in scPred <code>crossTab</code> that prints the overlap between two metadata slots.</p>
+<p>Now we will compare the output of the two methods using the convenient function in scPred <code>crossTab()</code> that prints the overlap between two metadata slots.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb36"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a><span class="fu">crossTab</span>(ctrl, <span class="st">"scmap_cell"</span>, <span class="st">"scpred_prediction"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 
 <div data-pagedtable="false">
   <script data-pagedtable-source="" type="application/json">
-{"columns":[{"label":[""],"name":["_rn_"],"type":[""],"align":["left"]},{"label":["B cell"],"name":[1],"type":["int"],"align":["right"]},{"label":["CD4 T cell"],"name":[2],"type":["int"],"align":["right"]},{"label":["CD8 T cell"],"name":[3],"type":["int"],"align":["right"]},{"label":["cDC"],"name":[4],"type":["int"],"align":["right"]},{"label":["cMono"],"name":[5],"type":["int"],"align":["right"]},{"label":["ncMono"],"name":[6],"type":["int"],"align":["right"]},{"label":["NK cell"],"name":[7],"type":["int"],"align":["right"]},{"label":["pDC"],"name":[8],"type":["int"],"align":["right"]}],"data":[{"1":"101","2":"2","3":"0","4":"0","5":"0","6":"1","7":"0","8":"0","_rn_":"B cell"},{"1":"0","2":"113","3":"27","4":"0","5":"1","6":"0","7":"0","8":"0","_rn_":"CD4 T cell"},{"1":"0","2":"42","3":"222","4":"0","5":"2","6":"1","7":"94","8":"0","_rn_":"CD8 T cell"},{"1":"0","2":"0","3":"0","4":"9","5":"2","6":"0","7":"0","8":"0","_rn_":"cDC"},{"1":"0","2":"0","3":"0","4":"45","5":"146","6":"64","7":"0","8":"0","_rn_":"cMono"},{"1":"0","2":"0","3":"0","4":"4","5":"7","6":"108","7":"0","8":"0","_rn_":"ncMono"},{"1":"0","2":"1","3":"26","4":"0","5":"0","6":"0","7":"72","8":"0","_rn_":"NK cell"},{"1":"0","2":"0","3":"0","4":"1","5":"0","6":"0","7":"0","8":"1","_rn_":"pDC"},{"1":"1","2":"0","3":"0","4":"0","5":"0","6":"0","7":"0","8":"0","_rn_":"Plasma cell"},{"1":"0","2":"18","3":"25","4":"6","5":"29","6":"15","7":"16","8":"1","_rn_":"unassigned"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
+{"columns":[{"label":[""],"name":["_rn_"],"type":[""],"align":["left"]},{"label":["B cell"],"name":[1],"type":["int"],"align":["right"]},{"label":["CD4 T cell"],"name":[2],"type":["int"],"align":["right"]},{"label":["CD8 T cell"],"name":[3],"type":["int"],"align":["right"]},{"label":["cDC"],"name":[4],"type":["int"],"align":["right"]},{"label":["cMono"],"name":[5],"type":["int"],"align":["right"]},{"label":["ncMono"],"name":[6],"type":["int"],"align":["right"]},{"label":["NK cell"],"name":[7],"type":["int"],"align":["right"]},{"label":["pDC"],"name":[8],"type":["int"],"align":["right"]}],"data":[{"1":"99","2":"1","3":"0","4":"0","5":"2","6":"0","7":"0","8":"0","_rn_":"B cell"},{"1":"0","2":"95","3":"34","4":"0","5":"0","6":"1","7":"0","8":"0","_rn_":"CD4 T cell"},{"1":"0","2":"44","3":"193","4":"0","5":"0","6":"2","7":"108","8":"0","_rn_":"CD8 T cell"},{"1":"0","2":"0","3":"0","4":"6","5":"6","6":"4","7":"0","8":"0","_rn_":"cDC"},{"1":"0","2":"0","3":"0","4":"21","5":"163","6":"70","7":"0","8":"0","_rn_":"cMono"},{"1":"0","2":"0","3":"0","4":"1","5":"4","6":"114","7":"0","8":"0","_rn_":"ncMono"},{"1":"0","2":"1","3":"27","4":"0","5":"0","6":"0","7":"70","8":"0","_rn_":"NK cell"},{"1":"1","2":"0","3":"0","4":"0","5":"0","6":"0","7":"0","8":"0","_rn_":"Plasma cell"},{"1":"0","2":"22","3":"21","4":"2","5":"24","6":"19","7":"16","8":"2","_rn_":"unassigned"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
   </script>
 </div>
 </div>
@@ -607,7 +611,7 @@ DONE!</code></pre>
 </section>
 <section id="meta-ct_gsea" class="level2" data-number="7">
 <h2 data-number="7" class="anchored" data-anchor-id="meta-ct_gsea"><span class="header-section-number">7</span> GSEA with celltype markers</h2>
-<p>Another option, where celltype can be classified on cluster level is to use gene set enrichment among the DEGs with known markers for different celltypes. Similar to how we did functional enrichment for the DEGs in the Differential expression exercise. There are some resources for celltype gene sets that can be used. Such as <a href="http://bio-bigdata.hrbmu.edu.cn/CellMarker/">CellMarker</a>, <a href="https://panglaodb.se/">PanglaoDB</a> or celltype gene sets at <a href="https://www.gsea-msigdb.org/gsea/msigdb/index.jsp">MSigDB</a>. We can also look at overlap between DEGs in a reference dataset and the dataset you are analysing.</p>
+<p>Another option, where celltype can be classified on cluster level is to use gene set enrichment among the DEGs with known markers for different celltypes. Similar to how we did functional enrichment for the DEGs in the differential expression exercise. There are some resources for celltype gene sets that can be used. Such as <a href="http://bio-bigdata.hrbmu.edu.cn/CellMarker/">CellMarker</a>, <a href="https://panglaodb.se/">PanglaoDB</a> or celltype gene sets at <a href="https://www.gsea-msigdb.org/gsea/msigdb/index.jsp">MSigDB</a>. We can also look at overlap between DEGs in a reference dataset and the dataset you are analyzing.</p>
 <section id="meta-ct_gsea_deg" class="level3" data-number="7.1">
 <h3 data-number="7.1" class="anchored" data-anchor-id="meta-ct_gsea_deg"><span class="header-section-number">7.1</span> DEG overlap</h3>
 <p>First, lets extract top DEGs for our Covid-19 dataset and the reference dataset. When we run differential expression for our dataset, we want to report as many genes as possible, hence we set the cutoffs quite lenient.</p>
@@ -675,165 +679,185 @@ DONE!</code></pre>
 <span id="cb40-22"><a href="#cb40-22" aria-hidden="true" tabindex="-1"></a>res</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>$`1`
-      pathway         pval         padj         ES       NES nMoreExtreme size
-1:      cMono 0.0001327492 0.0007607777  0.9515770  1.824481            0   47
-2:     ncMono 0.0003952048 0.0007607777  0.8775149  1.692495            2   49
-3:    NK cell 0.0070510162 0.0105765243 -0.6936107 -1.614830           16   49
-4: CD8 T cell 0.0002904444 0.0007607777 -0.9042254 -1.737436            0   18
-5:     B cell 0.0004050223 0.0007607777 -0.9085213 -2.107981            0   47
-6: CD4 T cell 0.0004226543 0.0007607777 -0.9246391 -2.155367            0   50
-                                leadingEdge
-1:  S100A8,S100A9,LYZ,S100A12,VCAN,FCN1,...
-2: S100A11,AIF1,S100A4,FCER1G,MAFB,SAT1,...
-3:         GNLY,NKG7,CTSW,GZMA,B2M,GZMM,...
-4:         IL32,CCL5,GZMH,CD3D,CD2,CD8A,...
-5: RPS5,CXCR4,RPL23A,CD52,RPL18A,RPL13A,...
-6:  RPL3,RPS4X,RPS27A,RPL5,EEF1A1,RPL14,...
+       pathway         pval         padj         ES       NES nMoreExtreme size
+1:       cMono 0.0001551109 0.0006944444  0.9536393  1.906787            0   47
+2:      ncMono 0.0003086420 0.0006944444  0.8633633  1.735818            1   49
+3:         cDC 0.0796821793 0.0896424518 -0.7492297 -1.386219          350   17
+4: Plasma cell 0.0581985028 0.0748266464 -0.7145256 -1.413678          240   24
+5:     NK cell 0.0028392959 0.0042589438 -0.7308859 -1.645392            9   49
+6:  CD8 T cell 0.0006915629 0.0012448133 -0.9002802 -1.680158            2   18
+7:      B cell 0.0002812940 0.0006944444 -0.8984765 -2.006883            0   47
+8:  CD4 T cell 0.0002853067 0.0006944444 -0.9198668 -2.080964            0   50
+                                               leadingEdge
+1:                 S100A8,S100A9,LYZ,S100A12,VCAN,FCN1,...
+2:                S100A11,S100A4,AIF1,FCER1G,MAFB,PSAP,...
+3: HLA-DPB1,HLA-DPA1,HLA-DQB1,HLA-DRA,HLA-DRB1,HLA-DMA,...
+4:                   ISG20,PEBP1,MIF,CYCS,FKBP11,SPCS2,...
+5:                        GNLY,B2M,NKG7,CTSW,GZMA,GZMM,...
+6:                        IL32,CCL5,GZMH,CD3D,CD2,LYAR,...
+7:                RPS5,CXCR4,RPL23A,CD52,RPL13A,RPL18A,...
+8:                 RPL3,RPS4X,RPS27A,RPL5,EEF1A1,RPL21,...
+
+$`10`
+      pathway         pval        padj         ES       NES nMoreExtreme size
+1:     ncMono 0.0001132631 0.001019368  0.9759892  1.789715            0   49
+2:        cDC 0.0278069255 0.041710388  0.8542775  1.407306          211   17
+3:     B cell 0.0008176615 0.001558442 -0.7522671 -1.859260            0   47
+4: CD8 T cell 0.0004366812 0.001558442 -0.9269023 -1.899304            0   18
+5:    NK cell 0.0008525149 0.001558442 -0.7802720 -1.942995            0   49
+6: CD4 T cell 0.0008658009 0.001558442 -0.8871017 -2.217522            0   50
+                                          leadingEdge
+1:           LST1,AIF1,FCGR3A,COTL1,FCER1G,CDKN1C,...
+2: HLA-DPA1,HLA-DRA,HLA-DRB1,HLA-DPB1,HLA-DRB5,MTMR14
+3:   CXCR4,MS4A1,BANK1,RPL13A,TNFRSF13C,LINC00926,...
+4:                  CCL5,IL32,GZMH,CD3D,CD2,KLRG1,...
+5:                  NKG7,GNLY,CST7,CTSW,GZMA,GZMM,...
+6:               LDHB,RPL31,RPS3,RPL3,IL7R,RPS27A,...
 
 $`2`
-      pathway         pval        padj         ES       NES nMoreExtreme size
-1:     B cell 0.0001973554 0.000365408  0.9639203  2.032368            0   47
-2: CD4 T cell 0.0001970055 0.000365408  0.8696162  1.846240            0   50
-3:        cDC 0.0001979806 0.000365408  0.9506666  1.711665            0   17
-4: CD8 T cell 0.0016083635 0.002067896 -0.8930677 -1.641590            7   18
-5:      cMono 0.0008105370 0.001215805 -0.7964559 -1.721447            3   47
-6:     ncMono 0.0002030045 0.000365408 -0.8998544 -1.960178            0   49
-7:    NK cell 0.0002030045 0.000365408 -0.9119291 -1.986480            0   49
+      pathway         pval         padj         ES       NES nMoreExtreme size
+1:     B cell 0.0001824485 0.0005003336  0.9677594  2.011726            0   47
+2: CD4 T cell 0.0001813894 0.0005003336  0.8783357  1.843797            0   50
+3:        cDC 0.0011378722 0.0017068083  0.9300603  1.651694            5   17
+4: CD8 T cell 0.0014796026 0.0019023462 -0.9032469 -1.663555            6   18
+5:      cMono 0.0004423800 0.0007962840 -0.8288828 -1.794856            1   47
+6:     ncMono 0.0002223705 0.0005003336 -0.8927248 -1.944025            0   49
+7:    NK cell 0.0002223705 0.0005003336 -0.9036055 -1.967719            0   49
                                                leadingEdge
-1:              MS4A1,CD37,CXCR4,TNFRSF13C,BANK1,CD79B,...
-2:                   RPS6,RPL13,RPL32,RPS3A,RPS29,RPL3,...
-3: HLA-DRA,HLA-DPB1,HLA-DQB1,HLA-DRB1,HLA-DPA1,HLA-DMA,...
+1:              MS4A1,CD37,TNFRSF13C,CXCR4,CD79B,BANK1,...
+2:                   RPS6,RPL13,RPS29,RPL32,RPS3A,RPL3,...
+3: HLA-DRA,HLA-DQB1,HLA-DPB1,HLA-DRB1,HLA-DPA1,HLA-DMA,...
 4:                        CCL5,IL32,GZMH,CD3D,CD2,LYAR,...
-5:                S100A6,S100A9,TYROBP,LYZ,S100A8,FCN1,...
-6:              S100A4,FCER1G,S100A11,AIF1,LST1,IFITM3,...
-7:                     HCST,NKG7,ITGB2,GNLY,MYO1F,CST7,...
+5:                S100A6,S100A9,LYZ,TYROBP,S100A8,FCN1,...
+6:              S100A4,FCER1G,S100A11,AIF1,IFITM3,LST1,...
+7:                     HCST,NKG7,ITGB2,MYO1F,GNLY,CST7,...
 
 $`3`
-       pathway         pval         padj         ES       NES nMoreExtreme size
-1:       cMono 0.0001162115 0.0005229518  0.9366715  1.754906            0   47
-2:      ncMono 0.0001152206 0.0005229518  0.9282959  1.748653            0   49
-3:         cDC 0.0058249797 0.0074892596  0.8938512  1.504106           42   17
-4: Plasma cell 0.0304961311 0.0343081475 -0.7003557 -1.517735           66   24
-5:     NK cell 0.0007558579 0.0011583012 -0.7163352 -1.783214            0   49
-6:  CD8 T cell 0.0003958828 0.0011583012 -0.9181589 -1.871343            0   18
-7:  CD4 T cell 0.0007722008 0.0011583012 -0.7661201 -1.917423            0   50
-8:      B cell 0.0007158196 0.0011583012 -0.8988784 -2.222805            0   47
-                                                leadingEdge
-1:                 LYZ,S100A9,S100A8,FCN1,TYROBP,S100A6,...
-2:                AIF1,PSAP,S100A4,FCER1G,S100A11,COTL1,...
-3: HLA-DRA,HLA-DRB1,HLA-DRB5,HLA-DPA1,HLA-DQB1,HLA-DPB1,...
-4:                  ISG20,CYCS,FKBP11,JCHAIN,MZB1,PEBP1,...
-5:                      NKG7,CST7,GZMM,CTSW,GZMA,FGFBP2,...
-6:                         CCL5,IL32,CD3D,GZMH,CD2,CD8A,...
-7:                  PIK3IP1,RPS29,IL7R,RPS27A,RPL3,RPS3,...
-8:               CXCR4,MS4A1,CD79B,RPS5,TNFRSF13C,BANK1,...
+      pathway         pval         padj         ES       NES nMoreExtreme size
+1:      cMono 0.0001039717 0.0004678727  0.9325692  1.613643            0   47
+2:     ncMono 0.0001036377 0.0004678727  0.9236666  1.601521            0   49
+3:        cDC 0.0147749399 0.0189963513  0.8662495  1.388729          128   17
+4: CD4 T cell 0.0029069767 0.0043604651 -0.6882100 -1.794770            0   50
+5:    NK cell 0.0028328612 0.0043604651 -0.7452625 -1.944815            0   49
+6: CD8 T cell 0.0008143322 0.0024429967 -0.9401020 -2.030125            0   18
+7:     B cell 0.0026041667 0.0043604651 -0.8642457 -2.246264            0   47
+                                               leadingEdge
+1:                  S100A9,LYZ,S100A8,FCN1,VCAN,TYROBP,...
+2:                AIF1,PSAP,S100A11,FCER1G,S100A4,LST1,...
+3: HLA-DRA,HLA-DRB1,HLA-DPA1,HLA-DMA,HLA-DQB1,HLA-DPB1,...
+4:                PIK3IP1,IL7R,RPS27A,RPL3,RPS29,RPS4X,...
+5:                       NKG7,GNLY,CST7,GZMA,CTSW,GZMM,...
+6:                        CCL5,IL32,GZMH,CD3D,CD2,CD8A,...
+7:               CXCR4,MS4A1,RPS5,CD79B,CD52,TNFRSF13C,...
 
 $`4`
       pathway         pval         padj         ES       NES nMoreExtreme size
-1: CD4 T cell 0.0002101723 0.0004728878  0.9821321  2.134294            0   50
-2:    NK cell 0.0339112212 0.0508668318 -0.6722891 -1.452462          177   49
-3:        cDC 0.0001847404 0.0004728878 -0.9340033 -1.702542            0   17
-4:        pDC 0.0005699088 0.0010258359 -0.8226825 -1.767306            2   47
-5:      cMono 0.0001899696 0.0004728878 -0.9129405 -1.961201            0   47
-6:     ncMono 0.0001905125 0.0004728878 -0.9484681 -2.049139            0   49
+1: CD4 T cell 0.0001929012 0.0004652605  0.9806828  2.081712            0   50
+2:    NK cell 0.0496277916 0.0744416873 -0.6517022 -1.405481          239   49
+3:        cDC 0.0007804878 0.0014048780 -0.9131711 -1.656468            3   17
+4:        pDC 0.0002064836 0.0004652605 -0.8114052 -1.738358            0   47
+5:      cMono 0.0002064836 0.0004652605 -0.9228986 -1.977222            0   47
+6:     ncMono 0.0002067825 0.0004652605 -0.9366933 -2.020101            0   49
                                                leadingEdge
-1:                  IL7R,LDHB,PIK3IP1,RPL3,RPS12,RPL13,...
-2:                   NKG7,GNLY,MYO1F,FGFBP2,CST7,ITGB2,...
+1:                   IL7R,LDHB,PIK3IP1,RPL3,RPS12,RPS6,...
+2:                   NKG7,GNLY,ITGB2,MYO1F,CST7,FGFBP2,...
 3: HLA-DRA,HLA-DRB1,HLA-DPA1,HLA-DPB1,HLA-DQB1,HLA-DMA,...
-4:                     PLEK,NPC2,PLAC8,IRF8,CTSB,PTPRE,...
-5:                 S100A9,TYROBP,S100A8,LYZ,FCN1,APLP2,...
-6:                   FCER1G,PSAP,IFITM3,LST1,SAT1,AIF1,...
+4:                     PLEK,NPC2,CTSB,IRF8,PLAC8,PTPRE,...
+5:                 S100A9,LYZ,TYROBP,S100A8,FCN1,APLP2,...
+6:                   FCER1G,PSAP,IFITM3,AIF1,SAT1,LST1,...
 
 $`5`
       pathway         pval         padj         ES       NES nMoreExtreme size
-1:     B cell 0.0001963479 0.0003684749  0.9641767  2.042223            0   47
-2: CD4 T cell 0.0001947799 0.0003684749  0.8825397  1.887378            0   50
-3:        cDC 0.0002023063 0.0003684749  0.9586399  1.728487            0   17
-4: CD8 T cell 0.0013938670 0.0020908005 -0.8995956 -1.657233            6   18
-5:      cMono 0.0018333673 0.0023571865 -0.7742663 -1.687829            8   47
-6:     ncMono 0.0002047083 0.0003684749 -0.9119300 -1.999937            0   49
-7:    NK cell 0.0002047083 0.0003684749 -0.9130713 -2.002440            0   49
+1:     B cell 0.0001914975 0.0004728878  0.9637114  2.032317            0   47
+2: CD4 T cell 0.0001905125 0.0004728878  0.8854160  1.885521            0   50
+3:        cDC 0.0003967467 0.0006276151  0.9368678  1.675238            1   17
+4: CD8 T cell 0.0008087343 0.0010398013 -0.9078590 -1.673890            3   18
+5:      cMono 0.0004184100 0.0006276151 -0.8011019 -1.733637            1   47
+6:    NK cell 0.0002101723 0.0004728878 -0.9037142 -1.963282            0   49
+7:     ncMono 0.0002101723 0.0004728878 -0.9081849 -1.972995            0   49
                                                leadingEdge
-1:          MS4A1,CD37,CXCR4,TNFRSF13C,BANK1,LINC00926,...
-2:                   RPS6,RPL13,RPL32,RPS3A,RPL9,RPS29,...
+1:              MS4A1,CD37,CXCR4,BANK1,CD79B,TNFRSF13C,...
+2:                    RPL32,RPS6,RPS3A,RPL9,RPL3,RPL13,...
 3: HLA-DRA,HLA-DQB1,HLA-DRB1,HLA-DPB1,HLA-DPA1,HLA-DMA,...
 4:                        CCL5,IL32,GZMH,CD3D,CD2,LYAR,...
 5:                S100A6,S100A9,LYZ,TYROBP,S100A8,FCN1,...
-6:                S100A4,FCER1G,S100A11,AIF1,PSAP,LST1,...
-7:                     ITGB2,NKG7,HCST,GNLY,MYO1F,CST7,...
+6:                     HCST,ITGB2,NKG7,GNLY,MYO1F,CST7,...
+7:                S100A4,FCER1G,S100A11,AIF1,LST1,PSAP,...
 
 $`6`
-      pathway         pval         padj         ES       NES nMoreExtreme size
-1:    NK cell 0.0001863586 0.0003882657  0.9383295  1.976633            0   49
-2: CD4 T cell 0.0001846381 0.0003882657  0.8789241  1.861605            0   50
-3: CD8 T cell 0.0001971220 0.0003882657  0.9670054  1.759568            0   18
-4:        pDC 0.0952073931 0.1224095054 -0.6041872 -1.319390          442   47
-5:        cDC 0.0034246575 0.0051369863 -0.8829998 -1.620873           16   17
-6:     ncMono 0.0002157032 0.0003882657 -0.8872842 -1.952006            0   49
-7:      cMono 0.0002149151 0.0003882657 -0.9085014 -1.983934            0   47
+       pathway         pval         padj         ES       NES nMoreExtreme size
+1:     NK cell 0.0001707942 0.0004340487  0.9392429  1.955654            0   49
+2:  CD4 T cell 0.0001705321 0.0004340487  0.8934133  1.866461            0   50
+3:  CD8 T cell 0.0001816201 0.0004340487  0.9629220  1.714117            0   18
+4: Plasma cell 0.0355492357 0.0457061602  0.7907669  1.474205          199   24
+5:         cDC 0.0022261799 0.0033392698 -0.9003827 -1.660217            9   17
+6:      ncMono 0.0002411382 0.0004340487 -0.8868316 -1.974190            0   49
+7:       cMono 0.0002401537 0.0004340487 -0.9063075 -2.004785            0   47
                                             leadingEdge
-1:                    NKG7,GNLY,CST7,GZMA,CTSW,GZMM,...
-2:                  IL7R,RPS3,RPS29,RPL3,RPL13,RPS6,...
+1:                    NKG7,CST7,GZMA,GNLY,CTSW,GZMM,...
+2:                 IL7R,RPS3,RPS29,RPL3,RPS4X,RPL14,...
 3:                    CCL5,IL32,GZMH,CD3D,LYAR,CD8A,...
-4:                 NPC2,CTSB,IRF8,UNC93B1,PLEK,TCF4,...
-5: HLA-DRA,HLA-DQB1,HLA-DRB5,HLA-DMA,HLA-DRB1,BASP1,...
+4:              FKBP11,RPL36AL,PPIB,SUB1,PEBP1,CYCS,...
+5: HLA-DRA,HLA-DMA,HLA-DQB1,HLA-DPA1,HLA-DRB1,BASP1,...
 6:                 FCER1G,AIF1,LST1,FTH1,COTL1,PSAP,...
-7:                S100A9,S100A8,LYZ,TYROBP,FCN1,TKT,...
+7:                S100A9,LYZ,S100A8,TYROBP,FCN1,TKT,...
 
 $`7`
       pathway         pval         padj         ES       NES nMoreExtreme size
-1:    NK cell 0.0002319109 0.0006957328  0.9845619  2.113823            0   49
-2: CD8 T cell 0.0048098946 0.0061841503  0.9021784  1.664902           20   18
-3:        cDC 0.0005337129 0.0009606832 -0.9182682 -1.651815            2   17
-4: CD4 T cell 0.0008767315 0.0013150973 -0.7915340 -1.672841            4   50
-5:     ncMono 0.0005272408 0.0009606832 -0.8127856 -1.712117            2   49
-6:      cMono 0.0001757469 0.0006957328 -0.8702759 -1.823002            0   47
-7:     B cell 0.0001757469 0.0006957328 -0.8859815 -1.855901            0   47
+1:    NK cell 0.0002094680 0.0006284039  0.9824783  2.071571            0   49
+2: CD8 T cell 0.0067825350 0.0087204021  0.8988735  1.609292           31   18
+3:        cDC 0.0047250047 0.0070875071 -0.8929504 -1.602425           24   17
+4: CD4 T cell 0.0032424185 0.0058363532 -0.7588271 -1.625977           16   50
+5:     ncMono 0.0017214996 0.0038733741 -0.7863629 -1.678737            8   49
+6:      cMono 0.0001913876 0.0006284039 -0.8767649 -1.855344            0   47
+7:     B cell 0.0001913876 0.0006284039 -0.8865935 -1.876143            0   47
                                                leadingEdge
-1:                     GNLY,NKG7,CTSW,FGFBP2,CST7,PRF1,...
-2:                   CCL5,GZMH,IL32,LYAR,CD2,LINC01871,...
-3: HLA-DRA,HLA-DRB1,HLA-DQB1,HLA-DPA1,HLA-DPB1,HLA-DMA,...
-4:               RPS28,TMEM123,RPL35A,RPS13,RPL9,RPS12,...
+1:                     GNLY,NKG7,FGFBP2,CST7,PRF1,CTSW,...
+2:                       CCL5,GZMH,IL32,LYAR,CD2,KLRG1,...
+3: HLA-DRA,HLA-DRB1,HLA-DQB1,HLA-DPA1,HLA-DMA,HLA-DPB1,...
+4:               TMEM123,RPS12,RPL35A,TPT1,RPS28,RPL22,...
 5:                    COTL1,FTH1,AIF1,LST1,SAT1,NAP1L1,...
-6:                     S100A9,S100A8,LYZ,FCN1,TKT,MNDA,...
-7:               CD37,CD52,MS4A1,BANK1,CD79B,TNFRSF13C,...
+6:                     S100A9,LYZ,S100A8,FCN1,TKT,MNDA,...
+7:                 CD37,MS4A1,RPL18A,RPS11,CD79B,BANK1,...
 
 $`8`
        pathway         pval         padj         ES       NES nMoreExtreme size
-1: Plasma cell 0.0497362472 0.0639466035  0.6759316  1.456101           65   24
-2:     NK cell 0.0014337708 0.0021506562 -0.7686920 -1.449205           12   49
-3:      ncMono 0.0014337708 0.0021506562 -0.7689308 -1.449655           12   49
-4:      B cell 0.0004431642 0.0013294926 -0.7964359 -1.495521            3   47
-5:         cDC 0.0006997901 0.0015745276 -0.8968690 -1.514856            5   17
-6:       cMono 0.0001107910 0.0004985597 -0.8330905 -1.564350            0   47
-7:  CD4 T cell 0.0001100837 0.0004985597 -0.9094132 -1.719188            0   50
+1:      ncMono 0.0738247627 0.1135042735 -0.6689888 -1.243096          668   49
+2: Plasma cell 0.0756695157 0.1135042735 -0.7297437 -1.260486          663   24
+3:         cDC 0.0041422161 0.0093199862 -0.8653714 -1.437918           35   17
+4:       cMono 0.0003317483 0.0009952449 -0.7868575 -1.455806            2   47
+5:      B cell 0.0003317483 0.0009952449 -0.7892015 -1.460143            2   47
+6:  CD4 T cell 0.0001101686 0.0009915170 -0.8906141 -1.659007            0   50
                                                leadingEdge
-1:               JCHAIN,MZB1,DAD1,DERL3,TNFRSF17,MYDGF,...
-2:                   ITGB2,NKG7,GNLY,MYO1F,IFITM1,JAK1,...
-3:           S100A4,S100A11,AIF1,IFITM2,CEBPB,SERPINA1,...
-4:                   CD52,RPS23,RPL13A,RPS11,RPL12,FAU,...
-5: HLA-DRA,HLA-DRB1,HLA-DPB1,HLA-DPA1,HLA-DQB1,HLA-DMA,...
-6:                   JUND,S100A6,TYROBP,NFKBIA,LYZ,FOS,...
-7:                 RPL34,EEF1A1,RPL13,RPS13,RPS3A,RPS6,...
+1:             S100A4,S100A11,AIF1,CEBPB,SERPINA1,SPI1,...
+2:               PPIB,RPL36AL,SUB1,ISG20,TRMT112,SPCS2,...
+3: HLA-DRB1,HLA-DRA,HLA-DPB1,HLA-DPA1,HLA-DQB1,HLA-DMA,...
+4:                  JUND,S100A6,NFKBIA,TYROBP,TKT,TSPO,...
+5:                  RPS23,RPL18A,CD52,RPL23A,RPL12,FAU,...
+6:                   RPL34,RPL32,RPS3,RPS6,RPS13,RPL36,...
 
 $`9`
-      pathway         pval        padj         ES       NES nMoreExtreme size
-1:     ncMono 0.0001131990 0.001018791  0.9741332  1.797890            0   49
-2:        cDC 0.0419888030 0.062983204  0.8400218  1.386229          314   17
-3: CD8 T cell 0.0004108463 0.001562500 -0.9139791 -1.881373            0   18
-4:    NK cell 0.0008561644 0.001562500 -0.7548756 -1.882005            0   49
-5:     B cell 0.0008244023 0.001562500 -0.7643028 -1.891838            0   47
-6: CD4 T cell 0.0008680556 0.001562500 -0.8712990 -2.177877            0   50
+       pathway         pval        padj         ES       NES nMoreExtreme size
+1:         cDC 0.0003123048 0.001229005  0.9601883  1.971905            0   17
+2:       cMono 0.0007296607 0.001641737  0.7653275  1.876180            1   47
+3: Plasma cell 0.0043449198 0.007820856  0.8131813  1.758333           12   24
+4:         pDC 0.0306457497 0.045968625  0.6162977  1.510837           83   47
+5:      ncMono 0.0511111111 0.065714286  0.5810041  1.430417          137   49
+6:  CD8 T cell 0.0804093567 0.090460526 -0.7124107 -1.357178          549   18
+7:  CD4 T cell 0.0004096682 0.001229005 -0.7439376 -1.645663            2   50
+8:      B cell 0.0001377221 0.001229005 -0.8947979 -1.959722            0   47
                                               leadingEdge
-1:               LST1,AIF1,COTL1,FCER1G,FCGR3A,IFITM3,...
-2: HLA-DPA1,HLA-DRA,HLA-DPB1,HLA-DRB1,HLA-DRB5,MTMR14,...
-3:                       CCL5,IL32,GZMH,CD3D,CD2,CD8A,...
-4:                     NKG7,GNLY,CST7,CTSW,GZMA,CD247,...
-5:       CXCR4,MS4A1,BANK1,TNFRSF13C,LINC00926,RPL13A,...
-6:                  RPL31,LDHB,RPS3,IL7R,RPS29,RPS27A,...</code></pre>
+1: HLA-DRA,HLA-DPA1,HLA-DRB5,HLA-DPB1,HLA-DRB1,FCER1A,...
+2:              LYZ,S100A9,TYROBP,S100A6,S100A8,AP1S2,...
+3:                 JCHAIN,PPIB,MZB1,MYDGF,SUB1,SEC11C,...
+4:              PPP1R14B,NPC2,PLD4,LILRB4,CD4,UNC93B1,...
+5:                AIF1,COTL1,S100A11,PSAP,LST1,FCER1G,...
+6:                       CCL5,CD3D,CD2,LYAR,CD8A,CD8B,...
+7:             PIK3IP1,RPL38,RPS27A,RPL31,RPS29,RPL21,...
+8:              CXCR4,MS4A1,CD37,TNFRSF13C,CD52,BANK1,...</code></pre>
 </div>
 </div>
-<p>Selecing top significant overlap per cluster, we can now rename the clusters according to the predicted labels. OBS! Be aware that if you have some clusters that have non-significant p-values for all the gene sets, the cluster label will not be very reliable. Also, the gene sets you are using may not cover all the celltypes you have in your dataset and hence predictions may just be the most similar celltype. Also, some of the clusters have very similar p-values to multiple celltypes, for instance the ncMono and cMono celltypes are equally good for some clusters.</p>
+<p>Selecting top significant overlap per cluster, we can now rename the clusters according to the predicted labels. OBS! Be aware that if you have some clusters that have non-significant p-values for all the gene sets, the cluster label will not be very reliable. Also, the gene sets you are using may not cover all the celltypes you have in your dataset and hence predictions may just be the most similar celltype. Also, some of the clusters have very similar p-values to multiple celltypes, for instance the ncMono and cMono celltypes are equally good for some clusters.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb42"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a>new.cluster.ids <span class="ot">&lt;-</span> <span class="fu">unlist</span>(<span class="fu">lapply</span>(res, <span class="cf">function</span>(x) {</span>
 <span id="cb42-2"><a href="#cb42-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">as.data.frame</span>(x)[<span class="dv">1</span>, <span class="dv">1</span>]</span>
@@ -854,7 +878,7 @@ $`9`
 </div>
 </div>
 </div>
-<p>Compare to results with the other celltype prediction methods in the ctrl_13 sample.</p>
+<p>Compare the results with the other celltype prediction methods in the <strong>ctrl_13</strong> sample.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb43"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a>ctrl.sce<span class="sc">@</span>colData<span class="sc">$</span>ref_gsea <span class="ot">&lt;-</span> alldata<span class="sc">@</span>colData<span class="sc">$</span>ref_gsea[alldata<span class="sc">@</span>colData<span class="sc">$</span>sample <span class="sc">==</span> <span class="st">"ctrl.13"</span>]</span>
 <span id="cb43-2"><a href="#cb43-2" aria-hidden="true" tabindex="-1"></a></span>
@@ -875,7 +899,7 @@ $`9`
 </section>
 <section id="meta-ct_gsea_annot" class="level3" data-number="7.2">
 <h3 data-number="7.2" class="anchored" data-anchor-id="meta-ct_gsea_annot"><span class="header-section-number">7.2</span> With annotated gene sets</h3>
-<p>We have dowloaded the celltype gene lists from http://bio-bigdata.hrbmu.edu.cn/CellMarker/CellMarker_download.html and converted the excel file to a csv for you. Read in the gene lists and do some filtering.</p>
+<p>We have downloaded the celltype gene lists from http://bio-bigdata.hrbmu.edu.cn/CellMarker/CellMarker_download.html and converted the excel file to a csv for you. Read in the gene lists and do some filtering.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb44"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a>path_file <span class="ot">&lt;-</span> <span class="fu">file.path</span>(<span class="st">"data/human_cell_markers.txt"</span>)</span>
 <span id="cb44-2"><a href="#cb44-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">file.exists</span>(path_file)) <span class="fu">download.file</span>(<span class="fu">file.path</span>(path_data, <span class="st">"human_cell_markers.txt"</span>), <span class="at">destfile =</span> path_file)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -932,93 +956,103 @@ $`9`
 <div class="cell-output cell-output-stdout">
 <pre><code>$`1`
                   pathway         pval       padj        ES      NES
-1:             Neutrophil 0.0001222195 0.01215255 0.9203456 1.876178
-2: CD1C+_B dendritic cell 0.0001292825 0.01215255 0.9243123 1.809278
-3:           Stromal cell 0.0011025358 0.04145535 0.8693509 1.626355
-   nMoreExtreme size                                  leadingEdge
-1:            0   80 S100A8,S100A9,S100A12,MNDA,NAMPT,S100A11,...
-2:            0   54      S100A8,S100A9,LYZ,S100A12,VCAN,FCN1,...
-3:            7   38          VIM,TIMP2,BST1,TIMP1,CD44,ANPEP,...
+1:             Neutrophil 0.0001458364 0.01452859 0.9105319 1.945951
+2: CD1C+_B dendritic cell 0.0001545595 0.01452859 0.9317595 1.899131
+3:            Acinar cell 0.0052131248 0.09800675 0.7939990 1.627970
+   nMoreExtreme size                               leadingEdge
+1:            0   82 S100A8,S100A9,S100A12,MNDA,NAMPT,CD14,...
+2:            0   54   S100A8,S100A9,LYZ,S100A12,VCAN,FCN1,...
+3:           33   57  LYZ,SOD2,SLC25A37,NFKBIA,MGST1,EFHD2,...
+
+$`10`
+            pathway         pval       padj        ES      NES nMoreExtreme
+1: Mesenchymal cell 0.0002183406 0.02052402 0.8361323 1.566008            1
+2:     Stromal cell 0.0011592859 0.05448644 0.8471072 1.521551            9
+3:    Hemangioblast 0.0001486326 0.02052402 0.9872013 1.489581            0
+   size                            leadingEdge
+1:   61    COTL1,S100A4,CTSC,HES4,ZEB2,VIM,...
+2:   38 PECAM1,TIMP1,VIM,PTPRC,TIMP2,ITGA4,...
+3:    8                            PECAM1,CDH5
 
 $`2`
                        pathway        pval       padj         ES       NES
-1:           Follicular B cell 0.008464329 0.06630391  0.8526465  1.600418
-2:              Pyramidal cell 0.004198321 0.04582724 -0.9744811 -1.516437
-3: CD4+CD25+ regulatory T cell 0.002199120 0.03445289 -0.9799105 -1.524886
-   nMoreExtreme size                         leadingEdge
-1:           41   22 MS4A1,CD69,CD22,FCER2,CD40,PAX5,...
-2:           20    6                           NRGN,CD3E
-3:           10    6            CD3E,CD3D,CD3G,PTPRC,CD4
+1:              Pyramidal cell 0.004498978 0.06090055 -0.9668365 -1.492233
+2: CD4+CD25+ regulatory T cell 0.001635992 0.03075665 -0.9777742 -1.509114
+3:      Lake et al.Science.Ex4 0.005772006 0.06782107 -0.9470712 -1.521210
+   nMoreExtreme size              leadingEdge
+1:           21    6                NRGN,CD3E
+2:            7    6 CD3E,CD3D,CD3G,PTPRC,CD4
+3:           27    8                    ANXA1
 
 $`3`
-                  pathway         pval       padj        ES      NES
-1:             Neutrophil 0.0001081315 0.01063709 0.8977016 1.749619
-2: CD1C+_B dendritic cell 0.0001131606 0.01063709 0.8981095 1.699327
-3:           Stromal cell 0.0003583801 0.02245849 0.8818002 1.619610
+                           pathway         pval        padj        ES      NES
+1:                      Neutrophil 0.0001012248 0.007139873 0.8862009 1.574768
+2:          CD1C+_B dendritic cell 0.0001031566 0.007139873 0.8961651 1.563606
+3: Monocyte derived dendritic cell 0.0001139341 0.007139873 0.9489847 1.531266
    nMoreExtreme size                                 leadingEdge
-1:            0   80 S100A9,S100A8,S100A11,LST1,CD14,S100A12,...
-2:            0   54        LYZ,S100A9,S100A8,FCN1,VCAN,CD14,...
-3:            2   38       VIM,CD44,TIMP2,TIMP1,ICAM1,PECAM1,...
+1:            0   82 S100A9,S100A8,CD14,S100A11,S100A12,LST1,...
+2:            0   54        S100A9,LYZ,S100A8,FCN1,VCAN,CD14,...
+3:            0   18      S100A9,S100A8,CST3,CD14,CD33,ITGAM,...
 
 $`4`
              pathway         pval        padj        ES      NES nMoreExtreme
-1: Naive CD8+ T cell 0.0002157497 0.006783575 0.8599144 2.048419            0
-2: Naive CD4+ T cell 0.0002164971 0.006783575 0.9296309 1.895090            0
-3:       CD4+ T cell 0.0002150538 0.006783575 0.9271953 1.799035            0
+1: Naive CD8+ T cell 0.0001870557 0.005749763 0.8691194 2.020377            0
+2: Naive CD4+ T cell 0.0002002403 0.005749763 0.9287257 1.859261            0
+3:       CD4+ T cell 0.0002016942 0.005749763 0.9338230 1.779499            0
    size                            leadingEdge
-1:   91 LDHB,PIK3IP1,NOSIP,TCF7,NPM1,RCAN3,...
-2:   34    IL7R,NOSIP,TCF7,EEF1B2,RPS5,MAL,...
+1:   91 LDHB,PIK3IP1,TCF7,NOSIP,NPM1,RCAN3,...
+2:   34    IL7R,TCF7,NOSIP,EEF1B2,RPS5,MAL,...
 3:   25        IL7R,LTB,CD3E,CD3D,CD3G,CD2,...
 
 $`5`
-              pathway        pval       padj         ES       NES nMoreExtreme
-1:  Follicular B cell 0.008289527 0.05993966  0.8517164  1.606149           40
-2: Myoepithelial cell 0.008235294 0.05993966 -0.9398262 -1.486394           41
-3:     Pyramidal cell 0.002341463 0.03160284 -0.9730353 -1.502327           11
-   size                         leadingEdge
-1:   22 MS4A1,CD69,CD22,CD40,FCER2,PAX5,...
-2:    7                  ITGB1,BHLHE40,CD44
-3:    6                           CD3E,NRGN
+                       pathway        pval       padj         ES       NES
+1:           Follicular B cell 0.009634290 0.07597494  0.8450580  1.585795
+2:              Pyramidal cell 0.002370605 0.03428259 -0.9754688 -1.514049
+3: CD4+CD25+ regulatory T cell 0.001580403 0.02701052 -0.9802456 -1.521463
+   nMoreExtreme size                         leadingEdge
+1:           48   22 MS4A1,CD69,CD22,CD40,FCER2,PAX5,...
+2:           11    6                           NRGN,CD3E
+3:            7    6            CD3E,CD3D,CD3G,CD4,PTPRC
 
 $`6`
                              pathway         pval        padj        ES
-1:             CD4+ cytotoxic T cell 0.0001825484 0.008283763 0.8850534
-2:               Natural killer cell 0.0001830831 0.008283763 0.8009472
-3: Effector CD8+ memory T (Tem) cell 0.0003665689 0.011485826 0.7818876
+1:             CD4+ cytotoxic T cell 0.0001597955 0.009931326 0.8795100
+2:               Natural killer cell 0.0001610047 0.009931326 0.7930681
+3: Effector CD8+ memory T (Tem) cell 0.0003232584 0.010128765 0.7774524
         NES nMoreExtreme size                           leadingEdge
-1: 2.020483            0   86     CCL5,NKG7,GNLY,GZMH,CST7,GZMA,...
-2: 1.824333            0   84     NKG7,GNLY,CD3D,CD3E,GZMA,CD3G,...
-3: 1.765723            1   79 GNLY,GZMH,ARL4C,GZMB,FGFBP2,KLRD1,...
+1: 1.978453            0   86     CCL5,NKG7,GZMH,CST7,GZMA,GNLY,...
+2: 1.777074            0   84     NKG7,CD3D,CD3E,GZMA,GNLY,CD3G,...
+3: 1.728095            1   79 GZMH,GNLY,ARL4C,GZMB,FGFBP2,KLRD1,...
 
 $`7`
                              pathway         pval       padj        ES      NES
-1:             CD4+ cytotoxic T cell 0.0002382087 0.01130895 0.9485749 2.191249
-2: Effector CD8+ memory T (Tem) cell 0.0002406160 0.01130895 0.8946982 2.041811
-3:               Natural killer cell 0.0002387205 0.01130895 0.8572499 1.974925
+1:             CD4+ cytotoxic T cell 0.0002098636 0.00990099 0.9455357 2.159477
+2: Effector CD8+ memory T (Tem) cell 0.0002106594 0.00990099 0.9041694 2.040912
+3:               Natural killer cell 0.0002095118 0.00990099 0.8466279 1.928046
    nMoreExtreme size                           leadingEdge
-1:            0   86   GNLY,NKG7,CCL5,GZMB,CTSW,FGFBP2,...
-2:            0   79 GNLY,GZMB,FGFBP2,KLRD1,SPON2,GZMH,...
-3:            0   84   GNLY,NKG7,GZMB,CD247,GZMA,KLRD1,...
+1:            0   86   GNLY,NKG7,GZMB,CCL5,FGFBP2,CST7,...
+2:            0   79 GNLY,GZMB,FGFBP2,GZMH,KLRD1,ARL4C,...
+3:            0   84   GNLY,NKG7,GZMB,GZMA,CD247,KLRD1,...
 
 $`8`
-               pathway        pval      padj         ES       NES nMoreExtreme
-1:       Megakaryocyte 0.008771930 0.1649123  0.8128385  1.763957           10
-2:          Eosinophil 0.007063238 0.1480465 -0.7453288 -1.396081           63
-3: Natural killer cell 0.003492433 0.1480465 -0.7084403 -1.396899           32
-   size                          leadingEdge
-1:   25  PPBP,PF4,GP9,ITGA2B,CD9,RASGRP2,...
-2:   47   CD52,PTPRC,CD48,CD44,CD53,CD69,...
-3:   84 PTPRC,NKG7,GNLY,CD69,CD81,FCGR3A,...
+         pathway        pval      padj         ES       NES nMoreExtreme size
+1: Megakaryocyte 0.002398082 0.1502798  0.8517566  1.823748            2   26
+2:      Platelet 0.007944389 0.2891863  0.6792239  1.631161            7   45
+3:   Interneuron 0.009229349 0.2891863 -0.8263059 -1.394163           79   19
+                           leadingEdge
+1: PPBP,PF4,GP9,ITGA2B,CD9,RASGRP2,...
+2: GP9,ITGA2B,CCL5,TGFB1,CD9,CD151,...
+3: VIM,CXCR4,LDHA,HMGB2,GNG5,FDFT1,...
 
 $`9`
-            pathway         pval       padj        ES      NES nMoreExtreme
-1: Mesenchymal cell 0.0001106929 0.02081027 0.8631721 1.606935            0
-2:     Stromal cell 0.0009342520 0.04648863 0.8552856 1.544942            7
-3:    Hemangioblast 0.0003017502 0.02836451 0.9907663 1.516461            1
-   size                           leadingEdge
-1:   58   COTL1,S100A4,CTSC,HES4,VIM,ZEB2,...
-2:   38 PECAM1,TIMP1,VIM,TIMP2,PTPRC,CD44,...
-3:    8                           PECAM1,CD34</code></pre>
+                           pathway         pval       padj         ES       NES
+1:          CD1C+_B dendritic cell 0.0003755163 0.03529854  0.8014596  2.019008
+2: Monocyte derived dendritic cell 0.0006180470 0.03873094  0.8964328  1.866963
+3:                  Pyramidal cell 0.0025502072 0.07990649 -0.9571122 -1.512474
+   nMoreExtreme size                               leadingEdge
+1:            0   54 LYZ,S100A9,FCER1A,S100A8,CLEC10A,FCN1,...
+2:            1   18   CST3,S100A9,FCER1A,S100A8,CD1C,CD33,...
+3:           15    6                                 NRGN,CD3E</code></pre>
 </div>
 </div>
 <p>#CT_GSEA8:</p>
@@ -1435,10 +1469,11 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
     <div class="nav-footer-center">
       &nbsp;
     </div>
-    <div class="nav-footer-right">Published with <a href="https://quarto.org/">Quarto</a> v1.3.450</div>
+    <div class="nav-footer-right">Published with <a href="https://quarto.org/">Quarto</a> v1.3.450
+</div>
   </div>
 </footer>
-<script>var lightboxQuarto = GLightbox({"loop":true,"closeEffect":"zoom","descPosition":"bottom","selector":".lightbox","openEffect":"zoom"});</script>
+<script>var lightboxQuarto = GLightbox({"selector":".lightbox","loop":true,"closeEffect":"zoom","openEffect":"zoom","descPosition":"bottom"});</script>
 
 
 

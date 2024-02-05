@@ -207,7 +207,7 @@ background-size: cover;
       <div>
       <div class="quarto-title-meta-heading">Published</div>
       <div class="quarto-title-meta-contents">
-        <p class="date">14-Jan-2024</p>
+        <p class="date">05-Feb-2024</p>
       </div>
     </div>
     
@@ -234,7 +234,8 @@ background-size: cover;
   <li><a href="#meta-clust_hier_dist" id="toc-meta-clust_hier_dist" class="nav-link" data-scroll-target="#meta-clust_hier_dist"><span class="header-section-number">3.1</span> Defining distance between cells</a></li>
   <li><a href="#meta-clust_hier_clust" id="toc-meta-clust_hier_clust" class="nav-link" data-scroll-target="#meta-clust_hier_clust"><span class="header-section-number">3.2</span> Clustering cells</a></li>
   </ul></li>
-  <li><a href="#meta-session" id="toc-meta-session" class="nav-link" data-scroll-target="#meta-session"><span class="header-section-number">4</span> Session info</a></li>
+  <li><a href="#meta-clust_distribution" id="toc-meta-clust_distribution" class="nav-link" data-scroll-target="#meta-clust_distribution"><span class="header-section-number">4</span> Distribution of clusters</a></li>
+  <li><a href="#meta-session" id="toc-meta-session" class="nav-link" data-scroll-target="#meta-session"><span class="header-section-number">5</span> Session info</a></li>
   </ul>
 </nav>
     </div>
@@ -258,7 +259,7 @@ Note
 <p>Code chunks run R commands unless otherwise specified.</p>
 </div>
 </div>
-<p>In this tutorial we will continue the analysis of the integrated dataset. We will use the integrated PCA to perform the clustering. First we will construct a <span class="math inline">\(k\)</span>-nearest neighbor graph in order to perform a clustering on the graph. We will also show how to perform hierarchical clustering and k-means clustering on PCA space.</p>
+<p>In this tutorial, we will continue the analysis of the integrated dataset. We will use the integrated PCA to perform the clustering. First, we will construct a <span class="math inline">\(k\)</span>-nearest neighbor graph in order to perform a clustering on the graph. We will also show how to perform hierarchical clustering and k-means clustering on PCA space.</p>
 <p>Let’s first load all necessary libraries and also the integrated dataset from the previous step.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">suppressPackageStartupMessages</span>({</span>
@@ -272,20 +273,27 @@ Note
 <span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>})</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>path_data <span class="ot">&lt;-</span> <span class="st">"https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"</span></span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>path_file <span class="ot">&lt;-</span> <span class="st">"data/covid/results/bioc_covid_qc_dr_int.rds"</span></span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">dir.exists</span>(<span class="fu">dirname</span>(path_file))) <span class="fu">dir.create</span>(<span class="fu">dirname</span>(path_file), <span class="at">recursive =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">file.exists</span>(path_file)) <span class="fu">download.file</span>(<span class="at">url =</span> <span class="fu">file.path</span>(path_data, <span class="st">"covid/results/bioc_covid_qc_dr_int.rds"</span>), <span class="at">destfile =</span> path_file)</span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>sce <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(path_file)</span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(<span class="fu">reducedDims</span>(sce))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># download pre-computed data if missing or long compute</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>fetch_data <span class="ot">&lt;-</span> <span class="cn">TRUE</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co"># url for source and intermediate data</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>path_data <span class="ot">&lt;-</span> <span class="st">"https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>path_file <span class="ot">&lt;-</span> <span class="st">"data/covid/results/bioc_covid_qc_dr_int.rds"</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">dir.exists</span>(<span class="fu">dirname</span>(path_file))) <span class="fu">dir.create</span>(<span class="fu">dirname</span>(path_file), <span class="at">recursive =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (fetch_data <span class="sc">&amp;&amp;</span> <span class="sc">!</span><span class="fu">file.exists</span>(path_file)) <span class="fu">download.file</span>(<span class="at">url =</span> <span class="fu">file.path</span>(path_data, <span class="st">"covid/results/bioc_covid_qc_dr_int.rds"</span>), <span class="at">destfile =</span> path_file)</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>sce <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(path_file)</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(<span class="fu">reducedDims</span>(sce))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>List of length 13
-names(13): PCA UMAP tSNE_on_PCA ... UMAP_on_MNN harmony UMAP_on_Harmony</code></pre>
+<pre><code>List of length 15
+names(15): PCA UMAP tSNE_on_PCA ... Scanorama_PCA UMAP_on_Scanorama</code></pre>
 </div>
 </div>
 <section id="meta-clust_graphclust" class="level2" data-number="1">
 <h2 data-number="1" class="anchored" data-anchor-id="meta-clust_graphclust"><span class="header-section-number">1</span> Graph clustering</h2>
-<p>The procedure of clustering on a Graph can be generalized as 3 main steps: 1) Build a kNN graph from the data. 2) Prune spurious connections from kNN graph (optional step). This is a SNN graph. 3) Find groups of cells that maximizes the connections within the group compared other groups.</p>
+<p>The procedure of clustering on a Graph can be generalized as 3 main steps:<br>
+- Build a kNN graph from the data.<br>
+- Prune spurious connections from kNN graph (optional step). This is a SNN graph.<br>
+- Find groups of cells that maximizes the connections within the group compared other groups.</p>
 <section id="meta-clust_graphclust_knn" class="level3" data-number="1.1">
 <h3 data-number="1.1" class="anchored" data-anchor-id="meta-clust_graphclust_knn"><span class="header-section-number">1.1</span> Building kNN / SNN graph</h3>
 <p>The first step into graph clustering is to construct a k-nn graph, in case you don’t have one. For this, we will use the PCA space. Thus, as done for dimensionality reduction, we will use ony the top <em>N</em> PCA dimensions for this purpose (the same used for computing UMAP / tSNE).</p>
@@ -298,7 +306,7 @@ names(13): PCA UMAP tSNE_on_PCA ... UMAP_on_MNN harmony UMAP_on_Harmony</code></
 <span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>g <span class="ot">&lt;-</span> <span class="fu">buildSNNGraph</span>(sce, <span class="at">k =</span> <span class="dv">30</span>, <span class="at">use.dimred =</span> <span class="st">"MNN"</span>)</span>
 <span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="fu">reducedDim</span>(sce, <span class="st">"SNN"</span>) <span class="ot">&lt;-</span> <span class="fu">as_adjacency_matrix</span>(g, <span class="at">attr =</span> <span class="st">"weight"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>We can take a look at the kNN and SNN graphs. The kNN graph is a matrix where every connection between cells is represented as <span class="math inline">\(1\)</span>s. This is called a <strong>unweighted</strong> graph (default in Seurat). In the SNN graph on the other hand, Some cell connections have more importance than others, in that case the scale of the graph from <span class="math inline">\(0\)</span> to a maximum distance (in this case <span class="math inline">\(1\)</span>). Usually, the smaller the distance, the closer two points are, and stronger is their connection. This is called a <strong>weighted</strong> graph. Both weighted and unweighted graphs are suitable for clustering, but clustering on unweighted graphs is faster for large datasets (&gt; 100k cells).</p>
+<p>We can take a look at the kNN and SNN graphs. The kNN graph is a matrix where every connection between cells is represented as <span class="math inline">\(1\)</span>s. This is called a <strong>unweighted</strong> graph (default in Seurat). In the SNN graph on the other hand, some cell connections have more importance than others, and the graph scales from <span class="math inline">\(0\)</span> to a maximum distance (in this case <span class="math inline">\(1\)</span>). Usually, the smaller the distance, the closer two points are, and stronger is their connection. This is called a <strong>weighted</strong> graph. Both weighted and unweighted graphs are suitable for clustering, but clustering on unweighted graphs is faster for large datasets (&gt; 100k cells).</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># plot the KNN graph</span></span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="fu">pheatmap</span>(<span class="fu">reducedDim</span>(sce, <span class="st">"KNN"</span>)[<span class="dv">1</span><span class="sc">:</span><span class="dv">200</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">200</span>],</span>
@@ -374,7 +382,7 @@ names(13): PCA UMAP tSNE_on_PCA ... UMAP_on_MNN harmony UMAP_on_Harmony</code></
 </section>
 <section id="meta-clust_kmean" class="level2" data-number="2">
 <h2 data-number="2" class="anchored" data-anchor-id="meta-clust_kmean"><span class="header-section-number">2</span> K-means clustering</h2>
-<p>K-means is a generic clustering algorithm that has been used in many application areas. In R, it can be applied via the kmeans function. Typically, it is applied to a reduced dimension representation of the expression data (most often PCA, because of the interpretability of the low-dimensional distances). We need to define the number of clusters in advance. Since the results depend on the initialization of the cluster centers, it is typically recommended to run K-means with multiple starting configurations (via the nstart argument).</p>
+<p>K-means is a generic clustering algorithm that has been used in many application areas. In R, it can be applied via the <code>kmeans()</code> function. Typically, it is applied to a reduced dimension representation of the expression data (most often PCA, because of the interpretability of the low-dimensional distances). We need to define the number of clusters in advance. Since the results depend on the initialization of the cluster centers, it is typically recommended to run K-means with multiple starting configurations (via the <code>nstart</code> argument).</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>sce<span class="sc">$</span>kmeans_5 <span class="ot">&lt;-</span> <span class="fu">factor</span>(<span class="fu">kmeans</span>(<span class="at">x =</span> <span class="fu">reducedDim</span>(sce, <span class="st">"MNN"</span>), <span class="at">centers =</span> <span class="dv">5</span>)<span class="sc">$</span>cluster)</span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>sce<span class="sc">$</span>kmeans_10 <span class="ot">&lt;-</span> <span class="fu">factor</span>(<span class="fu">kmeans</span>(<span class="at">x =</span> <span class="fu">reducedDim</span>(sce, <span class="st">"MNN"</span>), <span class="at">centers =</span> <span class="dv">10</span>)<span class="sc">$</span>cluster)</span>
@@ -418,8 +426,8 @@ names(13): PCA UMAP tSNE_on_PCA ... UMAP_on_MNN harmony UMAP_on_Harmony</code></
 </div>
 <p>As you might have realized, correlation is not a method implemented in the <code>dist()</code> function. However, we can create our own distances and transform them to a distance object. We can first compute sample correlations using the <code>cor</code> function.<br>
 As you already know, correlation range from -1 to 1, where 1 indicates that two samples are closest, -1 indicates that two samples are the furthest and 0 is somewhat in between. This, however, creates a problem in defining distances because a distance of 0 indicates that two samples are closest, 1 indicates that two samples are the furthest and distance of -1 is not meaningful. We thus need to transform the correlations to a positive scale (a.k.a. <strong>adjacency</strong>):<br>
-[adj = ]<br>
-Once we transformed the correlations to a 0-1 scale, we can simply convert it to a distance object using <code>as.dist</code> function. The transformation does not need to have a maximum of 1, but it is more intuitive to have it at 1, rather than at any other number.</p>
+<span class="math display">\[adj = \frac{1- cor}{2}\]</span><br>
+Once we transformed the correlations to a 0-1 scale, we can simply convert it to a distance object using <code>as.dist()</code> function. The transformation does not need to have a maximum of 1, but it is more intuitive to have it at 1, rather than at any other number.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Compute sample correlations</span></span>
 <span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>sample_cor <span class="ot">&lt;-</span> <span class="fu">cor</span>(Matrix<span class="sc">::</span><span class="fu">t</span>(<span class="fu">reducedDim</span>(sce, <span class="st">"MNN"</span>)))</span>
@@ -433,7 +441,7 @@ Once we transformed the correlations to a 0-1 scale, we can simply convert it to
 </section>
 <section id="meta-clust_hier_clust" class="level3" data-number="3.2">
 <h3 data-number="3.2" class="anchored" data-anchor-id="meta-clust_hier_clust"><span class="header-section-number">3.2</span> Clustering cells</h3>
-<p>After having calculated the distances between samples calculated, we can now proceed with the hierarchical clustering per-se. We will use the function <code>hclust</code> for this purpose, in which we can simply run it with the distance objects created above. The methods available are: ‘ward.D’, ‘ward.D2’, ‘single’, ‘complete’, ‘average’, ‘mcquitty’, ‘median’ or ‘centroid’. It is possible to plot the dendrogram for all cells, but this is very time consuming and we will omit for this tutorial.</p>
+<p>After having calculated the distances between samples, we can now proceed with the hierarchical clustering per-se. We will use the function <code>hclust()</code> for this purpose, in which we can simply run it with the distance objects created above. The methods available are: ‘ward.D’, ‘ward.D2’, ‘single’, ‘complete’, ‘average’, ‘mcquitty’, ‘median’ or ‘centroid’. It is possible to plot the dendrogram for all cells, but this is very time consuming and we will omit for this tutorial.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co"># euclidean</span></span>
 <span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>h_euclidean <span class="ot">&lt;-</span> <span class="fu">hclust</span>(d, <span class="at">method =</span> <span class="st">"ward.D2"</span>)</span>
@@ -480,6 +488,39 @@ Once we transformed the correlations to a 0-1 scale, we can simply convert it to
 <div class="cell">
 <div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(sce, <span class="st">"data/covid/results/bioc_covid_qc_dr_int_cl.rds"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
+</section>
+</section>
+<section id="meta-clust_distribution" class="level2" data-number="4">
+<h2 data-number="4" class="anchored" data-anchor-id="meta-clust_distribution"><span class="header-section-number">4</span> Distribution of clusters</h2>
+<p>Now, we can select one of our clustering methods and compare the proportion of samples across the clusters.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>p1 <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(<span class="fu">as.data.frame</span>(<span class="fu">colData</span>(sce)), <span class="fu">aes</span>(<span class="at">x =</span> louvain_SNNk10, <span class="at">fill =</span> sample)) <span class="sc">+</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_bar</span>(<span class="at">position =</span> <span class="st">"fill"</span>)</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>p2 <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(<span class="fu">as.data.frame</span>(<span class="fu">colData</span>(sce)), <span class="fu">aes</span>(<span class="at">x =</span> louvain_SNNk10, <span class="at">fill =</span> type)) <span class="sc">+</span></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_bar</span>(<span class="at">position =</span> <span class="st">"fill"</span>)</span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>p1 <span class="sc">+</span> p2</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-left">
+<figure class="figure">
+<p><a href="bioc_04_clustering_files/figure-html/unnamed-chunk-14-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-9"><img src="bioc_04_clustering_files/figure-html/unnamed-chunk-14-1.png" class="img-fluid figure-img" width="864"></a></p>
+</figure>
+</div>
+</div>
+</div>
+<p>In this case we have quite good representation of each sample in each cluster. But there are clearly some biases with more cells from one sample in some clusters and also more covid cells in some of the clusters.</p>
+<p>We can also plot it in the other direction, the proportion of each cluster per sample.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(<span class="fu">as.data.frame</span>(<span class="fu">colData</span>(sce)), <span class="fu">aes</span>(<span class="at">x =</span> sample, <span class="at">fill =</span> louvain_SNNk10)) <span class="sc">+</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_bar</span>(<span class="at">position =</span> <span class="st">"fill"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-left">
+<figure class="figure">
+<p><a href="bioc_04_clustering_files/figure-html/unnamed-chunk-15-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-10"><img src="bioc_04_clustering_files/figure-html/unnamed-chunk-15-1.png" class="img-fluid figure-img" width="672"></a></p>
+</figure>
+</div>
+</div>
+</div>
 <div class="callout callout-style-default callout-note callout-titled" title="Discuss">
 <div class="callout-header d-flex align-content-center">
 <div class="callout-icon-container">
@@ -490,19 +531,18 @@ Discuss
 </div>
 </div>
 <div class="callout-body-container callout-body">
-<p>By now you should know how to plot different features onto your data. Take the QC metrics that were calculated in the first exercise, that should be stored in your data object, and plot it as violin plots per cluster using the clustering method of your choice. For example, plot number of UMIS, detected genes, percent mitochondrial reads. Then, check carefully if there is any bias in how your data is separated due to quality metrics. Could it be explained biologically, or could you have technical bias there?</p>
+<p>By now you should know how to plot different features onto your data. Take the QC metrics that were calculated in the first exercise, that should be stored in your data object, and plot it as violin plots per cluster using the clustering method of your choice. For example, plot number of UMIS, detected genes, percent mitochondrial reads. Then, check carefully if there is any bias in how your data is separated by quality metrics. Could it be explained biologically, or could there be a technical bias there?</p>
 </div>
 </div>
 </section>
-</section>
-<section id="meta-session" class="level2" data-number="4">
-<h2 data-number="4" class="anchored" data-anchor-id="meta-session"><span class="header-section-number">4</span> Session info</h2>
+<section id="meta-session" class="level2" data-number="5">
+<h2 data-number="5" class="anchored" data-anchor-id="meta-session"><span class="header-section-number">5</span> Session info</h2>
 <details>
 <summary>
 Click here
 </summary>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>R version 4.3.0 (2023-04-21)
 Platform: x86_64-pc-linux-gnu (64-bit)
@@ -832,10 +872,11 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
     <div class="nav-footer-center">
       &nbsp;
     </div>
-    <div class="nav-footer-right">Published with <a href="https://quarto.org/">Quarto</a> v1.3.450</div>
+    <div class="nav-footer-right">Published with <a href="https://quarto.org/">Quarto</a> v1.3.450
+</div>
   </div>
 </footer>
-<script>var lightboxQuarto = GLightbox({"openEffect":"zoom","descPosition":"bottom","loop":true,"closeEffect":"zoom","selector":".lightbox"});</script>
+<script>var lightboxQuarto = GLightbox({"loop":true,"descPosition":"bottom","closeEffect":"zoom","openEffect":"zoom","selector":".lightbox"});</script>
 
 
 
