@@ -34,7 +34,7 @@ suppressPackageStartupMessages({
 
 ``` {r}
 # download pre-computed data if missing or long compute
-fetch_data <- FALSE
+fetch_data <- TRUE
 
 # url for source and intermediate data
 path_data <- "https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"
@@ -46,7 +46,7 @@ alldata <- readRDS(path_file)
 
 ## Feature selection
 
-Next, we first need to define which features/genes are important in our
+We first need to define which features/genes are important in our
 dataset to distinguish cell types. For this purpose, we need to find
 genes that are highly variable across cells, which in turn will also
 provide a good separation of the cell clusters.
@@ -60,22 +60,22 @@ LabelPoints(plot = VariableFeaturePlot(alldata), points = top20, repel = TRUE)
 
 ## Z-score transformation
 
-Now that the data is prepared, we now proceed with PCA. Since each gene
-has a different expression level, it means that genes with higher
-expression values will naturally have higher variation that will be
-captured by PCA. This means that we need to somehow give each gene a
+Now that the genes have been selected, we now proceed with PCA. Since
+each gene has a different expression level, it means that genes with
+higher expression values will naturally have higher variation that will
+be captured by PCA. This means that we need to somehow give each gene a
 similar weight when performing PCA (see below). The common practice is
 to center and scale each gene before performing PCA. This exact scaling
-is called Z-score normalization it is very useful for PCA, clustering
-and plotting heatmaps. Additionally, we can use regression to remove any
+called Z-score normalization is very useful for PCA, clustering and
+plotting heatmaps. Additionally, we can use regression to remove any
 unwanted sources of variation from the dataset, such as `cell cycle`,
-`sequencing depth`, `percent mitochondria`. This is achieved by doing a
-generalized linear regression using these parameters as co-variates in
-the model. Then the residuals of the model are taken as the *regressed
-data*. Although perhaps not in the best way, batch effect regression can
-also be done here. By default variables are scaled in the PCA step and
-is not done separately. But it could be achieved by running the commands
-below:
+`sequencing depth`, `percent mitochondria` etc. This is achieved by
+doing a generalized linear regression using these parameters as
+co-variates in the model. Then the residuals of the model are taken as
+the *regressed data*. Although perhaps not in the best way, batch effect
+regression can also be done here. By default, variables are scaled in
+the PCA step and is not done separately. But it could be achieved by
+running the commands below:
 
 ``` {r}
 alldata <- ScaleData(alldata, vars.to.regress = c("percent_mito", "nFeature_RNA"), assay = "RNA")
@@ -84,10 +84,10 @@ alldata <- ScaleData(alldata, vars.to.regress = c("percent_mito", "nFeature_RNA"
 ## PCA
 
 Performing PCA has many useful applications and interpretations, which
-much depends on the data used. In the case of life sciences, we want to
-segregate samples based on gene expression patterns in the data.
+much depends on the data used. In the case of single-cell data, we want
+to segregate samples based on gene expression patterns in the data.
 
-To run PCA you can use the function `RunPCA()`.
+To run PCA, you can use the function `RunPCA()`.
 
 ``` {r}
 alldata <- RunPCA(alldata, npcs = 50, verbose = F)
@@ -135,7 +135,7 @@ about rare cell types (such as platelets and DCs in this dataset)
 
 ## tSNE
 
-We can now run [BH-tSNE](https://arxiv.org/abs/1301.3342).
+We will now run [BH-tSNE](https://arxiv.org/abs/1301.3342).
 
 ``` {r}
 alldata <- RunTSNE(
@@ -150,11 +150,11 @@ alldata <- RunTSNE(
 # see ?Rtsne and ?RunTSNE for more info
 ```
 
-We can now plot the tSNE colored per dataset. We can clearly see the
+We plot the tSNE scatterplot colored by dataset. We can clearly see the
 effect of batches present in the dataset.
 
 ``` {r}
-#| fig-height: 4.5
+#| fig-height: 5
 #| fig-width: 6
 
 DimPlot(alldata, reduction = "tsne", group.by = "orig.ident")
@@ -180,15 +180,15 @@ alldata <- RunUMAP(
 # see ?RunUMAP for more info
 ```
 
-Another usefullness of UMAP is that it is not limitted by the number of
-dimensions the data cen be reduced into (unlike tSNE). We can simply
-reduce the dimentions altering the `n.components` parameter. So here we
-will create an UMAP with 10 dimensions.
+A feature of UMAP is that it is not limited by the number of dimensions
+the data cen be reduced into (unlike tSNE). We can simply reduce the
+dimentions altering the `n.components` parameter. So here we will create
+a UMAP with 10 dimensions.
 
-In Seurat we can add in additional reductions, by default they are named
-"pca", "umap", "tsne" etc. depending on the function you run. Here we
-will specify an alternative name for the umap with the `reduction.name`
-parameter.
+In Seurat, we can add in additional reductions, by default they are
+named "pca", "umap", "tsne" etc. depending on the function you run. Here
+we will specify an alternative name for the umap with the
+`reduction.name` parameter.
 
 ``` {r}
 alldata <- RunUMAP(
@@ -222,7 +222,7 @@ wrap_plots(
 ```
 
 We can now plot PCA, UMAP and tSNE side by side for comparison. Have a
-look at the UMAP and tSNE, what similarities/differences do you see, can
+look at the UMAP and tSNE. What similarities/differences do you see? Can
 you explain the differences based on what you learned during the
 lecture? Also, we can conclude from the dimensionality reductions that
 our dataset contains a batch effect that needs to be corrected before
@@ -258,7 +258,7 @@ PCA would be a standard approach (because it allows higher computation
 efficiency), the options are actually limitless. Below we will show a
 couple of other common options such as running directly on the scaled
 data (z-scores) (which was used for PCA) or on a graph built from scaled
-data. We will show from now on only UMAP, but the same applies for tSNE.
+data. We will only work with UMAPs, but the same applies for tSNE.
 
 ### UMAP from z-scores
 
@@ -321,7 +321,7 @@ We can now plot the UMAP comparing both on PCA vs ScaledSata vs Graph.
 p1 <- DimPlot(alldata, reduction = "umap", group.by = "orig.ident") + ggplot2::ggtitle(label = "UMAP_on_PCA")
 p2 <- DimPlot(alldata, reduction = "UMAP_on_ScaleData", group.by = "orig.ident") + ggplot2::ggtitle(label = "UMAP_on_ScaleData")
 p3 <- DimPlot(alldata, reduction = "UMAP_on_Graph", group.by = "orig.ident") + ggplot2::ggtitle(label = "UMAP_on_Graph")
-wrap_plots(p1, p2, p3, nrow = 3) + plot_layout(guides = "collect")
+wrap_plots(p1, p2, p3, ncol = 3) + plot_layout(guides = "collect")
 ```
 
 ## Genes of interest
