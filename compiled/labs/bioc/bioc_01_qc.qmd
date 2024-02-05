@@ -139,9 +139,9 @@ head(sce@colData, 10)
 Having the data in a suitable format, we can start calculating some
 quality metrics. We can for example calculate the percentage of
 mitochondrial and ribosomal genes per cell and add to the metadata. The
-proportion hemoglobin genes can give an indication of red blood cell
+proportion of hemoglobin genes can give an indication of red blood cell
 contamination. This will be helpful to visualize them across different
-metadata parameteres (i.e. datasetID and chemistry version). There are
+metadata parameters (i.e. datasetID and chemistry version). There are
 several ways of doing this. The QC metrics are finally added to the
 metadata table.
 
@@ -201,10 +201,10 @@ wrap_plots(
 ) + plot_layout(guides = "collect")
 ```
 
-As you can see, there is quite some difference in quality for the 4
-datasets, with for instance the covid_15 and covid_16 samples having
-fewer cells with many detected genes and more mitochondrial content. As
-the ribosomal proteins are highly expressed they will make up a larger
+As you can see, there is quite some difference in quality for these
+samples, with for instance the covid_15 and covid_16 samples having
+cells with fewer detected genes and more mitochondrial content. As the
+ribosomal proteins are highly expressed they will make up a larger
 proportion of the transcriptional landscape when fewer of the lowly
 expressed genes are detected. We can also plot the different QC-measures
 as scatter plots.
@@ -228,8 +228,8 @@ plotColData(sce, x = "total", y = "detected", colour_by = "sample")
 
 ### Detection-based filtering
 
-A standard approach is to filter cells with low amount of reads as well
-as genes that are present in at least a certain amount of cells. Here we
+A standard approach is to filter cells with low number of reads as well
+as genes that are present in at least a given number of cells. Here we
 will only consider cells with at least 200 detected genes and genes need
 to be expressed in at least 3 cells. Please note that those values are
 highly dependent on the library preparation method used.
@@ -300,7 +300,7 @@ important for quality control and downstream filtering.
 ### Mito/Ribo filtering
 
 We also have quite a lot of cells with high proportion of mitochondrial
-and low proportion of ribosomal reads. It could be wise to remove those
+and low proportion of ribosomal reads. It would be wise to remove those
 cells, if we have enough cells left after filtering. Another option
 would be to either remove all mitochondrial reads from the dataset and
 hope that the remaining genes still have enough biological signal. A
@@ -330,7 +330,7 @@ content, according to their function.
 
 ### Plot filtered QC
 
-Lets plot the same QC-stats another time.
+Lets plot the same QC-stats once more.
 
 ``` {r}
 #| fig-height: 6
@@ -374,21 +374,21 @@ dim(sce.filt)
 ## Sample sex
 
 When working with human or animal samples, you should ideally constrain
-you experiments to a single sex to avoid including sex bias in the
+your experiments to a single sex to avoid including sex bias in the
 conclusions. However this may not always be possible. By looking at
 reads from chromosomeY (males) and XIST (X-inactive specific transcript)
 expression (mainly female) it is quite easy to determine per sample
-which sex it is. It can also bee a good way to detect if there has been
-any sample mixups, if the sample metadata sex does not agree with the
-computational predictions.
+which sex it is. It can also be a good way to detect if there has been
+any mislabelling in which case, the sample metadata sex does not agree
+with the computational predictions.
 
 To get chromosome information for all genes, you should ideally parse
 the information from the gtf file that you used in the mapping pipeline
 as it has the exact same annotation version/gene naming. However, it may
 not always be available, as in this case where we have downloaded public
 data. R package biomaRt can be used to fetch annotation information. The
-code to run biomaRt is provided. As the biomart instances quite often
-are unresponsive, we will download and use a file that was created in
+code to run biomaRt is provided. As the biomart instances are quite
+often unresponsive, we will download and use a file that was created in
 advance.
 
 <div>
@@ -434,8 +434,8 @@ genes.table <- read.csv(genes_file)
 genes.table <- genes.table[genes.table$external_gene_name %in% rownames(sce.filt), ]
 ```
 
-Now that we have the chromosome information, we can calculate per cell
-the proportion of reads that comes from chromosome Y.
+Now that we have the chromosome information, we can calculate the
+proportion of reads that comes from chromosome Y per cell.
 
 ``` {r}
 chrY.gene <- genes.table$external_gene_name[genes.table$chromosome_name == "Y"]
@@ -485,9 +485,9 @@ We here perform cell cycle scoring. To score a gene list, the algorithm
 calculates the difference of mean expression of the given list and the
 mean expression of reference genes. To build the reference, the function
 randomly chooses a bunch of genes matching the distribution of the
-expression of the given list. Cell cycle scoring adds three slots in
-data, a score for S phase, a score for G2M phase and the predicted cell
-cycle phase.
+expression of the given list. Cell cycle scoring adds three slots in the
+metadata, a score for S phase, a score for G2M phase and the predicted
+cell cycle phase.
 
 ``` {r}
 hs.pairs <- readRDS(system.file("exdata", "human_cycle_markers.rds", package = "scran"))
@@ -512,7 +512,7 @@ sce.filt$S.score <- assignments$scores$S
 sce.filt$phase <- assignments$phases
 ```
 
-We can now plot a violin plot for the cell cycle scores as well.
+We can now create a violin plot for the cell cycle scores as well.
 
 ``` {r}
 #| fig-height: 4
@@ -558,10 +558,10 @@ and should have a doublet rate at about 4%.
 > **Caution**
 >
 > Ideally doublet prediction should be run on each sample separately,
-> especially if your different samples have different proportions of
-> cell types. In this case, the data is subsampled so we have very few
-> cells per sample and all samples are sorted PBMCs so it is okay to run
-> them together.
+> especially if your samples have different proportions of cell types.
+> In this case, the data is subsampled so we have very few cells per
+> sample and all samples are sorted PBMCs, so it is okay to run them
+> together.
 
 </div>
 
@@ -611,8 +611,8 @@ dim(sce.filt)
 ## Save data
 
 Finally, lets save the QC-filtered data for further analysis. Create
-output directory `results` and save data to that folder. This will be
-used in downstream labs.
+output directory `data/covid/results` and save data to that folder. This
+will be used in downstream labs.
 
 ``` {r}
 saveRDS(sce.filt, file.path(path_results, "bioc_covid_qc.rds"))
