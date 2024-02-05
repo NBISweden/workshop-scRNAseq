@@ -582,37 +582,19 @@ sc_adata = sc_adata[:, deg].copy()
 RNAStereoscope.setup_anndata(sc_adata, layer="counts", labels_key="subclass")
 ```
 
-::: {.callout-caution}
-
-This is a slow compute intensive step, we will not run this now and instead use a pre-computed file in the step below.
-
 ```{python}
-# the model is saved to a file, so if is slow to run, you can simply reload it from disk
-if not fetch_data:
+
+# the model is saved to a file, so if is slow to run, you can simply reload it from disk by setting train = False
+
+train = True
+if train:
     sc_model = RNAStereoscope(sc_adata)
     sc_model.train(max_epochs=300)
     sc_model.history["elbo_train"][10:].plot()
-    sc_model.save("./data/spatial/visium/scmodel", overwrite=True)
-```
-
-:::
-
-Download precomputed data.
-
-```{python}
-path_folder = "data/spatial/visium/scmodel"
-if fetch_data and not os.path.exists(path_folder):
-    import shutil
-    folder_url = os.path.join(
-        path_data, "spatial/visium/results/scmodel")
-    shutil.copytree(folder_url, path_folder)
-```
-
-Read data
-
-```{python}
-sc_model = RNAStereoscope.load(path_folder, sc_adata)
-print("Loaded RNA model from file!")
+    sc_model.save("./data/spatial/visium/scanpy_scmodel", overwrite=True)
+else:
+    sc_model = RNAStereoscope.load("./data/spatial/visium/scanpy_scmodel", sc_adata)
+    print("Loaded RNA model from file!")
 ```
 
 ### Predict proportions on the spatial data
@@ -631,14 +613,14 @@ SpatialStereoscope.setup_anndata(st_adata, layer="counts")
 
 ```{python}
 
-train=True
+train = True
 if train:
     spatial_model = SpatialStereoscope.from_rna_model(st_adata, sc_model)
     spatial_model.train(max_epochs = 3000)
     spatial_model.history["elbo_train"][10:].plot()
-    spatial_model.save("./data/spatial/stmodel", overwrite = True)
+    spatial_model.save("./data/spatial/visium/scanpy_stmodel", overwrite = True)
 else:
-    spatial_model = SpatialStereoscope.load("./data/spatial/stmodel", st_adata)
+    spatial_model = SpatialStereoscope.load("./data/spatial/visium/scanpy_stmodel", st_adata)
     print("Loaded Spatial model from file!")
 ```
 
