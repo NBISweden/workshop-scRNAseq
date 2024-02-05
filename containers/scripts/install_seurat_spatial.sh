@@ -64,7 +64,7 @@ installGithub.r --update FALSE \
     https://github.com/satijalab/seurat-data/tree/d6a8ce61ccb21a3b204f194d07009772c822791d
 
 ## Get brain data
-Rscript -e 'if (!("stxBrain.SeuratData" %in% rownames(SeuratData::InstalledData()))) InstallData("stxBrain")'
+Rscript -e 'if (!("stxBrain.SeuratData" %in% rownames(SeuratData::InstalledData()))) SeuratData::InstallData("stxBrain")'
 
 #wget seurat.nygenome.org/src/contrib/stxBrain.SeuratData_0.1.1.tar.gz \
 #    && R CMD INSTALL stxBrain.SeuratData_0.1.1.tar.gz \
