@@ -1,5 +1,6 @@
 ---
 description: Identify genes that are significantly over or
+  under-expressed between conditions in specific cell populations.
 subtitle:  Bioconductor Toolkit
 title:  Differential gene expression
 ---
@@ -12,12 +13,12 @@ title:  Differential gene expression
 
 </div>
 
-In this tutorial we will cover about Differetial gene expression, which
+In this tutorial we will cover differential gene expression, which
 comprises an extensive range of topics and methods. In single cell,
-differential expresison can have multiple functionalities such as of
-identifying marker genes for cell populations, as well as differentially
-regulated genes across conditions (healthy vs control). We will also
-exercise on how to account the batch information in your test.
+differential expresison can have multiple functionalities such as
+identifying marker genes for cell populations, as well as identifying
+differentially regulated genes across conditions (healthy vs control).
+We will also cover controlling batch effect in your test.
 
 We can first load the data from the clustering session. Moreover, we can
 already decide which clustering resolution to use. First let's define
@@ -38,10 +39,14 @@ suppressPackageStartupMessages({
 ```
 
 ``` {r}
+# download pre-computed data if missing or long compute
+fetch_data <- FALSE
+
+# url for source and intermediate data
 path_data <- "https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"
 path_file <- "data/covid/results/bioc_covid_qc_dr_int_cl.rds"
 if (!dir.exists(dirname(path_file))) dir.create(dirname(path_file), recursive = TRUE)
-if (!file.exists(path_file)) download.file(url = file.path(path_data, "covid/results/bioc_covid_qc_dr_int_cl.rds"), destfile = path_file)
+if (fetch_data && !file.exists(path_file)) download.file(url = file.path(path_data, "covid/results/bioc_covid_qc_dr_int_cl.rds"), destfile = path_file)
 sce <- readRDS(path_file)
 print(reducedDims(sce))
 ```
@@ -51,8 +56,8 @@ print(reducedDims(sce))
 Let us first compute a ranking for the highly differential genes in each
 cluster. There are many different tests and parameters to be chosen that
 can be used to refine your results. When looking for marker genes, we
-want genes that are positivelly expressed in a cell type and possibly
-not expressed in the others.
+want genes that are positively expressed in a cell type and possibly not
+expressed in others.
 
 ``` {r}
 # Compute differentiall expression
@@ -71,7 +76,7 @@ markers_genes
 markers_genes[["1"]]
 ```
 
-We can now select the top 25 up regulated genes for plotting.
+We can now select the top 25 overexpressed genes for plotting.
 
 ``` {r}
 # Colect the top 25 genes for each cluster and put the into a single table
@@ -136,7 +141,7 @@ case we have libraries comming from patients and controls and we would
 like to know which genes are influenced the most in a particular cell
 type. For this end, we will first subset our data for the desired cell
 cluster, then change the cell identities to the variable of comparison
-(which now in our case is the "type", e.g. Covid/Ctrl).
+(which now in our case is the **type**, e.g. Covid/Ctrl).
 
 ``` {r}
 #| fig-height: 5
@@ -270,7 +275,7 @@ gmt <- lapply(unique(msigdbgmt_subset$gs_name), function(x) {
 names(gmt) <- unique(paste0(msigdbgmt_subset$gs_name, "_", msigdbgmt_subset$gs_exact_source))
 ```
 
-Next, we will be using the GSEA. This will result in a table containing
+Next, we will run GSEA. This will result in a table containing
 information for several pathways. We can then sort and filter those
 pathways to visualize only the top ones. You can select/filter them by
 either `p-value` or normalized enrichment score (`NES`).
@@ -296,15 +301,14 @@ plotGseaTable(gmt[top10_UP], gene_rank, fgseaRes, gseaParam = 0.5)
 
 > **Discuss**
 >
-> Which KEGG pathways are upregulated in this cluster?Which KEGG
-> pathways are dowregulated in this cluster?\
-> Change the pathway source to another gene set (e.g. "CP:WIKIPATHWAYS"
-> or "CP:REACTOME" or "CP:BIOCARTA" or "GO:BP") and check the if you get
-> similar results?
+> Which KEGG pathways are upregulated in this cluster? Which KEGG
+> pathways are dowregulated in this cluster? Change the pathway source
+> to another gene set (e.g. CP:WIKIPATHWAYS or CP:REACTOME or
+> CP:BIOCARTA or GO:BP) and check the if you get similar results?
 
 </div>
 
-Finally, lets save the integrated data for further analysis.
+Finally, let's save the integrated data for further analysis.
 
 ``` {r}
 saveRDS(sce, "data/covid/results/bioc_covid_qc_dr_int_cl_dge.rds")

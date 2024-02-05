@@ -1,5 +1,7 @@
 ---
 description: Grouping individual cells with similar gene expression
+  profiles to uncover distinct cell populations and their functional
+  characteristics.
 subtitle:  Seurat Toolkit
 title:  Clustering
 ---
@@ -12,11 +14,11 @@ title:  Clustering
 
 </div>
 
-In this tutorial we will continue the analysis of the integrated
-dataset. We will use the integrated PCA to perform the clustering. First
-we will construct a $k$-nearest neighbor graph in order to perform a
-clustering on the graph. We will also show how to perform hierarchical
-clustering and k-means clustering on PCA space.
+In this tutorial, we will continue the analysis of the integrated
+dataset. We will use the integrated PCA to perform the clustering.
+First, we will construct a $k$-nearest neighbor graph in order to
+perform a clustering on the graph. We will also show how to perform
+hierarchical clustering and k-means clustering on PCA space.
 
 Let's first load all necessary libraries and also the integrated dataset
 from the previous step.
@@ -32,10 +34,14 @@ suppressPackageStartupMessages({
 ```
 
 ``` {r}
+# download pre-computed data if missing or long compute
+fetch_data <- TRUE
+
+# url for source and intermediate data
 path_data <- "https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"
 path_file <- "data/covid/results/seurat_covid_qc_dr_int.rds"
 if (!dir.exists(dirname(path_file))) dir.create(dirname(path_file), recursive = TRUE)
-if (!file.exists(path_file)) download.file(url = file.path(path_data, "covid/results/seurat_covid_qc_dr_int.rds"), destfile = path_file)
+if (fetch_data && !file.exists(path_file)) download.file(url = file.path(path_data, "covid/results/seurat_covid_qc_dr_int.rds"), destfile = path_file)
 alldata <- readRDS(path_file)
 print(names(alldata@reductions))
 ```
@@ -43,10 +49,12 @@ print(names(alldata@reductions))
 ## Graph clustering
 
 The procedure of clustering on a Graph can be generalized as 3 main
-steps: 1) Build a kNN graph from the data. 2) Prune spurious connections
-from kNN graph (optional step). This is a SNN graph. 3) Find groups of
-cells that maximizes the connections within the group compared other
-groups.
+steps:\
+- Build a kNN graph from the data.\
+- Prune spurious connections from kNN graph (optional step). This is a
+SNN graph.\
+- Find groups of cells that maximizes the connections within the group
+compared other groups.
 
 ### Building kNN / SNN graph
 
@@ -76,13 +84,13 @@ names(alldata@graphs)
 We can take a look at the kNN and SNN graphs. The kNN graph is a matrix
 where every connection between cells is represented as $1$s. This is
 called a **unweighted** graph (default in Seurat). In the SNN graph on
-the other hand, Some cell connections have more importance than others,
-in that case the scale of the graph from $0$ to a maximum distance (in
-this case $1$). Usually, the smaller the distance, the closer two points
-are, and stronger is their connection. This is called a **weighted**
-graph. Both weighted and unweighted graphs are suitable for clustering,
-but clustering on unweighted graphs is faster for large datasets (\>
-100k cells).
+the other hand, some cell connections have more importance than others,
+and the graph scales from $0$ to a maximum distance (in this case $1$).
+Usually, the smaller the distance, the closer two points are, and
+stronger is their connection. This is called a **weighted** graph. Both
+weighted and unweighted graphs are suitable for clustering, but
+clustering on unweighted graphs is faster for large datasets (\> 100k
+cells).
 
 ``` {r}
 #| fig-height: 6
@@ -132,15 +140,15 @@ for (res in c(0.1, 0.25, .5, 1, 1.5, 2)) {
 ```
 
 ``` {r}
-#| fig-height: 4
-#| fig-width: 12
+#| fig-height: 3.5
+#| fig-width: 13
 
 wrap_plots(
     DimPlot(alldata, reduction = "umap", group.by = "CCA_snn_res.0.5") + ggtitle("louvain_0.5"),
     DimPlot(alldata, reduction = "umap", group.by = "CCA_snn_res.1") + ggtitle("louvain_1"),
     DimPlot(alldata, reduction = "umap", group.by = "CCA_snn_res.2") + ggtitle("louvain_2"),
     ncol = 3
-) + plot_layout(guides = "collect")
+)
 ```
 
 We can now use the `clustree` package to visualize how cells are
@@ -157,13 +165,13 @@ clustree(alldata@meta.data, prefix = "CCA_snn_res.")
 ## K-means clustering
 
 K-means is a generic clustering algorithm that has been used in many
-application areas. In R, it can be applied via the kmeans function.
+application areas. In R, it can be applied via the `kmeans()` function.
 Typically, it is applied to a reduced dimension representation of the
 expression data (most often PCA, because of the interpretability of the
 low-dimensional distances). We need to define the number of clusters in
 advance. Since the results depend on the initialization of the cluster
 centers, it is typically recommended to run K-means with multiple
-starting configurations (via the nstart argument).
+starting configurations (via the `nstart` argument).
 
 ``` {r}
 #| fig-height: 4
@@ -215,9 +223,9 @@ in defining distances because a distance of 0 indicates that two samples
 are closest, 1 indicates that two samples are the furthest and distance
 of -1 is not meaningful. We thus need to transform the correlations to a
 positive scale (a.k.a. **adjacency**):\
-\[adj = `\frac{1- cor}{2}`{=tex}\]\
+$$adj = \frac{1- cor}{2}$$\
 Once we transformed the correlations to a 0-1 scale, we can simply
-convert it to a distance object using `as.dist` function. The
+convert it to a distance object using `as.dist()` function. The
 transformation does not need to have a maximum of 1, but it is more
 intuitive to have it at 1, rather than at any other number.
 
@@ -234,9 +242,9 @@ d2 <- as.dist(sample_cor)
 
 ### Clustering cells
 
-After having calculated the distances between samples calculated, we can
-now proceed with the hierarchical clustering per-se. We will use the
-function `hclust` for this purpose, in which we can simply run it with
+After having calculated the distances between samples, we can now
+proceed with the hierarchical clustering per-se. We will use the
+function `hclust()` for this purpose, in which we can simply run it with
 the distance objects created above. The methods available are: 'ward.D',
 'ward.D2', 'single', 'complete', 'average', 'mcquitty', 'median' or
 'centroid'. It is possible to plot the dendrogram for all cells, but
@@ -259,7 +267,7 @@ different clustering levels.
 
 ``` {r}
 #| fig-height: 8
-#| fig-width: 13
+#| fig-width: 14
 
 # euclidean distance
 alldata$hc_euclidean_5 <- cutree(h_euclidean, k = 5)
@@ -279,7 +287,7 @@ wrap_plots(
     DimPlot(alldata, reduction = "umap", group.by = "hc_corelation_10") + ggtitle("hc_cor_10"),
     DimPlot(alldata, reduction = "umap", group.by = "hc_corelation_15") + ggtitle("hc_cor_15"),
     ncol = 3
-) + plot_layout(guides = "collect")
+) + plot_layout()
 ```
 
 Finally, lets save the clustered data for further analysis.
@@ -293,8 +301,8 @@ saveRDS(alldata, "data/covid/results/seurat_covid_qc_dr_int_cl.rds")
 Now, we can select one of our clustering methods and compare the
 proportion of samples across the clusters.
 
-Select the "CCA_snn_res.0.5" and plot proportion of samples per cluster
-and also proportion covid vs ctrl.
+Select the **CCA_snn_res.0.5** and plot proportion of samples per
+cluster and also proportion covid vs ctrl.
 
 ``` {r}
 #| fig-height: 4
@@ -330,9 +338,9 @@ ggplot(alldata@meta.data, aes(x = orig.ident, fill = CCA_snn_res.0.5)) +
 > should be stored in your data object, and plot it as violin plots per
 > cluster using the clustering method of your choice. For example, plot
 > number of UMIS, detected genes, percent mitochondrial reads. Then,
-> check carefully if there is any bias in how your data is separated due
-> to quality metrics. Could it be explained biologically, or could you
-> have technical bias there?
+> check carefully if there is any bias in how your data is separated by
+> quality metrics. Could it be explained biologically, or could there be
+> a technical bias there?
 
 </div>
 

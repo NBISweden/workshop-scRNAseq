@@ -50,11 +50,11 @@ fi
 
 # create compiled versions of qmd to using profile "compiled"
 echo "Compiling seurat labs ..."
-docker run --rm --platform=linux/amd64 -v ${PWD}:/work $docker_site quarto render --profile compile /work/labs/seurat/*.qmd --to markdown-header_attributes --metadata engine:markdown --log-level warning,error
+docker run --rm --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work $docker_site quarto render --profile compile /work/labs/seurat/*.qmd --to markdown-header_attributes --metadata engine:markdown --log-level warning,error
 echo "Compiling bioc labs ..."
-docker run --rm --platform=linux/amd64 -v ${PWD}:/work $docker_site quarto render --profile compile /work/labs/bioc/*.qmd --to markdown-header_attributes --metadata engine:markdown --log-level warning,error
+docker run --rm --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work $docker_site quarto render --profile compile /work/labs/bioc/*.qmd --to markdown-header_attributes --metadata engine:markdown --log-level warning,error
 echo "Compiling scanpy labs ..."
-docker run --rm --platform=linux/amd64 -v ${PWD}:/work $docker_site quarto render --profile compile /work/labs/scanpy/*.qmd --to markdown-header_attributes --metadata engine:markdown --log-level warning,error
+docker run --rm --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work $docker_site quarto render --profile compile /work/labs/scanpy/*.qmd --to markdown-header_attributes --metadata engine:markdown --log-level warning,error
 
 # Read an md/qmd, remove unnecessary lines from yaml, and write to the original file
 echo "Slimming yaml across all .md files ..."
@@ -106,7 +106,7 @@ done
 echo "Converting scanpy .qmd files to .ipynb ..."
 for file in "${output_dir}"/labs/scanpy/*.qmd; do
     fname=$(basename "$file")
-    docker run --rm --platform=linux/amd64 -v ${PWD}:/work $docker_site quarto convert "/work/${file}"
+    docker run --rm --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work $docker_site quarto convert "/work/${file}"
     rm -rf "$file"
 done
 

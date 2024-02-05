@@ -1,5 +1,7 @@
 ---
 description: Combining and harmonizing samples or datasets from
+  different batches such as experiments or conditions to enable
+  meaningful cross-sample comparisons.
 subtitle:  Bioconductor Toolkit
 title:  Data Integration
 ---
@@ -39,6 +41,10 @@ Let's first load necessary libraries and the data saved in the previous
 lab.
 
 ``` {r}
+# Activate scanorama Python venv
+reticulate::use_virtualenv("/opt/venv/scanorama")
+reticulate::py_discover_config()
+
 suppressPackageStartupMessages({
     library(scater)
     library(scran)
@@ -49,16 +55,17 @@ suppressPackageStartupMessages({
     library(reticulate)
 })
 
-# Activate scanorama Python venv
-reticulate::use_virtualenv("/opt/venv/scanorama")
-reticulate::py_discover_config()
 ```
 
 ``` {r}
+# download pre-computed data if missing or long compute
+fetch_data <- FALSE
+
+# url for source and intermediate data
 path_data <- "https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"
 path_file <- "data/covid/results/bioc_covid_qc_dr.rds"
 if (!dir.exists(dirname(path_file))) dir.create(dirname(path_file), recursive = TRUE)
-if (!file.exists(path_file)) download.file(url = file.path(path_data, "covid/results/bioc_covid_qc_dr.rds"), destfile = path_file)
+if (fetch_data && !file.exists(path_file)) download.file(url = file.path(path_data, "covid/results/bioc_covid_qc_dr.rds"), destfile = path_file)
 sce <- readRDS(path_file)
 print(reducedDims(sce))
 ```
@@ -194,9 +201,14 @@ for (i in c("CD3E", "CD4", "CD8A", "NKG7", "GNLY", "MS4A1", "CD14", "LYZ", "MS4A
 wrap_plots(plotlist = plotlist, ncol = 3)
 ```
 
-INTEG_R1:
+## Harmony
 
-INTEG_R2:
+An alternative method for integration is Harmony, for more details on
+the method, please se their paper [Nat.
+Methods](https://www.nature.com/articles/s41592-019-0619-0). This method
+runs the integration on a dimensionality reduction, in most applications
+the PCA. So first, we will rerun scaling and PCA with the same set of
+genes that were used for the CCA integration.
 
 ``` {r}
 #| fig-height: 5
@@ -218,9 +230,15 @@ sce <- RunHarmony(
 sce <- runUMAP(sce, dimred = "harmony", n_dimred = 50, ncomponents = 2, name = "UMAP_on_Harmony")
 ```
 
-INTEG_R3:
+## Scanorama
 
-INTEG_R4:
+Another integration method is Scanorama (see [Nat.
+Biotech.](https://www.nature.com/articles/s41587-019-0113-3)). This
+method is implemented in python, but we can run it through the
+Reticulate package.
+
+We will run it with the same set of variable genes, but first we have to
+create a list of all the objects per sample.
 
 ``` {r}
 #| fig-height: 5
@@ -238,7 +256,7 @@ for (i in 1:length(sce.list)) {
 lapply(scelist, dim)
 ```
 
-INTEG_R5:
+Now we can run scanorama:
 
 ``` {r}
 #| fig-height: 5
@@ -253,7 +271,7 @@ intdimred <- do.call(rbind, integrated.data[[1]])
 colnames(intdimred) <- paste0("PC_", 1:100)
 rownames(intdimred) <- colnames(logcounts(sce))
 
-# Add standard deviations in order to draw Elbow Plots in Seurat
+# Add standard deviations in order to draw Elbow Plots 
 stdevs <- apply(intdimred, MARGIN = 2, FUN = sd)
 attr(intdimred, "varExplained") <- stdevs
 
@@ -261,9 +279,13 @@ reducedDim(sce, "Scanorama_PCA") <- intdimred
 
 # Here we use all PCs computed from Scanorama for UMAP calculation
 sce <- runUMAP(sce, dimred = "Scanorama_PCA", n_dimred = 50, ncomponents = 2, name = "UMAP_on_Scanorama")
+
+plotReducedDim(sce, dimred = "UMAP_on_Scanorama", colour_by = "sample", point_size = 0.6) + ggplot2::ggtitle(label = "UMAP_on_Scanorama")
 ```
 
-INTEG_R6:
+## Overview all methods
+
+Now we will plot UMAPS with all three integration methods side by side.
 
 ``` {r}
 #| fig-height: 8
@@ -278,8 +300,6 @@ p4 <- plotReducedDim(sce, dimred = "UMAP_on_Scanorama", colour_by = "sample", po
 wrap_plots(p1, p2, p3, p4, nrow = 2) +
     plot_layout(guides = "collect")
 ```
-
-INTEG_R7:
 
 Let's save the integrated data for further analysis.
 

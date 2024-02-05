@@ -1,5 +1,7 @@
 ---
 description: Grouping individual cells with similar gene expression
+  profiles to uncover distinct cell populations and their functional
+  characteristics.
 subtitle:  Bioconductor Toolkit
 title:  Clustering
 ---
@@ -12,11 +14,11 @@ title:  Clustering
 
 </div>
 
-In this tutorial we will continue the analysis of the integrated
-dataset. We will use the integrated PCA to perform the clustering. First
-we will construct a $k$-nearest neighbor graph in order to perform a
-clustering on the graph. We will also show how to perform hierarchical
-clustering and k-means clustering on PCA space.
+In this tutorial, we will continue the analysis of the integrated
+dataset. We will use the integrated PCA to perform the clustering.
+First, we will construct a $k$-nearest neighbor graph in order to
+perform a clustering on the graph. We will also show how to perform
+hierarchical clustering and k-means clustering on PCA space.
 
 Let's first load all necessary libraries and also the integrated dataset
 from the previous step.
@@ -34,10 +36,14 @@ suppressPackageStartupMessages({
 ```
 
 ``` {r}
+# download pre-computed data if missing or long compute
+fetch_data <- FALSE
+
+# url for source and intermediate data
 path_data <- "https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"
 path_file <- "data/covid/results/bioc_covid_qc_dr_int.rds"
 if (!dir.exists(dirname(path_file))) dir.create(dirname(path_file), recursive = TRUE)
-if (!file.exists(path_file)) download.file(url = file.path(path_data, "covid/results/bioc_covid_qc_dr_int.rds"), destfile = path_file)
+if (fetch_data && !file.exists(path_file)) download.file(url = file.path(path_data, "covid/results/bioc_covid_qc_dr_int.rds"), destfile = path_file)
 sce <- readRDS(path_file)
 print(reducedDims(sce))
 ```
@@ -45,10 +51,12 @@ print(reducedDims(sce))
 ## Graph clustering
 
 The procedure of clustering on a Graph can be generalized as 3 main
-steps: 1) Build a kNN graph from the data. 2) Prune spurious connections
-from kNN graph (optional step). This is a SNN graph. 3) Find groups of
-cells that maximizes the connections within the group compared other
-groups.
+steps:\
+- Build a kNN graph from the data.\
+- Prune spurious connections from kNN graph (optional step). This is a
+SNN graph.\
+- Find groups of cells that maximizes the connections within the group
+compared other groups.
 
 ### Building kNN / SNN graph
 
@@ -70,13 +78,13 @@ reducedDim(sce, "SNN") <- as_adjacency_matrix(g, attr = "weight")
 We can take a look at the kNN and SNN graphs. The kNN graph is a matrix
 where every connection between cells is represented as $1$s. This is
 called a **unweighted** graph (default in Seurat). In the SNN graph on
-the other hand, Some cell connections have more importance than others,
-in that case the scale of the graph from $0$ to a maximum distance (in
-this case $1$). Usually, the smaller the distance, the closer two points
-are, and stronger is their connection. This is called a **weighted**
-graph. Both weighted and unweighted graphs are suitable for clustering,
-but clustering on unweighted graphs is faster for large datasets (\>
-100k cells).
+the other hand, some cell connections have more importance than others,
+and the graph scales from $0$ to a maximum distance (in this case $1$).
+Usually, the smaller the distance, the closer two points are, and
+stronger is their connection. This is called a **weighted** graph. Both
+weighted and unweighted graphs are suitable for clustering, but
+clustering on unweighted graphs is faster for large datasets (\> 100k
+cells).
 
 ``` {r}
 #| fig-height: 6
@@ -146,13 +154,13 @@ clustree(sce, prefix = "louvain_SNNk")
 ## K-means clustering
 
 K-means is a generic clustering algorithm that has been used in many
-application areas. In R, it can be applied via the kmeans function.
+application areas. In R, it can be applied via the `kmeans()` function.
 Typically, it is applied to a reduced dimension representation of the
 expression data (most often PCA, because of the interpretability of the
 low-dimensional distances). We need to define the number of clusters in
 advance. Since the results depend on the initialization of the cluster
 centers, it is typically recommended to run K-means with multiple
-starting configurations (via the nstart argument).
+starting configurations (via the `nstart` argument).
 
 ``` {r}
 #| fig-height: 3
@@ -207,9 +215,9 @@ in defining distances because a distance of 0 indicates that two samples
 are closest, 1 indicates that two samples are the furthest and distance
 of -1 is not meaningful. We thus need to transform the correlations to a
 positive scale (a.k.a. **adjacency**):\
-\[adj = `\frac{1- cor}{2}`{=tex}\]\
+$$adj = \frac{1- cor}{2}$$\
 Once we transformed the correlations to a 0-1 scale, we can simply
-convert it to a distance object using `as.dist` function. The
+convert it to a distance object using `as.dist()` function. The
 transformation does not need to have a maximum of 1, but it is more
 intuitive to have it at 1, rather than at any other number.
 
@@ -226,9 +234,9 @@ d2 <- as.dist(sample_cor)
 
 ### Clustering cells
 
-After having calculated the distances between samples calculated, we can
-now proceed with the hierarchical clustering per-se. We will use the
-function `hclust` for this purpose, in which we can simply run it with
+After having calculated the distances between samples, we can now
+proceed with the hierarchical clustering per-se. We will use the
+function `hclust()` for this purpose, in which we can simply run it with
 the distance objects created above. The methods available are: 'ward.D',
 'ward.D2', 'single', 'complete', 'average', 'mcquitty', 'median' or
 'centroid'. It is possible to plot the dendrogram for all cells, but
@@ -286,6 +294,36 @@ Finally, lets save the clustered data for further analysis.
 saveRDS(sce, "data/covid/results/bioc_covid_qc_dr_int_cl.rds")
 ```
 
+## Distribution of clusters
+
+Now, we can select one of our clustering methods and compare the
+proportion of samples across the clusters.
+
+``` {r}
+#| fig-height: 4
+#| fig-width: 9
+
+p1 <- ggplot(as.data.frame(colData(sce)), aes(x = louvain_SNNk10, fill = sample)) +
+    geom_bar(position = "fill")
+p2 <- ggplot(as.data.frame(colData(sce)), aes(x = louvain_SNNk10, fill = type)) +
+    geom_bar(position = "fill")
+
+p1 + p2
+```
+
+In this case we have quite good representation of each sample in each
+cluster. But there are clearly some biases with more cells from one
+sample in some clusters and also more covid cells in some of the
+clusters.
+
+We can also plot it in the other direction, the proportion of each
+cluster per sample.
+
+``` {r}
+ggplot(as.data.frame(colData(sce)), aes(x = sample, fill = louvain_SNNk10)) +
+    geom_bar(position = "fill")
+```
+
 <div>
 
 > **Discuss**
@@ -295,9 +333,9 @@ saveRDS(sce, "data/covid/results/bioc_covid_qc_dr_int_cl.rds")
 > should be stored in your data object, and plot it as violin plots per
 > cluster using the clustering method of your choice. For example, plot
 > number of UMIS, detected genes, percent mitochondrial reads. Then,
-> check carefully if there is any bias in how your data is separated due
-> to quality metrics. Could it be explained biologically, or could you
-> have technical bias there?
+> check carefully if there is any bias in how your data is separated by
+> quality metrics. Could it be explained biologically, or could there be
+> a technical bias there?
 
 </div>
 

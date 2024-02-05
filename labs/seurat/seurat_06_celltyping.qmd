@@ -32,10 +32,14 @@ suppressPackageStartupMessages({
 {{< meta ct_read_2 >}}
 
 ```{r}
+# download pre-computed data if missing or long compute
+fetch_data <- TRUE
+
+# url for source and intermediate data
 path_data <- "https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"
 path_file <- "data/covid/results/seurat_covid_qc_dr_int_cl.rds"
 if (!dir.exists(dirname(path_file))) dir.create(dirname(path_file), recursive = TRUE)
-if (!file.exists(path_file)) download.file(url = file.path(path_data, "covid/results/seurat_covid_qc_dr_int_cl.rds"), destfile = path_file)
+if (fetch_data && !file.exists(path_file)) download.file(url = file.path(path_data, "covid/results/seurat_covid_qc_dr_int_cl.rds"), destfile = path_file)
 alldata <- readRDS(path_file)
 ```
 
@@ -103,7 +107,7 @@ DimPlot(ctrl, label = TRUE, repel = TRUE) + NoAxes()
 
 ## Label transfer
 
-First we will run label transfer using a similar method as in the integration exercise. But, instad of CCA the default for the 'FindTransferAnchors` function is to use "pcaproject", e.g. the query dataset is projected onto the PCA of the reference dataset. Then, the labels of the reference data are predicted.
+First we will run label transfer using a similar method as in the integration exercise. But, instead of CCA, which is the default for the `FindTransferAnchors()` function, we will use `pcaproject`, ie; the query dataset is projected onto the PCA of the reference dataset. Then, the labels of the reference data are predicted.
 
 ```{r}
 transfer.anchors <- FindTransferAnchors(
@@ -357,7 +361,7 @@ res <- lapply(res, function(x) {
 lapply(res, head, 3)
 ```
 
-#CT_GSEA8:
+Let's plot the results.
 
 ```{r}
 #| fig-height: 5

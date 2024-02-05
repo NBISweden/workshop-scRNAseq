@@ -14,6 +14,10 @@ Code chunks run R commands unless otherwise specified.
 {{< meta qc_data_1 >}}
 
 ```{r}
+# download pre-computed annotation
+fetch_annotation <- TRUE
+
+# url for source and intermediate data
 path_data <- "https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"
 
 path_covid <- "./data/covid"
@@ -147,14 +151,6 @@ head(alldata@meta.data, 10)
 alldata <- PercentageFeatureSet(alldata, "^MT-", col.name = "percent_mito")
 ```
 
-```{r, eval=FALSE}
-# OBS! Do not run now!
-# example method 2: doing it manually
-total_counts_per_cell <- colSums(alldata@assays$RNA@counts)
-mito_genes <- rownames(alldata)[grep("^MT-", rownames(alldata))]
-alldata$percent_mito2 <- colSums(alldata@assays$RNA@counts[mito_genes, ]) / total_counts_per_cell
-```
-
 ```{r}
 # Ribosomal
 alldata <- PercentageFeatureSet(alldata, "^RP[SL]", col.name = "percent_ribo")
@@ -163,6 +159,20 @@ alldata <- PercentageFeatureSet(alldata, "^HB[^(P|E|S)]", col.name = "percent_hb
 # Percentage for some platelet markers
 alldata <- PercentageFeatureSet(alldata, "PECAM1|PF4", col.name = "percent_plat")
 ```
+
+::: {.callout-tip collapse="true"}
+
+Alternatively, percentage expression can be calculated manually. Here is an example. Do not run this script now.
+
+```{r}
+#| eval: false
+# Do not run now!
+total_counts_per_cell <- colSums(alldata@assays$RNA@counts)
+mito_genes <- rownames(alldata)[grep("^MT-", rownames(alldata))]
+alldata$percent_mito2 <- colSums(alldata@assays$RNA@counts[mito_genes, ]) / total_counts_per_cell
+```
+
+:::
 
 {{< meta qc_calqc_3 >}}
 
@@ -179,7 +189,7 @@ head(alldata[[]])
 #| fig-width: 15
 
 feats <- c("nFeature_RNA", "nCount_RNA", "percent_mito", "percent_ribo", "percent_hb", "percent_plat")
-VlnPlot(alldata, group.by = "orig.ident", features = feats, pt.size = 0.1, ncol = 3) + NoLegend()
+VlnPlot(alldata, group.by = "orig.ident", split.by = "type", features = feats, pt.size = 0.1, ncol = 3)
 ```
 
 {{< meta qc_plotqc_2 >}}
@@ -298,30 +308,42 @@ dim(data.filt)
 
 {{< meta qc_sex_2 >}}
 
+::: {.callout-tip collapse="true"}
+
+Here is the code to download annotation data from Ensembl using biomaRt. We will not run this now and instead use a pre-computed file in the step below.
+
 ```{r}
-#| eval: false
+# fetch_annotation is defined at the top of this document
+if (!fetch_annotation) {
+  suppressMessages(library(biomaRt))
 
-# this code chunk is not executed
-suppressMessages(library(biomaRt))
+  # initialize connection to mart, may take some time if the sites are unresponsive.
+  mart <- useMart("ENSEMBL_MART_ENSEMBL", dataset = "hsapiens_gene_ensembl")
 
-# initialize connection to mart, may take some time if the sites are unresponsive.
-mart <- useMart("ENSEMBL_MART_ENSEMBL", dataset = "hsapiens_gene_ensembl")
-
-# fetch chromosome info plus some other annotations
-genes_table <- try(biomaRt::getBM(attributes = c(
+  # fetch chromosome info plus some other annotations
+  genes_table <- try(biomaRt::getBM(attributes = c(
     "ensembl_gene_id", "external_gene_name",
     "description", "gene_biotype", "chromosome_name", "start_position"
-), mart = mart, useCache = F))
+  ), mart = mart, useCache = F))
 
-write.csv(genes_table, file = "data/covid/results/genes_table.csv")
+  write.csv(genes_table, file = "data/covid/results/genes_table.csv")
+}
+```
+
+:::
+
+Download precomputed data.
+
+```{r}
+# fetch_annotation is defined at the top of this document
+if (fetch_annotation) {
+  genes_file <- file.path(path_results, "genes_table.csv")
+  if (!file.exists(genes_file)) download.file(file.path(path_data, "covid/results/genes_table.csv"), destfile = genes_file)
+}
 ```
 
 ```{r}
-genes_file <- file.path(path_results, "genes_table.csv")
-
-if (!file.exists(genes_file)) download.file(file.path(path_data, "covid/results/genes_table.csv"), destfile = genes_file)
 genes.table <- read.csv(genes_file)
-
 genes.table <- genes.table[genes.table$external_gene_name %in% rownames(data.filt), ]
 ```
 
@@ -377,11 +399,11 @@ VlnPlot(data.filt, features = c("S.Score", "G2M.Score"), group.by = "orig.ident"
 
 {{< meta qc_cellcycle_3 >}}
 
-Seurat does an automatic prediction of cell cycle phase with a default cutoff of the scores at zero. As you can see this does not fit this data very well, so be cautios with using these predictions. Instead we suggest that you look at the scores.
+Seurat does an automatic prediction of cell cycle phase with a default cutoff of the scores at zero. As you can see this does not fit this data very well, so be cautious with using these predictions. Instead we suggest that you look at the scores.
 
 ```{r}
-#| fig-height: 5
-#| fig-width: 15
+#| fig-height: 7
+#| fig-width: 7
 
 FeatureScatter(data.filt, "S.Score", "G2M.Score", group.by = "Phase")
 ```
@@ -394,7 +416,7 @@ FeatureScatter(data.filt, "S.Score", "G2M.Score", group.by = "Phase")
 {{< meta qc_doublet_2 >}}
 :::
 
-Here, we will use `DoubletFinder` to predict doublet cells. But before doing doublet detection we need to run scaling, variable gene selection and pca, as well as UMAP for visualization. These steps will be explored in more detail in coming exercises.
+Here, we will use `DoubletFinder` to predict doublet cells. But before doing doublet detection we need to run scaling, variable gene selection and PCA, as well as UMAP for visualization. These steps will be explored in more detail in coming exercises.
 
 ```{r}
 data.filt <- FindVariableFeatures(data.filt, verbose = F)
@@ -403,7 +425,7 @@ data.filt <- RunPCA(data.filt, verbose = F, npcs = 20)
 data.filt <- RunUMAP(data.filt, dims = 1:10, verbose = F)
 ```
 
-Then we run doubletFinder, selecting first 10 PCs and a pK value of 0.9. To optimize the parameters, you can run the `paramSweep` function in the package.
+Then we run doubletFinder, selecting first 10 PCs and a `pK` value of 0.9. To optimize the parameters, you can run the `paramSweep` function in the package.
 
 ```{r}
 suppressMessages(library(DoubletFinder))
@@ -420,6 +442,9 @@ data.filt <- doubletFinder_v3(data.filt, pN = 0.25, pK = 0.09, nExp = nExp, PCs 
 ```
 
 ```{r}
+#| fig-height: 4
+#| fig-width: 10
+
 # name of the DF prediction can change, so extract the correct column name.
 DF.name <- colnames(data.filt@meta.data)[grepl("DF.classification", colnames(data.filt@meta.data))]
 

@@ -24,10 +24,14 @@ suppressPackageStartupMessages({
 ```
 
 ```{r}
+# download pre-computed data if missing or long compute
+fetch_data <- TRUE
+
+# url for source and intermediate data
 path_data <- "https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"
 path_file <- "data/covid/results/seurat_covid_qc_dr_int.rds"
 if (!dir.exists(dirname(path_file))) dir.create(dirname(path_file), recursive = TRUE)
-if (!file.exists(path_file)) download.file(url = file.path(path_data, "covid/results/seurat_covid_qc_dr_int.rds"), destfile = path_file)
+if (fetch_data && !file.exists(path_file)) download.file(url = file.path(path_data, "covid/results/seurat_covid_qc_dr_int.rds"), destfile = path_file)
 alldata <- readRDS(path_file)
 print(names(alldata@reductions))
 ```
@@ -97,15 +101,15 @@ for (res in c(0.1, 0.25, .5, 1, 1.5, 2)) {
 ```
 
 ```{r}
-#| fig-height: 4
-#| fig-width: 12
+#| fig-height: 3.5
+#| fig-width: 13
 
 wrap_plots(
     DimPlot(alldata, reduction = "umap", group.by = "CCA_snn_res.0.5") + ggtitle("louvain_0.5"),
     DimPlot(alldata, reduction = "umap", group.by = "CCA_snn_res.1") + ggtitle("louvain_1"),
     DimPlot(alldata, reduction = "umap", group.by = "CCA_snn_res.2") + ggtitle("louvain_2"),
     ncol = 3
-) + plot_layout(guides = "collect")
+)
 ```
 
 {{< meta clust_graphclust_graph_2 >}}
@@ -217,7 +221,7 @@ saveRDS(alldata, "data/covid/results/seurat_covid_qc_dr_int_cl.rds")
 
 {{< meta clust_distribution_1 >}}
 
-Select the "CCA_snn_res.0.5" and plot proportion of samples per cluster and also proportion covid vs ctrl. 
+Select the **CCA_snn_res.0.5** and plot proportion of samples per cluster and also proportion covid vs ctrl. 
 
 ```{r}
 #| fig-height: 4

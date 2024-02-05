@@ -1,5 +1,6 @@
 ---
 description: Assignment of cell identities based on gene expression
+  patterns using reference data.
 subtitle:  Bioconductor Toolkit
 title:  Celltype prediction
 ---
@@ -15,21 +16,20 @@ title:  Celltype prediction
 Celltype prediction can either be performed on indiviudal cells where
 each cell gets a predicted celltype label, or on the level of clusters.
 All methods are based on similarity to other datasets, single cell or
-sorted bulk RNAseq, or uses known marker genes for each celltype.\
+sorted bulk RNAseq, or uses known marker genes for each cell type.\
 We will select one sample from the Covid data, `ctrl_13` and predict
 celltype by cell on that sample.\
 Some methods will predict a celltype to each cell based on what it is
-most similar to even if the celltype of that cell is not included in the
-reference. Other methods include an uncertainty so that cells with low
-similarity scores will be unclassified.\
+most similar to, even if that celltype is not included in the reference.
+Other methods include an uncertainty so that cells with low similarity
+scores will be unclassified.\
 There are multiple different methods to predict celltypes, here we will
 just cover a few of those.
 
-Here we will use a reference PBMC dataset from the `scPred` package
-which is provided as a Seurat object with counts. And we will test
-classification based on the `scPred` and `scMap` methods. Finally we
-will use gene set enrichment predict celltype based on the DEGs of each
-cluster.
+We will use a reference PBMC dataset from the `scPred` package which is
+provided as a Seurat object with counts. And we will test classification
+based on the `scPred` and `scMap` methods. Finally we will use gene set
+enrichment predict celltype based on the DEGs of each cluster.
 
 ## Read data
 
@@ -51,10 +51,14 @@ suppressPackageStartupMessages({
 Let's read in the saved Covid-19 data object from the clustering step.
 
 ``` {r}
+# download pre-computed data if missing or long compute
+fetch_data <- FALSE
+
+# url for source and intermediate data
 path_data <- "https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"
 path_file <- "data/covid/results/bioc_covid_qc_dr_int_cl.rds"
 if (!dir.exists(dirname(path_file))) dir.create(dirname(path_file), recursive = TRUE)
-if (!file.exists(path_file)) download.file(url = file.path(path_data, "covid/results/bioc_covid_qc_dr_int_cl.rds"), destfile = path_file)
+if (fetch_data && !file.exists(path_file)) download.file(url = file.path(path_data, "covid/results/bioc_covid_qc_dr_int_cl.rds"), destfile = path_file)
 alldata <- readRDS(path_file)
 ```
 
@@ -109,7 +113,7 @@ ref.sce <- runUMAP(ref.sce, dimred = "PCA")
 plotReducedDim(ref.sce, dimred = "UMAP", colour_by = "cell_type")
 ```
 
-Run all steps of the analysis for the ctrl sample as well. Use the
+Run all steps of the analysis for the **ctrl** sample as well. Use the
 clustering from the integration lab with resolution 0.5.
 
 ``` {r}
@@ -265,9 +269,10 @@ wrap_plots(
 ## scPred
 
 scPred will train a classifier based on all principal components. First,
-`getFeatureSpace` will create a scPred object stored in the `@misc` slot
-where it extracts the PCs that best separates the different celltypes.
-Then `trainModel` will do the actual training for each celltype.
+`getFeatureSpace()` will create a scPred object stored in the `@misc`
+slot where it extracts the PCs that best separates the different
+celltypes. Then `trainModel()` will do the actual training for each
+celltype.
 
 scPred works with Seurat objects, so we will convert both objects to
 seurat objects. You may see a lot of warnings about renaming things, but
@@ -302,18 +307,19 @@ reference <- trainModel(reference)
 ```
 
 scPred will train a classifier based on all principal components. First,
-`getFeatureSpace` will create a scPred object stored in the `@misc` slot
-where it extracts the PCs that best separates the different celltypes.
-Then `trainModel` will do the actual training for each celltype.
+`getFeatureSpace()` will create a scPred object stored in the `@misc`
+slot where it extracts the PCs that best separates the different
+celltypes. Then `trainModel()` will do the actual training for each
+celltype.
 
 ``` {r}
 get_scpred(reference)
 ```
 
-You can optimize parameters for each dataset by chaning parameters and
+You can optimize parameters for each dataset by chaining parameters and
 testing different types of models, see more at:
-https://powellgenomicslab.github.io/scPred/articles/introduction.html.
-But for now, we will continue with this model. Now, lets predict
+<https://powellgenomicslab.github.io/scPred/articles/introduction.html>.
+But for now, we will continue with this model. Now, let's predict
 celltypes on our data, where scPred will align the two datasets with
 Harmony and then perform classification.
 
@@ -348,7 +354,7 @@ ctrl.sce@colData$scpred_prediction <- ctrl$scpred_prediction
 ## Compare results
 
 Now we will compare the output of the two methods using the convenient
-function in scPred `crossTab` that prints the overlap between two
+function in scPred `crossTab()` that prints the overlap between two
 metadata slots.
 
 ``` {r}
@@ -360,13 +366,13 @@ crossTab(ctrl, "scmap_cell", "scpred_prediction")
 Another option, where celltype can be classified on cluster level is to
 use gene set enrichment among the DEGs with known markers for different
 celltypes. Similar to how we did functional enrichment for the DEGs in
-the Differential expression exercise. There are some resources for
+the differential expression exercise. There are some resources for
 celltype gene sets that can be used. Such as
 [CellMarker](http://bio-bigdata.hrbmu.edu.cn/CellMarker/),
 [PanglaoDB](https://panglaodb.se/) or celltype gene sets at
 [MSigDB](https://www.gsea-msigdb.org/gsea/msigdb/index.jsp). We can also
 look at overlap between DEGs in a reference dataset and the dataset you
-are analysing.
+are analyzing.
 
 ### DEG overlap
 
@@ -437,7 +443,7 @@ res <- lapply(res, function(x) {
 res
 ```
 
-Selecing top significant overlap per cluster, we can now rename the
+Selecting top significant overlap per cluster, we can now rename the
 clusters according to the predicted labels. OBS! Be aware that if you
 have some clusters that have non-significant p-values for all the gene
 sets, the cluster label will not be very reliable. Also, the gene sets
@@ -464,8 +470,8 @@ wrap_plots(
 )
 ```
 
-Compare to results with the other celltype prediction methods in the
-ctrl_13 sample.
+Compare the results with the other celltype prediction methods in the
+**ctrl_13** sample.
 
 ``` {r}
 #| fig-height: 3.5
@@ -483,7 +489,7 @@ wrap_plots(
 
 ### With annotated gene sets
 
-We have dowloaded the celltype gene lists from
+We have downloaded the celltype gene lists from
 http://bio-bigdata.hrbmu.edu.cn/CellMarker/CellMarker_download.html and
 converted the excel file to a csv for you. Read in the gene lists and do
 some filtering.
