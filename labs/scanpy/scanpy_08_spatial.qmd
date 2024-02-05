@@ -49,7 +49,7 @@ When using your own Visium data, use Scanpy's read_visium() function to import i
 
 ```{python}
 # download pre-computed data if missing or long compute
-fetch_data = False
+fetch_data = True
 
 # url for source and intermediate data
 path_data = "https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"
@@ -355,6 +355,7 @@ This is a slow compute intensive step, we will not run this now and instead use 
 
 ```{python}
 # | results: hide
+# this code is not executed
 
 if not fetch_data:
     import NaiveDE
@@ -379,9 +380,9 @@ Download precomputed file.
 ```{python}
 # | results: hide
 
+path_file = "data/spatial/visium/scanpy_spatialde.pkl"
 if fetch_data and not os.path.exists(path_file):
     import urllib.request
-    path_file = "data/spatial/visium/scanpy_spatialde.pkl"
     file_url = os.path.join(
         path_data, "spatial/visium/results/scanpy_spatialde.pkl")
     urllib.request.urlretrieve(file_url, path_file)
@@ -414,7 +415,7 @@ results.sort_values("qval").head(10)
 
 {{< meta st_ss_1 >}}
 
-Conveniently, you can also download the pre-processed dataset in h5ad format from here. Here with bash code:
+Conveniently, you can also download the pre-processed dataset in h5ad format.
 
 ```{python}
 import urllib.request
@@ -581,19 +582,37 @@ sc_adata = sc_adata[:, deg].copy()
 RNAStereoscope.setup_anndata(sc_adata, layer="counts", labels_key="subclass")
 ```
 
+::: {.callout-caution}
+
+This is a slow compute intensive step, we will not run this now and instead use a pre-computed file in the step below.
+
 ```{python}
-
-# the model is saved to a file, so if is slow to run, you can simply reload it from disk by setting train = False
-
-train = True
-if train:
+# the model is saved to a file, so if is slow to run, you can simply reload it from disk
+if not fetch_data:
     sc_model = RNAStereoscope(sc_adata)
     sc_model.train(max_epochs=300)
     sc_model.history["elbo_train"][10:].plot()
     sc_model.save("./data/spatial/visium/scmodel", overwrite=True)
-else:
-    sc_model = RNAStereoscope.load("./data/spatial/visium/scmodel", sc_adata)
-    print("Loaded RNA model from file!")
+```
+
+:::
+
+Download precomputed data.
+
+```{python}
+path_folder = "data/spatial/visium/scmodel"
+if fetch_data and not os.path.exists(path_folder):
+    import shutil
+    folder_url = os.path.join(
+        path_data, "spatial/visium/results/scmodel")
+    shutil.copytree(folder_url, path_folder)
+```
+
+Read data
+
+```{python}
+sc_model = RNAStereoscope.load(path_folder, sc_adata)
+print("Loaded RNA model from file!")
 ```
 
 ### Predict proportions on the spatial data
