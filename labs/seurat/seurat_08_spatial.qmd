@@ -37,7 +37,7 @@ The package `SeuratData` has some seurat objects for different datasets. Among t
 
 ```{r load}
 # download pre-computed data if missing or long compute
-fetch_data <- FALSE
+fetch_data <- TRUE
 
 # url for source and intermediate data
 path_data <- "https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"
@@ -67,13 +67,13 @@ brain <- merge(brain1, brain2)
 brain
 ```
 
-As you can see, now we do not have the assay "RNA", but instead an assay called "Spatial". 
+As you can see, now we do not have the assay **RNA**, but instead an assay called **Spatial**. 
 
 ## {{< meta st_qc >}}
 
 {{< meta st_qc_1 >}}
 
-Now the counts and feature counts are calculated on the Spatial assay, so they are named  "nCount_Spatial" and "nFeature_Spatial".
+Now the counts and feature counts are calculated on the Spatial assay, so they are named  **nCount_Spatial** and **nFeature_Spatial**.
 
 ```{r}
 #| fig-height: 8
@@ -158,7 +158,7 @@ dim(brain)
 
 {{< meta st_analysis_1 >}}
 
-For ST data, the Seurat team recommends to use SCTranform for normalization, so we will do that. `SCTransform` will select variable genes and normalize in one step.
+For ST data, the Seurat team recommends to use `SCTransform()` for normalization, so we will do that. `SCTransform()` will select variable genes and normalize in one step.
 
 ```{r}
 #| results: hide
@@ -225,7 +225,7 @@ SpatialDimPlot(brain, cells.highlight = CellsByIdentities(brain), facet.highligh
 
 {{< meta st_analysis_int_1 >}}
 
-We will do a similar integration as in the Data Integration lab, but this time we will use the SCT assay for integration. Therefore we need to run `PrepSCTIntegration` which will compute the sctransform residuals for all genes in both the datasets. 
+We will do a similar integration as in the Data Integration lab, but this time we will use the SCT assay for integration. Therefore we need to run `PrepSCTIntegration()` which will compute the sctransform residuals for all genes in both the datasets. 
 
 ```{r}
 #| results: hide
@@ -297,7 +297,7 @@ SpatialFeaturePlot(object = brain.integrated, features = rownames(de_markers)[1:
 
 Spatial transcriptomics allows researchers to investigate how gene expression trends varies in space, thus identifying spatial patterns of gene expression. For this purpose there are multiple methods, such as SpatailDE, SPARK, Trendsceek, HMRF and Splotch.
 
-In `FindSpatiallyVariables` the default method in Seurat (method = 'markvariogram), is inspired by the Trendsceek, which models spatial transcriptomics data as a mark point process and computes a 'variogram', which identifies genes whose expression level is dependent on their spatial location. More specifically, this process calculates gamma(r) values measuring the dependence between two spots a certain "r" distance apart. By default, we use an r-value of '5' in these analyses, and only compute these values for variable genes (where variation is calculated independently of spatial location) to save time.
+In `FindSpatiallyVariables()` the default method in Seurat (method = 'markvariogram'), is inspired by the Trendsceek, which models spatial transcriptomics data as a mark point process and computes a 'variogram', which identifies genes whose expression level is dependent on their spatial location. More specifically, this process calculates gamma(r) values measuring the dependence between two spots a certain "r" distance apart. By default, we use an r-value of '5' in these analyses, and only compute these values for variable genes (where variation is calculated independently of spatial location) to save time.
 
 :::{.callout-caution}
 Takes a long time to run, so skip this step for now!
@@ -318,7 +318,7 @@ Takes a long time to run, so skip this step for now!
 First download the seurat data:
 
 ```{r}
-if (!dir.exists("data/spatial/visium")) dir.create("data/spatial/visium")
+if (!dir.exists("data/spatial/visium")) dir.create("data/spatial/visium", recursive = TRUE)
 path_file <- "data/spatial/visium/allen_cortex.rds"
 if (!file.exists(path_file)) download.file(url = file.path(path_data, "spatial/visium/allen_cortex.rds"), destfile = path_file)
 ```
@@ -458,12 +458,13 @@ eset_ST <- ExpressionSet(assayData = as.matrix(cortex@assays$Spatial@counts[m_fe
 We then run the deconvolution defining the celltype of interest as "subclass" column in the single cell data.
 
 ::: {.callout-caution}
-
 This is a slow compute intensive step, we will not run this now and instead use a pre-computed file in the step below.
+:::
 
 ```{r}
 #| results: hide
 #| eval: false
+# this code block is not executed
 
 # fetch_data is defined at the top of this document
 if (!fetch_data) {
@@ -477,14 +478,12 @@ if (!fetch_data) {
 }
 ```
 
-:::
-
 Download the precomputed file.
 
 ```{r}
 # fetch_data is defined at the top of this document
+path_file <- "data/spatial/visium/seurat_scdc.rds"
 if (fetch_data) {
-  path_file <- "data/spatial/visium/seurat_scdc.rds"
   if (!file.exists(path_file)) download.file(url = file.path(path_data, "spatial/visium/results/seurat_scdc.rds"), destfile = path_file)
 }
 ```
