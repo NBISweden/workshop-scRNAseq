@@ -178,12 +178,58 @@ ggplot(ctrl@meta.data, aes(x = CCA_snn_res.0.5, fill = scpred_prediction)) +
     theme_classic()
 ```
 
+
+
+## {{< meta ct_azimuth >}}
+
+{{< meta ct_azimuth_1 >}}
+
+{{< meta ct_azimuth_2 >}}
+
+This is how to save the count matrix:
+
+```{r}
+#| eval: false
+
+# No need to run now.
+C = ctrl@assays$RNA@counts
+saveRDS(C, file = "data/covid/results/ctrl13_count_matrix.rds")
+```  
+
+Instead load the results and visualize:
+
+```{r}
+path_data <- "https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"
+path_file <- "data/covid/results/azimuth_pred.tsv"
+if (!dir.exists(dirname(path_file))) dir.create(dirname(path_file), recursive = TRUE)
+if (fetch_data && !file.exists(path_file)) download.file(url = file.path(path_data, "covid/results/azimuth_pred.tsv"), destfile = path_file)
+
+azimuth_pred <- read.table(path_file, sep = "\t", header = T)
+
+# add predictions to the seurat object
+ctrl$azimuth = azimuth_pred$predicted.celltype.l2
+DimPlot(ctrl, group.by = "azimuth", label = T, repel = T) + NoAxes()
+
+```
+
+
 ## {{< meta ct_compare >}}
 
 {{< meta ct_compare_1 >}}
 
 ```{r}
 crossTab(ctrl, "predicted.id", "scpred_prediction")
+```
+
+{{< meta ct_compare_2 >}}
+
+```{r}
+wrap_plots(
+    DimPlot(ctrl, label = T, group.by = "predicted.id") + NoAxes(),
+    DimPlot(ctrl, label = T, group.by = "scpred_prediction") + NoAxes(),
+    DimPlot(ctrl, label = T, group.by = "azimuth") + NoAxes(),
+    ncol = 2
+)
 ```
 
 ## {{< meta ct_gsea >}}
@@ -378,6 +424,7 @@ wrap_plots(
     ncol = 2
 )
 ```
+
 
 :::{.callout-note title="Discuss"}
 {{< meta ct_gsea_annot_2 >}}

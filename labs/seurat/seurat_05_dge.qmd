@@ -142,6 +142,55 @@ VlnPlot(alldata, features = as.character(unique(top3$gene)), ncol = 5, group.by 
 Take a screenshot of those results and re-run the same code above with another test: "wilcox" (Wilcoxon Rank Sum test), "bimod" (Likelihood-ratio test), "roc" (Identifies 'markers' of gene expression using ROC analysis),"t" (Student's t-test),"negbinom" (negative binomial generalized linear model),"poisson" (poisson generalized linear model), "LR" (logistic regression), "MAST" (hurdle model), "DESeq2" (negative binomial distribution).
 :::
 
+### DGE with equal amount of cells
+
+The number of cells per cluster differ quite a bit in this data
+
+```{r}
+table(alldata@active.ident)
+```
+
+Hence when we run `FindAllMarkers` one cluster vs rest, the largest cluster (cluster 0) will dominate the "rest" and influence the results the most. So it is often a good idea to subsample the clusters to an equal number of cells before running differential expression for one vs rest. So lets select 300 cells per cluster:
+
+```{r}
+sub <- subset(alldata, cells = WhichCells(alldata, downsample = 300))
+table(sub@active.ident)
+```
+Now rerun `FindAllMarkers` with this set and compare the results.
+
+```{r}
+markers_genes_sub <- FindAllMarkers(
+    sub,
+    log2FC.threshold = 0.2,
+    test.use = "wilcox",
+    min.pct = 0.1,
+    min.diff.pct = 0.2,
+    only.pos = TRUE,
+    max.cells.per.ident = 50,
+    assay = "RNA"
+)
+```
+The number of significant genes per cluster has changed, with more for some clusters and less for others. 
+
+```{r}
+table(markers_genes$cluster)
+table(markers_genes_sub$cluster)
+```
+
+
+
+```{r}
+#| fig-height: 8
+#| fig-width: 8
+
+markers_genes_sub %>%
+    group_by(cluster) %>%
+    slice_min(p_val_adj, n = 5, with_ties = FALSE) -> top5_sub
+
+DotPlot(alldata, features = rev(as.character(unique(top5_sub$gene))), group.by = sel.clust, assay = "RNA") + coord_flip()
+```
+
+
 ## {{< meta dge_cond >}}
 
 {{< meta dge_cond_1 >}}
