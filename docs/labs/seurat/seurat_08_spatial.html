@@ -207,7 +207,7 @@ background-size: cover;
       <div>
       <div class="quarto-title-meta-heading">Published</div>
       <div class="quarto-title-meta-contents">
-        <p class="date">18-Jan-2024</p>
+        <p class="date">05-Feb-2024</p>
       </div>
     </div>
     
@@ -270,7 +270,7 @@ Note
 </div>
 <p>This tutorial is adapted from the <a href="https://satijalab.org/seurat/v3.2/spatial_vignette.html">Seurat vignette</a>.</p>
 <p>Spatial transcriptomic data with the Visium platform is in many ways similar to scRNAseq data. It contains UMI counts for 5-20 cells instead of single cells, but is still quite sparse in the same way as scRNAseq data is, but with the additional information about spatial location in the tissue.<br>
-Here we will first run quality control in a similar manner to scRNAseq data, then QC filtering, dimensionality reduction, integration and clustering. Then we will use scRNAseq data from mouse cortex to run LabelTransfer to predict celltypes in the Visium spots.<br>
+Here we will first run quality control in a similar manner to scRNAseq data, then QC filtering, dimensionality reduction, integration and clustering. Then we will use scRNAseq data from mouse cortex to run label transfer to predict celltypes in the Visium spots.<br>
 We will use two <strong>Visium</strong> spatial transcriptomics dataset of the mouse brain (Sagittal), which are publicly available from the <a href="https://support.10xgenomics.com/spatial-gene-expression/datasets/">10x genomics website</a>. Note, that these dataset have already been filtered for spots that does not overlap with the tissue.</p>
 <section id="meta-st_prep" class="level2" data-number="1">
 <h2 data-number="1" class="anchored" data-anchor-id="meta-st_prep"><span class="header-section-number">1</span> Preparation</h2>
@@ -291,18 +291,24 @@ We will use two <strong>Visium</strong> spatial transcriptomics dataset of the m
 <p>Load ST data</p>
 <p>The package <code>SeuratData</code> has some seurat objects for different datasets. Among those are spatial transcriptomics data from mouse brain and kidney. Here we will download and process sections from the mouse brain.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>outdir <span class="ot">&lt;-</span> <span class="st">"data/spatial/"</span></span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">dir.exists</span>(outdir)) <span class="fu">dir.create</span>(outdir, <span class="at">showWarnings =</span> F)</span>
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># download pre-computed data if missing or long compute</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>fetch_data <span class="ot">&lt;-</span> <span class="cn">TRUE</span></span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co"># to list available datasets in SeuratData you can run AvailableData()</span></span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="co"># first we dowload the dataset</span></span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span>(<span class="st">"stxBrain.SeuratData"</span> <span class="sc">%in%</span> <span class="fu">rownames</span>(SeuratData<span class="sc">::</span><span class="fu">InstalledData</span>()))) {</span>
-<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="fu">InstallData</span>(<span class="st">"stxBrain"</span>)</span>
-<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="co"># now we can list what datasets we have downloaded</span></span>
-<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="fu">InstalledData</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co"># url for source and intermediate data</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>path_data <span class="ot">&lt;-</span> <span class="st">"https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>outdir <span class="ot">&lt;-</span> <span class="st">"data/spatial/"</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">dir.exists</span>(outdir)) <span class="fu">dir.create</span>(outdir, <span class="at">showWarnings =</span> F)</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="co"># to list available datasets in SeuratData you can run AvailableData()</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="co"># first we dowload the dataset</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span>(<span class="st">"stxBrain.SeuratData"</span> <span class="sc">%in%</span> <span class="fu">rownames</span>(SeuratData<span class="sc">::</span><span class="fu">InstalledData</span>()))) {</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>    <span class="fu">InstallData</span>(<span class="st">"stxBrain"</span>)</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a><span class="co"># now we can list what datasets we have downloaded</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a><span class="fu">InstalledData</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 
 <div data-pagedtable="false">
@@ -326,12 +332,12 @@ Active assay: Spatial (31053 features, 0 variable features)
  2 images present: anterior1, posterior1</code></pre>
 </div>
 </div>
-<p>As you can see, now we do not have the assay “RNA”, but instead an assay called “Spatial”.</p>
+<p>As you can see, now we do not have the assay <strong>RNA</strong>, but instead an assay called <strong>Spatial</strong>.</p>
 </section>
 <section id="meta-st_qc" class="level2" data-number="2">
 <h2 data-number="2" class="anchored" data-anchor-id="meta-st_qc"><span class="header-section-number">2</span> Quality control</h2>
 <p>Similar to scRNA-seq we use statistics on number of counts, number of features and percent mitochondria for quality control.</p>
-<p>Now the counts and feature counts are calculated on the Spatial assay, so they are named “nCount_Spatial” and “nFeature_Spatial”.</p>
+<p>Now the counts and feature counts are calculated on the Spatial assay, so they are named <strong>nCount_Spatial</strong> and <strong>nFeature_Spatial</strong>.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>brain <span class="ot">&lt;-</span> <span class="fu">PercentageFeatureSet</span>(brain, <span class="st">"^mt-"</span>, <span class="at">col.name =</span> <span class="st">"percent_mito"</span>)</span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>brain <span class="ot">&lt;-</span> <span class="fu">PercentageFeatureSet</span>(brain, <span class="st">"^Hb.*-"</span>, <span class="at">col.name =</span> <span class="st">"percent_hb"</span>)</span>
@@ -398,8 +404,8 @@ But remember, for some tissue types, the amount of genes expressed and proportio
 <span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="fu">gc</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>            used   (Mb) gc trigger   (Mb)  max used   (Mb)
-Ncells   3360672  179.5    5248490  280.3   5248490  280.3
-Vcells 189921808 1449.0  375078910 2861.7 357748714 2729.5</code></pre>
+Ncells   3360409  179.5    5248368  280.3   5248368  280.3
+Vcells 189921573 1449.0  375078628 2861.7 357748573 2729.5</code></pre>
 </div>
 </div>
 <p>As you can see, the mitochondrial genes are among the top expressed genes. Also the lncRNA gene Bc1 (brain cytoplasmic RNA 1). Also one hemoglobin gene.</p>
@@ -431,7 +437,7 @@ Vcells 189921808 1449.0  375078910 2861.7 357748714 2729.5</code></pre>
 <section id="meta-st_analysis" class="level2" data-number="3">
 <h2 data-number="3" class="anchored" data-anchor-id="meta-st_analysis"><span class="header-section-number">3</span> Analysis</h2>
 <p>We will proceed with the data in a very similar manner to scRNA-seq data.</p>
-<p>For ST data, the Seurat team recommends to use SCTranform for normalization, so we will do that. <code>SCTransform</code> will select variable genes and normalize in one step.</p>
+<p>For ST data, the Seurat team recommends to use <code>SCTransform()</code> for normalization, so we will do that. <code>SCTransform()</code> will select variable genes and normalize in one step.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>brain <span class="ot">&lt;-</span> <span class="fu">SCTransform</span>(brain, <span class="at">assay =</span> <span class="st">"Spatial"</span>, <span class="at">method =</span> <span class="st">"poisson"</span>, <span class="at">verbose =</span> <span class="cn">TRUE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
@@ -502,8 +508,8 @@ Vcells 189921808 1449.0  375078910 2861.7 357748714 2729.5</code></pre>
 </section>
 <section id="meta-st_analysis_int" class="level3" data-number="3.2">
 <h3 data-number="3.2" class="anchored" data-anchor-id="meta-st_analysis_int"><span class="header-section-number">3.2</span> Integration</h3>
-<p>Quite often there are strong batch effects between different ST sections, so it may be a good idea to integrate the data across sections.</p>
-<p>We will do a similar integration as in the Data Integration lab, but this time we will use the SCT assay for integration. Therefore we need to run <code>PrepSCTIntegration</code> which will compute the sctransform residuals for all genes in both the datasets.</p>
+<p>Quite often, there are strong batch effects between different ST sections, so it may be a good idea to integrate the data across sections.</p>
+<p>We will do a similar integration as in the Data Integration lab, but this time we will use the SCT assay for integration. Therefore we need to run <code>PrepSCTIntegration()</code> which will compute the sctransform residuals for all genes in both the datasets.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="co"># create a list of the original data that we loaded to start with</span></span>
 <span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>st.list <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">anterior1 =</span> brain1, <span class="at">posterior1 =</span> brain2)</span>
@@ -526,8 +532,8 @@ Vcells 189921808 1449.0  375078910 2861.7 357748714 2729.5</code></pre>
 <span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a><span class="fu">gc</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>            used   (Mb) gc trigger   (Mb)   max used   (Mb)
-Ncells   3530587  188.6    5248490  280.3    5248490  280.3
-Vcells 546165937 4167.0 1148293145 8760.8 1147467666 8754.5</code></pre>
+Ncells   3530321  188.6    5248368  280.3    5248368  280.3
+Vcells 546165692 4167.0 1148292444 8760.8 1147466814 8754.5</code></pre>
 </div>
 </div>
 <p>Then we run dimensionality reduction and clustering as before.</p>
@@ -589,7 +595,7 @@ Discuss
 </div>
 </div>
 <p>Spatial transcriptomics allows researchers to investigate how gene expression trends varies in space, thus identifying spatial patterns of gene expression. For this purpose there are multiple methods, such as SpatailDE, SPARK, Trendsceek, HMRF and Splotch.</p>
-<p>In <code>FindSpatiallyVariables</code> the default method in Seurat (method = ‘markvariogram), is inspired by the Trendsceek, which models spatial transcriptomics data as a mark point process and computes a ’variogram’, which identifies genes whose expression level is dependent on their spatial location. More specifically, this process calculates gamma(r) values measuring the dependence between two spots a certain “r” distance apart. By default, we use an r-value of ‘5’ in these analyses, and only compute these values for variable genes (where variation is calculated independently of spatial location) to save time.</p>
+<p>In <code>FindSpatiallyVariables()</code> the default method in Seurat (method = ‘markvariogram’), is inspired by the Trendsceek, which models spatial transcriptomics data as a mark point process and computes a ‘variogram’, which identifies genes whose expression level is dependent on their spatial location. More specifically, this process calculates gamma(r) values measuring the dependence between two spots a certain “r” distance apart. By default, we use an r-value of ‘5’ in these analyses, and only compute these values for variable genes (where variation is calculated independently of spatial location) to save time.</p>
 <div class="callout callout-style-default callout-caution callout-titled">
 <div class="callout-header d-flex align-content-center">
 <div class="callout-icon-container">
@@ -617,11 +623,9 @@ Caution
 <p>We can use a scRNA-seq dataset as a reference to predict the proportion of different celltypes in the Visium spots. Keep in mind that it is important to have a reference that contains all the celltypes you expect to find in your spots. Ideally it should be a scRNA-seq reference from the exact same tissue. We will use a reference scRNA-seq dataset of ~14,000 adult mouse cortical cell taxonomy from the Allen Institute, generated with the SMART-Seq2 protocol.</p>
 <p>First download the seurat data:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb32"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>path_data <span class="ot">&lt;-</span> <span class="st">"https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"</span></span>
-<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">dir.exists</span>(<span class="st">"data/spatial/visium"</span>)) <span class="fu">dir.create</span>(<span class="st">"data/spatial/visium"</span>)</span>
-<span id="cb32-4"><a href="#cb32-4" aria-hidden="true" tabindex="-1"></a>path_file <span class="ot">&lt;-</span> <span class="st">"data/spatial/visium/allen_cortex.rds"</span></span>
-<span id="cb32-5"><a href="#cb32-5" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">file.exists</span>(path_file)) <span class="fu">download.file</span>(<span class="at">url =</span> <span class="fu">file.path</span>(path_data, <span class="st">"spatial/visium/allen_cortex.rds"</span>), <span class="at">destfile =</span> path_file)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb32"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">dir.exists</span>(<span class="st">"data/spatial/visium"</span>)) <span class="fu">dir.create</span>(<span class="st">"data/spatial/visium"</span>, <span class="at">recursive =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a>path_file <span class="ot">&lt;-</span> <span class="st">"data/spatial/visium/allen_cortex.rds"</span></span>
+<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">file.exists</span>(path_file)) <span class="fu">download.file</span>(<span class="at">url =</span> <span class="fu">file.path</span>(path_data, <span class="st">"spatial/visium/allen_cortex.rds"</span>), <span class="at">destfile =</span> path_file)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>For speed, and for a more fair comparison of the celltypes, we will subsample all celltypes to a maximum of 200 cells per class (<code>subclass</code>).</p>
 <div class="cell">
@@ -786,27 +790,37 @@ Caution
 </div>
 </div>
 <div class="callout-body-container callout-body">
-<p>This step is slow to run, so it’s better to skip it for now and use the pre-computed file in the next step.</p>
+<p>This is a slow compute intensive step, we will not run this now and instead use a pre-computed file in the step below.</p>
 </div>
 </div>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb42"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a>deconvolution_crc <span class="ot">&lt;-</span> SCDC<span class="sc">::</span><span class="fu">SCDC_prop</span>(</span>
-<span id="cb42-2"><a href="#cb42-2" aria-hidden="true" tabindex="-1"></a>    <span class="at">bulk.eset =</span> eset_ST,</span>
-<span id="cb42-3"><a href="#cb42-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">sc.eset =</span> eset_SC,</span>
-<span id="cb42-4"><a href="#cb42-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">ct.varname =</span> <span class="st">"subclass"</span>,</span>
-<span id="cb42-5"><a href="#cb42-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">ct.sub =</span> <span class="fu">as.character</span>(<span class="fu">unique</span>(eset_SC<span class="sc">$</span>subclass))</span>
-<span id="cb42-6"><a href="#cb42-6" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb42-7"><a href="#cb42-7" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(deconvolution_crc, <span class="st">"data/spatial/visium/seurat_scdc.rds"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb42"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a><span class="co"># this code block is not executed</span></span>
+<span id="cb42-2"><a href="#cb42-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb42-3"><a href="#cb42-3" aria-hidden="true" tabindex="-1"></a><span class="co"># fetch_data is defined at the top of this document</span></span>
+<span id="cb42-4"><a href="#cb42-4" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span>fetch_data) {</span>
+<span id="cb42-5"><a href="#cb42-5" aria-hidden="true" tabindex="-1"></a>  deconvolution_crc <span class="ot">&lt;-</span> SCDC<span class="sc">::</span><span class="fu">SCDC_prop</span>(</span>
+<span id="cb42-6"><a href="#cb42-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">bulk.eset =</span> eset_ST,</span>
+<span id="cb42-7"><a href="#cb42-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">sc.eset =</span> eset_SC,</span>
+<span id="cb42-8"><a href="#cb42-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">ct.varname =</span> <span class="st">"subclass"</span>,</span>
+<span id="cb42-9"><a href="#cb42-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">ct.sub =</span> <span class="fu">as.character</span>(<span class="fu">unique</span>(eset_SC<span class="sc">$</span>subclass))</span>
+<span id="cb42-10"><a href="#cb42-10" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb42-11"><a href="#cb42-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">saveRDS</span>(deconvolution_crc, <span class="st">"data/spatial/visium/seurat_scdc.rds"</span>)</span>
+<span id="cb42-12"><a href="#cb42-12" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Download the precomputed file.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb43"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a>path_file <span class="ot">&lt;-</span> <span class="st">"data/spatial/visium/seurat_scdc.rds"</span></span>
-<span id="cb43-2"><a href="#cb43-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">file.exists</span>(path_file)) <span class="fu">download.file</span>(<span class="at">url =</span> <span class="fu">file.path</span>(path_data, <span class="st">"spatial/visium/results/seurat_scdc.rds"</span>), <span class="at">destfile =</span> path_file)</span>
-<span id="cb43-3"><a href="#cb43-3" aria-hidden="true" tabindex="-1"></a>deconvolution_crc <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(path_file)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb43"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a><span class="co"># fetch_data is defined at the top of this document</span></span>
+<span id="cb43-2"><a href="#cb43-2" aria-hidden="true" tabindex="-1"></a>path_file <span class="ot">&lt;-</span> <span class="st">"data/spatial/visium/seurat_scdc.rds"</span></span>
+<span id="cb43-3"><a href="#cb43-3" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (fetch_data) {</span>
+<span id="cb43-4"><a href="#cb43-4" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="sc">!</span><span class="fu">file.exists</span>(path_file)) <span class="fu">download.file</span>(<span class="at">url =</span> <span class="fu">file.path</span>(path_data, <span class="st">"spatial/visium/results/seurat_scdc.rds"</span>), <span class="at">destfile =</span> path_file)</span>
+<span id="cb43-5"><a href="#cb43-5" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb44"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a>deconvolution_crc <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(path_file)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Now we have a matrix with predicted proportions of each celltypes for each visium spot in <code>prop.est.mvw</code>.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb44"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(deconvolution_crc<span class="sc">$</span>prop.est.mvw)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb45"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(deconvolution_crc<span class="sc">$</span>prop.est.mvw)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>                     Lamp5 Sncg Serpinf1          Vip          Sst      Pvalb
 AAACTCGTGATATAAG-1_1     0    0        0 0.000000e+00 0.0003020068 0.00000000
@@ -847,41 +861,41 @@ AAATGATTCGATCAGC-1_1 0.000000e+00</code></pre>
 </div>
 <p>Now we take the deconvolution output and add it to the Seurat object as a new assay.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb46"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a>cortex<span class="sc">@</span>assays[[<span class="st">"SCDC"</span>]] <span class="ot">&lt;-</span> <span class="fu">CreateAssayObject</span>(<span class="at">data =</span> <span class="fu">t</span>(deconvolution_crc<span class="sc">$</span>prop.est.mvw))</span>
-<span id="cb46-2"><a href="#cb46-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb46-3"><a href="#cb46-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Seems to be a bug in SeuratData package that the key is not set and any plotting function etc. will throw an error.</span></span>
-<span id="cb46-4"><a href="#cb46-4" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="fu">length</span>(cortex<span class="sc">@</span>assays<span class="sc">$</span>SCDC<span class="sc">@</span>key) <span class="sc">==</span> <span class="dv">0</span>) {</span>
-<span id="cb46-5"><a href="#cb46-5" aria-hidden="true" tabindex="-1"></a>    cortex<span class="sc">@</span>assays<span class="sc">$</span>SCDC<span class="sc">@</span>key <span class="ot">&lt;-</span> <span class="st">"scdc_"</span></span>
-<span id="cb46-6"><a href="#cb46-6" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb47"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb47-1"><a href="#cb47-1" aria-hidden="true" tabindex="-1"></a>cortex<span class="sc">@</span>assays[[<span class="st">"SCDC"</span>]] <span class="ot">&lt;-</span> <span class="fu">CreateAssayObject</span>(<span class="at">data =</span> <span class="fu">t</span>(deconvolution_crc<span class="sc">$</span>prop.est.mvw))</span>
+<span id="cb47-2"><a href="#cb47-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb47-3"><a href="#cb47-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Seems to be a bug in SeuratData package that the key is not set and any plotting function etc. will throw an error.</span></span>
+<span id="cb47-4"><a href="#cb47-4" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="fu">length</span>(cortex<span class="sc">@</span>assays<span class="sc">$</span>SCDC<span class="sc">@</span>key) <span class="sc">==</span> <span class="dv">0</span>) {</span>
+<span id="cb47-5"><a href="#cb47-5" aria-hidden="true" tabindex="-1"></a>    cortex<span class="sc">@</span>assays<span class="sc">$</span>SCDC<span class="sc">@</span>key <span class="ot">&lt;-</span> <span class="st">"scdc_"</span></span>
+<span id="cb47-6"><a href="#cb47-6" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb47"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb47-1"><a href="#cb47-1" aria-hidden="true" tabindex="-1"></a><span class="fu">DefaultAssay</span>(cortex) <span class="ot">&lt;-</span> <span class="st">"SCDC"</span></span>
-<span id="cb47-2"><a href="#cb47-2" aria-hidden="true" tabindex="-1"></a><span class="fu">SpatialFeaturePlot</span>(cortex, <span class="at">features =</span> <span class="fu">c</span>(<span class="st">"L2/3 IT"</span>, <span class="st">"L4"</span>), <span class="at">pt.size.factor =</span> <span class="fl">1.6</span>, <span class="at">ncol =</span> <span class="dv">2</span>, <span class="at">crop =</span> <span class="cn">TRUE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb48"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb48-1"><a href="#cb48-1" aria-hidden="true" tabindex="-1"></a><span class="fu">DefaultAssay</span>(cortex) <span class="ot">&lt;-</span> <span class="st">"SCDC"</span></span>
+<span id="cb48-2"><a href="#cb48-2" aria-hidden="true" tabindex="-1"></a><span class="fu">SpatialFeaturePlot</span>(cortex, <span class="at">features =</span> <span class="fu">c</span>(<span class="st">"L2/3 IT"</span>, <span class="st">"L4"</span>), <span class="at">pt.size.factor =</span> <span class="fl">1.6</span>, <span class="at">ncol =</span> <span class="dv">2</span>, <span class="at">crop =</span> <span class="cn">TRUE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="seurat_08_spatial_files/figure-html/unnamed-chunk-33-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-16"><img src="seurat_08_spatial_files/figure-html/unnamed-chunk-33-1.png" class="img-fluid figure-img" width="768"></a></p>
+<p><a href="seurat_08_spatial_files/figure-html/unnamed-chunk-34-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-16"><img src="seurat_08_spatial_files/figure-html/unnamed-chunk-34-1.png" class="img-fluid figure-img" width="768"></a></p>
 </figure>
 </div>
 </div>
 </div>
 <p>Based on these prediction scores, we can also predict cell types whose location is spatially restricted. We use the same methods based on marked point processes to define spatially variable features, but use the cell type prediction scores as the “marks” rather than gene expression.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb48"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb48-1"><a href="#cb48-1" aria-hidden="true" tabindex="-1"></a><span class="co"># FindSpatiallyVariableFeatures() does not work with markvariogram or moransi</span></span>
-<span id="cb48-2"><a href="#cb48-2" aria-hidden="true" tabindex="-1"></a><span class="co"># this chunk is disabled</span></span>
-<span id="cb48-3"><a href="#cb48-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-4"><a href="#cb48-4" aria-hidden="true" tabindex="-1"></a>cortex <span class="ot">&lt;-</span> <span class="fu">FindSpatiallyVariableFeatures</span>(cortex,</span>
-<span id="cb48-5"><a href="#cb48-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">assay =</span> <span class="st">"SCDC"</span>, <span class="at">selection.method =</span> <span class="st">"markvariogram"</span>,</span>
-<span id="cb48-6"><a href="#cb48-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">features =</span> <span class="fu">rownames</span>(cortex), <span class="at">r.metric =</span> <span class="dv">5</span>, <span class="at">slot =</span> <span class="st">"data"</span></span>
-<span id="cb48-7"><a href="#cb48-7" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb48-8"><a href="#cb48-8" aria-hidden="true" tabindex="-1"></a>top.clusters <span class="ot">&lt;-</span> <span class="fu">head</span>(<span class="fu">SpatiallyVariableFeatures</span>(cortex), <span class="dv">4</span>)</span>
-<span id="cb48-9"><a href="#cb48-9" aria-hidden="true" tabindex="-1"></a><span class="fu">SpatialPlot</span>(<span class="at">object =</span> cortex, <span class="at">features =</span> top.clusters, <span class="at">ncol =</span> <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb49"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb49-1"><a href="#cb49-1" aria-hidden="true" tabindex="-1"></a><span class="co"># FindSpatiallyVariableFeatures() does not work with markvariogram or moransi</span></span>
+<span id="cb49-2"><a href="#cb49-2" aria-hidden="true" tabindex="-1"></a><span class="co"># this chunk is disabled</span></span>
+<span id="cb49-3"><a href="#cb49-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb49-4"><a href="#cb49-4" aria-hidden="true" tabindex="-1"></a>cortex <span class="ot">&lt;-</span> <span class="fu">FindSpatiallyVariableFeatures</span>(cortex,</span>
+<span id="cb49-5"><a href="#cb49-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">assay =</span> <span class="st">"SCDC"</span>, <span class="at">selection.method =</span> <span class="st">"markvariogram"</span>,</span>
+<span id="cb49-6"><a href="#cb49-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">features =</span> <span class="fu">rownames</span>(cortex), <span class="at">r.metric =</span> <span class="dv">5</span>, <span class="at">slot =</span> <span class="st">"data"</span></span>
+<span id="cb49-7"><a href="#cb49-7" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb49-8"><a href="#cb49-8" aria-hidden="true" tabindex="-1"></a>top.clusters <span class="ot">&lt;-</span> <span class="fu">head</span>(<span class="fu">SpatiallyVariableFeatures</span>(cortex), <span class="dv">4</span>)</span>
+<span id="cb49-9"><a href="#cb49-9" aria-hidden="true" tabindex="-1"></a><span class="fu">SpatialPlot</span>(<span class="at">object =</span> cortex, <span class="at">features =</span> top.clusters, <span class="at">ncol =</span> <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>We can also visualize the scores per cluster in ST data.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb49"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb49-1"><a href="#cb49-1" aria-hidden="true" tabindex="-1"></a><span class="co"># this chunk is disabled</span></span>
-<span id="cb49-2"><a href="#cb49-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb49-3"><a href="#cb49-3" aria-hidden="true" tabindex="-1"></a><span class="fu">VlnPlot</span>(cortex, <span class="at">group.by =</span> <span class="st">"seurat_clusters"</span>, <span class="at">features =</span> top.clusters, <span class="at">pt.size =</span> <span class="dv">0</span>, <span class="at">ncol =</span> <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb50"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb50-1"><a href="#cb50-1" aria-hidden="true" tabindex="-1"></a><span class="co"># this chunk is disabled</span></span>
+<span id="cb50-2"><a href="#cb50-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb50-3"><a href="#cb50-3" aria-hidden="true" tabindex="-1"></a><span class="fu">VlnPlot</span>(cortex, <span class="at">group.by =</span> <span class="st">"seurat_clusters"</span>, <span class="at">features =</span> top.clusters, <span class="at">pt.size =</span> <span class="dv">0</span>, <span class="at">ncol =</span> <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Keep in mind that the deconvolution results are just predictions, depending on how well your scRNAseq data covers the celltypes that are present in the ST data and on how parameters, gene selection etc. are tuned you may get different results.</p>
 <div class="callout callout-style-default callout-note callout-titled" title="Discuss">
@@ -896,27 +910,27 @@ Discuss
 <div class="callout-body-container callout-body">
 <p>Subset for another region that does not contain cortex cells and check what you get from the label transfer. Suggested region is the right end of the posterial section that you can select like this:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb50"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb50-1"><a href="#cb50-1" aria-hidden="true" tabindex="-1"></a><span class="co"># subset for the anterior dataset</span></span>
-<span id="cb50-2"><a href="#cb50-2" aria-hidden="true" tabindex="-1"></a>subregion <span class="ot">&lt;-</span> <span class="fu">subset</span>(brain.integrated, <span class="at">subset =</span> orig.ident <span class="sc">==</span> <span class="st">"posterior1"</span>)</span>
-<span id="cb50-3"><a href="#cb50-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb50-4"><a href="#cb50-4" aria-hidden="true" tabindex="-1"></a><span class="co"># there seems to be an error in the subsetting, so the posterior1 image is not removed, do it manually</span></span>
-<span id="cb50-5"><a href="#cb50-5" aria-hidden="true" tabindex="-1"></a>subregion<span class="sc">@</span>images<span class="sc">$</span>anterior1 <span class="ot">&lt;-</span> <span class="cn">NULL</span></span>
-<span id="cb50-6"><a href="#cb50-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb50-7"><a href="#cb50-7" aria-hidden="true" tabindex="-1"></a><span class="co"># add coordinates to metadata</span></span>
-<span id="cb50-8"><a href="#cb50-8" aria-hidden="true" tabindex="-1"></a><span class="co"># note that this only returns one slide by default</span></span>
-<span id="cb50-9"><a href="#cb50-9" aria-hidden="true" tabindex="-1"></a>subregion<span class="sc">$</span>imagerow <span class="ot">&lt;-</span> <span class="fu">GetTissueCoordinates</span>(subregion)<span class="sc">$</span>imagerow</span>
-<span id="cb50-10"><a href="#cb50-10" aria-hidden="true" tabindex="-1"></a>subregion<span class="sc">$</span>imagecol <span class="ot">&lt;-</span> <span class="fu">GetTissueCoordinates</span>(subregion)<span class="sc">$</span>imagecol</span>
-<span id="cb50-11"><a href="#cb50-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb50-12"><a href="#cb50-12" aria-hidden="true" tabindex="-1"></a><span class="co"># subset for a specific region</span></span>
-<span id="cb50-13"><a href="#cb50-13" aria-hidden="true" tabindex="-1"></a>subregion <span class="ot">&lt;-</span> <span class="fu">subset</span>(subregion, <span class="at">subset =</span> imagecol <span class="sc">&gt;</span> <span class="dv">400</span>, <span class="at">invert =</span> <span class="cn">FALSE</span>)</span>
-<span id="cb50-14"><a href="#cb50-14" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb50-15"><a href="#cb50-15" aria-hidden="true" tabindex="-1"></a>p1 <span class="ot">&lt;-</span> <span class="fu">SpatialDimPlot</span>(subregion, <span class="at">crop =</span> <span class="cn">TRUE</span>, <span class="at">label =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb50-16"><a href="#cb50-16" aria-hidden="true" tabindex="-1"></a>p2 <span class="ot">&lt;-</span> <span class="fu">SpatialDimPlot</span>(subregion, <span class="at">crop =</span> <span class="cn">FALSE</span>, <span class="at">label =</span> <span class="cn">TRUE</span>, <span class="at">pt.size.factor =</span> <span class="dv">1</span>, <span class="at">label.size =</span> <span class="dv">3</span>)</span>
-<span id="cb50-17"><a href="#cb50-17" aria-hidden="true" tabindex="-1"></a>p1 <span class="sc">+</span> p2</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb51"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb51-1"><a href="#cb51-1" aria-hidden="true" tabindex="-1"></a><span class="co"># subset for the anterior dataset</span></span>
+<span id="cb51-2"><a href="#cb51-2" aria-hidden="true" tabindex="-1"></a>subregion <span class="ot">&lt;-</span> <span class="fu">subset</span>(brain.integrated, <span class="at">subset =</span> orig.ident <span class="sc">==</span> <span class="st">"posterior1"</span>)</span>
+<span id="cb51-3"><a href="#cb51-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb51-4"><a href="#cb51-4" aria-hidden="true" tabindex="-1"></a><span class="co"># there seems to be an error in the subsetting, so the posterior1 image is not removed, do it manually</span></span>
+<span id="cb51-5"><a href="#cb51-5" aria-hidden="true" tabindex="-1"></a>subregion<span class="sc">@</span>images<span class="sc">$</span>anterior1 <span class="ot">&lt;-</span> <span class="cn">NULL</span></span>
+<span id="cb51-6"><a href="#cb51-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb51-7"><a href="#cb51-7" aria-hidden="true" tabindex="-1"></a><span class="co"># add coordinates to metadata</span></span>
+<span id="cb51-8"><a href="#cb51-8" aria-hidden="true" tabindex="-1"></a><span class="co"># note that this only returns one slide by default</span></span>
+<span id="cb51-9"><a href="#cb51-9" aria-hidden="true" tabindex="-1"></a>subregion<span class="sc">$</span>imagerow <span class="ot">&lt;-</span> <span class="fu">GetTissueCoordinates</span>(subregion)<span class="sc">$</span>imagerow</span>
+<span id="cb51-10"><a href="#cb51-10" aria-hidden="true" tabindex="-1"></a>subregion<span class="sc">$</span>imagecol <span class="ot">&lt;-</span> <span class="fu">GetTissueCoordinates</span>(subregion)<span class="sc">$</span>imagecol</span>
+<span id="cb51-11"><a href="#cb51-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb51-12"><a href="#cb51-12" aria-hidden="true" tabindex="-1"></a><span class="co"># subset for a specific region</span></span>
+<span id="cb51-13"><a href="#cb51-13" aria-hidden="true" tabindex="-1"></a>subregion <span class="ot">&lt;-</span> <span class="fu">subset</span>(subregion, <span class="at">subset =</span> imagecol <span class="sc">&gt;</span> <span class="dv">400</span>, <span class="at">invert =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb51-14"><a href="#cb51-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb51-15"><a href="#cb51-15" aria-hidden="true" tabindex="-1"></a>p1 <span class="ot">&lt;-</span> <span class="fu">SpatialDimPlot</span>(subregion, <span class="at">crop =</span> <span class="cn">TRUE</span>, <span class="at">label =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb51-16"><a href="#cb51-16" aria-hidden="true" tabindex="-1"></a>p2 <span class="ot">&lt;-</span> <span class="fu">SpatialDimPlot</span>(subregion, <span class="at">crop =</span> <span class="cn">FALSE</span>, <span class="at">label =</span> <span class="cn">TRUE</span>, <span class="at">pt.size.factor =</span> <span class="dv">1</span>, <span class="at">label.size =</span> <span class="dv">3</span>)</span>
+<span id="cb51-17"><a href="#cb51-17" aria-hidden="true" tabindex="-1"></a>p1 <span class="sc">+</span> p2</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="seurat_08_spatial_files/figure-html/unnamed-chunk-36-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-17"><img src="seurat_08_spatial_files/figure-html/unnamed-chunk-36-1.png" class="img-fluid figure-img" width="864"></a></p>
+<p><a href="seurat_08_spatial_files/figure-html/unnamed-chunk-37-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-17"><img src="seurat_08_spatial_files/figure-html/unnamed-chunk-37-1.png" class="img-fluid figure-img" width="864"></a></p>
 </figure>
 </div>
 </div>
@@ -932,7 +946,7 @@ Discuss
 Click here
 </summary>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb51"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb51-1"><a href="#cb51-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb52"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb52-1"><a href="#cb52-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>R version 4.3.0 (2023-04-21)
 Platform: x86_64-pc-linux-gnu (64-bit)
@@ -995,7 +1009,7 @@ loaded via a namespace (and not attached):
  [82] RANN_2.6.1              pillar_1.9.0            stringr_1.5.0          
  [85] later_1.3.1             splines_4.3.0           lattice_0.21-8         
  [88] bit_4.0.5               survival_3.5-5          deldir_1.0-9           
- [91] tidyselect_1.2.0        registry_0.5-1          Biostrings_2.70.1      
+ [91] tidyselect_1.2.0        registry_0.5-1          Biostrings_2.70.2      
  [94] miniUI_0.1.1.1          pbapply_1.7-0           knitr_1.43             
  [97] gridExtra_2.3           IRanges_2.36.0          scattermore_1.2        
 [100] stats4_4.3.0            xfun_0.39               matrixStats_1.0.0      
@@ -1259,7 +1273,8 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
     <div class="nav-footer-center">
       &nbsp;
     </div>
-    <div class="nav-footer-right">Published with <a href="https://quarto.org/">Quarto</a> v1.3.450</div>
+    <div class="nav-footer-right">Published with <a href="https://quarto.org/">Quarto</a> v1.3.450
+</div>
   </div>
 </footer>
 <script>var lightboxQuarto = GLightbox({"selector":".lightbox","closeEffect":"zoom","descPosition":"bottom","openEffect":"zoom","loop":true});</script>
