@@ -58,7 +58,7 @@ kidney. Here we will download and process sections from the mouse brain.
 
 ``` {r load}
 # download pre-computed data if missing or long compute
-fetch_data <- FALSE
+fetch_data <- TRUE
 
 # url for source and intermediate data
 path_data <- "https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"
@@ -399,7 +399,7 @@ generated with the SMART-Seq2 protocol.
 First download the seurat data:
 
 ``` {r}
-if (!dir.exists("data/spatial/visium")) dir.create("data/spatial/visium")
+if (!dir.exists("data/spatial/visium")) dir.create("data/spatial/visium", recursive = TRUE)
 path_file <- "data/spatial/visium/allen_cortex.rds"
 if (!file.exists(path_file)) download.file(url = file.path(path_data, "spatial/visium/allen_cortex.rds"), destfile = path_file)
 ```
@@ -570,31 +570,32 @@ We then run the deconvolution defining the celltype of interest as
 >
 > This is a slow compute intensive step, we will not run this now and
 > instead use a pre-computed file in the step below.
->
-> ``` {r}
-> #| results: hide
-> #| eval: false
->
-> # fetch_data is defined at the top of this document
-> if (!fetch_data) {
->   deconvolution_crc <- SCDC::SCDC_prop(
->     bulk.eset = eset_ST,
->     sc.eset = eset_SC,
->     ct.varname = "subclass",
->     ct.sub = as.character(unique(eset_SC$subclass))
->   )
->   saveRDS(deconvolution_crc, "data/spatial/visium/seurat_scdc.rds")
-> }
-> ```
 
 </div>
+
+``` {r}
+#| results: hide
+#| eval: false
+# this code block is not executed
+
+# fetch_data is defined at the top of this document
+if (!fetch_data) {
+  deconvolution_crc <- SCDC::SCDC_prop(
+    bulk.eset = eset_ST,
+    sc.eset = eset_SC,
+    ct.varname = "subclass",
+    ct.sub = as.character(unique(eset_SC$subclass))
+  )
+  saveRDS(deconvolution_crc, "data/spatial/visium/seurat_scdc.rds")
+}
+```
 
 Download the precomputed file.
 
 ``` {r}
 # fetch_data is defined at the top of this document
+path_file <- "data/spatial/visium/seurat_scdc.rds"
 if (fetch_data) {
-  path_file <- "data/spatial/visium/seurat_scdc.rds"
   if (!file.exists(path_file)) download.file(url = file.path(path_data, "spatial/visium/results/seurat_scdc.rds"), destfile = path_file)
 }
 ```

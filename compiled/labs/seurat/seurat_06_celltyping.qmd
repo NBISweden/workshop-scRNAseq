@@ -214,6 +214,42 @@ ggplot(ctrl@meta.data, aes(x = CCA_snn_res.0.5, fill = scpred_prediction)) +
     theme_classic()
 ```
 
+## Azimuth
+
+There are multiple online resources with large curated datasets with
+methods to integrate and do label transfer. One such resource is
+[Azimuth](https://azimuth.hubmapconsortium.org/) another one is
+[Disco](https://www.immunesinglecell.org/).
+
+Azimuth is also possible to install and run locally, but in this case we
+have used the online app and ran the predictions for you. So you just
+have to download the prediction file.
+
+This is how to save the count matrix:
+
+``` {r}
+#| eval: false
+
+# No need to run now.
+C = ctrl@assays$RNA@counts
+saveRDS(C, file = "data/covid/results/ctrl13_count_matrix.rds")
+```
+
+Instead load the results and visualize:
+
+``` {r}
+path_data <- "https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"
+path_file <- "data/covid/results/azimuth_pred.tsv"
+if (!dir.exists(dirname(path_file))) dir.create(dirname(path_file), recursive = TRUE)
+if (fetch_data && !file.exists(path_file)) download.file(url = file.path(path_data, "covid/results/azimuth_pred.tsv"), destfile = path_file)
+
+azimuth_pred <- read.table(path_file, sep = "\t", header = T)
+
+# add predictions to the seurat object
+ctrl$azimuth = azimuth_pred$predicted.celltype.l2
+DimPlot(ctrl, group.by = "azimuth", label = T, repel = T) + NoAxes()
+```
+
 ## Compare results
 
 Now we will compare the output of the two methods using the convenient
@@ -222,6 +258,17 @@ metadata slots.
 
 ``` {r}
 crossTab(ctrl, "predicted.id", "scpred_prediction")
+```
+
+We can also plot all the different predictions side by side
+
+``` {r}
+wrap_plots(
+    DimPlot(ctrl, label = T, group.by = "predicted.id") + NoAxes(),
+    DimPlot(ctrl, label = T, group.by = "scpred_prediction") + NoAxes(),
+    DimPlot(ctrl, label = T, group.by = "azimuth") + NoAxes(),
+    ncol = 2
+)
 ```
 
 ## GSEA with celltype markers
