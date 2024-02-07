@@ -207,7 +207,7 @@ background-size: cover;
       <div>
       <div class="quarto-title-meta-heading">Published</div>
       <div class="quarto-title-meta-contents">
-        <p class="date">05-Feb-2024</p>
+        <p class="date">06-Feb-2024</p>
       </div>
     </div>
     
@@ -223,7 +223,10 @@ background-size: cover;
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#meta-dge_cmg" id="toc-meta-dge_cmg" class="nav-link active" data-scroll-target="#meta-dge_cmg"><span class="header-section-number">1</span> Cell marker genes</a></li>
+  <li><a href="#meta-dge_cmg" id="toc-meta-dge_cmg" class="nav-link active" data-scroll-target="#meta-dge_cmg"><span class="header-section-number">1</span> Cell marker genes</a>
+  <ul>
+  <li><a href="#dge-with-equal-amount-of-cells" id="toc-dge-with-equal-amount-of-cells" class="nav-link" data-scroll-target="#dge-with-equal-amount-of-cells"><span class="header-section-number">1.1</span> DGE with equal amount of cells</a></li>
+  </ul></li>
   <li><a href="#meta-dge_cond" id="toc-meta-dge_cond" class="nav-link" data-scroll-target="#meta-dge_cond"><span class="header-section-number">2</span> DGE across conditions</a>
   <ul>
   <li><a href="#remove-sex-chromosome-genes" id="toc-remove-sex-chromosome-genes" class="nav-link" data-scroll-target="#remove-sex-chromosome-genes"><span class="header-section-number">2.1</span> Remove sex chromosome genes</a></li>
@@ -419,49 +422,113 @@ Discuss
 <p>Take a screenshot of those results and re-run the same code above with another test: “wilcox” (Wilcoxon Rank Sum test), “bimod” (Likelihood-ratio test), “roc” (Identifies ‘markers’ of gene expression using ROC analysis),“t” (Student’s t-test),“negbinom” (negative binomial generalized linear model),“poisson” (poisson generalized linear model), “LR” (logistic regression), “MAST” (hurdle model), “DESeq2” (negative binomial distribution).</p>
 </div>
 </div>
+<section id="dge-with-equal-amount-of-cells" class="level3" data-number="1.1">
+<h3 data-number="1.1" class="anchored" data-anchor-id="dge-with-equal-amount-of-cells"><span class="header-section-number">1.1</span> DGE with equal amount of cells</h3>
+<p>The number of cells per cluster differ quite a bit in this data</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="fu">table</span>(alldata<span class="sc">@</span>active.ident)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+   0    1    2    3    4    5    6    7    8    9 
+2063 1370 1037  648  542  364  362  337  334   77 </code></pre>
+</div>
+</div>
+<p>Hence when we run <code>FindAllMarkers</code> one cluster vs rest, the largest cluster (cluster 0) will dominate the “rest” and influence the results the most. So it is often a good idea to subsample the clusters to an equal number of cells before running differential expression for one vs rest. So lets select 300 cells per cluster:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>sub <span class="ot">&lt;-</span> <span class="fu">subset</span>(alldata, <span class="at">cells =</span> <span class="fu">WhichCells</span>(alldata, <span class="at">downsample =</span> <span class="dv">300</span>))</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="fu">table</span>(sub<span class="sc">@</span>active.ident)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+  0   1   2   3   4   5   6   7   8   9 
+300 300 300 300 300 300 300 300 300  77 </code></pre>
+</div>
+</div>
+<p>Now rerun <code>FindAllMarkers</code> with this set and compare the results.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>markers_genes_sub <span class="ot">&lt;-</span> <span class="fu">FindAllMarkers</span>(</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>    sub,</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">log2FC.threshold =</span> <span class="fl">0.2</span>,</span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">test.use =</span> <span class="st">"wilcox"</span>,</span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">min.pct =</span> <span class="fl">0.1</span>,</span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">min.diff.pct =</span> <span class="fl">0.2</span>,</span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">only.pos =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">max.cells.per.ident =</span> <span class="dv">50</span>,</span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">assay =</span> <span class="st">"RNA"</span></span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>The number of significant genes per cluster has changed, with more for some clusters and less for others.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="fu">table</span>(markers_genes<span class="sc">$</span>cluster)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+   0    1    2    3    4    5    6    7    8    9 
+1018  119  100  156  122  114  157   68  720  186 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="fu">table</span>(markers_genes_sub<span class="sc">$</span>cluster)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+   0    1    2    3    4    5    6    7    8    9 
+1024  152  119  161  112   65  208   50  938  221 </code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>markers_genes_sub <span class="sc">%&gt;%</span></span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">group_by</span>(cluster) <span class="sc">%&gt;%</span></span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">slice_min</span>(p_val_adj, <span class="at">n =</span> <span class="dv">5</span>, <span class="at">with_ties =</span> <span class="cn">FALSE</span>) <span class="ot">-&gt;</span> top5_sub</span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a><span class="fu">DotPlot</span>(alldata, <span class="at">features =</span> <span class="fu">rev</span>(<span class="fu">as.character</span>(<span class="fu">unique</span>(top5_sub<span class="sc">$</span>gene))), <span class="at">group.by =</span> sel.clust, <span class="at">assay =</span> <span class="st">"RNA"</span>) <span class="sc">+</span> <span class="fu">coord_flip</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-left">
+<figure class="figure">
+<p><a href="seurat_05_dge_files/figure-html/unnamed-chunk-15-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-7"><img src="seurat_05_dge_files/figure-html/unnamed-chunk-15-1.png" class="img-fluid figure-img" width="768"></a></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
 </section>
 <section id="meta-dge_cond" class="level2" data-number="2">
 <h2 data-number="2" class="anchored" data-anchor-id="meta-dge_cond"><span class="header-section-number">2</span> DGE across conditions</h2>
 <p>The second way of computing differential expression is to answer which genes are differentially expressed within a cluster. For example, in our case we have libraries comming from patients and controls and we would like to know which genes are influenced the most in a particular cell type. For this end, we will first subset our data for the desired cell cluster, then change the cell identities to the variable of comparison (which now in our case is the <strong>type</strong>, e.g.&nbsp;Covid/Ctrl).</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co"># select all cells in cluster 1</span></span>
-<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>cell_selection <span class="ot">&lt;-</span> <span class="fu">subset</span>(alldata, <span class="at">cells =</span> <span class="fu">colnames</span>(alldata)[alldata<span class="sc">@</span>meta.data[, sel.clust] <span class="sc">==</span> <span class="dv">3</span>])</span>
-<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>cell_selection <span class="ot">&lt;-</span> <span class="fu">SetIdent</span>(cell_selection, <span class="at">value =</span> <span class="st">"type"</span>)</span>
-<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Compute differentiall expression</span></span>
-<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>DGE_cell_selection <span class="ot">&lt;-</span> <span class="fu">FindAllMarkers</span>(cell_selection,</span>
-<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">log2FC.threshold =</span> <span class="fl">0.2</span>,</span>
-<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">test.use =</span> <span class="st">"wilcox"</span>,</span>
-<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">min.pct =</span> <span class="fl">0.1</span>,</span>
-<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">min.diff.pct =</span> <span class="fl">0.2</span>,</span>
-<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">only.pos =</span> <span class="cn">TRUE</span>,</span>
-<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">max.cells.per.ident =</span> <span class="dv">50</span>,</span>
-<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">assay =</span> <span class="st">"RNA"</span></span>
-<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="co"># select all cells in cluster 1</span></span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>cell_selection <span class="ot">&lt;-</span> <span class="fu">subset</span>(alldata, <span class="at">cells =</span> <span class="fu">colnames</span>(alldata)[alldata<span class="sc">@</span>meta.data[, sel.clust] <span class="sc">==</span> <span class="dv">3</span>])</span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>cell_selection <span class="ot">&lt;-</span> <span class="fu">SetIdent</span>(cell_selection, <span class="at">value =</span> <span class="st">"type"</span>)</span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Compute differentiall expression</span></span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>DGE_cell_selection <span class="ot">&lt;-</span> <span class="fu">FindAllMarkers</span>(cell_selection,</span>
+<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">log2FC.threshold =</span> <span class="fl">0.2</span>,</span>
+<span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">test.use =</span> <span class="st">"wilcox"</span>,</span>
+<span id="cb22-8"><a href="#cb22-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">min.pct =</span> <span class="fl">0.1</span>,</span>
+<span id="cb22-9"><a href="#cb22-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">min.diff.pct =</span> <span class="fl">0.2</span>,</span>
+<span id="cb22-10"><a href="#cb22-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">only.pos =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb22-11"><a href="#cb22-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">max.cells.per.ident =</span> <span class="dv">50</span>,</span>
+<span id="cb22-12"><a href="#cb22-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">assay =</span> <span class="st">"RNA"</span></span>
+<span id="cb22-13"><a href="#cb22-13" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>We can now plot the expression across the <strong>type</strong>.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>DGE_cell_selection <span class="sc">%&gt;%</span></span>
-<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">group_by</span>(cluster) <span class="sc">%&gt;%</span></span>
-<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">top_n</span>(<span class="sc">-</span><span class="dv">5</span>, p_val) <span class="ot">-&gt;</span> top5_cell_selection</span>
-<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a><span class="fu">VlnPlot</span>(cell_selection, <span class="at">features =</span> <span class="fu">as.character</span>(<span class="fu">unique</span>(top5_cell_selection<span class="sc">$</span>gene)), <span class="at">ncol =</span> <span class="dv">5</span>, <span class="at">group.by =</span> <span class="st">"type"</span>, <span class="at">assay =</span> <span class="st">"RNA"</span>, <span class="at">pt.size =</span> .<span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>DGE_cell_selection <span class="sc">%&gt;%</span></span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">group_by</span>(cluster) <span class="sc">%&gt;%</span></span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">top_n</span>(<span class="sc">-</span><span class="dv">5</span>, p_val) <span class="ot">-&gt;</span> top5_cell_selection</span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a><span class="fu">VlnPlot</span>(cell_selection, <span class="at">features =</span> <span class="fu">as.character</span>(<span class="fu">unique</span>(top5_cell_selection<span class="sc">$</span>gene)), <span class="at">ncol =</span> <span class="dv">5</span>, <span class="at">group.by =</span> <span class="st">"type"</span>, <span class="at">assay =</span> <span class="st">"RNA"</span>, <span class="at">pt.size =</span> .<span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="seurat_05_dge_files/figure-html/unnamed-chunk-12-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-7"><img src="seurat_05_dge_files/figure-html/unnamed-chunk-12-1.png" class="img-fluid figure-img" width="768"></a></p>
+<p><a href="seurat_05_dge_files/figure-html/unnamed-chunk-17-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-8"><img src="seurat_05_dge_files/figure-html/unnamed-chunk-17-1.png" class="img-fluid figure-img" width="768"></a></p>
 </figure>
 </div>
 </div>
 </div>
 <p>We can also plot these genes across all clusters, but split by <strong>type</strong>, to check if the genes are also over/under expressed in other celltypes.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="fu">VlnPlot</span>(alldata,</span>
-<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>    <span class="at">features =</span> <span class="fu">as.character</span>(<span class="fu">unique</span>(top5_cell_selection<span class="sc">$</span>gene)),</span>
-<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">ncol =</span> <span class="dv">4</span>, <span class="at">split.by =</span> <span class="st">"type"</span>, <span class="at">assay =</span> <span class="st">"RNA"</span>, <span class="at">pt.size =</span> <span class="dv">0</span></span>
-<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="fu">VlnPlot</span>(alldata,</span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>    <span class="at">features =</span> <span class="fu">as.character</span>(<span class="fu">unique</span>(top5_cell_selection<span class="sc">$</span>gene)),</span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">ncol =</span> <span class="dv">4</span>, <span class="at">split.by =</span> <span class="st">"type"</span>, <span class="at">assay =</span> <span class="st">"RNA"</span>, <span class="at">pt.size =</span> <span class="dv">0</span></span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="seurat_05_dge_files/figure-html/unnamed-chunk-13-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-8"><img src="seurat_05_dge_files/figure-html/unnamed-chunk-13-1.png" class="img-fluid figure-img" width="1152"></a></p>
+<p><a href="seurat_05_dge_files/figure-html/unnamed-chunk-18-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-9"><img src="seurat_05_dge_files/figure-html/unnamed-chunk-18-1.png" class="img-fluid figure-img" width="1152"></a></p>
 </figure>
 </div>
 </div>
@@ -471,63 +538,63 @@ Discuss
 <h3 data-number="2.1" class="anchored" data-anchor-id="remove-sex-chromosome-genes"><span class="header-section-number">2.1</span> Remove sex chromosome genes</h3>
 <p>To remove some of the bias due to unbalanced sex in the subjects, we can remove the sex chromosome related genes.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>genes_file <span class="ot">&lt;-</span> <span class="fu">file.path</span>(<span class="st">"data/covid/results/genes_table.csv"</span>)</span>
-<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">file.exists</span>(genes_file)) <span class="fu">download.file</span>(<span class="fu">file.path</span>(path_data, <span class="st">"covid/results/genes_table.csv"</span>), <span class="at">destfile =</span> genes_file)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>genes_file <span class="ot">&lt;-</span> <span class="fu">file.path</span>(<span class="st">"data/covid/results/genes_table.csv"</span>)</span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">file.exists</span>(genes_file)) <span class="fu">download.file</span>(<span class="fu">file.path</span>(path_data, <span class="st">"covid/results/genes_table.csv"</span>), <span class="at">destfile =</span> genes_file)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>gene.info <span class="ot">&lt;-</span> <span class="fu">read.csv</span>(genes_file) <span class="co"># was created in the QC exercise</span></span>
-<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>auto.genes <span class="ot">&lt;-</span> gene.info<span class="sc">$</span>external_gene_name[<span class="sc">!</span>(gene.info<span class="sc">$</span>chromosome_name <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">"X"</span>, <span class="st">"Y"</span>))]</span>
-<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>cell_selection<span class="sc">@</span>active.assay <span class="ot">&lt;-</span> <span class="st">"RNA"</span></span>
-<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>keep.genes <span class="ot">&lt;-</span> <span class="fu">intersect</span>(<span class="fu">rownames</span>(cell_selection), auto.genes)</span>
-<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>cell_selection <span class="ot">&lt;-</span> cell_selection[keep.genes, ]</span>
-<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a><span class="co"># then renormalize the data</span></span>
-<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a>cell_selection <span class="ot">&lt;-</span> <span class="fu">NormalizeData</span>(cell_selection)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>gene.info <span class="ot">&lt;-</span> <span class="fu">read.csv</span>(genes_file) <span class="co"># was created in the QC exercise</span></span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a>auto.genes <span class="ot">&lt;-</span> gene.info<span class="sc">$</span>external_gene_name[<span class="sc">!</span>(gene.info<span class="sc">$</span>chromosome_name <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">"X"</span>, <span class="st">"Y"</span>))]</span>
+<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a>cell_selection<span class="sc">@</span>active.assay <span class="ot">&lt;-</span> <span class="st">"RNA"</span></span>
+<span id="cb26-6"><a href="#cb26-6" aria-hidden="true" tabindex="-1"></a>keep.genes <span class="ot">&lt;-</span> <span class="fu">intersect</span>(<span class="fu">rownames</span>(cell_selection), auto.genes)</span>
+<span id="cb26-7"><a href="#cb26-7" aria-hidden="true" tabindex="-1"></a>cell_selection <span class="ot">&lt;-</span> cell_selection[keep.genes, ]</span>
+<span id="cb26-8"><a href="#cb26-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-9"><a href="#cb26-9" aria-hidden="true" tabindex="-1"></a><span class="co"># then renormalize the data</span></span>
+<span id="cb26-10"><a href="#cb26-10" aria-hidden="true" tabindex="-1"></a>cell_selection <span class="ot">&lt;-</span> <span class="fu">NormalizeData</span>(cell_selection)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Rerun differential expression:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Compute differential expression</span></span>
-<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>DGE_cell_selection <span class="ot">&lt;-</span> <span class="fu">FindMarkers</span>(cell_selection,</span>
-<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">ident.1 =</span> <span class="st">"Covid"</span>, <span class="at">ident.2 =</span> <span class="st">"Ctrl"</span>,</span>
-<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">logfc.threshold =</span> <span class="fl">0.2</span>, <span class="at">test.use =</span> <span class="st">"wilcox"</span>, <span class="at">min.pct =</span> <span class="fl">0.1</span>,</span>
-<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">min.diff.pct =</span> <span class="fl">0.2</span>, <span class="at">assay =</span> <span class="st">"RNA"</span></span>
-<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Define as Covid or Ctrl in the df and add a gene column</span></span>
-<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a>DGE_cell_selection<span class="sc">$</span>direction <span class="ot">&lt;-</span> <span class="fu">ifelse</span>(DGE_cell_selection<span class="sc">$</span>avg_log2FC <span class="sc">&gt;</span> <span class="dv">0</span>, <span class="st">"Covid"</span>, <span class="st">"Ctrl"</span>)</span>
-<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a>DGE_cell_selection<span class="sc">$</span>gene <span class="ot">&lt;-</span> <span class="fu">rownames</span>(DGE_cell_selection)</span>
-<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a>DGE_cell_selection <span class="sc">%&gt;%</span></span>
-<span id="cb17-14"><a href="#cb17-14" aria-hidden="true" tabindex="-1"></a>    <span class="fu">group_by</span>(direction) <span class="sc">%&gt;%</span></span>
-<span id="cb17-15"><a href="#cb17-15" aria-hidden="true" tabindex="-1"></a>    <span class="fu">top_n</span>(<span class="sc">-</span><span class="dv">5</span>, p_val) <span class="sc">%&gt;%</span></span>
-<span id="cb17-16"><a href="#cb17-16" aria-hidden="true" tabindex="-1"></a>    <span class="fu">arrange</span>(direction) <span class="ot">-&gt;</span> top5_cell_selection</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Compute differential expression</span></span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>DGE_cell_selection <span class="ot">&lt;-</span> <span class="fu">FindMarkers</span>(cell_selection,</span>
+<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">ident.1 =</span> <span class="st">"Covid"</span>, <span class="at">ident.2 =</span> <span class="st">"Ctrl"</span>,</span>
+<span id="cb27-4"><a href="#cb27-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">logfc.threshold =</span> <span class="fl">0.2</span>, <span class="at">test.use =</span> <span class="st">"wilcox"</span>, <span class="at">min.pct =</span> <span class="fl">0.1</span>,</span>
+<span id="cb27-5"><a href="#cb27-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">min.diff.pct =</span> <span class="fl">0.2</span>, <span class="at">assay =</span> <span class="st">"RNA"</span></span>
+<span id="cb27-6"><a href="#cb27-6" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb27-7"><a href="#cb27-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-8"><a href="#cb27-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Define as Covid or Ctrl in the df and add a gene column</span></span>
+<span id="cb27-9"><a href="#cb27-9" aria-hidden="true" tabindex="-1"></a>DGE_cell_selection<span class="sc">$</span>direction <span class="ot">&lt;-</span> <span class="fu">ifelse</span>(DGE_cell_selection<span class="sc">$</span>avg_log2FC <span class="sc">&gt;</span> <span class="dv">0</span>, <span class="st">"Covid"</span>, <span class="st">"Ctrl"</span>)</span>
+<span id="cb27-10"><a href="#cb27-10" aria-hidden="true" tabindex="-1"></a>DGE_cell_selection<span class="sc">$</span>gene <span class="ot">&lt;-</span> <span class="fu">rownames</span>(DGE_cell_selection)</span>
+<span id="cb27-11"><a href="#cb27-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-12"><a href="#cb27-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-13"><a href="#cb27-13" aria-hidden="true" tabindex="-1"></a>DGE_cell_selection <span class="sc">%&gt;%</span></span>
+<span id="cb27-14"><a href="#cb27-14" aria-hidden="true" tabindex="-1"></a>    <span class="fu">group_by</span>(direction) <span class="sc">%&gt;%</span></span>
+<span id="cb27-15"><a href="#cb27-15" aria-hidden="true" tabindex="-1"></a>    <span class="fu">top_n</span>(<span class="sc">-</span><span class="dv">5</span>, p_val) <span class="sc">%&gt;%</span></span>
+<span id="cb27-16"><a href="#cb27-16" aria-hidden="true" tabindex="-1"></a>    <span class="fu">arrange</span>(direction) <span class="ot">-&gt;</span> top5_cell_selection</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="fu">VlnPlot</span>(cell_selection,</span>
-<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>    <span class="at">features =</span> <span class="fu">as.character</span>(<span class="fu">unique</span>(top5_cell_selection<span class="sc">$</span>gene)),</span>
-<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">ncol =</span> <span class="dv">5</span>, <span class="at">group.by =</span> <span class="st">"type"</span>, <span class="at">assay =</span> <span class="st">"RNA"</span>, <span class="at">pt.size =</span> .<span class="dv">1</span></span>
-<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="fu">VlnPlot</span>(cell_selection,</span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>    <span class="at">features =</span> <span class="fu">as.character</span>(<span class="fu">unique</span>(top5_cell_selection<span class="sc">$</span>gene)),</span>
+<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">ncol =</span> <span class="dv">5</span>, <span class="at">group.by =</span> <span class="st">"type"</span>, <span class="at">assay =</span> <span class="st">"RNA"</span>, <span class="at">pt.size =</span> .<span class="dv">1</span></span>
+<span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="seurat_05_dge_files/figure-html/unnamed-chunk-17-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-9"><img src="seurat_05_dge_files/figure-html/unnamed-chunk-17-1.png" class="img-fluid figure-img" width="1152"></a></p>
+<p><a href="seurat_05_dge_files/figure-html/unnamed-chunk-22-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-10"><img src="seurat_05_dge_files/figure-html/unnamed-chunk-22-1.png" class="img-fluid figure-img" width="1152"></a></p>
 </figure>
 </div>
 </div>
 </div>
 <p>We can also plot these genes across all clusters, but split by <strong>type</strong>, to check if the genes are also over/under expressed in other celltypes/clusters.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="fu">VlnPlot</span>(alldata,</span>
-<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>    <span class="at">features =</span> <span class="fu">as.character</span>(<span class="fu">unique</span>(top5_cell_selection<span class="sc">$</span>gene)),</span>
-<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">ncol =</span> <span class="dv">4</span>, <span class="at">split.by =</span> <span class="st">"type"</span>, <span class="at">assay =</span> <span class="st">"RNA"</span>, <span class="at">pt.size =</span> <span class="dv">0</span></span>
-<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a><span class="fu">VlnPlot</span>(alldata,</span>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>    <span class="at">features =</span> <span class="fu">as.character</span>(<span class="fu">unique</span>(top5_cell_selection<span class="sc">$</span>gene)),</span>
+<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">ncol =</span> <span class="dv">4</span>, <span class="at">split.by =</span> <span class="st">"type"</span>, <span class="at">assay =</span> <span class="st">"RNA"</span>, <span class="at">pt.size =</span> <span class="dv">0</span></span>
+<span id="cb29-4"><a href="#cb29-4" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="seurat_05_dge_files/figure-html/unnamed-chunk-18-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-10"><img src="seurat_05_dge_files/figure-html/unnamed-chunk-18-1.png" class="img-fluid figure-img" width="1152"></a></p>
+<p><a href="seurat_05_dge_files/figure-html/unnamed-chunk-23-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-11"><img src="seurat_05_dge_files/figure-html/unnamed-chunk-23-1.png" class="img-fluid figure-img" width="1152"></a></p>
 </figure>
 </div>
 </div>
@@ -538,11 +605,11 @@ Discuss
 <h2 data-number="3" class="anchored" data-anchor-id="patient-batch-effects"><span class="header-section-number">3</span> Patient Batch effects</h2>
 <p>When we are testing for Covid vs Control, we are running a DGE test for 4 vs 4 individuals. That will be very sensitive to sample differences unless we find a way to control for it. So first, let’s check how the top DEGs are expressed across the individuals within cluster 3:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="fu">VlnPlot</span>(cell_selection, <span class="at">group.by =</span> <span class="st">"orig.ident"</span>, <span class="at">features =</span> <span class="fu">as.character</span>(<span class="fu">unique</span>(top5_cell_selection<span class="sc">$</span>gene)), <span class="at">ncol =</span> <span class="dv">4</span>, <span class="at">assay =</span> <span class="st">"RNA"</span>, <span class="at">pt.size =</span> <span class="dv">0</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb30"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a><span class="fu">VlnPlot</span>(cell_selection, <span class="at">group.by =</span> <span class="st">"orig.ident"</span>, <span class="at">features =</span> <span class="fu">as.character</span>(<span class="fu">unique</span>(top5_cell_selection<span class="sc">$</span>gene)), <span class="at">ncol =</span> <span class="dv">4</span>, <span class="at">assay =</span> <span class="st">"RNA"</span>, <span class="at">pt.size =</span> <span class="dv">0</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="seurat_05_dge_files/figure-html/unnamed-chunk-19-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-11"><img src="seurat_05_dge_files/figure-html/unnamed-chunk-19-1.png" class="img-fluid figure-img" width="1152"></a></p>
+<p><a href="seurat_05_dge_files/figure-html/unnamed-chunk-24-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-12"><img src="seurat_05_dge_files/figure-html/unnamed-chunk-24-1.png" class="img-fluid figure-img" width="1152"></a></p>
 </figure>
 </div>
 </div>
@@ -550,21 +617,21 @@ Discuss
 <p>As you can see, many of the genes detected as DGE in Covid are unique to one or 2 patients.</p>
 <p>We can examine more genes with a DotPlot:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>DGE_cell_selection <span class="sc">%&gt;%</span></span>
-<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">group_by</span>(direction) <span class="sc">%&gt;%</span></span>
-<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">top_n</span>(<span class="sc">-</span><span class="dv">20</span>, p_val) <span class="ot">-&gt;</span> top20_cell_selection</span>
-<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a><span class="fu">DotPlot</span>(cell_selection, <span class="at">features =</span> <span class="fu">rev</span>(<span class="fu">as.character</span>(<span class="fu">unique</span>(top20_cell_selection<span class="sc">$</span>gene))), <span class="at">group.by =</span> <span class="st">"orig.ident"</span>, <span class="at">assay =</span> <span class="st">"RNA"</span>) <span class="sc">+</span> <span class="fu">coord_flip</span>() <span class="sc">+</span> <span class="fu">RotatedAxis</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb31"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>DGE_cell_selection <span class="sc">%&gt;%</span></span>
+<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">group_by</span>(direction) <span class="sc">%&gt;%</span></span>
+<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">top_n</span>(<span class="sc">-</span><span class="dv">20</span>, p_val) <span class="ot">-&gt;</span> top20_cell_selection</span>
+<span id="cb31-4"><a href="#cb31-4" aria-hidden="true" tabindex="-1"></a><span class="fu">DotPlot</span>(cell_selection, <span class="at">features =</span> <span class="fu">rev</span>(<span class="fu">as.character</span>(<span class="fu">unique</span>(top20_cell_selection<span class="sc">$</span>gene))), <span class="at">group.by =</span> <span class="st">"orig.ident"</span>, <span class="at">assay =</span> <span class="st">"RNA"</span>) <span class="sc">+</span> <span class="fu">coord_flip</span>() <span class="sc">+</span> <span class="fu">RotatedAxis</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="seurat_05_dge_files/figure-html/unnamed-chunk-20-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-12"><img src="seurat_05_dge_files/figure-html/unnamed-chunk-20-1.png" class="img-fluid figure-img" width="672"></a></p>
+<p><a href="seurat_05_dge_files/figure-html/unnamed-chunk-25-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-13"><img src="seurat_05_dge_files/figure-html/unnamed-chunk-25-1.png" class="img-fluid figure-img" width="672"></a></p>
 </figure>
 </div>
 </div>
 </div>
 <p>As you can see, most of the DGEs are driven by the <code>covid_17</code> patient. It is also a sample with very high number of cells:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="fu">table</span>(cell_selection<span class="sc">$</span>orig.ident)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb32"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a><span class="fu">table</span>(cell_selection<span class="sc">$</span>orig.ident)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>
  covid_1 covid_15 covid_16 covid_17  ctrl_13  ctrl_14  ctrl_19   ctrl_5 
@@ -577,10 +644,10 @@ Discuss
 <p>So one obvious thing to consider is an equal amount of cells per individual so that the DGE results are not dominated by a single sample.</p>
 <p>We will use the <code>downsample</code> option in the Seurat function <code>WhichCells()</code> to select 30 cells per cluster:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>cell_selection <span class="ot">&lt;-</span> <span class="fu">SetIdent</span>(cell_selection, <span class="at">value =</span> <span class="st">"orig.ident"</span>)</span>
-<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>sub_data <span class="ot">&lt;-</span> <span class="fu">subset</span>(cell_selection, <span class="at">cells =</span> <span class="fu">WhichCells</span>(cell_selection, <span class="at">downsample =</span> <span class="dv">30</span>))</span>
-<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a><span class="fu">table</span>(sub_data<span class="sc">$</span>orig.ident)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb34"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a>cell_selection <span class="ot">&lt;-</span> <span class="fu">SetIdent</span>(cell_selection, <span class="at">value =</span> <span class="st">"orig.ident"</span>)</span>
+<span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a>sub_data <span class="ot">&lt;-</span> <span class="fu">subset</span>(cell_selection, <span class="at">cells =</span> <span class="fu">WhichCells</span>(cell_selection, <span class="at">downsample =</span> <span class="dv">30</span>))</span>
+<span id="cb34-3"><a href="#cb34-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb34-4"><a href="#cb34-4" aria-hidden="true" tabindex="-1"></a><span class="fu">table</span>(sub_data<span class="sc">$</span>orig.ident)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>
  covid_1 covid_15 covid_16 covid_17  ctrl_13  ctrl_14  ctrl_19   ctrl_5 
@@ -589,48 +656,48 @@ Discuss
 </div>
 <p>And now we run DGE analysis again:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>sub_data <span class="ot">&lt;-</span> <span class="fu">SetIdent</span>(sub_data, <span class="at">value =</span> <span class="st">"type"</span>)</span>
-<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Compute differentiall expression</span></span>
-<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a>DGE_sub <span class="ot">&lt;-</span> <span class="fu">FindMarkers</span>(sub_data,</span>
-<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">ident.1 =</span> <span class="st">"Covid"</span>, <span class="at">ident.2 =</span> <span class="st">"Ctrl"</span>,</span>
-<span id="cb26-6"><a href="#cb26-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">logfc.threshold =</span> <span class="fl">0.2</span>, <span class="at">test.use =</span> <span class="st">"wilcox"</span>, <span class="at">min.pct =</span> <span class="fl">0.1</span>,</span>
-<span id="cb26-7"><a href="#cb26-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">min.diff.pct =</span> <span class="fl">0.2</span>, <span class="at">assay =</span> <span class="st">"RNA"</span></span>
-<span id="cb26-8"><a href="#cb26-8" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb26-9"><a href="#cb26-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb26-10"><a href="#cb26-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Define as Covid or Ctrl in the df and add a gene column</span></span>
-<span id="cb26-11"><a href="#cb26-11" aria-hidden="true" tabindex="-1"></a>DGE_sub<span class="sc">$</span>direction <span class="ot">&lt;-</span> <span class="fu">ifelse</span>(DGE_sub<span class="sc">$</span>avg_log2FC <span class="sc">&gt;</span> <span class="dv">0</span>, <span class="st">"Covid"</span>, <span class="st">"Ctrl"</span>)</span>
-<span id="cb26-12"><a href="#cb26-12" aria-hidden="true" tabindex="-1"></a>DGE_sub<span class="sc">$</span>gene <span class="ot">&lt;-</span> <span class="fu">rownames</span>(DGE_sub)</span>
-<span id="cb26-13"><a href="#cb26-13" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb26-14"><a href="#cb26-14" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb26-15"><a href="#cb26-15" aria-hidden="true" tabindex="-1"></a>DGE_sub <span class="sc">%&gt;%</span></span>
-<span id="cb26-16"><a href="#cb26-16" aria-hidden="true" tabindex="-1"></a>    <span class="fu">group_by</span>(direction) <span class="sc">%&gt;%</span></span>
-<span id="cb26-17"><a href="#cb26-17" aria-hidden="true" tabindex="-1"></a>    <span class="fu">top_n</span>(<span class="sc">-</span><span class="dv">5</span>, p_val) <span class="sc">%&gt;%</span></span>
-<span id="cb26-18"><a href="#cb26-18" aria-hidden="true" tabindex="-1"></a>    <span class="fu">arrange</span>(direction) <span class="ot">-&gt;</span> top5_sub</span>
-<span id="cb26-19"><a href="#cb26-19" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb26-20"><a href="#cb26-20" aria-hidden="true" tabindex="-1"></a><span class="fu">VlnPlot</span>(sub_data,</span>
-<span id="cb26-21"><a href="#cb26-21" aria-hidden="true" tabindex="-1"></a>    <span class="at">features =</span> <span class="fu">as.character</span>(<span class="fu">unique</span>(top5_sub<span class="sc">$</span>gene)),</span>
-<span id="cb26-22"><a href="#cb26-22" aria-hidden="true" tabindex="-1"></a>    <span class="at">ncol =</span> <span class="dv">5</span>, <span class="at">group.by =</span> <span class="st">"type"</span>, <span class="at">assay =</span> <span class="st">"RNA"</span>, <span class="at">pt.size =</span> .<span class="dv">1</span></span>
-<span id="cb26-23"><a href="#cb26-23" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb36"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a>sub_data <span class="ot">&lt;-</span> <span class="fu">SetIdent</span>(sub_data, <span class="at">value =</span> <span class="st">"type"</span>)</span>
+<span id="cb36-2"><a href="#cb36-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb36-3"><a href="#cb36-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Compute differentiall expression</span></span>
+<span id="cb36-4"><a href="#cb36-4" aria-hidden="true" tabindex="-1"></a>DGE_sub <span class="ot">&lt;-</span> <span class="fu">FindMarkers</span>(sub_data,</span>
+<span id="cb36-5"><a href="#cb36-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">ident.1 =</span> <span class="st">"Covid"</span>, <span class="at">ident.2 =</span> <span class="st">"Ctrl"</span>,</span>
+<span id="cb36-6"><a href="#cb36-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">logfc.threshold =</span> <span class="fl">0.2</span>, <span class="at">test.use =</span> <span class="st">"wilcox"</span>, <span class="at">min.pct =</span> <span class="fl">0.1</span>,</span>
+<span id="cb36-7"><a href="#cb36-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">min.diff.pct =</span> <span class="fl">0.2</span>, <span class="at">assay =</span> <span class="st">"RNA"</span></span>
+<span id="cb36-8"><a href="#cb36-8" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb36-9"><a href="#cb36-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb36-10"><a href="#cb36-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Define as Covid or Ctrl in the df and add a gene column</span></span>
+<span id="cb36-11"><a href="#cb36-11" aria-hidden="true" tabindex="-1"></a>DGE_sub<span class="sc">$</span>direction <span class="ot">&lt;-</span> <span class="fu">ifelse</span>(DGE_sub<span class="sc">$</span>avg_log2FC <span class="sc">&gt;</span> <span class="dv">0</span>, <span class="st">"Covid"</span>, <span class="st">"Ctrl"</span>)</span>
+<span id="cb36-12"><a href="#cb36-12" aria-hidden="true" tabindex="-1"></a>DGE_sub<span class="sc">$</span>gene <span class="ot">&lt;-</span> <span class="fu">rownames</span>(DGE_sub)</span>
+<span id="cb36-13"><a href="#cb36-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb36-14"><a href="#cb36-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb36-15"><a href="#cb36-15" aria-hidden="true" tabindex="-1"></a>DGE_sub <span class="sc">%&gt;%</span></span>
+<span id="cb36-16"><a href="#cb36-16" aria-hidden="true" tabindex="-1"></a>    <span class="fu">group_by</span>(direction) <span class="sc">%&gt;%</span></span>
+<span id="cb36-17"><a href="#cb36-17" aria-hidden="true" tabindex="-1"></a>    <span class="fu">top_n</span>(<span class="sc">-</span><span class="dv">5</span>, p_val) <span class="sc">%&gt;%</span></span>
+<span id="cb36-18"><a href="#cb36-18" aria-hidden="true" tabindex="-1"></a>    <span class="fu">arrange</span>(direction) <span class="ot">-&gt;</span> top5_sub</span>
+<span id="cb36-19"><a href="#cb36-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb36-20"><a href="#cb36-20" aria-hidden="true" tabindex="-1"></a><span class="fu">VlnPlot</span>(sub_data,</span>
+<span id="cb36-21"><a href="#cb36-21" aria-hidden="true" tabindex="-1"></a>    <span class="at">features =</span> <span class="fu">as.character</span>(<span class="fu">unique</span>(top5_sub<span class="sc">$</span>gene)),</span>
+<span id="cb36-22"><a href="#cb36-22" aria-hidden="true" tabindex="-1"></a>    <span class="at">ncol =</span> <span class="dv">5</span>, <span class="at">group.by =</span> <span class="st">"type"</span>, <span class="at">assay =</span> <span class="st">"RNA"</span>, <span class="at">pt.size =</span> .<span class="dv">1</span></span>
+<span id="cb36-23"><a href="#cb36-23" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="seurat_05_dge_files/figure-html/unnamed-chunk-23-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-13"><img src="seurat_05_dge_files/figure-html/unnamed-chunk-23-1.png" class="img-fluid figure-img" width="768"></a></p>
+<p><a href="seurat_05_dge_files/figure-html/unnamed-chunk-28-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-14"><img src="seurat_05_dge_files/figure-html/unnamed-chunk-28-1.png" class="img-fluid figure-img" width="768"></a></p>
 </figure>
 </div>
 </div>
 </div>
 <p>Plot as dotplot, but in the full (not subsampled) data, still only showing cluster 3:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>DGE_sub <span class="sc">%&gt;%</span></span>
-<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">group_by</span>(direction) <span class="sc">%&gt;%</span></span>
-<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">top_n</span>(<span class="sc">-</span><span class="dv">20</span>, p_val) <span class="ot">-&gt;</span> top20_sub</span>
-<span id="cb27-4"><a href="#cb27-4" aria-hidden="true" tabindex="-1"></a><span class="fu">DotPlot</span>(cell_selection, <span class="at">features =</span> <span class="fu">rev</span>(<span class="fu">as.character</span>(<span class="fu">unique</span>(top20_sub<span class="sc">$</span>gene))), <span class="at">group.by =</span> <span class="st">"orig.ident"</span>, <span class="at">assay =</span> <span class="st">"RNA"</span>) <span class="sc">+</span></span>
-<span id="cb27-5"><a href="#cb27-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">coord_flip</span>() <span class="sc">+</span> <span class="fu">RotatedAxis</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb37"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a>DGE_sub <span class="sc">%&gt;%</span></span>
+<span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">group_by</span>(direction) <span class="sc">%&gt;%</span></span>
+<span id="cb37-3"><a href="#cb37-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">top_n</span>(<span class="sc">-</span><span class="dv">20</span>, p_val) <span class="ot">-&gt;</span> top20_sub</span>
+<span id="cb37-4"><a href="#cb37-4" aria-hidden="true" tabindex="-1"></a><span class="fu">DotPlot</span>(cell_selection, <span class="at">features =</span> <span class="fu">rev</span>(<span class="fu">as.character</span>(<span class="fu">unique</span>(top20_sub<span class="sc">$</span>gene))), <span class="at">group.by =</span> <span class="st">"orig.ident"</span>, <span class="at">assay =</span> <span class="st">"RNA"</span>) <span class="sc">+</span></span>
+<span id="cb37-5"><a href="#cb37-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">coord_flip</span>() <span class="sc">+</span> <span class="fu">RotatedAxis</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="seurat_05_dge_files/figure-html/unnamed-chunk-24-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-14"><img src="seurat_05_dge_files/figure-html/unnamed-chunk-24-1.png" class="img-fluid figure-img" width="768"></a></p>
+<p><a href="seurat_05_dge_files/figure-html/unnamed-chunk-29-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-15"><img src="seurat_05_dge_files/figure-html/unnamed-chunk-29-1.png" class="img-fluid figure-img" width="768"></a></p>
 </figure>
 </div>
 </div>
@@ -644,30 +711,30 @@ Discuss
 <p>However, having only 4 patients is perhaps too low, with many more patients it will work better to run pseudobulk analysis.</p>
 <p>For a fair comparison we should have equal number of cells per sample when we create the pseudobulk, so we will use the subsampled object.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="co"># get the count matrix for all cells</span></span>
-<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>DGE_DATA <span class="ot">&lt;-</span> sub_data<span class="sc">@</span>assays<span class="sc">$</span>RNA<span class="sc">@</span>counts</span>
-<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Compute pseudobulk</span></span>
-<span id="cb28-5"><a href="#cb28-5" aria-hidden="true" tabindex="-1"></a>mm <span class="ot">&lt;-</span> Matrix<span class="sc">::</span><span class="fu">sparse.model.matrix</span>(<span class="sc">~</span> <span class="dv">0</span> <span class="sc">+</span> sub_data<span class="sc">$</span>orig.ident)</span>
-<span id="cb28-6"><a href="#cb28-6" aria-hidden="true" tabindex="-1"></a>pseudobulk <span class="ot">&lt;-</span> DGE_DATA <span class="sc">%*%</span> mm</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb38"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a><span class="co"># get the count matrix for all cells</span></span>
+<span id="cb38-2"><a href="#cb38-2" aria-hidden="true" tabindex="-1"></a>DGE_DATA <span class="ot">&lt;-</span> sub_data<span class="sc">@</span>assays<span class="sc">$</span>RNA<span class="sc">@</span>counts</span>
+<span id="cb38-3"><a href="#cb38-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb38-4"><a href="#cb38-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Compute pseudobulk</span></span>
+<span id="cb38-5"><a href="#cb38-5" aria-hidden="true" tabindex="-1"></a>mm <span class="ot">&lt;-</span> Matrix<span class="sc">::</span><span class="fu">sparse.model.matrix</span>(<span class="sc">~</span> <span class="dv">0</span> <span class="sc">+</span> sub_data<span class="sc">$</span>orig.ident)</span>
+<span id="cb38-6"><a href="#cb38-6" aria-hidden="true" tabindex="-1"></a>pseudobulk <span class="ot">&lt;-</span> DGE_DATA <span class="sc">%*%</span> mm</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Then run edgeR:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a><span class="co"># define the groups</span></span>
-<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>bulk.labels <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"Covid"</span>, <span class="st">"Covid"</span>, <span class="st">"Covid"</span>, <span class="st">"Covid"</span>, <span class="st">"Ctrl"</span>, <span class="st">"Ctrl"</span>, <span class="st">"Ctrl"</span>, <span class="st">"Ctrl"</span>)</span>
-<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb29-4"><a href="#cb29-4" aria-hidden="true" tabindex="-1"></a>dge.list <span class="ot">&lt;-</span> <span class="fu">DGEList</span>(<span class="at">counts =</span> pseudobulk, <span class="at">group =</span> <span class="fu">factor</span>(bulk.labels))</span>
-<span id="cb29-5"><a href="#cb29-5" aria-hidden="true" tabindex="-1"></a>keep <span class="ot">&lt;-</span> <span class="fu">filterByExpr</span>(dge.list)</span>
-<span id="cb29-6"><a href="#cb29-6" aria-hidden="true" tabindex="-1"></a>dge.list <span class="ot">&lt;-</span> dge.list[keep, , keep.lib.sizes <span class="ot">=</span> <span class="cn">FALSE</span>]</span>
-<span id="cb29-7"><a href="#cb29-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb29-8"><a href="#cb29-8" aria-hidden="true" tabindex="-1"></a>dge.list <span class="ot">&lt;-</span> <span class="fu">calcNormFactors</span>(dge.list)</span>
-<span id="cb29-9"><a href="#cb29-9" aria-hidden="true" tabindex="-1"></a>design <span class="ot">&lt;-</span> <span class="fu">model.matrix</span>(<span class="sc">~</span>bulk.labels)</span>
-<span id="cb29-10"><a href="#cb29-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb29-11"><a href="#cb29-11" aria-hidden="true" tabindex="-1"></a>dge.list <span class="ot">&lt;-</span> <span class="fu">estimateDisp</span>(dge.list, design)</span>
-<span id="cb29-12"><a href="#cb29-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb29-13"><a href="#cb29-13" aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">glmQLFit</span>(dge.list, design)</span>
-<span id="cb29-14"><a href="#cb29-14" aria-hidden="true" tabindex="-1"></a>qlf <span class="ot">&lt;-</span> <span class="fu">glmQLFTest</span>(fit, <span class="at">coef =</span> <span class="dv">2</span>)</span>
-<span id="cb29-15"><a href="#cb29-15" aria-hidden="true" tabindex="-1"></a><span class="fu">topTags</span>(qlf)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb39"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a><span class="co"># define the groups</span></span>
+<span id="cb39-2"><a href="#cb39-2" aria-hidden="true" tabindex="-1"></a>bulk.labels <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"Covid"</span>, <span class="st">"Covid"</span>, <span class="st">"Covid"</span>, <span class="st">"Covid"</span>, <span class="st">"Ctrl"</span>, <span class="st">"Ctrl"</span>, <span class="st">"Ctrl"</span>, <span class="st">"Ctrl"</span>)</span>
+<span id="cb39-3"><a href="#cb39-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb39-4"><a href="#cb39-4" aria-hidden="true" tabindex="-1"></a>dge.list <span class="ot">&lt;-</span> <span class="fu">DGEList</span>(<span class="at">counts =</span> pseudobulk, <span class="at">group =</span> <span class="fu">factor</span>(bulk.labels))</span>
+<span id="cb39-5"><a href="#cb39-5" aria-hidden="true" tabindex="-1"></a>keep <span class="ot">&lt;-</span> <span class="fu">filterByExpr</span>(dge.list)</span>
+<span id="cb39-6"><a href="#cb39-6" aria-hidden="true" tabindex="-1"></a>dge.list <span class="ot">&lt;-</span> dge.list[keep, , keep.lib.sizes <span class="ot">=</span> <span class="cn">FALSE</span>]</span>
+<span id="cb39-7"><a href="#cb39-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb39-8"><a href="#cb39-8" aria-hidden="true" tabindex="-1"></a>dge.list <span class="ot">&lt;-</span> <span class="fu">calcNormFactors</span>(dge.list)</span>
+<span id="cb39-9"><a href="#cb39-9" aria-hidden="true" tabindex="-1"></a>design <span class="ot">&lt;-</span> <span class="fu">model.matrix</span>(<span class="sc">~</span>bulk.labels)</span>
+<span id="cb39-10"><a href="#cb39-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb39-11"><a href="#cb39-11" aria-hidden="true" tabindex="-1"></a>dge.list <span class="ot">&lt;-</span> <span class="fu">estimateDisp</span>(dge.list, design)</span>
+<span id="cb39-12"><a href="#cb39-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb39-13"><a href="#cb39-13" aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">glmQLFit</span>(dge.list, design)</span>
+<span id="cb39-14"><a href="#cb39-14" aria-hidden="true" tabindex="-1"></a>qlf <span class="ot">&lt;-</span> <span class="fu">glmQLFTest</span>(fit, <span class="at">coef =</span> <span class="dv">2</span>)</span>
+<span id="cb39-15"><a href="#cb39-15" aria-hidden="true" tabindex="-1"></a><span class="fu">topTags</span>(qlf)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Coefficient:  bulk.labelsCtrl 
             logFC   logCPM         F       PValue        FDR
@@ -686,23 +753,23 @@ CEMIP2 -1.3381862 7.562814  9.729066 6.351110e-03 0.70360430</code></pre>
 <p>As you can see, we have very few significant genes. Since we only have 4 vs 4 samples, we should not expect to find many genes with this method.</p>
 <p>Again as dotplot including top 10 genes:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb31"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>res.edgeR <span class="ot">&lt;-</span> <span class="fu">topTags</span>(qlf, <span class="dv">100</span>)<span class="sc">$</span>table</span>
-<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>res.edgeR<span class="sc">$</span>dir <span class="ot">&lt;-</span> <span class="fu">ifelse</span>(res.edgeR<span class="sc">$</span>logFC <span class="sc">&gt;</span> <span class="dv">0</span>, <span class="st">"Covid"</span>, <span class="st">"Ctrl"</span>)</span>
-<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a>res.edgeR<span class="sc">$</span>gene <span class="ot">&lt;-</span> <span class="fu">rownames</span>(res.edgeR)</span>
-<span id="cb31-4"><a href="#cb31-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-5"><a href="#cb31-5" aria-hidden="true" tabindex="-1"></a>res.edgeR <span class="sc">%&gt;%</span></span>
-<span id="cb31-6"><a href="#cb31-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">group_by</span>(dir) <span class="sc">%&gt;%</span></span>
-<span id="cb31-7"><a href="#cb31-7" aria-hidden="true" tabindex="-1"></a>    <span class="fu">top_n</span>(<span class="sc">-</span><span class="dv">10</span>, PValue) <span class="sc">%&gt;%</span></span>
-<span id="cb31-8"><a href="#cb31-8" aria-hidden="true" tabindex="-1"></a>    <span class="fu">arrange</span>(dir) <span class="ot">-&gt;</span> top.edgeR</span>
-<span id="cb31-9"><a href="#cb31-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-10"><a href="#cb31-10" aria-hidden="true" tabindex="-1"></a><span class="fu">DotPlot</span>(cell_selection,</span>
-<span id="cb31-11"><a href="#cb31-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">features =</span> <span class="fu">as.character</span>(<span class="fu">unique</span>(top.edgeR<span class="sc">$</span>gene)), <span class="at">group.by =</span> <span class="st">"orig.ident"</span>,</span>
-<span id="cb31-12"><a href="#cb31-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">assay =</span> <span class="st">"RNA"</span></span>
-<span id="cb31-13"><a href="#cb31-13" aria-hidden="true" tabindex="-1"></a>) <span class="sc">+</span> <span class="fu">coord_flip</span>() <span class="sc">+</span> <span class="fu">ggtitle</span>(<span class="st">"EdgeR pseudobulk"</span>) <span class="sc">+</span> <span class="fu">RotatedAxis</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb41"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a>res.edgeR <span class="ot">&lt;-</span> <span class="fu">topTags</span>(qlf, <span class="dv">100</span>)<span class="sc">$</span>table</span>
+<span id="cb41-2"><a href="#cb41-2" aria-hidden="true" tabindex="-1"></a>res.edgeR<span class="sc">$</span>dir <span class="ot">&lt;-</span> <span class="fu">ifelse</span>(res.edgeR<span class="sc">$</span>logFC <span class="sc">&gt;</span> <span class="dv">0</span>, <span class="st">"Covid"</span>, <span class="st">"Ctrl"</span>)</span>
+<span id="cb41-3"><a href="#cb41-3" aria-hidden="true" tabindex="-1"></a>res.edgeR<span class="sc">$</span>gene <span class="ot">&lt;-</span> <span class="fu">rownames</span>(res.edgeR)</span>
+<span id="cb41-4"><a href="#cb41-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb41-5"><a href="#cb41-5" aria-hidden="true" tabindex="-1"></a>res.edgeR <span class="sc">%&gt;%</span></span>
+<span id="cb41-6"><a href="#cb41-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">group_by</span>(dir) <span class="sc">%&gt;%</span></span>
+<span id="cb41-7"><a href="#cb41-7" aria-hidden="true" tabindex="-1"></a>    <span class="fu">top_n</span>(<span class="sc">-</span><span class="dv">10</span>, PValue) <span class="sc">%&gt;%</span></span>
+<span id="cb41-8"><a href="#cb41-8" aria-hidden="true" tabindex="-1"></a>    <span class="fu">arrange</span>(dir) <span class="ot">-&gt;</span> top.edgeR</span>
+<span id="cb41-9"><a href="#cb41-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb41-10"><a href="#cb41-10" aria-hidden="true" tabindex="-1"></a><span class="fu">DotPlot</span>(cell_selection,</span>
+<span id="cb41-11"><a href="#cb41-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">features =</span> <span class="fu">as.character</span>(<span class="fu">unique</span>(top.edgeR<span class="sc">$</span>gene)), <span class="at">group.by =</span> <span class="st">"orig.ident"</span>,</span>
+<span id="cb41-12"><a href="#cb41-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">assay =</span> <span class="st">"RNA"</span></span>
+<span id="cb41-13"><a href="#cb41-13" aria-hidden="true" tabindex="-1"></a>) <span class="sc">+</span> <span class="fu">coord_flip</span>() <span class="sc">+</span> <span class="fu">ggtitle</span>(<span class="st">"EdgeR pseudobulk"</span>) <span class="sc">+</span> <span class="fu">RotatedAxis</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="seurat_05_dge_files/figure-html/unnamed-chunk-27-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-15"><img src="seurat_05_dge_files/figure-html/unnamed-chunk-27-1.png" class="img-fluid figure-img" width="576"></a></p>
+<p><a href="seurat_05_dge_files/figure-html/unnamed-chunk-32-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-16"><img src="seurat_05_dge_files/figure-html/unnamed-chunk-32-1.png" class="img-fluid figure-img" width="576"></a></p>
 </figure>
 </div>
 </div>
@@ -715,131 +782,131 @@ CEMIP2 -1.3381862 7.562814  9.729066 6.351110e-03 0.70360430</code></pre>
 <p>We will run MAST with and without patient info as random effect and compare the results</p>
 <p>First, filter genes in part to speed up the process but also to avoid too many warnings in the model fitting step of MAST. We will keep genes that are expressed with at least 2 reads in 2 covid patients or 2 controls.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb32"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a><span class="co"># select genes that are expressed in at least 2 patients or 2 ctrls with &gt; 2 reads.</span></span>
-<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a>nPatient <span class="ot">&lt;-</span> <span class="fu">sapply</span>(<span class="fu">unique</span>(cell_selection<span class="sc">$</span>orig.ident), <span class="cf">function</span>(x) {</span>
-<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">rowSums</span>(cell_selection<span class="sc">@</span>assays<span class="sc">$</span>RNA<span class="sc">@</span>counts[, cell_selection<span class="sc">$</span>orig.ident</span>
-<span id="cb32-4"><a href="#cb32-4" aria-hidden="true" tabindex="-1"></a>    <span class="sc">==</span> x] <span class="sc">&gt;</span> <span class="dv">2</span>)</span>
-<span id="cb32-5"><a href="#cb32-5" aria-hidden="true" tabindex="-1"></a>})</span>
-<span id="cb32-6"><a href="#cb32-6" aria-hidden="true" tabindex="-1"></a>nCovid <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(nPatient[, <span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>] <span class="sc">&gt;</span> <span class="dv">2</span>)</span>
-<span id="cb32-7"><a href="#cb32-7" aria-hidden="true" tabindex="-1"></a>nCtrl <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(nPatient[, <span class="dv">5</span><span class="sc">:</span><span class="dv">8</span>] <span class="sc">&gt;</span> <span class="dv">2</span>)</span>
-<span id="cb32-8"><a href="#cb32-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb32-9"><a href="#cb32-9" aria-hidden="true" tabindex="-1"></a>sel <span class="ot">&lt;-</span> nCovid <span class="sc">&gt;=</span> <span class="dv">2</span> <span class="sc">|</span> nCtrl <span class="sc">&gt;=</span> <span class="dv">2</span></span>
-<span id="cb32-10"><a href="#cb32-10" aria-hidden="true" tabindex="-1"></a>cell_selection_sub <span class="ot">&lt;-</span> cell_selection[sel, ]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb42"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a><span class="co"># select genes that are expressed in at least 2 patients or 2 ctrls with &gt; 2 reads.</span></span>
+<span id="cb42-2"><a href="#cb42-2" aria-hidden="true" tabindex="-1"></a>nPatient <span class="ot">&lt;-</span> <span class="fu">sapply</span>(<span class="fu">unique</span>(cell_selection<span class="sc">$</span>orig.ident), <span class="cf">function</span>(x) {</span>
+<span id="cb42-3"><a href="#cb42-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">rowSums</span>(cell_selection<span class="sc">@</span>assays<span class="sc">$</span>RNA<span class="sc">@</span>counts[, cell_selection<span class="sc">$</span>orig.ident</span>
+<span id="cb42-4"><a href="#cb42-4" aria-hidden="true" tabindex="-1"></a>    <span class="sc">==</span> x] <span class="sc">&gt;</span> <span class="dv">2</span>)</span>
+<span id="cb42-5"><a href="#cb42-5" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb42-6"><a href="#cb42-6" aria-hidden="true" tabindex="-1"></a>nCovid <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(nPatient[, <span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>] <span class="sc">&gt;</span> <span class="dv">2</span>)</span>
+<span id="cb42-7"><a href="#cb42-7" aria-hidden="true" tabindex="-1"></a>nCtrl <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(nPatient[, <span class="dv">5</span><span class="sc">:</span><span class="dv">8</span>] <span class="sc">&gt;</span> <span class="dv">2</span>)</span>
+<span id="cb42-8"><a href="#cb42-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb42-9"><a href="#cb42-9" aria-hidden="true" tabindex="-1"></a>sel <span class="ot">&lt;-</span> nCovid <span class="sc">&gt;=</span> <span class="dv">2</span> <span class="sc">|</span> nCtrl <span class="sc">&gt;=</span> <span class="dv">2</span></span>
+<span id="cb42-10"><a href="#cb42-10" aria-hidden="true" tabindex="-1"></a>cell_selection_sub <span class="ot">&lt;-</span> cell_selection[sel, ]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Set up the MAST object.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb33"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a><span class="co"># create the feature data</span></span>
-<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>fData <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">primerid =</span> <span class="fu">rownames</span>(cell_selection_sub))</span>
-<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a>m <span class="ot">&lt;-</span> cell_selection_sub<span class="sc">@</span>meta.data</span>
-<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a>m<span class="sc">$</span>wellKey <span class="ot">&lt;-</span> <span class="fu">rownames</span>(m)</span>
-<span id="cb33-5"><a href="#cb33-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb33-6"><a href="#cb33-6" aria-hidden="true" tabindex="-1"></a><span class="co"># make sure type and orig.ident are factors</span></span>
-<span id="cb33-7"><a href="#cb33-7" aria-hidden="true" tabindex="-1"></a>m<span class="sc">$</span>orig.ident <span class="ot">&lt;-</span> <span class="fu">factor</span>(m<span class="sc">$</span>orig.ident)</span>
-<span id="cb33-8"><a href="#cb33-8" aria-hidden="true" tabindex="-1"></a>m<span class="sc">$</span>type <span class="ot">&lt;-</span> <span class="fu">factor</span>(m<span class="sc">$</span>type)</span>
-<span id="cb33-9"><a href="#cb33-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb33-10"><a href="#cb33-10" aria-hidden="true" tabindex="-1"></a>sca <span class="ot">&lt;-</span> MAST<span class="sc">::</span><span class="fu">FromMatrix</span>(</span>
-<span id="cb33-11"><a href="#cb33-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">exprsArray =</span> <span class="fu">as.matrix</span>(<span class="at">x =</span> cell_selection_sub<span class="sc">@</span>assays<span class="sc">$</span>RNA<span class="sc">@</span>data),</span>
-<span id="cb33-12"><a href="#cb33-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">check_sanity =</span> <span class="cn">FALSE</span>, <span class="at">cData =</span> m, <span class="at">fData =</span> fData</span>
-<span id="cb33-13"><a href="#cb33-13" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb43"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a><span class="co"># create the feature data</span></span>
+<span id="cb43-2"><a href="#cb43-2" aria-hidden="true" tabindex="-1"></a>fData <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">primerid =</span> <span class="fu">rownames</span>(cell_selection_sub))</span>
+<span id="cb43-3"><a href="#cb43-3" aria-hidden="true" tabindex="-1"></a>m <span class="ot">&lt;-</span> cell_selection_sub<span class="sc">@</span>meta.data</span>
+<span id="cb43-4"><a href="#cb43-4" aria-hidden="true" tabindex="-1"></a>m<span class="sc">$</span>wellKey <span class="ot">&lt;-</span> <span class="fu">rownames</span>(m)</span>
+<span id="cb43-5"><a href="#cb43-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb43-6"><a href="#cb43-6" aria-hidden="true" tabindex="-1"></a><span class="co"># make sure type and orig.ident are factors</span></span>
+<span id="cb43-7"><a href="#cb43-7" aria-hidden="true" tabindex="-1"></a>m<span class="sc">$</span>orig.ident <span class="ot">&lt;-</span> <span class="fu">factor</span>(m<span class="sc">$</span>orig.ident)</span>
+<span id="cb43-8"><a href="#cb43-8" aria-hidden="true" tabindex="-1"></a>m<span class="sc">$</span>type <span class="ot">&lt;-</span> <span class="fu">factor</span>(m<span class="sc">$</span>type)</span>
+<span id="cb43-9"><a href="#cb43-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb43-10"><a href="#cb43-10" aria-hidden="true" tabindex="-1"></a>sca <span class="ot">&lt;-</span> MAST<span class="sc">::</span><span class="fu">FromMatrix</span>(</span>
+<span id="cb43-11"><a href="#cb43-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">exprsArray =</span> <span class="fu">as.matrix</span>(<span class="at">x =</span> cell_selection_sub<span class="sc">@</span>assays<span class="sc">$</span>RNA<span class="sc">@</span>data),</span>
+<span id="cb43-12"><a href="#cb43-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">check_sanity =</span> <span class="cn">FALSE</span>, <span class="at">cData =</span> m, <span class="at">fData =</span> fData</span>
+<span id="cb43-13"><a href="#cb43-13" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>First, run the regular MAST analysis without random effects</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb34"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a><span class="co"># takes a while to run, so save a file to tmpdir in case you have to rerun the code</span></span>
-<span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a>tmpdir <span class="ot">&lt;-</span> <span class="st">"data/covid/results/tmp_dge"</span></span>
-<span id="cb34-3"><a href="#cb34-3" aria-hidden="true" tabindex="-1"></a><span class="fu">dir.create</span>(tmpdir, <span class="at">showWarnings =</span> F)</span>
-<span id="cb34-4"><a href="#cb34-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb34-5"><a href="#cb34-5" aria-hidden="true" tabindex="-1"></a>tmpfile1 <span class="ot">&lt;-</span> <span class="fu">file.path</span>(tmpdir, <span class="st">"mast_bayesglm_cl3.Rds"</span>)</span>
-<span id="cb34-6"><a href="#cb34-6" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="fu">file.exists</span>(tmpfile1)) {</span>
-<span id="cb34-7"><a href="#cb34-7" aria-hidden="true" tabindex="-1"></a>    fcHurdle1 <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(tmpfile1)</span>
-<span id="cb34-8"><a href="#cb34-8" aria-hidden="true" tabindex="-1"></a>} <span class="cf">else</span> {</span>
-<span id="cb34-9"><a href="#cb34-9" aria-hidden="true" tabindex="-1"></a>    zlmCond <span class="ot">&lt;-</span> <span class="fu">suppressMessages</span>(MAST<span class="sc">::</span><span class="fu">zlm</span>(<span class="sc">~</span> type <span class="sc">+</span> nFeature_RNA, sca, <span class="at">method =</span> <span class="st">"bayesglm"</span>, <span class="at">ebayes =</span> T))</span>
-<span id="cb34-10"><a href="#cb34-10" aria-hidden="true" tabindex="-1"></a>    summaryCond <span class="ot">&lt;-</span> <span class="fu">suppressMessages</span>(MAST<span class="sc">::</span><span class="fu">summary</span>(zlmCond, <span class="at">doLRT =</span> <span class="st">"typeCtrl"</span>))</span>
-<span id="cb34-11"><a href="#cb34-11" aria-hidden="true" tabindex="-1"></a>    summaryDt <span class="ot">&lt;-</span> summaryCond<span class="sc">$</span>datatable</span>
-<span id="cb34-12"><a href="#cb34-12" aria-hidden="true" tabindex="-1"></a>    fcHurdle <span class="ot">&lt;-</span> <span class="fu">merge</span>(summaryDt[summaryDt<span class="sc">$</span>contrast <span class="sc">==</span> <span class="st">"typeCtrl"</span> <span class="sc">&amp;</span> summaryDt<span class="sc">$</span>component <span class="sc">==</span></span>
-<span id="cb34-13"><a href="#cb34-13" aria-hidden="true" tabindex="-1"></a>        <span class="st">"logFC"</span>, <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">7</span>, <span class="dv">5</span>, <span class="dv">6</span>, <span class="dv">8</span>)], summaryDt[summaryDt<span class="sc">$</span>contrast <span class="sc">==</span> <span class="st">"typeCtrl"</span> <span class="sc">&amp;</span></span>
-<span id="cb34-14"><a href="#cb34-14" aria-hidden="true" tabindex="-1"></a>        summaryDt<span class="sc">$</span>component <span class="sc">==</span> <span class="st">"H"</span>, <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">4</span>)], <span class="at">by =</span> <span class="st">"primerid"</span>)</span>
-<span id="cb34-15"><a href="#cb34-15" aria-hidden="true" tabindex="-1"></a>    fcHurdle1 <span class="ot">&lt;-</span> stats<span class="sc">::</span><span class="fu">na.omit</span>(<span class="fu">as.data.frame</span>(fcHurdle))</span>
-<span id="cb34-16"><a href="#cb34-16" aria-hidden="true" tabindex="-1"></a>    <span class="fu">saveRDS</span>(fcHurdle1, tmpfile1)</span>
-<span id="cb34-17"><a href="#cb34-17" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb44"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a><span class="co"># takes a while to run, so save a file to tmpdir in case you have to rerun the code</span></span>
+<span id="cb44-2"><a href="#cb44-2" aria-hidden="true" tabindex="-1"></a>tmpdir <span class="ot">&lt;-</span> <span class="st">"data/covid/results/tmp_dge"</span></span>
+<span id="cb44-3"><a href="#cb44-3" aria-hidden="true" tabindex="-1"></a><span class="fu">dir.create</span>(tmpdir, <span class="at">showWarnings =</span> F)</span>
+<span id="cb44-4"><a href="#cb44-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb44-5"><a href="#cb44-5" aria-hidden="true" tabindex="-1"></a>tmpfile1 <span class="ot">&lt;-</span> <span class="fu">file.path</span>(tmpdir, <span class="st">"mast_bayesglm_cl3.Rds"</span>)</span>
+<span id="cb44-6"><a href="#cb44-6" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="fu">file.exists</span>(tmpfile1)) {</span>
+<span id="cb44-7"><a href="#cb44-7" aria-hidden="true" tabindex="-1"></a>    fcHurdle1 <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(tmpfile1)</span>
+<span id="cb44-8"><a href="#cb44-8" aria-hidden="true" tabindex="-1"></a>} <span class="cf">else</span> {</span>
+<span id="cb44-9"><a href="#cb44-9" aria-hidden="true" tabindex="-1"></a>    zlmCond <span class="ot">&lt;-</span> <span class="fu">suppressMessages</span>(MAST<span class="sc">::</span><span class="fu">zlm</span>(<span class="sc">~</span> type <span class="sc">+</span> nFeature_RNA, sca, <span class="at">method =</span> <span class="st">"bayesglm"</span>, <span class="at">ebayes =</span> T))</span>
+<span id="cb44-10"><a href="#cb44-10" aria-hidden="true" tabindex="-1"></a>    summaryCond <span class="ot">&lt;-</span> <span class="fu">suppressMessages</span>(MAST<span class="sc">::</span><span class="fu">summary</span>(zlmCond, <span class="at">doLRT =</span> <span class="st">"typeCtrl"</span>))</span>
+<span id="cb44-11"><a href="#cb44-11" aria-hidden="true" tabindex="-1"></a>    summaryDt <span class="ot">&lt;-</span> summaryCond<span class="sc">$</span>datatable</span>
+<span id="cb44-12"><a href="#cb44-12" aria-hidden="true" tabindex="-1"></a>    fcHurdle <span class="ot">&lt;-</span> <span class="fu">merge</span>(summaryDt[summaryDt<span class="sc">$</span>contrast <span class="sc">==</span> <span class="st">"typeCtrl"</span> <span class="sc">&amp;</span> summaryDt<span class="sc">$</span>component <span class="sc">==</span></span>
+<span id="cb44-13"><a href="#cb44-13" aria-hidden="true" tabindex="-1"></a>        <span class="st">"logFC"</span>, <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">7</span>, <span class="dv">5</span>, <span class="dv">6</span>, <span class="dv">8</span>)], summaryDt[summaryDt<span class="sc">$</span>contrast <span class="sc">==</span> <span class="st">"typeCtrl"</span> <span class="sc">&amp;</span></span>
+<span id="cb44-14"><a href="#cb44-14" aria-hidden="true" tabindex="-1"></a>        summaryDt<span class="sc">$</span>component <span class="sc">==</span> <span class="st">"H"</span>, <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">4</span>)], <span class="at">by =</span> <span class="st">"primerid"</span>)</span>
+<span id="cb44-15"><a href="#cb44-15" aria-hidden="true" tabindex="-1"></a>    fcHurdle1 <span class="ot">&lt;-</span> stats<span class="sc">::</span><span class="fu">na.omit</span>(<span class="fu">as.data.frame</span>(fcHurdle))</span>
+<span id="cb44-16"><a href="#cb44-16" aria-hidden="true" tabindex="-1"></a>    <span class="fu">saveRDS</span>(fcHurdle1, tmpfile1)</span>
+<span id="cb44-17"><a href="#cb44-17" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Then run MAST with glmer and random effect.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb35"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(lme4)</span>
-<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb35-3"><a href="#cb35-3" aria-hidden="true" tabindex="-1"></a>tmpfile2 <span class="ot">&lt;-</span> <span class="fu">file.path</span>(tmpdir, <span class="st">"mast_glme_cl3.Rds"</span>)</span>
-<span id="cb35-4"><a href="#cb35-4" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="fu">file.exists</span>(tmpfile2)) {</span>
-<span id="cb35-5"><a href="#cb35-5" aria-hidden="true" tabindex="-1"></a>    fcHurdle2 <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(tmpfile2)</span>
-<span id="cb35-6"><a href="#cb35-6" aria-hidden="true" tabindex="-1"></a>} <span class="cf">else</span> {</span>
-<span id="cb35-7"><a href="#cb35-7" aria-hidden="true" tabindex="-1"></a>    zlmCond <span class="ot">&lt;-</span> <span class="fu">suppressMessages</span>(MAST<span class="sc">::</span><span class="fu">zlm</span>(<span class="sc">~</span> type <span class="sc">+</span> nFeature_RNA <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> orig.ident), sca,</span>
-<span id="cb35-8"><a href="#cb35-8" aria-hidden="true" tabindex="-1"></a>        <span class="at">method =</span> <span class="st">"glmer"</span>,</span>
-<span id="cb35-9"><a href="#cb35-9" aria-hidden="true" tabindex="-1"></a>        <span class="at">ebayes =</span> F, <span class="at">strictConvergence =</span> <span class="cn">FALSE</span></span>
-<span id="cb35-10"><a href="#cb35-10" aria-hidden="true" tabindex="-1"></a>    ))</span>
-<span id="cb35-11"><a href="#cb35-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb35-12"><a href="#cb35-12" aria-hidden="true" tabindex="-1"></a>    summaryCond <span class="ot">&lt;-</span> <span class="fu">suppressMessages</span>(MAST<span class="sc">::</span><span class="fu">summary</span>(zlmCond, <span class="at">doLRT =</span> <span class="st">"typeCtrl"</span>))</span>
-<span id="cb35-13"><a href="#cb35-13" aria-hidden="true" tabindex="-1"></a>    summaryDt <span class="ot">&lt;-</span> summaryCond<span class="sc">$</span>datatable</span>
-<span id="cb35-14"><a href="#cb35-14" aria-hidden="true" tabindex="-1"></a>    fcHurdle <span class="ot">&lt;-</span> <span class="fu">merge</span>(summaryDt[summaryDt<span class="sc">$</span>contrast <span class="sc">==</span> <span class="st">"typeCtrl"</span> <span class="sc">&amp;</span> summaryDt<span class="sc">$</span>component <span class="sc">==</span></span>
-<span id="cb35-15"><a href="#cb35-15" aria-hidden="true" tabindex="-1"></a>        <span class="st">"logFC"</span>, <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">7</span>, <span class="dv">5</span>, <span class="dv">6</span>, <span class="dv">8</span>)], summaryDt[summaryDt<span class="sc">$</span>contrast <span class="sc">==</span> <span class="st">"typeCtrl"</span> <span class="sc">&amp;</span></span>
-<span id="cb35-16"><a href="#cb35-16" aria-hidden="true" tabindex="-1"></a>        summaryDt<span class="sc">$</span>component <span class="sc">==</span> <span class="st">"H"</span>, <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">4</span>)], <span class="at">by =</span> <span class="st">"primerid"</span>)</span>
-<span id="cb35-17"><a href="#cb35-17" aria-hidden="true" tabindex="-1"></a>    fcHurdle2 <span class="ot">&lt;-</span> stats<span class="sc">::</span><span class="fu">na.omit</span>(<span class="fu">as.data.frame</span>(fcHurdle))</span>
-<span id="cb35-18"><a href="#cb35-18" aria-hidden="true" tabindex="-1"></a>    <span class="fu">saveRDS</span>(fcHurdle2, tmpfile2)</span>
-<span id="cb35-19"><a href="#cb35-19" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb45"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(lme4)</span>
+<span id="cb45-2"><a href="#cb45-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-3"><a href="#cb45-3" aria-hidden="true" tabindex="-1"></a>tmpfile2 <span class="ot">&lt;-</span> <span class="fu">file.path</span>(tmpdir, <span class="st">"mast_glme_cl3.Rds"</span>)</span>
+<span id="cb45-4"><a href="#cb45-4" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="fu">file.exists</span>(tmpfile2)) {</span>
+<span id="cb45-5"><a href="#cb45-5" aria-hidden="true" tabindex="-1"></a>    fcHurdle2 <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(tmpfile2)</span>
+<span id="cb45-6"><a href="#cb45-6" aria-hidden="true" tabindex="-1"></a>} <span class="cf">else</span> {</span>
+<span id="cb45-7"><a href="#cb45-7" aria-hidden="true" tabindex="-1"></a>    zlmCond <span class="ot">&lt;-</span> <span class="fu">suppressMessages</span>(MAST<span class="sc">::</span><span class="fu">zlm</span>(<span class="sc">~</span> type <span class="sc">+</span> nFeature_RNA <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> orig.ident), sca,</span>
+<span id="cb45-8"><a href="#cb45-8" aria-hidden="true" tabindex="-1"></a>        <span class="at">method =</span> <span class="st">"glmer"</span>,</span>
+<span id="cb45-9"><a href="#cb45-9" aria-hidden="true" tabindex="-1"></a>        <span class="at">ebayes =</span> F, <span class="at">strictConvergence =</span> <span class="cn">FALSE</span></span>
+<span id="cb45-10"><a href="#cb45-10" aria-hidden="true" tabindex="-1"></a>    ))</span>
+<span id="cb45-11"><a href="#cb45-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-12"><a href="#cb45-12" aria-hidden="true" tabindex="-1"></a>    summaryCond <span class="ot">&lt;-</span> <span class="fu">suppressMessages</span>(MAST<span class="sc">::</span><span class="fu">summary</span>(zlmCond, <span class="at">doLRT =</span> <span class="st">"typeCtrl"</span>))</span>
+<span id="cb45-13"><a href="#cb45-13" aria-hidden="true" tabindex="-1"></a>    summaryDt <span class="ot">&lt;-</span> summaryCond<span class="sc">$</span>datatable</span>
+<span id="cb45-14"><a href="#cb45-14" aria-hidden="true" tabindex="-1"></a>    fcHurdle <span class="ot">&lt;-</span> <span class="fu">merge</span>(summaryDt[summaryDt<span class="sc">$</span>contrast <span class="sc">==</span> <span class="st">"typeCtrl"</span> <span class="sc">&amp;</span> summaryDt<span class="sc">$</span>component <span class="sc">==</span></span>
+<span id="cb45-15"><a href="#cb45-15" aria-hidden="true" tabindex="-1"></a>        <span class="st">"logFC"</span>, <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">7</span>, <span class="dv">5</span>, <span class="dv">6</span>, <span class="dv">8</span>)], summaryDt[summaryDt<span class="sc">$</span>contrast <span class="sc">==</span> <span class="st">"typeCtrl"</span> <span class="sc">&amp;</span></span>
+<span id="cb45-16"><a href="#cb45-16" aria-hidden="true" tabindex="-1"></a>        summaryDt<span class="sc">$</span>component <span class="sc">==</span> <span class="st">"H"</span>, <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">4</span>)], <span class="at">by =</span> <span class="st">"primerid"</span>)</span>
+<span id="cb45-17"><a href="#cb45-17" aria-hidden="true" tabindex="-1"></a>    fcHurdle2 <span class="ot">&lt;-</span> stats<span class="sc">::</span><span class="fu">na.omit</span>(<span class="fu">as.data.frame</span>(fcHurdle))</span>
+<span id="cb45-18"><a href="#cb45-18" aria-hidden="true" tabindex="-1"></a>    <span class="fu">saveRDS</span>(fcHurdle2, tmpfile2)</span>
+<span id="cb45-19"><a href="#cb45-19" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Top genes with normal MAST:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb36"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a>top1 <span class="ot">&lt;-</span> <span class="fu">head</span>(fcHurdle1[<span class="fu">order</span>(fcHurdle1<span class="sc">$</span><span class="st">`</span><span class="at">Pr(&gt;Chisq)</span><span class="st">`</span>), ], <span class="dv">10</span>)</span>
-<span id="cb36-2"><a href="#cb36-2" aria-hidden="true" tabindex="-1"></a>top1</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb46"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a>top1 <span class="ot">&lt;-</span> <span class="fu">head</span>(fcHurdle1[<span class="fu">order</span>(fcHurdle1<span class="sc">$</span><span class="st">`</span><span class="at">Pr(&gt;Chisq)</span><span class="st">`</span>), ], <span class="dv">10</span>)</span>
+<span id="cb46-2"><a href="#cb46-2" aria-hidden="true" tabindex="-1"></a>top1</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 
 <div data-pagedtable="false">
   <script data-pagedtable-source="" type="application/json">
-{"columns":[{"label":[""],"name":["_rn_"],"type":[""],"align":["left"]},{"label":["primerid"],"name":[1],"type":["chr"],"align":["left"]},{"label":["coef"],"name":[2],"type":["dbl"],"align":["right"]},{"label":["ci.hi"],"name":[3],"type":["dbl"],"align":["right"]},{"label":["ci.lo"],"name":[4],"type":["dbl"],"align":["right"]},{"label":["z"],"name":[5],"type":["dbl"],"align":["right"]},{"label":["Pr(>Chisq)"],"name":[6],"type":["dbl"],"align":["right"]}],"data":[{"1":"HLA-DRB5","2":"-0.05417449","3":"0.0061172703","4":"-0.1144663","5":"-1.761104","6":"1.197182e-57","_rn_":"364"},{"1":"CD74","2":"0.45898610","3":"0.5196348376","4":"0.3983374","5":"14.832893","6":"4.206937e-41","_rn_":"141"},{"1":"CD69","2":"-0.23916981","3":"0.0153761394","4":"-0.4937158","5":"-1.841570","6":"4.343540e-40","_rn_":"140"},{"1":"RPS26","2":"0.27847208","3":"0.6760953682","4":"-0.1191512","5":"1.372644","6":"5.919891e-29","_rn_":"739"},{"1":"NFKBIA","2":"-0.18366377","3":"0.0352041646","4":"-0.4025317","5":"-1.644710","6":"6.480696e-28","_rn_":"528"},{"1":"ISG20","2":"-0.11418122","3":"0.0094625157","4":"-0.2378250","5":"-1.809967","6":"1.159440e-26","_rn_":"418"},{"1":"S100A9","2":"-1.01577430","3":"-0.3947030799","4":"-1.6368455","5":"-3.205560","6":"4.324266e-25","_rn_":"763"},{"1":"RPL4","2":"0.21515384","3":"0.6883333088","4":"-0.2580256","5":"0.891192","6":"1.696045e-24","_rn_":"711"},{"1":"IER2","2":"-0.13420192","3":"0.0008196466","4":"-0.2692235","5":"-1.948066","6":"1.162233e-23","_rn_":"397"},{"1":"NFKBID","2":"-0.24302359","3":"-0.0215956440","4":"-0.4644515","5":"-2.151117","6":"6.491165e-22","_rn_":"529"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
+{"columns":[{"label":[""],"name":["_rn_"],"type":[""],"align":["left"]},{"label":["primerid"],"name":[1],"type":["chr"],"align":["left"]},{"label":["coef"],"name":[2],"type":["dbl"],"align":["right"]},{"label":["ci.hi"],"name":[3],"type":["dbl"],"align":["right"]},{"label":["ci.lo"],"name":[4],"type":["dbl"],"align":["right"]},{"label":["z"],"name":[5],"type":["dbl"],"align":["right"]},{"label":["Pr(>Chisq)"],"name":[6],"type":["dbl"],"align":["right"]}],"data":[{"1":"HLA-DRB5","2":"-0.05202396","3":"0.0062855856","4":"-0.1103335","5":"-1.7486860","6":"6.956781e-57","_rn_":"363"},{"1":"CD74","2":"0.46143837","3":"0.5219380403","4":"0.4009387","5":"14.9488845","6":"1.238321e-41","_rn_":"141"},{"1":"CD69","2":"-0.21230436","3":"0.0185584311","4":"-0.4431672","5":"-1.8024078","6":"3.628079e-39","_rn_":"140"},{"1":"RPS26","2":"0.26332656","3":"0.6463862242","4":"-0.1197331","5":"1.3473373","6":"2.450608e-29","_rn_":"738"},{"1":"NFKBIA","2":"-0.18414384","3":"0.0353127252","4":"-0.4036004","5":"-1.6445865","6":"5.771763e-27","_rn_":"527"},{"1":"ISG20","2":"-0.11573280","3":"0.0095656331","4":"-0.2410312","5":"-1.8103349","6":"7.664280e-26","_rn_":"417"},{"1":"S100A9","2":"-1.02223323","3":"-0.4024180034","4":"-1.6420485","5":"-3.2324800","6":"6.976580e-25","_rn_":"762"},{"1":"RPL4","2":"0.21673051","3":"0.6926475679","4":"-0.2591866","5":"0.8925589","6":"1.016739e-23","_rn_":"710"},{"1":"IER2","2":"-0.13482545","3":"0.0009967396","4":"-0.2706476","5":"-1.9455807","6":"6.418485e-23","_rn_":"396"},{"1":"NFKBID","2":"-0.22619799","3":"-0.0163465606","4":"-0.4360494","5":"-2.1126371","6":"6.476016e-22","_rn_":"528"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
   </script>
 </div>
 </div>
-<div class="sourceCode cell-code" id="cb37"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a>fcHurdle1<span class="sc">$</span>pval <span class="ot">&lt;-</span> fcHurdle1<span class="sc">$</span><span class="st">`</span><span class="at">Pr(&gt;Chisq)</span><span class="st">`</span></span>
-<span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a>fcHurdle1<span class="sc">$</span>dir <span class="ot">&lt;-</span> <span class="fu">ifelse</span>(fcHurdle1<span class="sc">$</span>z <span class="sc">&gt;</span> <span class="dv">0</span>, <span class="st">"Ctrl"</span>, <span class="st">"Covid"</span>)</span>
-<span id="cb37-3"><a href="#cb37-3" aria-hidden="true" tabindex="-1"></a>fcHurdle1 <span class="sc">%&gt;%</span></span>
-<span id="cb37-4"><a href="#cb37-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">group_by</span>(dir) <span class="sc">%&gt;%</span></span>
-<span id="cb37-5"><a href="#cb37-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">top_n</span>(<span class="sc">-</span><span class="dv">10</span>, pval) <span class="sc">%&gt;%</span></span>
-<span id="cb37-6"><a href="#cb37-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">arrange</span>(z) <span class="ot">-&gt;</span> mastN</span>
-<span id="cb37-7"><a href="#cb37-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb37-8"><a href="#cb37-8" aria-hidden="true" tabindex="-1"></a>mastN <span class="ot">&lt;-</span> mastN<span class="sc">$</span>primerid</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb47"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb47-1"><a href="#cb47-1" aria-hidden="true" tabindex="-1"></a>fcHurdle1<span class="sc">$</span>pval <span class="ot">&lt;-</span> fcHurdle1<span class="sc">$</span><span class="st">`</span><span class="at">Pr(&gt;Chisq)</span><span class="st">`</span></span>
+<span id="cb47-2"><a href="#cb47-2" aria-hidden="true" tabindex="-1"></a>fcHurdle1<span class="sc">$</span>dir <span class="ot">&lt;-</span> <span class="fu">ifelse</span>(fcHurdle1<span class="sc">$</span>z <span class="sc">&gt;</span> <span class="dv">0</span>, <span class="st">"Ctrl"</span>, <span class="st">"Covid"</span>)</span>
+<span id="cb47-3"><a href="#cb47-3" aria-hidden="true" tabindex="-1"></a>fcHurdle1 <span class="sc">%&gt;%</span></span>
+<span id="cb47-4"><a href="#cb47-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">group_by</span>(dir) <span class="sc">%&gt;%</span></span>
+<span id="cb47-5"><a href="#cb47-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">top_n</span>(<span class="sc">-</span><span class="dv">10</span>, pval) <span class="sc">%&gt;%</span></span>
+<span id="cb47-6"><a href="#cb47-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">arrange</span>(z) <span class="ot">-&gt;</span> mastN</span>
+<span id="cb47-7"><a href="#cb47-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb47-8"><a href="#cb47-8" aria-hidden="true" tabindex="-1"></a>mastN <span class="ot">&lt;-</span> mastN<span class="sc">$</span>primerid</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Top genes with random effect:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb38"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a>top2 <span class="ot">&lt;-</span> <span class="fu">head</span>(fcHurdle2[<span class="fu">order</span>(fcHurdle2<span class="sc">$</span><span class="st">`</span><span class="at">Pr(&gt;Chisq)</span><span class="st">`</span>), ], <span class="dv">10</span>)</span>
-<span id="cb38-2"><a href="#cb38-2" aria-hidden="true" tabindex="-1"></a>top2</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb48"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb48-1"><a href="#cb48-1" aria-hidden="true" tabindex="-1"></a>top2 <span class="ot">&lt;-</span> <span class="fu">head</span>(fcHurdle2[<span class="fu">order</span>(fcHurdle2<span class="sc">$</span><span class="st">`</span><span class="at">Pr(&gt;Chisq)</span><span class="st">`</span>), ], <span class="dv">10</span>)</span>
+<span id="cb48-2"><a href="#cb48-2" aria-hidden="true" tabindex="-1"></a>top2</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 
 <div data-pagedtable="false">
   <script data-pagedtable-source="" type="application/json">
-{"columns":[{"label":[""],"name":["_rn_"],"type":[""],"align":["left"]},{"label":["primerid"],"name":[1],"type":["chr"],"align":["left"]},{"label":["coef"],"name":[2],"type":["dbl"],"align":["right"]},{"label":["ci.hi"],"name":[3],"type":["dbl"],"align":["right"]},{"label":["ci.lo"],"name":[4],"type":["dbl"],"align":["right"]},{"label":["z"],"name":[5],"type":["dbl"],"align":["right"]},{"label":["Pr(>Chisq)"],"name":[6],"type":["dbl"],"align":["right"]}],"data":[{"1":"PCSK7","2":"0.40937955","3":"0.673653649","4":"0.1451054434","5":"3.0361248","6":"2.144793e-05","_rn_":"565"},{"1":"HSP90AB1","2":"-0.09355620","3":"0.022300292","4":"-0.2094127016","5":"-1.5827062","6":"7.058701e-05","_rn_":"389"},{"1":"LIMD2","2":"0.61706177","3":"1.354535172","4":"-0.1204116354","5":"1.6399491","6":"1.629988e-04","_rn_":"456"},{"1":"COX6A1","2":"-0.05292232","3":"0.008092456","4":"-0.1139371010","5":"-1.7000119","6":"2.083757e-04","_rn_":"190"},{"1":"S100A8","2":"-1.13094213","3":"-0.426709577","4":"-1.8351746902","5":"-3.1475481","6":"3.244178e-04","_rn_":"762"},{"1":"KLF2","2":"0.97436555","3":"1.880686706","4":"0.0680443925","5":"2.1071133","6":"4.550242e-04","_rn_":"437"},{"1":"ZEB2","2":"0.03990841","3":"0.091018173","4":"-0.0112013612","5":"1.5304127","6":"9.164791e-04","_rn_":"986"},{"1":"YPEL3","2":"0.19466925","3":"0.388358344","4":"0.0009801557","5":"1.9698823","6":"1.140239e-03","_rn_":"975"},{"1":"COX6B1","2":"-0.02858616","3":"0.048641658","4":"-0.1058139764","5":"-0.7254878","6":"1.227660e-03","_rn_":"191"},{"1":"UCP2","2":"0.20398553","3":"0.432848212","4":"-0.0248771484","5":"1.7469178","6":"1.228606e-03","_rn_":"940"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
+{"columns":[{"label":[""],"name":["_rn_"],"type":[""],"align":["left"]},{"label":["primerid"],"name":[1],"type":["chr"],"align":["left"]},{"label":["coef"],"name":[2],"type":["dbl"],"align":["right"]},{"label":["ci.hi"],"name":[3],"type":["dbl"],"align":["right"]},{"label":["ci.lo"],"name":[4],"type":["dbl"],"align":["right"]},{"label":["z"],"name":[5],"type":["dbl"],"align":["right"]},{"label":["Pr(>Chisq)"],"name":[6],"type":["dbl"],"align":["right"]}],"data":[{"1":"PCSK7","2":"0.38751854","3":"0.64722345","4":"0.127813629","5":"2.924559","6":"2.322057e-05","_rn_":"564"},{"1":"HSP90AB1","2":"-0.08786692","3":"0.02201318","4":"-0.197747028","5":"-1.567308","6":"5.931748e-05","_rn_":"388"},{"1":"LIMD2","2":"0.63093383","3":"1.37221439","4":"-0.110346731","5":"1.668205","6":"9.456131e-05","_rn_":"455"},{"1":"COX6A1","2":"-0.05110376","3":"0.00789683","4":"-0.110104348","5":"-1.697636","6":"2.261282e-04","_rn_":"190"},{"1":"KLF2","2":"0.99195996","3":"1.90854303","4":"0.075376896","5":"2.121145","6":"4.902684e-04","_rn_":"435"},{"1":"S100A8","2":"-1.12003823","3":"-0.41392788","4":"-1.826148576","5":"-3.108911","6":"6.878709e-04","_rn_":"761"},{"1":"YPEL3","2":"0.19708174","3":"0.39165128","4":"0.002512209","5":"1.985270","6":"1.063985e-03","_rn_":"972"},{"1":"UCP2","2":"0.19708949","3":"0.41868984","4":"-0.024510861","5":"1.743175","6":"1.303958e-03","_rn_":"937"},{"1":"ZEB2","2":"0.04037618","3":"0.09329089","4":"-0.012538541","5":"1.495536","6":"1.742781e-03","_rn_":"982"},{"1":"SERF2","2":"-0.06737739","3":"0.03496536","4":"-0.169720129","5":"-1.290343","6":"1.853510e-03","_rn_":"779"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
   </script>
 </div>
 </div>
-<div class="sourceCode cell-code" id="cb39"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a>fcHurdle2<span class="sc">$</span>pval <span class="ot">&lt;-</span> fcHurdle2<span class="sc">$</span><span class="st">`</span><span class="at">Pr(&gt;Chisq)</span><span class="st">`</span></span>
-<span id="cb39-2"><a href="#cb39-2" aria-hidden="true" tabindex="-1"></a>fcHurdle2<span class="sc">$</span>dir <span class="ot">&lt;-</span> <span class="fu">ifelse</span>(fcHurdle2<span class="sc">$</span>z <span class="sc">&gt;</span> <span class="dv">0</span>, <span class="st">"Ctrl"</span>, <span class="st">"Covid"</span>)</span>
-<span id="cb39-3"><a href="#cb39-3" aria-hidden="true" tabindex="-1"></a>fcHurdle2 <span class="sc">%&gt;%</span></span>
-<span id="cb39-4"><a href="#cb39-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">group_by</span>(dir) <span class="sc">%&gt;%</span></span>
-<span id="cb39-5"><a href="#cb39-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">top_n</span>(<span class="sc">-</span><span class="dv">10</span>, pval) <span class="sc">%&gt;%</span></span>
-<span id="cb39-6"><a href="#cb39-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">arrange</span>(z) <span class="ot">-&gt;</span> mastR</span>
-<span id="cb39-7"><a href="#cb39-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb39-8"><a href="#cb39-8" aria-hidden="true" tabindex="-1"></a>mastR <span class="ot">&lt;-</span> mastR<span class="sc">$</span>primerid</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb49"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb49-1"><a href="#cb49-1" aria-hidden="true" tabindex="-1"></a>fcHurdle2<span class="sc">$</span>pval <span class="ot">&lt;-</span> fcHurdle2<span class="sc">$</span><span class="st">`</span><span class="at">Pr(&gt;Chisq)</span><span class="st">`</span></span>
+<span id="cb49-2"><a href="#cb49-2" aria-hidden="true" tabindex="-1"></a>fcHurdle2<span class="sc">$</span>dir <span class="ot">&lt;-</span> <span class="fu">ifelse</span>(fcHurdle2<span class="sc">$</span>z <span class="sc">&gt;</span> <span class="dv">0</span>, <span class="st">"Ctrl"</span>, <span class="st">"Covid"</span>)</span>
+<span id="cb49-3"><a href="#cb49-3" aria-hidden="true" tabindex="-1"></a>fcHurdle2 <span class="sc">%&gt;%</span></span>
+<span id="cb49-4"><a href="#cb49-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">group_by</span>(dir) <span class="sc">%&gt;%</span></span>
+<span id="cb49-5"><a href="#cb49-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">top_n</span>(<span class="sc">-</span><span class="dv">10</span>, pval) <span class="sc">%&gt;%</span></span>
+<span id="cb49-6"><a href="#cb49-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">arrange</span>(z) <span class="ot">-&gt;</span> mastR</span>
+<span id="cb49-7"><a href="#cb49-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb49-8"><a href="#cb49-8" aria-hidden="true" tabindex="-1"></a>mastR <span class="ot">&lt;-</span> mastR<span class="sc">$</span>primerid</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>As you can see, we have lower significance for the genes with the random effect added.</p>
 <p>Dotplot for top 10 genes in each direction:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb40"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a>p1 <span class="ot">&lt;-</span> <span class="fu">DotPlot</span>(cell_selection, <span class="at">features =</span> mastN, <span class="at">group.by =</span> <span class="st">"orig.ident"</span>, <span class="at">assay =</span> <span class="st">"RNA"</span>) <span class="sc">+</span></span>
-<span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">coord_flip</span>() <span class="sc">+</span> <span class="fu">RotatedAxis</span>() <span class="sc">+</span> <span class="fu">ggtitle</span>(<span class="st">"Regular MAST"</span>)</span>
-<span id="cb40-3"><a href="#cb40-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb40-4"><a href="#cb40-4" aria-hidden="true" tabindex="-1"></a>p2 <span class="ot">&lt;-</span> <span class="fu">DotPlot</span>(cell_selection, <span class="at">features =</span> mastR, <span class="at">group.by =</span> <span class="st">"orig.ident"</span>, <span class="at">assay =</span> <span class="st">"RNA"</span>) <span class="sc">+</span></span>
-<span id="cb40-5"><a href="#cb40-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">coord_flip</span>() <span class="sc">+</span> <span class="fu">RotatedAxis</span>() <span class="sc">+</span> <span class="fu">ggtitle</span>(<span class="st">"With random effect"</span>)</span>
-<span id="cb40-6"><a href="#cb40-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb40-7"><a href="#cb40-7" aria-hidden="true" tabindex="-1"></a>p1 <span class="sc">+</span> p2</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb50"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb50-1"><a href="#cb50-1" aria-hidden="true" tabindex="-1"></a>p1 <span class="ot">&lt;-</span> <span class="fu">DotPlot</span>(cell_selection, <span class="at">features =</span> mastN, <span class="at">group.by =</span> <span class="st">"orig.ident"</span>, <span class="at">assay =</span> <span class="st">"RNA"</span>) <span class="sc">+</span></span>
+<span id="cb50-2"><a href="#cb50-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">coord_flip</span>() <span class="sc">+</span> <span class="fu">RotatedAxis</span>() <span class="sc">+</span> <span class="fu">ggtitle</span>(<span class="st">"Regular MAST"</span>)</span>
+<span id="cb50-3"><a href="#cb50-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb50-4"><a href="#cb50-4" aria-hidden="true" tabindex="-1"></a>p2 <span class="ot">&lt;-</span> <span class="fu">DotPlot</span>(cell_selection, <span class="at">features =</span> mastR, <span class="at">group.by =</span> <span class="st">"orig.ident"</span>, <span class="at">assay =</span> <span class="st">"RNA"</span>) <span class="sc">+</span></span>
+<span id="cb50-5"><a href="#cb50-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">coord_flip</span>() <span class="sc">+</span> <span class="fu">RotatedAxis</span>() <span class="sc">+</span> <span class="fu">ggtitle</span>(<span class="st">"With random effect"</span>)</span>
+<span id="cb50-6"><a href="#cb50-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb50-7"><a href="#cb50-7" aria-hidden="true" tabindex="-1"></a>p1 <span class="sc">+</span> p2</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="seurat_05_dge_files/figure-html/unnamed-chunk-34-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-16"><img src="seurat_05_dge_files/figure-html/unnamed-chunk-34-1.png" class="img-fluid figure-img" width="1248"></a></p>
+<p><a href="seurat_05_dge_files/figure-html/unnamed-chunk-39-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-17"><img src="seurat_05_dge_files/figure-html/unnamed-chunk-39-1.png" class="img-fluid figure-img" width="1248"></a></p>
 </figure>
 </div>
 </div>
@@ -865,11 +932,11 @@ Discuss
 <p>Having a defined list of differentially expressed genes, you can now look for their combined function using hypergeometric test.</p>
 <p>In this case we will use the DGE from MAST with random effect to run enrichment analysis.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb41"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Load additional packages</span></span>
-<span id="cb41-2"><a href="#cb41-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(enrichR)</span>
-<span id="cb41-3"><a href="#cb41-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb41-4"><a href="#cb41-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Check available databases to perform enrichment (then choose one)</span></span>
-<span id="cb41-5"><a href="#cb41-5" aria-hidden="true" tabindex="-1"></a>enrichR<span class="sc">::</span><span class="fu">listEnrichrDbs</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb51"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb51-1"><a href="#cb51-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Load additional packages</span></span>
+<span id="cb51-2"><a href="#cb51-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(enrichR)</span>
+<span id="cb51-3"><a href="#cb51-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb51-4"><a href="#cb51-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Check available databases to perform enrichment (then choose one)</span></span>
+<span id="cb51-5"><a href="#cb51-5" aria-hidden="true" tabindex="-1"></a>enrichR<span class="sc">::</span><span class="fu">listEnrichrDbs</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 
 <div data-pagedtable="false">
@@ -878,11 +945,11 @@ Discuss
   </script>
 </div>
 </div>
-<div class="sourceCode cell-code" id="cb42"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Perform enrichment</span></span>
-<span id="cb42-2"><a href="#cb42-2" aria-hidden="true" tabindex="-1"></a>enrich_results <span class="ot">&lt;-</span> <span class="fu">enrichr</span>(</span>
-<span id="cb42-3"><a href="#cb42-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">genes     =</span> fcHurdle2<span class="sc">$</span>primerid[fcHurdle2<span class="sc">$</span>z <span class="sc">&lt;</span> <span class="dv">0</span> <span class="sc">&amp;</span> fcHurdle2<span class="sc">$</span>pval <span class="sc">&lt;</span> <span class="fl">0.05</span>],</span>
-<span id="cb42-4"><a href="#cb42-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">databases =</span> <span class="st">"GO_Biological_Process_2017b"</span></span>
-<span id="cb42-5"><a href="#cb42-5" aria-hidden="true" tabindex="-1"></a>)[[<span class="dv">1</span>]]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb52"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb52-1"><a href="#cb52-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Perform enrichment</span></span>
+<span id="cb52-2"><a href="#cb52-2" aria-hidden="true" tabindex="-1"></a>enrich_results <span class="ot">&lt;-</span> <span class="fu">enrichr</span>(</span>
+<span id="cb52-3"><a href="#cb52-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">genes     =</span> fcHurdle2<span class="sc">$</span>primerid[fcHurdle2<span class="sc">$</span>z <span class="sc">&lt;</span> <span class="dv">0</span> <span class="sc">&amp;</span> fcHurdle2<span class="sc">$</span>pval <span class="sc">&lt;</span> <span class="fl">0.05</span>],</span>
+<span id="cb52-4"><a href="#cb52-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">databases =</span> <span class="st">"GO_Biological_Process_2017b"</span></span>
+<span id="cb52-5"><a href="#cb52-5" aria-hidden="true" tabindex="-1"></a>)[[<span class="dv">1</span>]]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Uploading data to Enrichr... Done.
   Querying GO_Biological_Process_2017b... Done.
@@ -893,21 +960,21 @@ Parsing results... Done.</code></pre>
 <code>GO_Biological_Process_2017b</code><code>KEGG_2019_Human</code><code>KEGG_2019_Mouse</code><code>WikiPathways_2019_Human</code><code>WikiPathways_2019_Mouse</code><br>
 You visualize your results using a simple barplot, for example:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb44"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mfrow =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">1</span>), <span class="at">mar =</span> <span class="fu">c</span>(<span class="dv">3</span>, <span class="dv">25</span>, <span class="dv">2</span>, <span class="dv">1</span>))</span>
-<span id="cb44-2"><a href="#cb44-2" aria-hidden="true" tabindex="-1"></a><span class="fu">barplot</span>(</span>
-<span id="cb44-3"><a href="#cb44-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">height =</span> <span class="sc">-</span><span class="fu">log10</span>(enrich_results<span class="sc">$</span>P.value)[<span class="dv">10</span><span class="sc">:</span><span class="dv">1</span>],</span>
-<span id="cb44-4"><a href="#cb44-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">names.arg =</span> enrich_results<span class="sc">$</span>Term[<span class="dv">10</span><span class="sc">:</span><span class="dv">1</span>],</span>
-<span id="cb44-5"><a href="#cb44-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">horiz =</span> <span class="cn">TRUE</span>,</span>
-<span id="cb44-6"><a href="#cb44-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">las =</span> <span class="dv">1</span>,</span>
-<span id="cb44-7"><a href="#cb44-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">border =</span> <span class="cn">FALSE</span>,</span>
-<span id="cb44-8"><a href="#cb44-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">cex.names =</span> .<span class="dv">6</span></span>
-<span id="cb44-9"><a href="#cb44-9" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb44-10"><a href="#cb44-10" aria-hidden="true" tabindex="-1"></a><span class="fu">abline</span>(<span class="at">v =</span> <span class="fu">c</span>(<span class="sc">-</span><span class="fu">log10</span>(<span class="fl">0.05</span>)), <span class="at">lty =</span> <span class="dv">2</span>)</span>
-<span id="cb44-11"><a href="#cb44-11" aria-hidden="true" tabindex="-1"></a><span class="fu">abline</span>(<span class="at">v =</span> <span class="dv">0</span>, <span class="at">lty =</span> <span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb54"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb54-1"><a href="#cb54-1" aria-hidden="true" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mfrow =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">1</span>), <span class="at">mar =</span> <span class="fu">c</span>(<span class="dv">3</span>, <span class="dv">25</span>, <span class="dv">2</span>, <span class="dv">1</span>))</span>
+<span id="cb54-2"><a href="#cb54-2" aria-hidden="true" tabindex="-1"></a><span class="fu">barplot</span>(</span>
+<span id="cb54-3"><a href="#cb54-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">height =</span> <span class="sc">-</span><span class="fu">log10</span>(enrich_results<span class="sc">$</span>P.value)[<span class="dv">10</span><span class="sc">:</span><span class="dv">1</span>],</span>
+<span id="cb54-4"><a href="#cb54-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">names.arg =</span> enrich_results<span class="sc">$</span>Term[<span class="dv">10</span><span class="sc">:</span><span class="dv">1</span>],</span>
+<span id="cb54-5"><a href="#cb54-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">horiz =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb54-6"><a href="#cb54-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">las =</span> <span class="dv">1</span>,</span>
+<span id="cb54-7"><a href="#cb54-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">border =</span> <span class="cn">FALSE</span>,</span>
+<span id="cb54-8"><a href="#cb54-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">cex.names =</span> .<span class="dv">6</span></span>
+<span id="cb54-9"><a href="#cb54-9" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb54-10"><a href="#cb54-10" aria-hidden="true" tabindex="-1"></a><span class="fu">abline</span>(<span class="at">v =</span> <span class="fu">c</span>(<span class="sc">-</span><span class="fu">log10</span>(<span class="fl">0.05</span>)), <span class="at">lty =</span> <span class="dv">2</span>)</span>
+<span id="cb54-11"><a href="#cb54-11" aria-hidden="true" tabindex="-1"></a><span class="fu">abline</span>(<span class="at">v =</span> <span class="dv">0</span>, <span class="at">lty =</span> <span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="seurat_05_dge_files/figure-html/unnamed-chunk-36-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-17"><img src="seurat_05_dge_files/figure-html/unnamed-chunk-36-1.png" class="img-fluid figure-img" width="672"></a></p>
+<p><a href="seurat_05_dge_files/figure-html/unnamed-chunk-41-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-18"><img src="seurat_05_dge_files/figure-html/unnamed-chunk-41-1.png" class="img-fluid figure-img" width="672"></a></p>
 </figure>
 </div>
 </div>
@@ -919,33 +986,33 @@ You visualize your results using a simple barplot, for example:</p>
 <p>Besides the enrichment using hypergeometric test, we can also perform gene set enrichment analysis (GSEA), which scores ranked genes list (usually based on fold changes) and computes permutation test to check if a particular gene set is more present in the Up-regulated genes, among the DOWN_regulated genes or not differentially regulated.</p>
 <p>Before, we ran <code>FindMarkers()</code> with the default settings for reporting only significantly up/down regulated genes, but now we need statistics on a larger set of genes, so we will have to rerun the test with more lenient cutoffs.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb45"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a>sub_data <span class="ot">&lt;-</span> <span class="fu">SetIdent</span>(sub_data, <span class="at">value =</span> <span class="st">"type"</span>)</span>
-<span id="cb45-2"><a href="#cb45-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb45-3"><a href="#cb45-3" aria-hidden="true" tabindex="-1"></a>DGE_cell_selection2 <span class="ot">&lt;-</span> <span class="fu">FindMarkers</span>(</span>
-<span id="cb45-4"><a href="#cb45-4" aria-hidden="true" tabindex="-1"></a>    sub_data,</span>
-<span id="cb45-5"><a href="#cb45-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">ident.1 =</span> <span class="st">"Covid"</span>,</span>
-<span id="cb45-6"><a href="#cb45-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">log2FC.threshold =</span> <span class="sc">-</span><span class="cn">Inf</span>,</span>
-<span id="cb45-7"><a href="#cb45-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">test.use =</span> <span class="st">"wilcox"</span>,</span>
-<span id="cb45-8"><a href="#cb45-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">min.pct =</span> <span class="fl">0.05</span>,</span>
-<span id="cb45-9"><a href="#cb45-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">min.diff.pct =</span> <span class="dv">0</span>,</span>
-<span id="cb45-10"><a href="#cb45-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">only.pos =</span> <span class="cn">FALSE</span>,</span>
-<span id="cb45-11"><a href="#cb45-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">max.cells.per.ident =</span> <span class="dv">50</span>,</span>
-<span id="cb45-12"><a href="#cb45-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">assay =</span> <span class="st">"RNA"</span></span>
-<span id="cb45-13"><a href="#cb45-13" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb45-14"><a href="#cb45-14" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb45-15"><a href="#cb45-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Create a gene rank based on the gene expression fold change</span></span>
-<span id="cb45-16"><a href="#cb45-16" aria-hidden="true" tabindex="-1"></a>gene_rank <span class="ot">&lt;-</span> <span class="fu">setNames</span>(DGE_cell_selection2<span class="sc">$</span>avg_log2FC, <span class="fu">casefold</span>(<span class="fu">rownames</span>(DGE_cell_selection2), <span class="at">upper =</span> T))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb55"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb55-1"><a href="#cb55-1" aria-hidden="true" tabindex="-1"></a>sub_data <span class="ot">&lt;-</span> <span class="fu">SetIdent</span>(sub_data, <span class="at">value =</span> <span class="st">"type"</span>)</span>
+<span id="cb55-2"><a href="#cb55-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb55-3"><a href="#cb55-3" aria-hidden="true" tabindex="-1"></a>DGE_cell_selection2 <span class="ot">&lt;-</span> <span class="fu">FindMarkers</span>(</span>
+<span id="cb55-4"><a href="#cb55-4" aria-hidden="true" tabindex="-1"></a>    sub_data,</span>
+<span id="cb55-5"><a href="#cb55-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">ident.1 =</span> <span class="st">"Covid"</span>,</span>
+<span id="cb55-6"><a href="#cb55-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">log2FC.threshold =</span> <span class="sc">-</span><span class="cn">Inf</span>,</span>
+<span id="cb55-7"><a href="#cb55-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">test.use =</span> <span class="st">"wilcox"</span>,</span>
+<span id="cb55-8"><a href="#cb55-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">min.pct =</span> <span class="fl">0.05</span>,</span>
+<span id="cb55-9"><a href="#cb55-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">min.diff.pct =</span> <span class="dv">0</span>,</span>
+<span id="cb55-10"><a href="#cb55-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">only.pos =</span> <span class="cn">FALSE</span>,</span>
+<span id="cb55-11"><a href="#cb55-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">max.cells.per.ident =</span> <span class="dv">50</span>,</span>
+<span id="cb55-12"><a href="#cb55-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">assay =</span> <span class="st">"RNA"</span></span>
+<span id="cb55-13"><a href="#cb55-13" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb55-14"><a href="#cb55-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb55-15"><a href="#cb55-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Create a gene rank based on the gene expression fold change</span></span>
+<span id="cb55-16"><a href="#cb55-16" aria-hidden="true" tabindex="-1"></a>gene_rank <span class="ot">&lt;-</span> <span class="fu">setNames</span>(DGE_cell_selection2<span class="sc">$</span>avg_log2FC, <span class="fu">casefold</span>(<span class="fu">rownames</span>(DGE_cell_selection2), <span class="at">upper =</span> T))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Once our list of genes are sorted, we can proceed with the enrichment itself. We can use the package to get gene set from the Molecular Signature Database (MSigDB) and select KEGG pathways as an example.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb46"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(msigdbr)</span>
-<span id="cb46-2"><a href="#cb46-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb46-3"><a href="#cb46-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Download gene sets</span></span>
-<span id="cb46-4"><a href="#cb46-4" aria-hidden="true" tabindex="-1"></a>msigdbgmt <span class="ot">&lt;-</span> msigdbr<span class="sc">::</span><span class="fu">msigdbr</span>(<span class="st">"Homo sapiens"</span>)</span>
-<span id="cb46-5"><a href="#cb46-5" aria-hidden="true" tabindex="-1"></a>msigdbgmt <span class="ot">&lt;-</span> <span class="fu">as.data.frame</span>(msigdbgmt)</span>
-<span id="cb46-6"><a href="#cb46-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb46-7"><a href="#cb46-7" aria-hidden="true" tabindex="-1"></a><span class="co"># List available gene sets</span></span>
-<span id="cb46-8"><a href="#cb46-8" aria-hidden="true" tabindex="-1"></a><span class="fu">unique</span>(msigdbgmt<span class="sc">$</span>gs_subcat)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb56"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb56-1"><a href="#cb56-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(msigdbr)</span>
+<span id="cb56-2"><a href="#cb56-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb56-3"><a href="#cb56-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Download gene sets</span></span>
+<span id="cb56-4"><a href="#cb56-4" aria-hidden="true" tabindex="-1"></a>msigdbgmt <span class="ot">&lt;-</span> msigdbr<span class="sc">::</span><span class="fu">msigdbr</span>(<span class="st">"Homo sapiens"</span>)</span>
+<span id="cb56-5"><a href="#cb56-5" aria-hidden="true" tabindex="-1"></a>msigdbgmt <span class="ot">&lt;-</span> <span class="fu">as.data.frame</span>(msigdbgmt)</span>
+<span id="cb56-6"><a href="#cb56-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb56-7"><a href="#cb56-7" aria-hidden="true" tabindex="-1"></a><span class="co"># List available gene sets</span></span>
+<span id="cb56-8"><a href="#cb56-8" aria-hidden="true" tabindex="-1"></a><span class="fu">unique</span>(msigdbgmt<span class="sc">$</span>gs_subcat)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code> [1] "MIR:MIR_Legacy"  "TFT:TFT_Legacy"  "CGP"             "TFT:GTRD"       
  [5] ""                "VAX"             "CP:BIOCARTA"     "CGN"            
@@ -953,30 +1020,30 @@ You visualize your results using a simple barplot, for example:</p>
 [13] "HPO"             "CP:KEGG"         "MIR:MIRDB"       "CM"             
 [17] "CP"              "CP:PID"          "CP:REACTOME"     "CP:WIKIPATHWAYS"</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb48"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb48-1"><a href="#cb48-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Subset which gene set you want to use.</span></span>
-<span id="cb48-2"><a href="#cb48-2" aria-hidden="true" tabindex="-1"></a>msigdbgmt_subset <span class="ot">&lt;-</span> msigdbgmt[msigdbgmt<span class="sc">$</span>gs_subcat <span class="sc">==</span> <span class="st">"CP:WIKIPATHWAYS"</span>, ]</span>
-<span id="cb48-3"><a href="#cb48-3" aria-hidden="true" tabindex="-1"></a>gmt <span class="ot">&lt;-</span> <span class="fu">lapply</span>(<span class="fu">unique</span>(msigdbgmt_subset<span class="sc">$</span>gs_name), <span class="cf">function</span>(x) {</span>
-<span id="cb48-4"><a href="#cb48-4" aria-hidden="true" tabindex="-1"></a>    msigdbgmt_subset[msigdbgmt_subset<span class="sc">$</span>gs_name <span class="sc">==</span> x, <span class="st">"gene_symbol"</span>]</span>
-<span id="cb48-5"><a href="#cb48-5" aria-hidden="true" tabindex="-1"></a>})</span>
-<span id="cb48-6"><a href="#cb48-6" aria-hidden="true" tabindex="-1"></a><span class="fu">names</span>(gmt) <span class="ot">&lt;-</span> <span class="fu">unique</span>(<span class="fu">paste0</span>(msigdbgmt_subset<span class="sc">$</span>gs_name, <span class="st">"_"</span>, msigdbgmt_subset<span class="sc">$</span>gs_exact_source))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb58"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb58-1"><a href="#cb58-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Subset which gene set you want to use.</span></span>
+<span id="cb58-2"><a href="#cb58-2" aria-hidden="true" tabindex="-1"></a>msigdbgmt_subset <span class="ot">&lt;-</span> msigdbgmt[msigdbgmt<span class="sc">$</span>gs_subcat <span class="sc">==</span> <span class="st">"CP:WIKIPATHWAYS"</span>, ]</span>
+<span id="cb58-3"><a href="#cb58-3" aria-hidden="true" tabindex="-1"></a>gmt <span class="ot">&lt;-</span> <span class="fu">lapply</span>(<span class="fu">unique</span>(msigdbgmt_subset<span class="sc">$</span>gs_name), <span class="cf">function</span>(x) {</span>
+<span id="cb58-4"><a href="#cb58-4" aria-hidden="true" tabindex="-1"></a>    msigdbgmt_subset[msigdbgmt_subset<span class="sc">$</span>gs_name <span class="sc">==</span> x, <span class="st">"gene_symbol"</span>]</span>
+<span id="cb58-5"><a href="#cb58-5" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb58-6"><a href="#cb58-6" aria-hidden="true" tabindex="-1"></a><span class="fu">names</span>(gmt) <span class="ot">&lt;-</span> <span class="fu">unique</span>(<span class="fu">paste0</span>(msigdbgmt_subset<span class="sc">$</span>gs_name, <span class="st">"_"</span>, msigdbgmt_subset<span class="sc">$</span>gs_exact_source))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Next, we will run GSEA. This will result in a table containing information for several pathways. We can then sort and filter those pathways to visualize only the top ones. You can select/filter them by either <code>p-value</code> or normalized enrichment score (<code>NES</code>).</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb49"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb49-1"><a href="#cb49-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(fgsea)</span>
-<span id="cb49-2"><a href="#cb49-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb49-3"><a href="#cb49-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Perform enrichemnt analysis</span></span>
-<span id="cb49-4"><a href="#cb49-4" aria-hidden="true" tabindex="-1"></a>fgseaRes <span class="ot">&lt;-</span> <span class="fu">fgsea</span>(<span class="at">pathways =</span> gmt, <span class="at">stats =</span> gene_rank, <span class="at">minSize =</span> <span class="dv">15</span>, <span class="at">maxSize =</span> <span class="dv">500</span>)</span>
-<span id="cb49-5"><a href="#cb49-5" aria-hidden="true" tabindex="-1"></a>fgseaRes <span class="ot">&lt;-</span> fgseaRes[<span class="fu">order</span>(fgseaRes<span class="sc">$</span>pval, <span class="at">decreasing =</span> T), ]</span>
-<span id="cb49-6"><a href="#cb49-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb49-7"><a href="#cb49-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Filter the results table to show only the top 10 UP or DOWN regulated processes (optional)</span></span>
-<span id="cb49-8"><a href="#cb49-8" aria-hidden="true" tabindex="-1"></a>top10_UP <span class="ot">&lt;-</span> fgseaRes<span class="sc">$</span>pathway[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>]</span>
-<span id="cb49-9"><a href="#cb49-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb49-10"><a href="#cb49-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Nice summary table (shown as a plot)</span></span>
-<span id="cb49-11"><a href="#cb49-11" aria-hidden="true" tabindex="-1"></a><span class="fu">plotGseaTable</span>(gmt[top10_UP], gene_rank, fgseaRes, <span class="at">gseaParam =</span> <span class="fl">0.5</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb59"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb59-1"><a href="#cb59-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(fgsea)</span>
+<span id="cb59-2"><a href="#cb59-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb59-3"><a href="#cb59-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Perform enrichemnt analysis</span></span>
+<span id="cb59-4"><a href="#cb59-4" aria-hidden="true" tabindex="-1"></a>fgseaRes <span class="ot">&lt;-</span> <span class="fu">fgsea</span>(<span class="at">pathways =</span> gmt, <span class="at">stats =</span> gene_rank, <span class="at">minSize =</span> <span class="dv">15</span>, <span class="at">maxSize =</span> <span class="dv">500</span>)</span>
+<span id="cb59-5"><a href="#cb59-5" aria-hidden="true" tabindex="-1"></a>fgseaRes <span class="ot">&lt;-</span> fgseaRes[<span class="fu">order</span>(fgseaRes<span class="sc">$</span>pval, <span class="at">decreasing =</span> T), ]</span>
+<span id="cb59-6"><a href="#cb59-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb59-7"><a href="#cb59-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Filter the results table to show only the top 10 UP or DOWN regulated processes (optional)</span></span>
+<span id="cb59-8"><a href="#cb59-8" aria-hidden="true" tabindex="-1"></a>top10_UP <span class="ot">&lt;-</span> fgseaRes<span class="sc">$</span>pathway[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>]</span>
+<span id="cb59-9"><a href="#cb59-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb59-10"><a href="#cb59-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Nice summary table (shown as a plot)</span></span>
+<span id="cb59-11"><a href="#cb59-11" aria-hidden="true" tabindex="-1"></a><span class="fu">plotGseaTable</span>(gmt[top10_UP], gene_rank, fgseaRes, <span class="at">gseaParam =</span> <span class="fl">0.5</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="seurat_05_dge_files/figure-html/unnamed-chunk-39-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-18"><img src="seurat_05_dge_files/figure-html/unnamed-chunk-39-1.png" class="img-fluid figure-img" width="1152"></a></p>
+<p><a href="seurat_05_dge_files/figure-html/unnamed-chunk-44-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-19"><img src="seurat_05_dge_files/figure-html/unnamed-chunk-44-1.png" class="img-fluid figure-img" width="1152"></a></p>
 </figure>
 </div>
 </div>
@@ -1002,7 +1069,7 @@ Discuss
 Click here
 </summary>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb50"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb50-1"><a href="#cb50-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb60"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb60-1"><a href="#cb60-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>R version 4.3.0 (2023-04-21)
 Platform: x86_64-pc-linux-gnu (64-bit)
@@ -1336,7 +1403,7 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
 </div>
   </div>
 </footer>
-<script>var lightboxQuarto = GLightbox({"loop":true,"descPosition":"bottom","closeEffect":"zoom","selector":".lightbox","openEffect":"zoom"});</script>
+<script>var lightboxQuarto = GLightbox({"closeEffect":"zoom","selector":".lightbox","openEffect":"zoom","descPosition":"bottom","loop":true});</script>
 
 
 
