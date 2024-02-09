@@ -13,7 +13,7 @@
 ## Run this script in the root of repo. It takes about 1 min to run.
 ## bash ./scripts/compile.sh
 
-singularity_site="ghcr.io/nbisweden/workshop-scrnaseq:2024-site-r4.3.0"
+singularity_site="/sw/courses/scrnaseq/singularity/2024-site-r4.3.0.sif"
 
 # set output directory for compiled output
 output_dir="compiled"
