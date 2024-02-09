@@ -72,6 +72,10 @@ docker run --rm --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work $docker_scan
 docker run --rm --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work $docker_scanpy_spatial quarto render /work/labs/scanpy/scanpy_08_spatial.qmd
 duration_scanpy=$(echo "$(date +%s.%N) - $start_scanpy" | bc) && echo "Scanpy time elapsed: $duration_scanpy seconds"
 
+## lecture
+docker run --rm --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work $docker_seurat quarto render /work/lectures/dge/index.qmd
+docker run --rm --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work $docker_seurat quarto render /work/lectures/gsa/index.qmd
+
 ## site
 docker run --rm --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work $docker_site quarto render /work/index.qmd
 docker run --rm --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work $docker_site quarto render /work/home_contents.qmd

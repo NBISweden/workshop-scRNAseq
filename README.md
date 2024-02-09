@@ -62,13 +62,13 @@ Instructions to render the `.qmd` files to `.html`.
 
 ```
 # r/seurat
-docker run --rm -ti --platform=linux/amd64 -v ${PWD}:/work ghcr.io/nbisweden/workshop-scrnaseq:2024-seurat-r4.3.0 quarto render /work/labs/seurat/seurat_01_qc.qmd
+docker run --rm -ti --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work ghcr.io/nbisweden/workshop-scrnaseq:2024-seurat-r4.3.0 quarto render /work/labs/seurat/seurat_01_qc.qmd
 
 # r/bioc
-docker run --rm -ti --platform=linux/amd64 -v ${PWD}:/work ghcr.io/nbisweden/workshop-scrnaseq:2024-bioconductor-r4.3.0 quarto render /work/labs/bioc/bioc_01_qc.qmd
+docker run --rm -ti --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work ghcr.io/nbisweden/workshop-scrnaseq:2024-bioconductor-r4.3.0 quarto render /work/labs/bioc/bioc_01_qc.qmd
 
 # python/scanpy
-docker run --rm -ti --platform=linux/amd64 -u root  -v ${PWD}:/work ghcr.io/nbisweden/workshop-scrnaseq:2024-scanpy-py3.10 quarto render /work/labs/scanpy/scanpy_01_qc.qmd
+docker run --rm -ti --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work ghcr.io/nbisweden/workshop-scrnaseq:2024-scanpy-py3.10 quarto render /work/labs/scanpy/scanpy_01_qc.qmd
 ```
 
 - Successfully rendered outputs are moved to `docs` folder and chunks are cached under `_freeze`.
@@ -81,7 +81,7 @@ To render all qmd files in the repo to `docs/` as html output, run
 bash scripts/render.sh
 ```
 
-To compile all qmds into `compiled/labs` as qmds and ipynb with evaluated text, run
+To compile all qmds into `compiled/labs` as qmds and ipynb with evaluated meta variables, run
 
 ```
 bash scripts/compile.sh

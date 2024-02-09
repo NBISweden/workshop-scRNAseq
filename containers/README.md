@@ -141,22 +141,38 @@ To build singularity images, use this bash script;
 #SBATCH -A naiss2023-22-1345
 #SBATCH -p core
 #SBATCH -n 4
-#SBATCH -t 2:00:00
+#SBATCH -t 1:30:00
 #SBATCH -J bld-sif
 
 # start date time
 starttime=`date +%s`
 
-singularity build 2024-seurat-r4.3.0.sif singularity_seurat.def
-singularity build 2024-bioconductor-r4.3.0.sif singularity_bioconductor.def
-singularity build 2024-scanpy-py3.10.sif singularity_scanpy.def
+export APPTAINER_CACHEDIR=${PWD}
+export SINGULARITY_CACHEDIR=${PWD}
 
-singularity build 2024-seurat_spatial-r4.3.0.sif singularity_seurat_spatial.def
-singularity build 2024-bioconductor_spatial-r4.3.0.sif singularity_bioconductor_spatial.def
-singularity build 2024-scanpy_spatial-py3.10.sif singularity_scanpy_spatial.def
+singularity cache clean --all
+
+singularity build --force 2024-seurat-r4.3.0.sif singularity_seurat.def
+singularity build --force 2024-bioconductor-r4.3.0.sif singularity_bioconductor.def
+singularity build --force 2024-scanpy-py3.10.sif singularity_scanpy.def
+
+singularity build --force 2024-seurat_spatial-r4.3.0.sif singularity_seurat_spatial.def
+singularity build --force 2024-bioconductor_spatial-r4.3.0.sif singularity_bioconductor_spatial.def
+singularity build --force 2024-scanpy_spatial-py3.10.sif singularity_scanpy_spatial.def
+
+singularity build --force 2024-site-r4.3.0.sif singularity_site.def
 
 #end date time
 endtime=`date +%s`
 echo "End of Script. Script took $(($endtime-$starttime)) seconds."
 exit 0
+```
+
+## Build site
+
+To render all qmds files and thereby the website as well as generate compiled files, clone the repo, then run this in the root of the repo:
+
+```
+## assumes singularity images are at /sw/courses/scrnaseq/singularity/
+sbatch scripts/render-singularity.sh
 ```
