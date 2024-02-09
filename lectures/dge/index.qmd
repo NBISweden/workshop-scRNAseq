@@ -1,0 +1,474 @@
+---
+title: Differential Gene Expression
+author: Roy Francis, Åsa Björklund, Olga Dethlefson
+format:
+  revealjs:
+    df-print: kable
+execute:
+  echo: false
+bibliography: references.bib
+---
+
+
+## Setup {visibility="hidden"}
+
+```{r}
+#| include: false
+
+library(Seurat)
+library(ggplot2)
+library(dplyr)
+
+theme_set(theme_minimal(base_size=10))
+options(ggplot2.discrete.colour= c("#1f78b4", "#33a02c", "#e31a1c", "#ff7f00", "#6a3d9a"))
+```
+
+```{r}
+obj <- NormalizeData(pbmc_small) %>%
+  ScaleData() %>%
+  RunPCA() %>%
+  RunUMAP(dims=1:3) %>%
+  FindNeighbors() %>%
+  FindClusters(res=1.2)
+m <- FindAllMarkers(obj)
+```
+
+## Workflow
+
+- Quality control
+- Cell cycle phase classification
+- Normalization
+- Select highly variable genes
+- Data integration
+- Clustering
+- Cell typing
+- **Differential gene expression**
+- GSA/GSEA
+
+## What is differential gene expression?
+
+::: {.columns}
+::: {.column width="40%"}
+
+```{r}
+#| fig-height: 6
+#| fig-width: 6
+UMAPPlot(obj, group.by = "seurat_clusters", pt.size = 1.5) + NoAxes()
+```
+
+:::
+
+::: {.column width="60%"}
+
+```{r}
+head(m, n=10) %>%
+  select(avg_log2FC, p_val_adj)
+```
+
+:::
+:::
+
+. . . 
+
+Count data -> statistical analysis -> Are differences significant (greater than expected randomly)
+
+:::{.notes}
+DGE is basically comparing two groups of samples to identify if gene expression differs significantly. The end result is a table of genes with effect size (fold-change) and significance (p values).
+:::
+
+## What is differential gene expression?
+
+```{r}
+#| fig-height: 6
+#| fig-width: 8
+n <- 30
+dfr <- data.frame(cluster=rep(c(rep("C1",n),rep("C2",n)),3), gene=rep(c("CD79A","FOX1","MS41A"),each=n*2), norm_expression=c(rnorm(n,3,0.5),rnorm(n,1,0.5),rnorm(n,1,0.5),rnorm(n,3,0.5),rnorm(n,1.8,0.5),rnorm(n,2.2,0.5)))
+
+ggplot(dfr, aes(x=cluster, y=norm_expression))+
+  #geom_violin(aes(fill=cluster))+
+  geom_jitter(aes(color=cluster), alpha=0.8)+
+  facet_wrap(~gene)
+```
+
+:::{.notes}
+Sometimes, it's easy to visually identify if the expression of a gene is significantly different between groups and in which direction. If the samples overlap or the spread is too high, it might be harder.
+:::
+
+## What is differential gene expression?
+
+::: {.columns}
+::: {.column}
+
+```{r}
+#| fig-height: 4
+#| fig-width: 5
+n <- 30
+dfr <- data.frame(cluster=c(rep("C1",n),rep("C2",n)), gene=rep("CD79A",n*2), norm_expression=c(rnorm(n-5,4,0.3),rep(0,5),rnorm(n-20,4,0.3),rep(0,20)))
+
+ggplot(dfr, aes(x=cluster, y=norm_expression))+
+  geom_jitter(alpha=0.8)+
+  facet_wrap(~gene)
+```
+
+:::
+::: {.column}
+
+```{r}
+#| fig-height: 4
+#| fig-width: 6
+ggplot(dfr, aes(x=cluster, y=norm_expression))+
+  geom_violin(aes(fill=cluster))+
+  geom_jitter(alpha=0.8)+
+  facet_wrap(~gene)
+```
+
+:::
+:::
+
+. . .
+
+Most methods do not take zeros into account.
+
+> ...most computational methods still stick with the old mentality of viewing differential expression as a simple ‘up or down’ phenomenon. We advocate that we should fully embrace the features of single cell data, which allows us to observe binary (from Off to On) as well as continuous (the amount of expression) regulations. @wu2018two
+
+:::{.notes}
+But single cell expression looks more like this. With lots of zeros. Now, it's harder to say if the difference is significant. Apart from the level of expression, the number of samples (cells) that express the gene also becomes relevant. If we only look at expression level, they might be similar, but if we look at number of cells, one might be higher than ohe other.
+:::
+
+## Comparisons
+
+::: {.columns}
+::: {.column}
+
+```{r}
+#| fig-height: 6
+#| fig-width: 6
+UMAPPlot(obj, pt.size = 1.5, group.by = "seurat_clusters") + NoAxes()
+```
+
+:::
+::: {.column}
+
+- Pairwise cluster comparisons
+  - C1 vs C2, C2 vs C3 ...
+- Marker genes
+  - C1 vs all other cells ...
+  - Only positive markers
+- Conditions... Groups...
+
+:::
+:::
+
+## Functions
+
+|Toolkit|Function|
+|:---|:---|
+|{{< fa brands r-project >}} Seurat|`FindMarkers()`, `FindAllMarkers()`|
+|{{< fa brands r-project >}} Scran|`findMarkers()`|
+|{{< fa brands python >}} Scanpy|`scanpy.tl.rank_genes_groups()`|
+
+
+## FindAllMarkers
+
+```{r}
+#| eval: false
+#| echo: true
+#| code-line-numbers: "6"
+
+FindAllMarkers(
+  object,
+  assay = NULL,
+  features = NULL,
+  logfc.threshold = 0.25,
+  test.use = "wilcox",
+  slot = "data",
+  min.pct = 0.1,
+  min.diff.pct = -Inf,
+  node = NULL,
+  verbose = TRUE,
+  only.pos = FALSE,
+  max.cells.per.ident = Inf,
+  random.seed = 1,
+  latent.vars = NULL,
+  min.cells.feature = 3,
+  min.cells.group = 3,
+  mean.fxn = NULL,
+  fc.name = NULL,
+  base = 2,
+  return.thresh = 0.01,
+  densify = FALSE,
+  ...
+)
+```
+
+[Seurat 4.3.0]{.small}
+
+:::{.notes}
+FindAllMarkers() does a 1 vs rest comparison for all Identities. `assay` must be RNA. `slot` is usually data.
+:::
+
+## Tests
+
+```{yaml}
+#| eval: false
+#| echo: true
+#| code-line-numbers: "1,7"
+#| 
+"wilcox" : Identifies differentially expressed genes between two groups of cells using a Wilcoxon Rank Sum test (default)
+
+"bimod" : Likelihood-ratio test for single cell gene expression, (McDavid et al., Bioinformatics, 2013)
+
+"roc" : Identifies 'markers' of gene expression using ROC analysis. For each gene, evaluates (using AUC) a classifier built on that gene alone, to classify between two groups of cells. An AUC value of 1 means that expression values for this gene alone can perfectly classify the two groupings (i.e. Each of the cells in cells.1 exhibit a higher level than each of the cells in cells.2). An AUC value of 0 also means there is perfect classification, but in the other direction. A value of 0.5 implies that the gene has no predictive power to classify the two groups. Returns a 'predictive power' (abs(AUC-0.5) * 2) ranked matrix of putative differentially expressed genes.
+
+"t" : Identify differentially expressed genes between two groups of cells using the Student's t-test.
+
+"negbinom" : Identifies differentially expressed genes between two groups of cells using a negative binomial generalized linear model. Use only for UMI-based datasets
+
+"poisson" : Identifies differentially expressed genes between two groups of cells using a poisson generalized linear model. Use only for UMI-based datasets
+
+"LR" : Uses a logistic regression framework to determine differentially expressed genes. Constructs a logistic regression model predicting group membership based on each feature individually and compares this to a null model with a likelihood ratio test.
+
+"MAST" : Identifies differentially expressed genes between two groups of cells using a hurdle model tailored to scRNA-seq data. Utilizes the MAST package to run the DE testing.
+
+"DESeq2" : Identifies differentially expressed genes between two groups of cells based on a model using DESeq2 which uses a negative binomial distribution (Love et al, Genome Biology, 2014).This test does not support pre-filtering of genes based on average difference (or percent detection rate) between cell groups. However, genes may be pre-filtered based on their minimum detection rate (min.pct) across both cell groups. To use this method, please install DESeq2, using the instructions at https://bioconductor.org/packages/release/bioc/html/DESeq2.html
+```
+
+## Tests
+
+```{yaml}
+#| eval: false
+#| echo: true
+#| code-line-numbers: "9,11,17"
+#| 
+"wilcox" : Identifies differentially expressed genes between two groups of cells using a Wilcoxon Rank Sum test (default)
+
+"bimod" : Likelihood-ratio test for single cell gene expression, (McDavid et al., Bioinformatics, 2013)
+
+"roc" : Identifies 'markers' of gene expression using ROC analysis. For each gene, evaluates (using AUC) a classifier built on that gene alone, to classify between two groups of cells. An AUC value of 1 means that expression values for this gene alone can perfectly classify the two groupings (i.e. Each of the cells in cells.1 exhibit a higher level than each of the cells in cells.2). An AUC value of 0 also means there is perfect classification, but in the other direction. A value of 0.5 implies that the gene has no predictive power to classify the two groups. Returns a 'predictive power' (abs(AUC-0.5) * 2) ranked matrix of putative differentially expressed genes.
+
+"t" : Identify differentially expressed genes between two groups of cells using the Student's t-test.
+
+"negbinom" : Identifies differentially expressed genes between two groups of cells using a negative binomial generalized linear model. Use only for UMI-based datasets
+
+"poisson" : Identifies differentially expressed genes between two groups of cells using a poisson generalized linear model. Use only for UMI-based datasets
+
+"LR" : Uses a logistic regression framework to determine differentially expressed genes. Constructs a logistic regression model predicting group membership based on each feature individually and compares this to a null model with a likelihood ratio test.
+
+"MAST" : Identifies differentially expressed genes between two groups of cells using a hurdle model tailored to scRNA-seq data. Utilizes the MAST package to run the DE testing.
+
+"DESeq2" : Identifies differentially expressed genes between two groups of cells based on a model using DESeq2 which uses a negative binomial distribution (Love et al, Genome Biology, 2014).This test does not support pre-filtering of genes based on average difference (or percent detection rate) between cell groups. However, genes may be pre-filtered based on their minimum detection rate (min.pct) across both cell groups. To use this method, please install DESeq2, using the instructions at https://bioconductor.org/packages/release/bioc/html/DESeq2.html
+```
+
+:::{.notes}
+wilcox: non-parametric, fast, no covariates
+t-test: normal distribution, fast, no covariates
+mast: parametric, slow, complex modelling
+negbinom: neg bionomial distribution, only umi data
+poisson: poisson distribution, only umi data
+:::
+
+## Distributions
+
+::: {.columns}
+::: {.column}
+
+![](assets/distributions.png)
+
+:::
+::: {.column}
+
+- High noise (technical + biology)
+- Low library sizes
+- Low mRNA quantity
+- Amplification bias, drop-outs
+- 3' bias, partial coverage
+- Bursting
+- Mixed cell types
+
+:::
+:::
+
+:::{.notes}
+What distribution is single-cell data?
+Distributions differ gene to gene.
+
+Data is zero inflated.
+Some distributions capture this closely: ZINB, Poisson-Beta
+:::
+
+## Tests
+
+```{yaml}
+#| eval: false
+#| echo: true
+#| code-line-numbers: "15"
+#| 
+"wilcox" : Identifies differentially expressed genes between two groups of cells using a Wilcoxon Rank Sum test (default)
+
+"bimod" : Likelihood-ratio test for single cell gene expression, (McDavid et al., Bioinformatics, 2013)
+
+"roc" : Identifies 'markers' of gene expression using ROC analysis. For each gene, evaluates (using AUC) a classifier built on that gene alone, to classify between two groups of cells. An AUC value of 1 means that expression values for this gene alone can perfectly classify the two groupings (i.e. Each of the cells in cells.1 exhibit a higher level than each of the cells in cells.2). An AUC value of 0 also means there is perfect classification, but in the other direction. A value of 0.5 implies that the gene has no predictive power to classify the two groups. Returns a 'predictive power' (abs(AUC-0.5) * 2) ranked matrix of putative differentially expressed genes.
+
+"t" : Identify differentially expressed genes between two groups of cells using the Student's t-test.
+
+"negbinom" : Identifies differentially expressed genes between two groups of cells using a negative binomial generalized linear model. Use only for UMI-based datasets
+
+"poisson" : Identifies differentially expressed genes between two groups of cells using a poisson generalized linear model. Use only for UMI-based datasets
+
+"LR" : Uses a logistic regression framework to determine differentially expressed genes. Constructs a logistic regression model predicting group membership based on each feature individually and compares this to a null model with a likelihood ratio test.
+
+"MAST" : Identifies differentially expressed genes between two groups of cells using a hurdle model tailored to scRNA-seq data. Utilizes the MAST package to run the DE testing.
+
+"DESeq2" : Identifies differentially expressed genes between two groups of cells based on a model using DESeq2 which uses a negative binomial distribution (Love et al, Genome Biology, 2014).This test does not support pre-filtering of genes based on average difference (or percent detection rate) between cell groups. However, genes may be pre-filtered based on their minimum detection rate (min.pct) across both cell groups. To use this method, please install DESeq2, using the instructions at https://bioconductor.org/packages/release/bioc/html/DESeq2.html
+```
+
+
+## MAST
+
+![](assets/mast.png)
+
+. . .
+
+- Two part GLM (Hurdle model)
+- Models the continuous nature of gene expression and the discrete binary nature of gene detection
+- Detection hurdle
+  - Expression detected or not?
+  - Logistic regression
+  - If gene is not detected, stop, else move to next hurdle
+- Expression hurdle
+  - Genes with positive expression levels modelled using GLM
+- Hurdle model is able to handle drop-outs
+- Support complex modelling
+
+[@finak2015mast]{.small}
+
+## Comparing Methods
+
+::: {.columns}
+::: {.column width="35%"}
+
+![](assets/soneson-2018-deg-methods.jpg)
+
+:::
+::: {.column width="65%"}
+
+- T-test and Wilcoxon work well enough given sufficient number of samples
+- Bulk methods are not worse than single-cell specific methods
+- Pre-filtering lowly expressed genes is important for bulk methods
+
+[@soneson2018bias]{.small}
+
+:::
+:::
+
+:::{.notes}
+- 36 datasets (31 full-length, 5 UMI based)
+- edgeRQLFDetRate: EdgeR when normalized for detection rate
+:::
+
+## Comparing Methods
+
+![](assets/soneson-2018-gene-ranking.jpg)
+
+Similarity between methods based on genes identified
+
+[@soneson2018bias]{.small}
+
+:::{.notes}
+:::
+
+
+## Assessing results
+
+- We don't know the ground truth
+- Using known data (positive controls)
+- Simulated data by modelling
+- Intersect of multiple methods
+- Visual inspection
+
+## Assessing results
+
+![](assets/violin.png)
+
+Violin plots are good to visualize distribution
+
+:::{.notes}
+- Violin plots are great to visually confirm DGE results
+- Gm15645: Significant DEG
+- Lgals2, Pla2g4a: Not convincing
+- Sp110: Low fold change?
+- Ly6g6e: Multiple distributions?
+:::
+
+## Cluster balance
+
+::: {.columns}
+::: {.column}
+![](assets/unbalanced-clusters-1.png)
+:::
+::: {.column}
+- Highly similar clusters
+- Will have most of their DEGs overlapping
+- Pairwise comparisons might help rather than 1 vs rest
+:::
+:::
+
+:::{.notes}
+When doing a C4 vs all comparison, very few DEGs are found because Clusters 1 and 4 might share a lot of similar genes. 
+:::
+
+## Cluster balance
+
+::: {.columns}
+::: {.column}
+![](assets/unbalanced-clusters-2.png)
+:::
+::: {.column}
+- Balance cluster sizes
+- C1 will dominate all 1-vs-rest comparisons
+- Probably good idea to subsample
+- Be aware the subsampling strategies in Seurat only does it per test
+:::
+:::
+
+:::{.notes}
+Cluster C3 vs all will be mostly C3 vs C1 because C1 dominates the second group. Subsample to bring all clusters to equal number of cells.
+:::
+
+## Things to think about
+
+- Which data should I use? Raw? Normalized? Log Normalized?
+  - Depends on test/method
+- Check that DEGs are not just a result of some batch effect
+- Batch effects can be corrected using covariates
+- How many cells do I need for reliable DGE?
+  - Highly expressed genes: 10-20 cells?
+  - Lowly expressed genes: 20-50 cells?
+  - Also depends on quality of library prep
+- Distinctness of cell types
+- Differentiate between noise and signal
+  - Any comparison will produce some DEGs
+
+:::{.notes}
+For highly expressed genes, 
+:::
+
+## Conclusion
+
+- Important to understand what you are trying to compare: mean expression vs probability of being expressed
+- Important to understand the data
+- Take into account single-cell specific nuances
+- Models can get complicated
+- Important to assess and validate the results
+- Most tests give similar results for top genes but p values might differ.
+- Fold changes can't be interpreted the same way as bulk rnaseq
+- Too many cells can give extremely low p values
+
+## References
+
+::: {#refs}
+:::
+
+## Acknowledgements
+
+Slides adapted from previous presentations by Olga Dethlefson and Åsa Björklund.
