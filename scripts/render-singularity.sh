@@ -91,6 +91,7 @@ singularity run -e $singularity_site quarto render other/uppmax.qmd
 singularity run -e $singularity_site quarto render other/docker.qmd
 singularity run -e $singularity_site quarto render other/containers.qmd
 singularity run -e $singularity_site quarto render other/faq.qmd
+singularity run -e $singularity_site quarto render other/data.qmd
 #singularity run -e $singularity_site quarto render 404.md
 singularity run -e $singularity_site quarto render labs/index.qmd
 
