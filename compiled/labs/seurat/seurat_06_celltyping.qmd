@@ -238,6 +238,9 @@ saveRDS(C, file = "data/covid/results/ctrl13_count_matrix.rds")
 Instead load the results and visualize:
 
 ``` {r}
+#| fig-height: 7
+#| fig-width: 8
+
 path_data <- "https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"
 path_file <- "data/covid/results/azimuth_pred.tsv"
 if (!dir.exists(dirname(path_file))) dir.create(dirname(path_file), recursive = TRUE)
@@ -246,7 +249,7 @@ if (fetch_data && !file.exists(path_file)) download.file(url = file.path(path_da
 azimuth_pred <- read.table(path_file, sep = "\t", header = T)
 
 # add predictions to the seurat object
-ctrl$azimuth = azimuth_pred$predicted.celltype.l2
+ctrl$azimuth = azimuth_pred$predicted.celltype.l2[match(colnames(ctrl), azimuth_pred$cell)]
 DimPlot(ctrl, group.by = "azimuth", label = T, repel = T) + NoAxes()
 ```
 
@@ -263,11 +266,14 @@ crossTab(ctrl, "predicted.id", "scpred_prediction")
 We can also plot all the different predictions side by side
 
 ``` {r}
+#| fig-height: 5
+#| fig-width: 16
+
 wrap_plots(
     DimPlot(ctrl, label = T, group.by = "predicted.id") + NoAxes(),
     DimPlot(ctrl, label = T, group.by = "scpred_prediction") + NoAxes(),
     DimPlot(ctrl, label = T, group.by = "azimuth") + NoAxes(),
-    ncol = 2
+    ncol = 3
 )
 ```
 
@@ -376,6 +382,9 @@ instance the ncMono and cMono celltypes are equally good for some
 clusters.
 
 ``` {r}
+#| fig-height: 5
+#| fig-width: 11
+
 new.cluster.ids <- unlist(lapply(res, function(x) {
     as.data.frame(x)[1, 1]
 }))
@@ -403,7 +412,7 @@ wrap_plots(
     DimPlot(ctrl, label = T, group.by = "predicted.id") + NoAxes() + ggtitle("LabelTransfer"),
     DimPlot(ctrl, label = T, group.by = "scpred_prediction") + NoAxes() + ggtitle("scPred"),
     ncol = 3
-) + plot_layout(guides = "collect")
+)
 ```
 
 ### With annotated gene sets
