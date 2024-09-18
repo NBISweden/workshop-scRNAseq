@@ -123,6 +123,12 @@ sdata.ctrl19$type <- "Ctrl"
 # Merge datasets into one single seurat object
 alldata <- merge(sdata.cov1, c(sdata.cov15, sdata.cov16, sdata.cov17, sdata.ctrl5, sdata.ctrl13, sdata.ctrl14, sdata.ctrl19), add.cell.ids = c("covid_1", "covid_15", "covid_16", "covid_17", "ctrl_5", "ctrl_13", "ctrl_14", "ctrl_19"))
 ```
+In Seurat v5, merging creates a single object, but keeps the expression information split into different layers for integration. If not proceeding with integration, rejoin the layers after merging.
+
+``` {r}
+alldata <- JoinLayers(alldata)
+alldata
+```
 
 {{< meta qc_collate_2 >}}
 
@@ -136,7 +142,7 @@ gc()
 {{< meta qc_collate_3 >}}
 
 ```{r}
-as.data.frame(alldata@assays$RNA@counts[1:10, 1:2])
+alldata[["RNA"]]$counts[1:10, 1:4] 
 head(alldata@meta.data, 10)
 ```
 
@@ -177,7 +183,7 @@ alldata$percent_mito2 <- colSums(alldata@assays$RNA@counts[mito_genes, ]) / tota
 {{< meta qc_calqc_3 >}}
 
 ```{r}
-head(alldata[[]])
+head(alldata@meta.data)
 ```
 
 ## {{< meta qc_plotqc >}}
@@ -213,7 +219,7 @@ FeatureScatter(alldata, "nCount_RNA", "nFeature_RNA", group.by = "orig.ident", p
 
 ```{r}
 selected_c <- WhichCells(alldata, expression = nFeature_RNA > 200)
-selected_f <- rownames(alldata)[Matrix::rowSums(alldata) > 3]
+selected_f <- rownames(alldata)[Matrix::rowSums(alldata[["RNA"]]$counts) > 3]
 
 data.filt <- subset(alldata, features = selected_f, cells = selected_c)
 dim(data.filt)
@@ -237,7 +243,7 @@ table(data.filt$orig.ident)
 # Compute the proportion of counts of each gene per cell
 # Use sparse matrix operations, if your dataset is large, doing matrix devisions the regular way will take a very long time.
 
-C <- data.filt@assays$RNA@counts
+C <- data.filt[["RNA"]]$counts
 C@x <- C@x / rep.int(colSums(C), diff(C@p)) * 100
 most_expressed <- order(Matrix::rowSums(C), decreasing = T)[20:1]
 boxplot(as.matrix(t(C[most_expressed, ])),
@@ -256,12 +262,7 @@ boxplot(as.matrix(t(C[most_expressed, ])),
 #| fig-height: 5
 #| fig-width: 15
 
-selected_mito <- WhichCells(data.filt, expression = percent_mito < 20)
-selected_ribo <- WhichCells(data.filt, expression = percent_ribo > 5)
-
-# and subset the object to only keep those cells
-data.filt <- subset(data.filt, cells = selected_mito)
-data.filt <- subset(data.filt, cells = selected_ribo)
+data.filt <- subset(data.filt, percent_mito < 20 & percent_ribo > 5)
 dim(data.filt)
 table(data.filt$orig.ident)
 ```
@@ -297,7 +298,7 @@ data.filt <- data.filt[!grepl("^MT-", rownames(data.filt)), ]
 # data.filt <- data.filt[ ! grepl("^RP[SL]", rownames(data.filt)), ]
 
 # Filter Hemoglobin gene (optional if that is a problem on your data)
-# data.filt <- data.filt[!grepl("^HB[^(P|E|S)]", rownames(data.filt)), ]
+data.filt <- data.filt[!grepl("^HB[^(P|E|S)]", rownames(data.filt)), ]
 
 dim(data.filt)
 ```
@@ -350,14 +351,21 @@ genes.table <- genes.table[genes.table$external_gene_name %in% rownames(data.fil
 {{< meta qc_sex_3 >}}
 
 ```{r}
+par1 = c(10001, 2781479)
+par2 = c(56887903, 57217415)
+p1.gene = genes.table$external_gene_name[genes.table$start_position > par1[1] & genes.table$start_position < par1[2] & genes.table$chromosome_name == "Y"]
+p2.gene = genes.table$external_gene_name[genes.table$start_position > par2[1] & genes.table$start_position < par2[2] & genes.table$chromosome_name == "Y"]
+
 chrY.gene <- genes.table$external_gene_name[genes.table$chromosome_name == "Y"]
-data.filt$pct_chrY <- colSums(data.filt@assays$RNA@counts[chrY.gene, ]) / colSums(data.filt@assays$RNA@counts)
+chrY.gene = setdiff(chrY.gene, c(p1.gene, p2.gene))
+
+data.filt <- PercentageFeatureSet(data.filt, features = chrY.gene, col.name = "pct_chrY")
 ```
 
 {{< meta qc_sex_4 >}}
 
 ```{r}
-FeatureScatter(data.filt, feature1 = "XIST", feature2 = "pct_chrY")
+FeatureScatter(data.filt, feature1 = "XIST", feature2 = "pct_chrY", slot = "counts")
 ```
 
 {{< meta qc_sex_5 >}}
@@ -438,7 +446,7 @@ suppressMessages(library(DoubletFinder))
 
 # define the expected number of doublet cellscells.
 nExp <- round(ncol(data.filt) * 0.04) # expect 4% doublets
-data.filt <- doubletFinder_v3(data.filt, pN = 0.25, pK = 0.09, nExp = nExp, PCs = 1:10)
+data.filt <- doubletFinder(data.filt, pN = 0.25, pK = 0.09, nExp = nExp, PCs = 1:10)
 ```
 
 ```{r}

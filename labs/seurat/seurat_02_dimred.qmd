@@ -15,8 +15,9 @@ Code chunks run R commands unless otherwise specified.
 
 ```{r}
 # Activate conda environment to get the correct python path
-reticulate::use_condaenv("seurat", conda = "/opt/conda/bin/conda")
-reticulate::py_discover_config()
+#eticulate::use_condaenv("seurat", conda = "/opt/conda/bin/conda")
+#reticulate::py_discover_config()
+reticulate::use_condaenv("/Users/asabjor/miniconda3/envs/seurat5", required = TRUE)
 
 suppressPackageStartupMessages({
     library(Seurat)
@@ -100,6 +101,19 @@ ElbowPlot(alldata, reduction = "pca", ndims = 50)
 ```
 
 {{< meta dimred_pca_5 >}}
+
+With the `scater` package we can check how different metadata variables contribute to each PCs.
+This can be important to look at to understand different biases you may have in your data.
+
+
+```{r}
+#| fig-height: 4
+#| fig-width: 10
+
+scater::plotExplanatoryPCs(as.SingleCellExperiment(alldata), nvars_to_plot = 15, npcs_to_plot = 20)
+```
+
+Clearly, `orig,ident` (and `ident` which is created by `SingleCellExperiment`) clearly contributes to many of the PCs and PC7 is trongly influenced by cell cycle, 
 
 ## {{< meta dimred_tsne >}}
 
@@ -211,7 +225,7 @@ wrap_plots(
 alldata <- RunUMAP(
     alldata,
     reduction.name = "UMAP_on_ScaleData",
-    features = alldata@assays$RNA@var.features,
+    features = VariableFeatures(alldata),
     assay = "RNA",
     n.components = 2,
     n.neighbors = 30,
@@ -226,13 +240,16 @@ alldata <- RunUMAP(
 
 {{< meta dimred_zsg_g_1 >}}
 
-```{r}
+```{r, eval = FALSE}
+#OBS! Skip for now, known issue with later version of umap-learn in Seurat5
+# have 0.5.6 now, tested downgrading to 0.5.4 or 0.5.3 but still have same error.
+
 # Build Graph
 alldata <- FindNeighbors(alldata,
     reduction = "pca",
     assay = "RNA",
     k.param = 20,
-    features = alldata@assays$RNA@var.features
+    features = VariableFeatures(alldata)
 )
 
 alldata <- RunUMAP(alldata,
@@ -246,7 +263,7 @@ alldata <- RunUMAP(alldata,
 
 {{< meta dimred_zsg_g_2 >}}
 
-```{r}
+```{r, eval=FALSE}
 #| fig-height: 4
 #| fig-width: 12
 
@@ -283,6 +300,16 @@ FeaturePlot(alldata, reduction = "umap", dims = 1:2, features = myfeatures, ncol
 :::{.callout-note title="Discuss"}
 {{< meta dimred_plotgenes_2 >}}
 :::
+
+```{r}
+#| fig-height: 9
+#| fig-width: 12
+
+myfeatures <- c("nCount_RNA","nFeature_RNA", "percent_mito","percent_ribo","percent_hb","percent_plat")
+FeaturePlot(alldata, reduction = "umap", dims = 1:2, features = myfeatures, ncol = 3, order = T) +
+    NoLegend() + NoAxes() + NoGrid()
+```
+
 
 ## {{< meta dimred_save >}}
 

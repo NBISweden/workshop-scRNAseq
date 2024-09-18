@@ -44,7 +44,7 @@ alldata <- readRDS(path_file)
 #| fig-width: 12
 
 # Set the identity as louvain with resolution 0.5
-sel.clust <- "CCA_snn_res.0.5"
+sel.clust <- "RNA_snn_res.0.5"
 
 alldata <- SetIdent(alldata, value = sel.clust)
 table(alldata@active.ident)
@@ -56,9 +56,9 @@ table(alldata@active.ident)
 
 # plot this clustering
 wrap_plots(
-    DimPlot(alldata, label = T) + NoAxes(),
-    DimPlot(alldata, group.by = "orig.ident") + NoAxes(),
-    DimPlot(alldata, group.by = "type") + NoAxes(),
+    DimPlot(alldata, reduction = "umap_cca", label = T) + NoAxes(),
+    DimPlot(alldata, reduction = "umap_cca", group.by = "orig.ident") + NoAxes(),
+    DimPlot(alldata, reduction = "umap_cca", group.by = "type") + NoAxes(),
     ncol = 3
 )
 ```
@@ -66,6 +66,23 @@ wrap_plots(
 ## {{< meta dge_cmg >}}
 
 {{< meta dge_cmg_1 >}}
+
+For differential expression it is important to use the RNA assay, for most tests we will use the logtransformed counts in the data slot. With Seurat v5 the data may be split into layers depending on what you did with the data beforehand. So first, lets check what we have in our object:
+
+```{r}
+Layers(alldata@assays$RNA)
+```
+
+As you can see, we have the data split by each sample, so we need to merge them into one single matrix to run the differential expression.
+
+```{r}
+alldata@active.assay = "RNA"
+alldata <- JoinLayers(object = alldata, layers = c("data","counts"))
+
+Layers(alldata@assays$RNA)
+```
+
+Now we can run the function `FindAllMarkers` that will run each of the clusters vs the rest. As you can see, there are some filtering criteria to remov genes that do not have certain log2FC or percent expressed. Here we only test for upregulated genes, so the `only.pos` parameter is set to `TRUE`. 
 
 ```{r}
 # Compute differentiall expression
@@ -196,7 +213,7 @@ DotPlot(alldata, features = rev(as.character(unique(top5_sub$gene))), group.by =
 {{< meta dge_cond_1 >}}
 
 ```{r}
-# select all cells in cluster 1
+# select all cells in cluster 3
 cell_selection <- subset(alldata, cells = colnames(alldata)[alldata@meta.data[, sel.clust] == 3])
 cell_selection <- SetIdent(cell_selection, value = "type")
 # Compute differentiall expression
@@ -403,16 +420,10 @@ One option is to treat the samples as pseudobulks and do differential expression
 
 However, having only 4 patients is perhaps too low, with many more patients it will work better to run pseudobulk analysis.
 
-For a fair comparison we should have equal number of cells per sample when we create the pseudobulk, so we will use the subsampled object.
+For a fair comparison we should have equal number of cells per sample when we create the pseudobulk with `AggregateExpression`. For pseudobulk it is recommended to use the subsampled object so that you have similar amount of cells into each pseudobulk calculation. A biased number of cells will strongly influence the differential expression you run with the pseudobulk.
 
 ```{r}
-# get the count matrix for all cells
-DGE_DATA <- sub_data@assays$RNA@counts
-
-# Compute pseudobulk
-mm <- Matrix::sparse.model.matrix(~ 0 + sub_data$orig.ident)
-pseudobulk <- DGE_DATA %*% mm
-
+pseudobulk = AggregateExpression(sub_data, group.by = "orig.ident", assays = "RNA")$RNA
 ```
 
 Then run edgeR:
@@ -471,8 +482,7 @@ First, filter genes in part to speed up the process but also to avoid too many w
 ```{r}
 # select genes that are expressed in at least 2 patients or 2 ctrls with > 2 reads.
 nPatient <- sapply(unique(cell_selection$orig.ident), function(x) {
-    rowSums(cell_selection@assays$RNA@counts[, cell_selection$orig.ident
-    == x] > 2)
+    rowSums(cell_selection@assays$RNA@layers$counts[, cell_selection$orig.ident == x] > 2)
 })
 nCovid <- rowSums(nPatient[, 1:4] > 2)
 nCtrl <- rowSums(nPatient[, 5:8] > 2)
@@ -494,7 +504,7 @@ m$orig.ident <- factor(m$orig.ident)
 m$type <- factor(m$type)
 
 sca <- MAST::FromMatrix(
-    exprsArray = as.matrix(x = cell_selection_sub@assays$RNA@data),
+    exprsArray = as.matrix(x = cell_selection_sub@assays$RNA@layers$data),
     check_sanity = FALSE, cData = m, fData = fData
 )
 ```

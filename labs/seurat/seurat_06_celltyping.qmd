@@ -11,7 +11,7 @@ Code chunks run R commands unless otherwise specified.
 
 {{< meta ct_1 >}}
 
-{{< meta ct_2 >}}
+{{< meta ct_seurat_2 >}}
 
 ## {{< meta ct_read >}}
 
@@ -24,8 +24,11 @@ suppressPackageStartupMessages({
     library(patchwork)
     library(ggplot2)
     library(pheatmap)
-    # remotes::install_github("powellgenomicslab/scPred")
     library(scPred)
+    library(celldex)
+    library(SingleR)
+    library(SeuratData)
+    library(Azimuth)
 })
 ```
 
@@ -47,11 +50,6 @@ alldata <- readRDS(path_file)
 
 ```{r}
 ctrl <- alldata[, alldata$orig.ident == "ctrl_13"]
-
-# set active assay to RNA and remove the CCA assay
-ctrl@active.assay <- "RNA"
-ctrl[["CCA"]] <- NULL
-ctrl
 ```
 
 ## {{< meta ct_ref >}}
@@ -87,8 +85,8 @@ DimPlot(reference, group.by = "cell_type", label = TRUE, repel = TRUE) + NoAxes(
 {{< meta ct_ref_3 >}}
 
 ```{r}
-# Set the identity as louvain with resolution 0.3
-ctrl <- SetIdent(ctrl, value = "CCA_snn_res.0.5")
+# Set the identity as louvain with resolution 0.5
+ctrl <- SetIdent(ctrl, value = "RNA_snn_res.0.5")
 
 ctrl <- ctrl %>%
     NormalizeData() %>%
@@ -134,49 +132,67 @@ Now plot how many cells of each celltypes can be found in each cluster.
 #| fig-height: 5
 #| fig-width: 6
 
-ggplot(ctrl@meta.data, aes(x = CCA_snn_res.0.5, fill = predicted.id)) +
+ggplot(ctrl@meta.data, aes(x = RNA_snn_res.0.5, fill = predicted.id)) +
     geom_bar() +
     theme_classic()
 ```
 
-## {{< meta ct_scpred >}}
+## {{< meta ct_singler >}}
 
-{{< meta ct_scpred_1 >}}
+{{< meta ct_singler_1 >}}
 
-```{r}
-reference <- getFeatureSpace(reference, "cell_type")
-reference <- trainModel(reference)
-```
 
-{{< meta ct_scpred_2 >}}
+We first have to convert the Seurat object to a SingleCellExperiment object.
 
 ```{r}
-get_scpred(reference)
+sce = as.SingleCellExperiment(ctrl)
 ```
 
-{{< meta ct_scpred_3 >}}
+{{< meta ct_singler_2 >}}
+
+### Immune cell reference
 
 ```{r}
-ctrl <- scPredict(ctrl, reference)
+immune = celldex::DatabaseImmuneCellExpressionData()
+singler.immune <- SingleR(test = sce, ref = immune, assay.type.test=1,
+    labels = immune$label.main)
+
+head(singler.immune)
 ```
+
+### HPCA reference
 
 ```{r}
-#| fig-height: 5
-#| fig-width: 6
 
-DimPlot(ctrl, group.by = "scpred_prediction", label = T, repel = T) + NoAxes()
+hpca <- HumanPrimaryCellAtlasData()
+singler.hpca <- SingleR(test = sce, ref = hpca, assay.type.test=1,
+    labels = hpca$label.main)
+
+head(singler.hpca)
 ```
 
-{{< meta ct_scpred_4 >}}
+### With own reference data
 
 ```{r}
-#| fig-height: 5
-#| fig-width: 6
-
-ggplot(ctrl@meta.data, aes(x = CCA_snn_res.0.5, fill = scpred_prediction)) +
-    geom_bar() +
-    theme_classic()
+sce.ref = as.SingleCellExperiment(reference)
+singler.ref <- SingleR(test=sce, ref=sce.ref, labels=sce.ref$cell_type, de.method="wilcox")
+head(singler.ref)
 ```
+
+Compare results:
+
+```{r}
+#| fig-height: 7
+#| fig-width: 8
+
+ctrl$singler.immune = singler.immune$pruned.labels
+ctrl$singler.hpca = singler.hpca$pruned.labels
+ctrl$singler.ref = singler.ref$pruned.labels
+
+DimPlot(ctrl, group.by = c("singler.hpca", "singler.immune", "singler.ref"), ncol = 2)
+```
+
+
 
 ## {{< meta ct_azimuth >}}
 
@@ -184,55 +200,43 @@ ggplot(ctrl@meta.data, aes(x = CCA_snn_res.0.5, fill = scpred_prediction)) +
 
 {{< meta ct_azimuth_2 >}}
 
-This is how to save the count matrix:
-
 ```{r}
-#| eval: false
+options(future.globals.maxSize = 1e9)
 
-# No need to run now.
-C = ctrl@assays$RNA@counts
-saveRDS(C, file = "data/covid/results/ctrl13_count_matrix.rds")
-```  
-
-Instead load the results and visualize:
-
-```{r}
-#| fig-height: 7
-#| fig-width: 8
-
-path_data <- "https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"
-path_file <- "data/covid/results/azimuth_pred.tsv"
-if (!dir.exists(dirname(path_file))) dir.create(dirname(path_file), recursive = TRUE)
-if (fetch_data && !file.exists(path_file)) download.file(url = file.path(path_data, "covid/results/azimuth_pred.tsv"), destfile = path_file)
-
-azimuth_pred <- read.table(path_file, sep = "\t", header = T)
-
-# add predictions to the seurat object
-ctrl$azimuth = azimuth_pred$predicted.celltype.l2[match(colnames(ctrl), azimuth_pred$cell)]
-DimPlot(ctrl, group.by = "azimuth", label = T, repel = T) + NoAxes()
+# will install the pbmcref dataset first time you run it.
+ctrl <- RunAzimuth(ctrl, reference = "pbmcref")
 ```
 
+This dataset has predictions at 3 different levels of annotation wiht `l1` being the more broad celltypes and `l3` more detailed annotation.
+
+```{r}
+DimPlot(ctrl, group.by = "predicted.celltype.l1", label = T, repel = T) + NoAxes()
+DimPlot(ctrl, group.by = "predicted.celltype.l2", label = T, repel = T) + NoAxes()
+DimPlot(ctrl, group.by = "predicted.celltype.l3", label = T, repel = T) + NoAxes()
+```
 
 ## {{< meta ct_compare >}}
 
 {{< meta ct_compare_1 >}}
 
 ```{r}
-crossTab(ctrl, "predicted.id", "scpred_prediction")
+crossTab(ctrl, "predicted.id", "singler.hpca")
 ```
 
 {{< meta ct_compare_2 >}}
 
 ```{r}
-#| fig-height: 5
+#| fig-height: 10
 #| fig-width: 16
 
 wrap_plots(
-    DimPlot(ctrl, label = T, group.by = "predicted.id") + NoAxes(),
-    DimPlot(ctrl, label = T, group.by = "scpred_prediction") + NoAxes(),
-    DimPlot(ctrl, label = T, group.by = "azimuth") + NoAxes(),
-    ncol = 3
+    DimPlot(ctrl, label = T, group.by = "predicted.id") + NoAxes() + ggtitle("LabelTransfer"),
+    DimPlot(ctrl, label = T, group.by = "singler.hpca") + NoAxes() + ggtitle("SingleR HPCA"),
+    DimPlot(ctrl, label = T, group.by = "singler.ref") + NoAxes() + ggtitle("SingleR HPCA"),
+    DimPlot(ctrl, label = T, group.by = "predicted.celltype.l1") + NoAxes() + ggtitle("Azimuth l1"),
+    ncol = 2
 )
+
 ```
 
 ## {{< meta ct_gsea >}}
@@ -245,7 +249,12 @@ wrap_plots(
 
 ```{r}
 # run differential expression in our dataset, using clustering at resolution 0.5
-alldata <- SetIdent(alldata, value = "CCA_snn_res.0.5")
+# first we need to join the layers
+alldata@active.assay = "RNA"
+alldata <- JoinLayers(object = alldata, layers = c("data","counts"))
+
+# set the clustering you want to use as the identity class.
+alldata <- SetIdent(alldata, value = "RNA_snn_res.0.5")
 DGE_table <- FindAllMarkers(
     alldata,
     logfc.threshold = 0,
@@ -253,7 +262,7 @@ DGE_table <- FindAllMarkers(
     min.pct = 0.1,
     min.diff.pct = 0,
     only.pos = TRUE,
-    max.cells.per.ident = 20,
+    max.cells.per.ident = 100,
     return.thresh = 1,
     assay = "RNA"
 )
@@ -326,10 +335,12 @@ new.cluster.ids <- unlist(lapply(res, function(x) {
     as.data.frame(x)[1, 1]
 }))
 
-alldata$ref_gsea <- new.cluster.ids[as.character(alldata@active.ident)]
+annot = new.cluster.ids[as.character(alldata@active.ident)]
+names(annot) = colnames(alldata)
+alldata$ref_gsea <- annot
 
 wrap_plots(
-    DimPlot(alldata, label = T, group.by = "CCA_snn_res.0.5") + NoAxes(),
+    DimPlot(alldata, label = T, group.by = "RNA_snn_res.0.5") + NoAxes(),
     DimPlot(alldata, label = T, group.by = "ref_gsea") + NoAxes(),
     ncol = 2
 )
@@ -346,8 +357,7 @@ ctrl$ref_gsea <- alldata$ref_gsea[alldata$orig.ident == "ctrl_13"]
 wrap_plots(
     DimPlot(ctrl, label = T, group.by = "ref_gsea") + NoAxes() + ggtitle("GSEA"),
     DimPlot(ctrl, label = T, group.by = "predicted.id") + NoAxes() + ggtitle("LabelTransfer"),
-    DimPlot(ctrl, label = T, group.by = "scpred_prediction") + NoAxes() + ggtitle("scPred"),
-    ncol = 3
+    ncol = 2
 )
 ```
 
@@ -422,7 +432,9 @@ Let's plot the results.
 new.cluster.ids <- unlist(lapply(res, function(x) {
     as.data.frame(x)[1, 1]
 }))
-alldata$cellmarker_gsea <- new.cluster.ids[as.character(alldata@active.ident)]
+annot = new.cluster.ids[as.character(alldata@active.ident)]
+names(annot) = colnames(alldata)
+alldata$cellmarker_gsea <- annot
 
 wrap_plots(
     DimPlot(alldata, label = T, group.by = "ref_gsea") + NoAxes(),
