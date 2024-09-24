@@ -25,7 +25,7 @@ qc_collate_3: "Here is how the count matrix and the metadata look like for every
 
 # calculate qc
 qc_calqc: "Calculate QC"
-qc_calqc_1: "Having the data in a suitable format, we can start calculating some quality metrics. We can for example calculate the percentage of mitochondrial and ribosomal genes per cell and add to the metadata. The proportion of hemoglobin genes can give an indication of red blood cell contamination. This will be helpful to visualize them across different metadata parameters (i.e. datasetID and chemistry version). There are several ways of doing this. The QC metrics are finally added to the metadata table."
+qc_calqc_1: "Having the data in a suitable format, we can start calculating some quality metrics. We can for example calculate the percentage of mitochondrial and ribosomal genes per cell and add to the metadata. The proportion of hemoglobin genes can give an indication of red blood cell contamination, but in some tissues it can also be the case that some celltypes have higher content of hemoglobin. This will be helpful to visualize them across different metadata parameters (i.e. datasetID and chemistry version). There are several ways of doing this. The QC metrics are finally added to the metadata table."
 qc_calqc_2: "Citing from Simple Single Cell workflows (Lun, McCarthy & Marioni, 2017): High proportions are indicative of poor-quality cells (Islam et al. 2014; Ilicic et al. 2016), possibly because of loss of cytoplasmic RNA from perforated cells. The reasoning is that mitochondria are larger than individual transcript molecules and less likely to escape through tears in the cell membrane."
 qc_calqc_3: "Now you can see that we have additional data in the metadata slot."
 
@@ -61,7 +61,11 @@ qc_filter_genes_1: "As the level of expression of mitochondrial and MALAT1 genes
 qc_sex: "Sample sex"
 qc_sex_1: "When working with human or animal samples, you should ideally constrain your experiments to a single sex to avoid including sex bias in the conclusions. However this may not always be possible. By looking at reads from chromosomeY (males) and XIST (X-inactive specific transcript) expression (mainly female) it is quite easy to determine per sample which sex it is. It can also be a good way to detect if there has been any mislabelling in which case, the sample metadata sex does not agree with the computational predictions."
 qc_sex_2: "To get chromosome information for all genes, you should ideally parse the information from the gtf file that you used in the mapping pipeline as it has the exact same annotation version/gene naming. However, it may not always be available, as in this case where we have downloaded public data. R package biomaRt can be used to fetch annotation information. The code to run biomaRt is provided. As the biomart instances are quite often unresponsive, we will download and use a file that was created in advance."
-qc_sex_3: "Now that we have the chromosome information, we can calculate the proportion of reads that comes from chromosome Y per cell."
+qc_sex_3: "Now that we have the chromosome information, we can calculate the proportion of reads that comes from chromosome Y per cell.But first we have to remove all genes in the pseudoautosmal regions of chrY that are:
+
+* chromosome:GRCh38:Y:10001 - 2781479 is shared with X: 10001 - 2781479 (PAR1)
+* chromosome:GRCh38:Y:56887903 - 57217415 is shared with X: 155701383 - 156030895 (PAR2)
+"
 qc_sex_4: "Then plot XIST expression vs chrY proportion. As you can see, the samples are clearly on either side, even if some cells do not have detection of either."
 qc_sex_5: "Plot as violins."
 qc_sex_6: "Here, we can see clearly that we have three males and five females, can you see which samples they are? Do you think this will cause any problems for downstream analysis? Discuss with your group: what would be the best way to deal with this type of sex bias?"
@@ -141,7 +145,7 @@ dimred_plotgenes_1: "Let's plot some marker genes for different cell types onto 
 dimred_plotgenes_2: "Select some of your dimensionality reductions and plot some of the QC stats that were calculated in the previous lab. Can you see if some of the separation in your data is driven by quality of the cells?"
 
 dimred_harmony: "Harmony"
-dimred_harmony_1: "An alternative method for integration is Harmony, for more details on the method, please se their paper  [Nat. Methods](https://www.nature.com/articles/s41592-019-0619-0). This method runs the integration on a dimensionality reduction, in most applications the PCA. So first, we will rerun scaling and PCA with the same set of genes that were used for the CCA integration."
+dimred_harmony_1: "An alternative method for integration is Harmony, for more details on the method, please se their paper  [Nat. Methods](https://www.nature.com/articles/s41592-019-0619-0). This method runs the integration on a dimensionality reduction, in most applications the PCA. So first, we prefer to have scaling and PCA with the same set of genes that were used for the CCA integration, which we ran earlier."
 
 dimred_scanorama: "Scanorama"
 dimred_scanorama_1: "Another integration method is Scanorama (see [Nat. Biotech.](https://www.nature.com/articles/s41587-019-0113-3)). This method is implemented in python, but we can run it through the Reticulate package."
@@ -178,7 +182,7 @@ int_save: "Let's save the integrated data for further analysis."
 clust_title: "{{< fa circle-nodes >}} Clustering"
 clust_description: "Grouping individual cells with similar gene expression profiles to uncover distinct cell populations and their functional characteristics."
 
-clust_1: "In this tutorial, we will continue the analysis of the integrated dataset. We will use the integrated PCA to perform the clustering. First, we will construct a $k$-nearest neighbor graph in order to perform a clustering on the graph. We will also show how to perform hierarchical clustering and k-means clustering on PCA space."
+clust_1: "In this tutorial, we will continue the analysis of the integrated dataset. We will use the integrated PCA or CCA to perform the clustering. First, we will construct a $k$-nearest neighbor graph in order to perform a clustering on the graph. We will also show how to perform hierarchical clustering and k-means clustering on the selected space."
 clust_2: "Let's first load all necessary libraries and also the integrated dataset from the previous step."
 
 # graph clustering
@@ -229,6 +233,17 @@ clust_distribution_3: "We can also plot it in the other direction, the proportio
 clust_3: |
   By now you should know how to plot different features onto your data. Take the QC metrics that were calculated in the first exercise, that should be stored in your data object, and plot it as violin plots per cluster using the clustering method of your choice. For example, plot number of UMIS, detected genes, percent mitochondrial reads.
   Then, check carefully if there is any bias in how your data is separated by quality metrics. Could it be explained biologically, or could there be a technical bias there?
+
+
+clust_4: "Some clusters that are clearly defined by higher number of genes and counts. These are either doublets or a larger celltype. And some clusters with low values on these metrics that are either low quality cells or a smaller celltype. You will have to explore these clusters in more detail to judge what you believe them to be."
+
+clust_sub: "Subclustering of T and NK-cells"
+clust_sub_1: "It is common that the subtypes of cells within a cluster is not so well separated when you have a heterogeneous dataset. In such a case it could be a good idea to run subclustering of individual celltypes. The main reason for subclustering is that the variable genes and the first principal components in the full analysis are mainly driven by differences between celltypes, while with subclustering we may detect smaller differences between subtypes within celltypes."
+clust_sub_2: "So first, lets find out where our T-cell and NK-cell clusters are. We know that T-cells express CD3E, and the main subtypes are CD4 and CD8, while NK-cells express GNLY."
+clust_sub_3: "Ideally we should rerun all steps of integration with that subset of cells instead of just taking the joint embedding. If you have too few cells per sample in the celltype that you want to cluster it may not be possible.
+We will start with selecting a new set of genes that better reflecs the variability within this celltype"
+clust_sub_4: "We clearly have a very different geneset now, so hopefully it should better capture the variability within T-cells."
+clust_sub_5: "Now we have to run the full pipeline with scaling, pca, integration and clustering on this subset of cells, using the new set of variable genes" 
 
 #   K-means + Hierachical clustering   #
 #CLUST_TITLE5:### K-means + Hierachical clustering
@@ -298,6 +313,7 @@ ct_1: |
 
   There are multiple different methods to predict celltypes, here we will just cover a few of those. 
 ct_2: "We will use a reference PBMC dataset from the `scPred` package which is provided as a Seurat object with counts. And we will test classification based on the `scPred` and `scMap` methods. Finally we will use gene set enrichment predict celltype based on the DEGs of each cluster."
+ct_seurat_2: "We will use a reference PBMC dataset from the `scPred` package which is provided as a Seurat object with counts. Unfortunately scPred has not been updated to run with Seurat v5, so we will not use it here. We will test classification based on Seurat `labelTransfer`, the `SingleR` method `scPred` and using `Azimuth`. Finally we will use gene set enrichment predict celltype based on the DEGs of each cluster."
 
 # read data
 ct_read: "Read data"
@@ -307,7 +323,7 @@ ct_read_3: "Subset one patient."
 
 # prepare reference data
 ct_ref: "Reference data"
-ct_ref_1: "Load the reference dataset with annotated labels."
+ct_ref_1: "Load the reference dataset with annotated labels that is provided by the `scPred` package, it is a subsampled set of cells from human PBMCs."
 ct_ref_2: "Rerun analysis pipeline. Run normalization, feature selection and dimensionality reduction"
 ct_ref_3: "Run all steps of the analysis for the **ctrl** sample as well. Use the clustering from the integration lab with resolution 0.5."
 
@@ -320,14 +336,20 @@ ct_scpred_3: |
   Now, let's predict celltypes on our data, where scPred will align the two datasets with Harmony and then perform classification.
 ct_scpred_4: "Now plot how many	cells of each celltypes	can be found in	each cluster."
 
+# SingleR
+ct_singler: SinlgeR
+ct_singler_1: "SingleR is performs unbiased cell type recognition from single-cell RNA sequencing data, by leveraging reference transcriptomic datasets of pure cell types to infer the cell of origin of each single cell independently."
+ct_singler_2: "There are multiple datasets included in the `celldex` package that can be used for celltype prediction, here we will test two different ones, the `DatabaseImmuneCellExpressionData` and the `HumanPrimaryCellAtlasData`. In addition we will use the same reference dataset that we used for label transfer above but using SingleR instead."
+
 ct_azimuth: "Azimuth"
 ct_azimuth_1: "There are multiple online resources with large curated datasets with methods to integrate and do label transfer. One such resource is [Azimuth](https://azimuth.hubmapconsortium.org/) another one is [Disco](https://www.immunesinglecell.org/)."
-ct_azimuth_2: "Azimuth is also possible to install and run locally, but in this case we have used the online app and ran the predictions for you. So you just have to download the prediction file."
+#ct_azimuth_2: "Azimuth is also possible to install and run locally, but in this case we have used the online app and ran the predictions for you. So you just have to download the prediction file."
+ct_azimuth_2: "Here we will use the PBMC reference provided with Azimuth. Which in principle runs label transfer of your dataset onto a large curated reference. The first time you run the command, the `pbmcref` dataset will be downloaded to your local computer." 
 
 ct_compare: "Compare results"
 ct_compare_1: "Now we will compare the output of the two methods using the convenient function in scPred `crossTab()` that prints the overlap between two metadata slots."
 ct_compare_2: "We can also plot all the different predictions side by side"
-
+ct_compare_3: "As you can see, the predictions are fairly similar, but there are some minor differences, especially in the NK/T-cell group. Depending on the type of tissue you are working with and the availability for reference data, different methods may be best for your case."
 
 ct_gsea: "GSEA with celltype markers"
 ct_gsea_1: |

@@ -51,8 +51,8 @@ suppressPackageStartupMessages({
 })
 
 # Activate scanorama Python venv
-reticulate::use_virtualenv("/opt/venv/scanorama")
-reticulate::py_discover_config()
+#reticulate::use_virtualenv("/opt/venv/scanorama")
+#reticulate::py_discover_config()
 ```
 
 ``` {r}
@@ -85,7 +85,7 @@ for (i in 1:length(alldata.list)) {
 }
 
 # get the variable genes from all the datasets.
-hvgs_per_dataset <- lapply(alldata.list, function(x) { x@assays$RNA@var.features })
+hvgs_per_dataset <- lapply(alldata.list, VariableFeatures )
 
 # also add in the variable genes that was selected on the whole dataset
 hvgs_per_dataset$all = VariableFeatures(alldata)
@@ -117,6 +117,8 @@ pheatmap::pheatmap(t(overlap*1),cluster_rows = F ,
 ```
 
 For all downstream integration we will use this set of genes.
+
+Add discussion point!
 
 ## CCA
 
@@ -159,6 +161,7 @@ the data in that assay. But you could also specify in each of the
 functions to run them in a specific assay with the parameter
 `assay = "CCA"`.
 
+
 ``` {r}
 #Run Dimensionality reduction on integrated space
 alldata.int <- ScaleData(alldata.int, verbose = FALSE)
@@ -199,7 +202,7 @@ We also want to keep the original umap for visualization purposes, so we
 copy it over to the integrated object.
 
 ``` {r}
-alldata.int@reductions$umap_raw = alldata@reductions$umap
+alldata.int[["umap_raw"]] = alldata@reductions$umap
 
 # remove all objects that will not be used.
 rm(alldata,  alldata.anchors)
@@ -300,7 +303,7 @@ create a list of all the objects per sample.
 assaylist <- list()
 genelist <- list()
 for(i in 1:length(alldata.list)) {
-  assaylist[[i]] <- t(as.matrix(GetAssayData(alldata.list[[i]], "data")[hvgs_all,]))
+  assaylist[[i]] <- t(as.matrix(GetAssayData(alldata.list[[i]], layer = "counts", assay = "RNA")[hvgs_all,]))
   genelist[[i]] <- hvgs_all
 }
 
@@ -322,7 +325,7 @@ integrated.data <- scanorama$integrate(datasets_full = assaylist,
 
 # Now we create a new dim reduction object in the format that Seurat uses
 intdimred <- do.call(rbind, integrated.data[[1]])
-colnames(intdimred) <- paste0("PC_", 1:100)
+colnames(intdimred) <- paste0("Scanorama_", 1:100)
 rownames(intdimred) <- colnames(alldata.int)
 
 # Add standard deviations in order to draw Elbow Plots in Seurat
@@ -332,7 +335,7 @@ stdevs <- apply(intdimred, MARGIN = 2, FUN = sd)
 alldata.int[["scanorama"]] <- CreateDimReducObject(
   embeddings = intdimred,
   stdev      = stdevs,
-  key        = "PC_",
+  key        = "Scanorama_",
   assay      = "RNA")
 ```
 
@@ -340,7 +343,7 @@ alldata.int[["scanorama"]] <- CreateDimReducObject(
 #Here we use all PCs computed from Scanorama for UMAP calculation
 alldata.int <- RunUMAP(alldata.int, dims = 1:100, reduction = "scanorama",reduction.name = "umap_scanorama")
 
-DimPlot(alldata.int, reduction = "umap_scanorama", group.by = "orig.ident") + NoAxes() + ggtitle("Harmony UMAP")
+DimPlot(alldata.int, reduction = "umap_scanorama", group.by = "orig.ident") + NoAxes() + ggtitle("Scanorama UMAP")
 ```
 
 ## Overview all methods

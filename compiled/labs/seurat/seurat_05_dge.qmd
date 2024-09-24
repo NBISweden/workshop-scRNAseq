@@ -56,7 +56,7 @@ alldata <- readRDS(path_file)
 #| fig-width: 12
 
 # Set the identity as louvain with resolution 0.5
-sel.clust <- "CCA_snn_res.0.5"
+sel.clust <- "RNA_snn_res.0.5"
 
 alldata <- SetIdent(alldata, value = sel.clust)
 table(alldata@active.ident)
@@ -68,9 +68,9 @@ table(alldata@active.ident)
 
 # plot this clustering
 wrap_plots(
-    DimPlot(alldata, label = T) + NoAxes(),
-    DimPlot(alldata, group.by = "orig.ident") + NoAxes(),
-    DimPlot(alldata, group.by = "type") + NoAxes(),
+    DimPlot(alldata, reduction = "umap_cca", label = T) + NoAxes(),
+    DimPlot(alldata, reduction = "umap_cca", group.by = "orig.ident") + NoAxes(),
+    DimPlot(alldata, reduction = "umap_cca", group.by = "type") + NoAxes(),
     ncol = 3
 )
 ```
@@ -82,6 +82,22 @@ cluster. There are many different tests and parameters to be chosen that
 can be used to refine your results. When looking for marker genes, we
 want genes that are positively expressed in a cell type and possibly not
 expressed in others.
+
+For differential expression it is important to use the RNA assay, for most tests we will use the logtransformed counts in the data slot. With Seurat v5 the data may be split into layers depending on what you did with the data beforehand. So first, lets check what we have in our object:
+
+```{r}
+Layers(alldata@assays$RNA)
+```
+
+As you can see, we have the data split by each sample, so we need to merge them into one single matrix to run the differential expression.
+
+```{r}
+alldata@active.assay = "RNA"
+alldata <- JoinLayers(object = alldata, layers = c("data","counts"))
+
+Layers(alldata@assays$RNA)
+```
+
 
 ``` {r}
 # Compute differentiall expression
@@ -233,8 +249,8 @@ cluster, then change the cell identities to the variable of comparison
 (which now in our case is the **type**, e.g. Covid/Ctrl).
 
 ``` {r}
-# select all cells in cluster 1
-cell_selection <- subset(alldata, cells = colnames(alldata)[alldata@meta.data[, sel.clust] == 3])
+# select all cells in cluster 4
+cell_selection <- subset(alldata, cells = colnames(alldata)[alldata@meta.data[, sel.clust] == 4])
 cell_selection <- SetIdent(cell_selection, value = "type")
 # Compute differentiall expression
 DGE_cell_selection <- FindAllMarkers(cell_selection,
@@ -391,11 +407,11 @@ So one obvious thing to consider is an equal amount of cells per
 individual so that the DGE results are not dominated by a single sample.
 
 We will use the `downsample` option in the Seurat function
-`WhichCells()` to select 30 cells per cluster:
+`WhichCells()` to select 32 cells per cluster:
 
 ``` {r}
 cell_selection <- SetIdent(cell_selection, value = "orig.ident")
-sub_data <- subset(cell_selection, cells = WhichCells(cell_selection, downsample = 30))
+sub_data <- subset(cell_selection, cells = WhichCells(cell_selection, downsample = 32))
 
 table(sub_data$orig.ident)
 ```
@@ -465,12 +481,8 @@ For a fair comparison we should have equal number of cells per sample
 when we create the pseudobulk, so we will use the subsampled object.
 
 ``` {r}
-# get the count matrix for all cells
-DGE_DATA <- sub_data@assays$RNA@counts
+pseudobulk = AggregateExpression(sub_data, group.by = "orig.ident", assays = "RNA")$RNA
 
-# Compute pseudobulk
-mm <- Matrix::sparse.model.matrix(~ 0 + sub_data$orig.ident)
-pseudobulk <- DGE_DATA %*% mm
 ```
 
 Then run edgeR:
@@ -538,7 +550,7 @@ controls.
 ``` {r}
 # select genes that are expressed in at least 2 patients or 2 ctrls with > 2 reads.
 nPatient <- sapply(unique(cell_selection$orig.ident), function(x) {
-    rowSums(cell_selection@assays$RNA@counts[, cell_selection$orig.ident
+    rowSums(cell_selection@assays$RNA@layers$counts[, cell_selection$orig.ident
     == x] > 2)
 })
 nCovid <- rowSums(nPatient[, 1:4] > 2)
@@ -561,7 +573,7 @@ m$orig.ident <- factor(m$orig.ident)
 m$type <- factor(m$type)
 
 sca <- MAST::FromMatrix(
-    exprsArray = as.matrix(x = cell_selection_sub@assays$RNA@data),
+    exprsArray = as.matrix(x = cell_selection_sub@assays$RNA@layers$data),
     check_sanity = FALSE, cData = m, fData = fData
 )
 ```
@@ -696,7 +708,7 @@ enrichR::listEnrichrDbs()
 # Perform enrichment
 enrich_results <- enrichr(
     genes     = fcHurdle2$primerid[fcHurdle2$z < 0 & fcHurdle2$pval < 0.05],
-    databases = "GO_Biological_Process_2017b"
+    databases = "GO_Biological_Process_2023"
 )[[1]]
 ```
 
@@ -727,11 +739,12 @@ if a particular gene set is more present in the Up-regulated genes,
 among the DOWN_regulated genes or not differentially regulated.
 
 Before, we ran `FindMarkers()` with the default settings for reporting
-only significantly up/down regulated genes, but now we need statistics
-on a larger set of genes, so we will have to rerun the test with more
-lenient cutoffs.
+only significantly up/down regulated genes, but to run GSEA we need statistics 
+on a much larger set of genes. This is how it should be run:
 
-``` {r}
+``` {r, eval=FALSE}
+
+## OBS! NO NEED TO RUN!
 sub_data <- SetIdent(sub_data, value = "type")
 
 DGE_cell_selection2 <- FindMarkers(
@@ -748,6 +761,12 @@ DGE_cell_selection2 <- FindMarkers(
 
 # Create a gene rank based on the gene expression fold change
 gene_rank <- setNames(DGE_cell_selection2$avg_log2FC, casefold(rownames(DGE_cell_selection2), upper = T))
+```
+
+In this case we will use the results from MAST with random effect to run GSEA, and we will use the Z-score from MAST to sort the genes.
+
+```{r}
+gene_rank <- setNames(fcHurdle2$z, casefold(fcHurdle2$primerid, upper = T))
 ```
 
 Once our list of genes are sorted, we can proceed with the enrichment
@@ -785,7 +804,7 @@ library(fgsea)
 
 # Perform enrichemnt analysis
 fgseaRes <- fgsea(pathways = gmt, stats = gene_rank, minSize = 15, maxSize = 500)
-fgseaRes <- fgseaRes[order(fgseaRes$pval, decreasing = T), ]
+fgseaRes <- fgseaRes[order(fgseaRes$pval, decreasing = F), ]
 
 # Filter the results table to show only the top 10 UP or DOWN regulated processes (optional)
 top10_UP <- fgseaRes$pathway[1:10]

@@ -207,7 +207,7 @@ background-size: cover;
       <div>
       <div class="quarto-title-meta-heading">Published</div>
       <div class="quarto-title-meta-contents">
-        <p class="date">06-Feb-2024</p>
+        <p class="date">23-Sep-2024</p>
       </div>
     </div>
     
@@ -235,7 +235,8 @@ background-size: cover;
   <li><a href="#meta-clust_hier_clust" id="toc-meta-clust_hier_clust" class="nav-link" data-scroll-target="#meta-clust_hier_clust"><span class="header-section-number">3.2</span> Clustering cells</a></li>
   </ul></li>
   <li><a href="#meta-clust_distribution" id="toc-meta-clust_distribution" class="nav-link" data-scroll-target="#meta-clust_distribution"><span class="header-section-number">4</span> Distribution of clusters</a></li>
-  <li><a href="#meta-session" id="toc-meta-session" class="nav-link" data-scroll-target="#meta-session"><span class="header-section-number">5</span> Session info</a></li>
+  <li><a href="#meta-clust_sub" id="toc-meta-clust_sub" class="nav-link" data-scroll-target="#meta-clust_sub"><span class="header-section-number">5</span> Subclustering of T and NK-cells</a></li>
+  <li><a href="#meta-session" id="toc-meta-session" class="nav-link" data-scroll-target="#meta-session"><span class="header-section-number">6</span> Session info</a></li>
   </ul>
 </nav>
     </div>
@@ -259,7 +260,7 @@ Note
 <p>Code chunks run R commands unless otherwise specified.</p>
 </div>
 </div>
-<p>In this tutorial, we will continue the analysis of the integrated dataset. We will use the integrated PCA to perform the clustering. First, we will construct a <span class="math inline">\(k\)</span>-nearest neighbor graph in order to perform a clustering on the graph. We will also show how to perform hierarchical clustering and k-means clustering on PCA space.</p>
+<p>In this tutorial, we will continue the analysis of the integrated dataset. We will use the integrated PCA or CCA to perform the clustering. First, we will construct a <span class="math inline">\(k\)</span>-nearest neighbor graph in order to perform a clustering on the graph. We will also show how to perform hierarchical clustering and k-means clustering on the selected space.</p>
 <p>Let’s first load all necessary libraries and also the integrated dataset from the previous step.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">suppressPackageStartupMessages</span>({</span>
@@ -282,9 +283,11 @@ Note
 <span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>alldata <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(path_file)</span>
 <span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(<span class="fu">names</span>(alldata<span class="sc">@</span>reductions))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>[1] "pca"            "umap"           "tsne"           "umap_raw"      
-[5] "pca_harmony"    "harmony"        "umap_harmony"   "scanorama"     
-[9] "umap_scanorama"</code></pre>
+<pre><code> [1] "pca"               "umap"              "tsne"             
+ [4] "UMAP10_on_PCA"     "UMAP_on_ScaleData" "integrated_cca"   
+ [7] "umap_cca"          "tsne_cca"          "harmony"          
+[10] "umap_harmony"      "scanorama"         "scanoramaC"       
+[13] "umap_scanorama"    "umap_scanoramaC"  </code></pre>
 </div>
 </div>
 <section id="meta-clust_graphclust" class="level2" data-number="1">
@@ -297,29 +300,28 @@ Note
 <h3 data-number="1.1" class="anchored" data-anchor-id="meta-clust_graphclust_knn"><span class="header-section-number">1.1</span> Building kNN / SNN graph</h3>
 <p>The first step into graph clustering is to construct a k-nn graph, in case you don’t have one. For this, we will use the PCA space. Thus, as done for dimensionality reduction, we will use ony the top <em>N</em> PCA dimensions for this purpose (the same used for computing UMAP / tSNE).</p>
 <p>As we can see above, the <strong>Seurat</strong> function <code>FindNeighbors()</code> already computes both the KNN and SNN graphs, in which we can control the minimal percentage of shared neighbours to be kept. See <code>?FindNeighbors</code> for additional options.</p>
+<p>The main options to consider are:</p>
+<ul>
+<li><strong>dims</strong> - the number of dimensions from the initial reduction to include when calculating distances between cells.</li>
+<li><strong>k.param</strong> - the number of neighbors per cell to include in the KNN graph.</li>
+<li><strong>prune.SNN</strong> - sets the cutoff for Jaccard index when pruning the graph.</li>
+</ul>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># check if CCA is still the active assay</span></span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>alldata<span class="sc">@</span>active.assay</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># use the CCA integration to create the neighborhood graph.</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>alldata <span class="ot">&lt;-</span> <span class="fu">FindNeighbors</span>(alldata, <span class="at">dims =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">30</span>, <span class="at">k.param =</span> <span class="dv">60</span>, <span class="at">prune.SNN =</span> <span class="dv">1</span> <span class="sc">/</span> <span class="dv">15</span>, <span class="at">reduction =</span>  <span class="st">"integrated_cca"</span>)</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="co"># check the names for graphs in the object.</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="fu">names</span>(alldata<span class="sc">@</span>graphs)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>[1] "RNA"</code></pre>
-</div>
-<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># set the correct assay.</span></span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>alldata<span class="sc">@</span>active.assay <span class="ot">&lt;-</span> <span class="st">"CCA"</span></span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>alldata <span class="ot">&lt;-</span> <span class="fu">FindNeighbors</span>(alldata, <span class="at">dims =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">30</span>, <span class="at">k.param =</span> <span class="dv">60</span>, <span class="at">prune.SNN =</span> <span class="dv">1</span> <span class="sc">/</span> <span class="dv">15</span>)</span>
-<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="co"># check the names for graphs in the object.</span></span>
-<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a><span class="fu">names</span>(alldata<span class="sc">@</span>graphs)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>[1] "CCA_nn"  "CCA_snn"</code></pre>
+<pre><code>[1] "RNA_nn"  "RNA_snn"</code></pre>
 </div>
 </div>
 <p>We can take a look at the kNN and SNN graphs. The kNN graph is a matrix where every connection between cells is represented as <span class="math inline">\(1\)</span>s. This is called a <strong>unweighted</strong> graph (default in Seurat). In the SNN graph on the other hand, some cell connections have more importance than others, and the graph scales from <span class="math inline">\(0\)</span> to a maximum distance (in this case <span class="math inline">\(1\)</span>). Usually, the smaller the distance, the closer two points are, and stronger is their connection. This is called a <strong>weighted</strong> graph. Both weighted and unweighted graphs are suitable for clustering, but clustering on unweighted graphs is faster for large datasets (&gt; 100k cells).</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">pheatmap</span>(alldata<span class="sc">@</span>graphs<span class="sc">$</span>CCA_nn[<span class="dv">1</span><span class="sc">:</span><span class="dv">200</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">200</span>],</span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>    <span class="at">col =</span> <span class="fu">c</span>(<span class="st">"white"</span>, <span class="st">"black"</span>), <span class="at">border_color =</span> <span class="st">"grey90"</span>, <span class="at">main =</span> <span class="st">"KNN graph"</span>,</span>
-<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">legend =</span> F, <span class="at">cluster_rows =</span> F, <span class="at">cluster_cols =</span> F, <span class="at">fontsize =</span> <span class="dv">2</span></span>
-<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">pheatmap</span>(alldata<span class="sc">@</span>graphs<span class="sc">$</span>RNA_nn[<span class="dv">1</span><span class="sc">:</span><span class="dv">200</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">200</span>],</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    <span class="at">col =</span> <span class="fu">c</span>(<span class="st">"white"</span>, <span class="st">"black"</span>), <span class="at">border_color =</span> <span class="st">"grey90"</span>, <span class="at">main =</span> <span class="st">"KNN graph"</span>,</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">legend =</span> F, <span class="at">cluster_rows =</span> F, <span class="at">cluster_cols =</span> F, <span class="at">fontsize =</span> <span class="dv">2</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
@@ -327,11 +329,11 @@ Note
 </figure>
 </div>
 </div>
-<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">pheatmap</span>(alldata<span class="sc">@</span>graphs<span class="sc">$</span>CCA_snn[<span class="dv">1</span><span class="sc">:</span><span class="dv">200</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">200</span>],</span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>    <span class="at">col =</span> <span class="fu">colorRampPalette</span>(<span class="fu">c</span>(<span class="st">"white"</span>, <span class="st">"yellow"</span>, <span class="st">"red"</span>))(<span class="dv">100</span>),</span>
-<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">border_color =</span> <span class="st">"grey90"</span>, <span class="at">main =</span> <span class="st">"SNN graph"</span>,</span>
-<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">legend =</span> F, <span class="at">cluster_rows =</span> F, <span class="at">cluster_cols =</span> F, <span class="at">fontsize =</span> <span class="dv">2</span></span>
-<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">pheatmap</span>(alldata<span class="sc">@</span>graphs<span class="sc">$</span>RNA_snn[<span class="dv">1</span><span class="sc">:</span><span class="dv">200</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">200</span>],</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    <span class="at">col =</span> <span class="fu">colorRampPalette</span>(<span class="fu">c</span>(<span class="st">"white"</span>, <span class="st">"yellow"</span>, <span class="st">"red"</span>))(<span class="dv">100</span>),</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">border_color =</span> <span class="st">"grey90"</span>, <span class="at">main =</span> <span class="st">"SNN graph"</span>,</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">legend =</span> F, <span class="at">cluster_rows =</span> F, <span class="at">cluster_cols =</span> F, <span class="at">fontsize =</span> <span class="dv">2</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
@@ -347,34 +349,36 @@ Note
 <p>In <strong>Seurat</strong>, the function <code>FindClusters()</code> will do a graph-based clustering using “Louvain” algorithim by default (<code>algorithm = 1</code>). To use the leiden algorithm, you need to set it to <code>algorithm = 4</code>. See <code>?FindClusters</code> for additional options.</p>
 <p>By default it will run clustering on the SNN graph we created in the previous step, but you can also specify different graphs for clustering with <code>graph.name</code>.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Clustering with louvain (algorithm 1) and a few different resolutions</span></span>
-<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (res <span class="cf">in</span> <span class="fu">c</span>(<span class="fl">0.1</span>, <span class="fl">0.25</span>, .<span class="dv">5</span>, <span class="dv">1</span>, <span class="fl">1.5</span>, <span class="dv">2</span>)) {</span>
-<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>    alldata <span class="ot">&lt;-</span> <span class="fu">FindClusters</span>(alldata, <span class="at">graph.name =</span> <span class="st">"CCA_snn"</span>, <span class="at">resolution =</span> res, <span class="at">algorithm =</span> <span class="dv">1</span>)</span>
-<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a><span class="co"># each time you run clustering, the data is stored in meta data columns:</span></span>
-<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a><span class="co"># seurat_clusters - lastest results only</span></span>
-<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a><span class="co"># CCA_snn_res.XX - for each different resolution you test.</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Clustering with louvain (algorithm 1) and a few different resolutions</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (res <span class="cf">in</span> <span class="fu">c</span>(<span class="fl">0.1</span>, <span class="fl">0.25</span>, .<span class="dv">5</span>, <span class="dv">1</span>, <span class="fl">1.5</span>, <span class="dv">2</span>)) {</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    alldata <span class="ot">&lt;-</span> <span class="fu">FindClusters</span>(alldata, <span class="at">graph.name =</span> <span class="st">"RNA_snn"</span>, <span class="at">resolution =</span> res, <span class="at">algorithm =</span> <span class="dv">1</span>)</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a><span class="co"># each time you run clustering, the data is stored in meta data columns:</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a><span class="co"># seurat_clusters - lastest results only</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a><span class="co"># RNA_snn_res.XX - for each different resolution you test.</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="fu">wrap_plots</span>(</span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"umap"</span>, <span class="at">group.by =</span> <span class="st">"CCA_snn_res.0.5"</span>) <span class="sc">+</span> <span class="fu">ggtitle</span>(<span class="st">"louvain_0.5"</span>),</span>
-<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"umap"</span>, <span class="at">group.by =</span> <span class="st">"CCA_snn_res.1"</span>) <span class="sc">+</span> <span class="fu">ggtitle</span>(<span class="st">"louvain_1"</span>),</span>
-<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"umap"</span>, <span class="at">group.by =</span> <span class="st">"CCA_snn_res.2"</span>) <span class="sc">+</span> <span class="fu">ggtitle</span>(<span class="st">"louvain_2"</span>),</span>
-<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">ncol =</span> <span class="dv">3</span></span>
-<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">wrap_plots</span>(</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"umap_cca"</span>, <span class="at">group.by =</span> <span class="st">"RNA_snn_res.0.1"</span>) <span class="sc">+</span> <span class="fu">ggtitle</span>(<span class="st">"louvain_0.1"</span>),</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"umap_cca"</span>, <span class="at">group.by =</span> <span class="st">"RNA_snn_res.0.25"</span>) <span class="sc">+</span> <span class="fu">ggtitle</span>(<span class="st">"louvain_0.25"</span>),</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"umap_cca"</span>, <span class="at">group.by =</span> <span class="st">"RNA_snn_res.0.5"</span>) <span class="sc">+</span> <span class="fu">ggtitle</span>(<span class="st">"louvain_0.5"</span>),</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"umap_cca"</span>, <span class="at">group.by =</span> <span class="st">"RNA_snn_res.1"</span>) <span class="sc">+</span> <span class="fu">ggtitle</span>(<span class="st">"louvain_1"</span>),</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"umap_cca"</span>, <span class="at">group.by =</span> <span class="st">"RNA_snn_res.2"</span>) <span class="sc">+</span> <span class="fu">ggtitle</span>(<span class="st">"louvain_2"</span>),</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">ncol =</span> <span class="dv">3</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="seurat_04_clustering_files/figure-html/unnamed-chunk-6-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-4"><img src="seurat_04_clustering_files/figure-html/unnamed-chunk-6-1.png" class="img-fluid figure-img" width="1248"></a></p>
+<p><a href="seurat_04_clustering_files/figure-html/unnamed-chunk-6-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-4"><img src="seurat_04_clustering_files/figure-html/unnamed-chunk-6-1.png" class="img-fluid figure-img" width="1344"></a></p>
 </figure>
 </div>
 </div>
 </div>
 <p>We can now use the <code>clustree</code> package to visualize how cells are distributed between clusters depending on resolution.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="fu">suppressPackageStartupMessages</span>(<span class="fu">library</span>(clustree))</span>
-<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="fu">clustree</span>(alldata<span class="sc">@</span>meta.data, <span class="at">prefix =</span> <span class="st">"CCA_snn_res."</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">suppressPackageStartupMessages</span>(<span class="fu">library</span>(clustree))</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="fu">clustree</span>(alldata<span class="sc">@</span>meta.data, <span class="at">prefix =</span> <span class="st">"RNA_snn_res."</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
@@ -389,26 +393,26 @@ Note
 <h2 data-number="2" class="anchored" data-anchor-id="meta-clust_kmean"><span class="header-section-number">2</span> K-means clustering</h2>
 <p>K-means is a generic clustering algorithm that has been used in many application areas. In R, it can be applied via the <code>kmeans()</code> function. Typically, it is applied to a reduced dimension representation of the expression data (most often PCA, because of the interpretability of the low-dimensional distances). We need to define the number of clusters in advance. Since the results depend on the initialization of the cluster centers, it is typically recommended to run K-means with multiple starting configurations (via the <code>nstart</code> argument).</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (k <span class="cf">in</span> <span class="fu">c</span>(<span class="dv">5</span>, <span class="dv">7</span>, <span class="dv">10</span>, <span class="dv">12</span>, <span class="dv">15</span>, <span class="dv">17</span>, <span class="dv">20</span>)) {</span>
-<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>    alldata<span class="sc">@</span>meta.data[, <span class="fu">paste0</span>(<span class="st">"kmeans_"</span>, k)] <span class="ot">&lt;-</span> <span class="fu">kmeans</span>(<span class="at">x =</span> alldata<span class="sc">@</span>reductions[[<span class="st">"pca"</span>]]<span class="sc">@</span>cell.embeddings, <span class="at">centers =</span> k, <span class="at">nstart =</span> <span class="dv">100</span>)<span class="sc">$</span>cluster</span>
-<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a><span class="fu">wrap_plots</span>(</span>
-<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"umap"</span>, <span class="at">group.by =</span> <span class="st">"kmeans_5"</span>) <span class="sc">+</span> <span class="fu">ggtitle</span>(<span class="st">"kmeans_5"</span>),</span>
-<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>    <span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"umap"</span>, <span class="at">group.by =</span> <span class="st">"kmeans_10"</span>) <span class="sc">+</span> <span class="fu">ggtitle</span>(<span class="st">"kmeans_10"</span>),</span>
-<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>    <span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"umap"</span>, <span class="at">group.by =</span> <span class="st">"kmeans_15"</span>) <span class="sc">+</span> <span class="fu">ggtitle</span>(<span class="st">"kmeans_15"</span>),</span>
-<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">ncol =</span> <span class="dv">3</span></span>
-<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>) <span class="sc">+</span> <span class="fu">plot_layout</span>(<span class="at">guides =</span> <span class="st">"collect"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (k <span class="cf">in</span> <span class="fu">c</span>(<span class="dv">5</span>, <span class="dv">7</span>, <span class="dv">10</span>, <span class="dv">12</span>, <span class="dv">15</span>, <span class="dv">17</span>, <span class="dv">20</span>)) {</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>    alldata<span class="sc">@</span>meta.data[, <span class="fu">paste0</span>(<span class="st">"kmeans_"</span>, k)] <span class="ot">&lt;-</span> <span class="fu">kmeans</span>(<span class="at">x =</span> <span class="fu">Embeddings</span>(alldata, <span class="st">"integrated_cca"</span>), <span class="at">centers =</span> k, <span class="at">nstart =</span> <span class="dv">100</span>)<span class="sc">$</span>cluster</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a><span class="fu">wrap_plots</span>(</span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"umap_cca"</span>, <span class="at">group.by =</span> <span class="st">"kmeans_5"</span>) <span class="sc">+</span> <span class="fu">ggtitle</span>(<span class="st">"kmeans_5"</span>),</span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>    <span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"umap_cca"</span>, <span class="at">group.by =</span> <span class="st">"kmeans_10"</span>) <span class="sc">+</span> <span class="fu">ggtitle</span>(<span class="st">"kmeans_10"</span>),</span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>    <span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"umap_cca"</span>, <span class="at">group.by =</span> <span class="st">"kmeans_15"</span>) <span class="sc">+</span> <span class="fu">ggtitle</span>(<span class="st">"kmeans_15"</span>),</span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">ncol =</span> <span class="dv">3</span></span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="seurat_04_clustering_files/figure-html/unnamed-chunk-8-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-6"><img src="seurat_04_clustering_files/figure-html/unnamed-chunk-8-1.png" class="img-fluid figure-img" width="1152"></a></p>
+<p><a href="seurat_04_clustering_files/figure-html/unnamed-chunk-8-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-6"><img src="seurat_04_clustering_files/figure-html/unnamed-chunk-8-1.png" class="img-fluid figure-img" width="1248"></a></p>
 </figure>
 </div>
 </div>
 </div>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="fu">clustree</span>(alldata<span class="sc">@</span>meta.data, <span class="at">prefix =</span> <span class="st">"kmeans_"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="fu">clustree</span>(alldata<span class="sc">@</span>meta.data, <span class="at">prefix =</span> <span class="st">"kmeans_"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
@@ -424,54 +428,54 @@ Note
 <h3 data-number="3.1" class="anchored" data-anchor-id="meta-clust_hier_dist"><span class="header-section-number">3.1</span> Defining distance between cells</h3>
 <p>The base R <code>stats</code> package already contains a function <code>dist</code> that calculates distances between all pairs of samples. Since we want to compute distances between samples, rather than among genes, we need to transpose the data before applying it to the <code>dist</code> function. This can be done by simply adding the transpose function <code>t()</code> to the data. The distance methods available in <code>dist</code> are: ‘euclidean’, ‘maximum’, ‘manhattan’, ‘canberra’, ‘binary’ or ‘minkowski’.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>d <span class="ot">&lt;-</span> <span class="fu">dist</span>(alldata<span class="sc">@</span>reductions[[<span class="st">"pca"</span>]]<span class="sc">@</span>cell.embeddings, <span class="at">method =</span> <span class="st">"euclidean"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>d <span class="ot">&lt;-</span> <span class="fu">dist</span>(<span class="fu">Embeddings</span>(alldata, <span class="st">"integrated_cca"</span>), <span class="at">method =</span> <span class="st">"euclidean"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>As you might have realized, correlation is not a method implemented in the <code>dist()</code> function. However, we can create our own distances and transform them to a distance object. We can first compute sample correlations using the <code>cor</code> function.<br>
 As you already know, correlation range from -1 to 1, where 1 indicates that two samples are closest, -1 indicates that two samples are the furthest and 0 is somewhat in between. This, however, creates a problem in defining distances because a distance of 0 indicates that two samples are closest, 1 indicates that two samples are the furthest and distance of -1 is not meaningful. We thus need to transform the correlations to a positive scale (a.k.a. <strong>adjacency</strong>):<br>
 <span class="math display">\[adj = \frac{1- cor}{2}\]</span><br>
 Once we transformed the correlations to a 0-1 scale, we can simply convert it to a distance object using <code>as.dist()</code> function. The transformation does not need to have a maximum of 1, but it is more intuitive to have it at 1, rather than at any other number.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Compute sample correlations</span></span>
-<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>sample_cor <span class="ot">&lt;-</span> <span class="fu">cor</span>(Matrix<span class="sc">::</span><span class="fu">t</span>(alldata<span class="sc">@</span>reductions[[<span class="st">"pca"</span>]]<span class="sc">@</span>cell.embeddings))</span>
-<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Transform the scale from correlations</span></span>
-<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>sample_cor <span class="ot">&lt;-</span> (<span class="dv">1</span> <span class="sc">-</span> sample_cor) <span class="sc">/</span> <span class="dv">2</span></span>
-<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Convert it to a distance object</span></span>
-<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>d2 <span class="ot">&lt;-</span> <span class="fu">as.dist</span>(sample_cor)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Compute sample correlations</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>sample_cor <span class="ot">&lt;-</span> <span class="fu">cor</span>(Matrix<span class="sc">::</span><span class="fu">t</span>(<span class="fu">Embeddings</span>(alldata, <span class="st">"integrated_cca"</span>)))</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Transform the scale from correlations</span></span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>sample_cor <span class="ot">&lt;-</span> (<span class="dv">1</span> <span class="sc">-</span> sample_cor) <span class="sc">/</span> <span class="dv">2</span></span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Convert it to a distance object</span></span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>d2 <span class="ot">&lt;-</span> <span class="fu">as.dist</span>(sample_cor)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 <section id="meta-clust_hier_clust" class="level3" data-number="3.2">
 <h3 data-number="3.2" class="anchored" data-anchor-id="meta-clust_hier_clust"><span class="header-section-number">3.2</span> Clustering cells</h3>
 <p>After having calculated the distances between samples, we can now proceed with the hierarchical clustering per-se. We will use the function <code>hclust()</code> for this purpose, in which we can simply run it with the distance objects created above. The methods available are: ‘ward.D’, ‘ward.D2’, ‘single’, ‘complete’, ‘average’, ‘mcquitty’, ‘median’ or ‘centroid’. It is possible to plot the dendrogram for all cells, but this is very time consuming and we will omit for this tutorial.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="co"># euclidean</span></span>
-<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>h_euclidean <span class="ot">&lt;-</span> <span class="fu">hclust</span>(d, <span class="at">method =</span> <span class="st">"ward.D2"</span>)</span>
-<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a><span class="co"># correlation</span></span>
-<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>h_correlation <span class="ot">&lt;-</span> <span class="fu">hclust</span>(d2, <span class="at">method =</span> <span class="st">"ward.D2"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="co"># euclidean</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>h_euclidean <span class="ot">&lt;-</span> <span class="fu">hclust</span>(d, <span class="at">method =</span> <span class="st">"ward.D2"</span>)</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a><span class="co"># correlation</span></span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>h_correlation <span class="ot">&lt;-</span> <span class="fu">hclust</span>(d2, <span class="at">method =</span> <span class="st">"ward.D2"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Once your dendrogram is created, the next step is to define which samples belong to a particular cluster. After identifying the dendrogram, we can now literally cut the tree at a fixed threshold (with <code>cutree</code>) at different levels to define the clusters. We can either define the number of clusters or decide on a height. We can simply try different clustering levels.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="co"># euclidean distance</span></span>
-<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>alldata<span class="sc">$</span>hc_euclidean_5 <span class="ot">&lt;-</span> <span class="fu">cutree</span>(h_euclidean, <span class="at">k =</span> <span class="dv">5</span>)</span>
-<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>alldata<span class="sc">$</span>hc_euclidean_10 <span class="ot">&lt;-</span> <span class="fu">cutree</span>(h_euclidean, <span class="at">k =</span> <span class="dv">10</span>)</span>
-<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>alldata<span class="sc">$</span>hc_euclidean_15 <span class="ot">&lt;-</span> <span class="fu">cutree</span>(h_euclidean, <span class="at">k =</span> <span class="dv">15</span>)</span>
-<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a><span class="co"># correlation distance</span></span>
-<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>alldata<span class="sc">$</span>hc_corelation_5 <span class="ot">&lt;-</span> <span class="fu">cutree</span>(h_correlation, <span class="at">k =</span> <span class="dv">5</span>)</span>
-<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>alldata<span class="sc">$</span>hc_corelation_10 <span class="ot">&lt;-</span> <span class="fu">cutree</span>(h_correlation, <span class="at">k =</span> <span class="dv">10</span>)</span>
-<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a>alldata<span class="sc">$</span>hc_corelation_15 <span class="ot">&lt;-</span> <span class="fu">cutree</span>(h_correlation, <span class="at">k =</span> <span class="dv">15</span>)</span>
-<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a><span class="fu">wrap_plots</span>(</span>
-<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a>    <span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"umap"</span>, <span class="at">group.by =</span> <span class="st">"hc_euclidean_5"</span>) <span class="sc">+</span> <span class="fu">ggtitle</span>(<span class="st">"hc_euc_5"</span>),</span>
-<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a>    <span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"umap"</span>, <span class="at">group.by =</span> <span class="st">"hc_euclidean_10"</span>) <span class="sc">+</span> <span class="fu">ggtitle</span>(<span class="st">"hc_euc_10"</span>),</span>
-<span id="cb18-14"><a href="#cb18-14" aria-hidden="true" tabindex="-1"></a>    <span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"umap"</span>, <span class="at">group.by =</span> <span class="st">"hc_euclidean_15"</span>) <span class="sc">+</span> <span class="fu">ggtitle</span>(<span class="st">"hc_euc_15"</span>),</span>
-<span id="cb18-15"><a href="#cb18-15" aria-hidden="true" tabindex="-1"></a>    <span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"umap"</span>, <span class="at">group.by =</span> <span class="st">"hc_corelation_5"</span>) <span class="sc">+</span> <span class="fu">ggtitle</span>(<span class="st">"hc_cor_5"</span>),</span>
-<span id="cb18-16"><a href="#cb18-16" aria-hidden="true" tabindex="-1"></a>    <span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"umap"</span>, <span class="at">group.by =</span> <span class="st">"hc_corelation_10"</span>) <span class="sc">+</span> <span class="fu">ggtitle</span>(<span class="st">"hc_cor_10"</span>),</span>
-<span id="cb18-17"><a href="#cb18-17" aria-hidden="true" tabindex="-1"></a>    <span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"umap"</span>, <span class="at">group.by =</span> <span class="st">"hc_corelation_15"</span>) <span class="sc">+</span> <span class="fu">ggtitle</span>(<span class="st">"hc_cor_15"</span>),</span>
-<span id="cb18-18"><a href="#cb18-18" aria-hidden="true" tabindex="-1"></a>    <span class="at">ncol =</span> <span class="dv">3</span></span>
-<span id="cb18-19"><a href="#cb18-19" aria-hidden="true" tabindex="-1"></a>) <span class="sc">+</span> <span class="fu">plot_layout</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="co"># euclidean distance</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>alldata<span class="sc">$</span>hc_euclidean_5 <span class="ot">&lt;-</span> <span class="fu">cutree</span>(h_euclidean, <span class="at">k =</span> <span class="dv">5</span>)</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>alldata<span class="sc">$</span>hc_euclidean_10 <span class="ot">&lt;-</span> <span class="fu">cutree</span>(h_euclidean, <span class="at">k =</span> <span class="dv">10</span>)</span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>alldata<span class="sc">$</span>hc_euclidean_15 <span class="ot">&lt;-</span> <span class="fu">cutree</span>(h_euclidean, <span class="at">k =</span> <span class="dv">15</span>)</span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a><span class="co"># correlation distance</span></span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>alldata<span class="sc">$</span>hc_corelation_5 <span class="ot">&lt;-</span> <span class="fu">cutree</span>(h_correlation, <span class="at">k =</span> <span class="dv">5</span>)</span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>alldata<span class="sc">$</span>hc_corelation_10 <span class="ot">&lt;-</span> <span class="fu">cutree</span>(h_correlation, <span class="at">k =</span> <span class="dv">10</span>)</span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>alldata<span class="sc">$</span>hc_corelation_15 <span class="ot">&lt;-</span> <span class="fu">cutree</span>(h_correlation, <span class="at">k =</span> <span class="dv">15</span>)</span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a><span class="fu">wrap_plots</span>(</span>
+<span id="cb16-12"><a href="#cb16-12" aria-hidden="true" tabindex="-1"></a>    <span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"umap_cca"</span>, <span class="at">group.by =</span> <span class="st">"hc_euclidean_5"</span>) <span class="sc">+</span> <span class="fu">ggtitle</span>(<span class="st">"hc_euc_5"</span>),</span>
+<span id="cb16-13"><a href="#cb16-13" aria-hidden="true" tabindex="-1"></a>    <span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"umap_cca"</span>, <span class="at">group.by =</span> <span class="st">"hc_euclidean_10"</span>) <span class="sc">+</span> <span class="fu">ggtitle</span>(<span class="st">"hc_euc_10"</span>),</span>
+<span id="cb16-14"><a href="#cb16-14" aria-hidden="true" tabindex="-1"></a>    <span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"umap_cca"</span>, <span class="at">group.by =</span> <span class="st">"hc_euclidean_15"</span>) <span class="sc">+</span> <span class="fu">ggtitle</span>(<span class="st">"hc_euc_15"</span>),</span>
+<span id="cb16-15"><a href="#cb16-15" aria-hidden="true" tabindex="-1"></a>    <span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"umap_cca"</span>, <span class="at">group.by =</span> <span class="st">"hc_corelation_5"</span>) <span class="sc">+</span> <span class="fu">ggtitle</span>(<span class="st">"hc_cor_5"</span>),</span>
+<span id="cb16-16"><a href="#cb16-16" aria-hidden="true" tabindex="-1"></a>    <span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"umap_cca"</span>, <span class="at">group.by =</span> <span class="st">"hc_corelation_10"</span>) <span class="sc">+</span> <span class="fu">ggtitle</span>(<span class="st">"hc_cor_10"</span>),</span>
+<span id="cb16-17"><a href="#cb16-17" aria-hidden="true" tabindex="-1"></a>    <span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"umap_cca"</span>, <span class="at">group.by =</span> <span class="st">"hc_corelation_15"</span>) <span class="sc">+</span> <span class="fu">ggtitle</span>(<span class="st">"hc_cor_15"</span>),</span>
+<span id="cb16-18"><a href="#cb16-18" aria-hidden="true" tabindex="-1"></a>    <span class="at">ncol =</span> <span class="dv">3</span></span>
+<span id="cb16-19"><a href="#cb16-19" aria-hidden="true" tabindex="-1"></a>) <span class="sc">+</span> <span class="fu">plot_layout</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
@@ -482,21 +486,21 @@ Once we transformed the correlations to a 0-1 scale, we can simply convert it to
 </div>
 <p>Finally, lets save the clustered data for further analysis.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(alldata, <span class="st">"data/covid/results/seurat_covid_qc_dr_int_cl.rds"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(alldata, <span class="st">"data/covid/results/seurat_covid_qc_dr_int_cl.rds"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 </section>
 <section id="meta-clust_distribution" class="level2" data-number="4">
 <h2 data-number="4" class="anchored" data-anchor-id="meta-clust_distribution"><span class="header-section-number">4</span> Distribution of clusters</h2>
 <p>Now, we can select one of our clustering methods and compare the proportion of samples across the clusters.</p>
-<p>Select the <strong>CCA_snn_res.0.5</strong> and plot proportion of samples per cluster and also proportion covid vs ctrl.</p>
+<p>Select the <strong>RNA_snn_res.0.5</strong> and plot proportion of samples per cluster and also proportion covid vs ctrl.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>p1 <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(alldata<span class="sc">@</span>meta.data, <span class="fu">aes</span>(<span class="at">x =</span> CCA_snn_res.<span class="fl">0.5</span>, <span class="at">fill =</span> orig.ident)) <span class="sc">+</span></span>
-<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_bar</span>(<span class="at">position =</span> <span class="st">"fill"</span>)</span>
-<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>p2 <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(alldata<span class="sc">@</span>meta.data, <span class="fu">aes</span>(<span class="at">x =</span> CCA_snn_res.<span class="fl">0.5</span>, <span class="at">fill =</span> type)) <span class="sc">+</span></span>
-<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_bar</span>(<span class="at">position =</span> <span class="st">"fill"</span>)</span>
-<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>p1 <span class="sc">+</span> p2</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>p1 <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(alldata<span class="sc">@</span>meta.data, <span class="fu">aes</span>(<span class="at">x =</span> RNA_snn_res.<span class="fl">0.5</span>, <span class="at">fill =</span> orig.ident)) <span class="sc">+</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_bar</span>(<span class="at">position =</span> <span class="st">"fill"</span>)</span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>p2 <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(alldata<span class="sc">@</span>meta.data, <span class="fu">aes</span>(<span class="at">x =</span> RNA_snn_res.<span class="fl">0.5</span>, <span class="at">fill =</span> type)) <span class="sc">+</span></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_bar</span>(<span class="at">position =</span> <span class="st">"fill"</span>)</span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>p1 <span class="sc">+</span> p2</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
@@ -508,8 +512,8 @@ Once we transformed the correlations to a 0-1 scale, we can simply convert it to
 <p>In this case we have quite good representation of each sample in each cluster. But there are clearly some biases with more cells from one sample in some clusters and also more covid cells in some of the clusters.</p>
 <p>We can also plot it in the other direction, the proportion of each cluster per sample.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(alldata<span class="sc">@</span>meta.data, <span class="fu">aes</span>(<span class="at">x =</span> orig.ident, <span class="at">fill =</span> CCA_snn_res.<span class="fl">0.5</span>)) <span class="sc">+</span></span>
-<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_bar</span>(<span class="at">position =</span> <span class="st">"fill"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(alldata<span class="sc">@</span>meta.data, <span class="fu">aes</span>(<span class="at">x =</span> orig.ident, <span class="at">fill =</span> RNA_snn_res.<span class="fl">0.5</span>)) <span class="sc">+</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_bar</span>(<span class="at">position =</span> <span class="st">"fill"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
@@ -531,81 +535,196 @@ Discuss
 <p>By now you should know how to plot different features onto your data. Take the QC metrics that were calculated in the first exercise, that should be stored in your data object, and plot it as violin plots per cluster using the clustering method of your choice. For example, plot number of UMIS, detected genes, percent mitochondrial reads. Then, check carefully if there is any bias in how your data is separated by quality metrics. Could it be explained biologically, or could there be a technical bias there?</p>
 </div>
 </div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="fu">VlnPlot</span>(alldata, <span class="at">group.by =</span> <span class="st">"RNA_snn_res.0.5"</span>, <span class="at">features =</span> <span class="fu">c</span>(<span class="st">"nFeature_RNA"</span>, <span class="st">"percent_mito"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-left">
+<figure class="figure">
+<p><a href="seurat_04_clustering_files/figure-html/unnamed-chunk-17-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-11"><img src="seurat_04_clustering_files/figure-html/unnamed-chunk-17-1.png" class="img-fluid figure-img" width="864"></a></p>
+</figure>
+</div>
+</div>
+</div>
+<p>Some clusters that are clearly defined by higher number of genes and counts. These are either doublets or a larger celltype. And some clusters with low values on these metrics that are either low quality cells or a smaller celltype. You will have to explore these clusters in more detail to judge what you believe them to be.</p>
 </section>
-<section id="meta-session" class="level2" data-number="5">
-<h2 data-number="5" class="anchored" data-anchor-id="meta-session"><span class="header-section-number">5</span> Session info</h2>
+<section id="meta-clust_sub" class="level2" data-number="5">
+<h2 data-number="5" class="anchored" data-anchor-id="meta-clust_sub"><span class="header-section-number">5</span> Subclustering of T and NK-cells</h2>
+<p>It is common that the subtypes of cells within a cluster is not so well separated when you have a heterogeneous dataset. In such a case it could be a good idea to run subclustering of individual celltypes. The main reason for subclustering is that the variable genes and the first principal components in the full analysis are mainly driven by differences between celltypes, while with subclustering we may detect smaller differences between subtypes within celltypes.</p>
+<p>So first, lets find out where our T-cell and NK-cell clusters are. We know that T-cells express CD3E, and the main subtypes are CD4 and CD8, while NK-cells express GNLY.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="co"># check with the lowest resolution</span></span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>p1 <span class="ot">=</span> <span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"umap_cca"</span>, <span class="at">group.by =</span> <span class="st">"RNA_snn_res.0.1"</span>, <span class="at">label =</span> T) <span class="sc">+</span> <span class="fu">ggtitle</span>(<span class="st">"louvain_0.1"</span>)</span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>p2 <span class="ot">=</span> <span class="fu">FeaturePlot</span>(alldata, <span class="at">features =</span> <span class="st">"CD3E"</span>, <span class="at">reduction =</span> <span class="st">"umap_cca"</span>, <span class="at">order =</span> T) </span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>p3 <span class="ot">=</span> <span class="fu">FeaturePlot</span>(alldata, <span class="at">features =</span> <span class="st">"CD4"</span>, <span class="at">reduction =</span> <span class="st">"umap_cca"</span>, <span class="at">order =</span> T) </span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>p4 <span class="ot">=</span> <span class="fu">FeaturePlot</span>(alldata, <span class="at">features =</span> <span class="st">"CD8A"</span>, <span class="at">reduction =</span> <span class="st">"umap_cca"</span>, <span class="at">order =</span> T) </span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>p5 <span class="ot">=</span> <span class="fu">FeaturePlot</span>(alldata, <span class="at">features =</span> <span class="st">"GNLY"</span>, <span class="at">reduction =</span> <span class="st">"umap_cca"</span>, <span class="at">order =</span> T) </span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a><span class="fu">wrap_plots</span>(p1,p2,p3,p4,p5, <span class="at">ncol=</span><span class="dv">3</span>) <span class="sc">+</span> <span class="fu">plot_layout</span>(<span class="at">guides =</span> <span class="st">"collect"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-left">
+<figure class="figure">
+<p><a href="seurat_04_clustering_files/figure-html/unnamed-chunk-18-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-12"><img src="seurat_04_clustering_files/figure-html/unnamed-chunk-18-1.png" class="img-fluid figure-img" width="1344"></a></p>
+</figure>
+</div>
+</div>
+</div>
+<p>We can clearly see what clusters are T-cell clusters, so lets subset the data for those cells</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>tcells <span class="ot">=</span> alldata[,alldata<span class="sc">$</span>RNA_snn_res.<span class="fl">0.1</span> <span class="sc">%in%</span> <span class="fu">c</span>(<span class="dv">0</span>,<span class="dv">3</span>)]</span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a><span class="fu">table</span>(tcells<span class="sc">$</span>orig.ident)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+ covid_1 covid_15 covid_16 covid_17  ctrl_13  ctrl_14  ctrl_19   ctrl_5 
+     281      241      130      292      633      525      561      705 </code></pre>
+</div>
+</div>
+<p>Ideally we should rerun all steps of integration with that subset of cells instead of just taking the joint embedding. If you have too few cells per sample in the celltype that you want to cluster it may not be possible. We will start with selecting a new set of genes that better reflecs the variability within this celltype</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>tcells <span class="ot">=</span> <span class="fu">FindVariableFeatures</span>(tcells, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a><span class="co"># check overlap with the variable genes using all the data</span></span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a><span class="fu">length</span>(<span class="fu">intersect</span>(<span class="fu">VariableFeatures</span>(alldata), <span class="fu">VariableFeatures</span>(tcells)))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 1213</code></pre>
+</div>
+</div>
+<p>We clearly have a very different geneset now, so hopefully it should better capture the variability within T-cells.</p>
+<p>Now we have to run the full pipeline with scaling, pca, integration and clustering on this subset of cells, using the new set of variable genes</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="co"># run all the steps from before:</span></span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>tcells <span class="ot">=</span> <span class="fu">ScaleData</span>(tcells, <span class="at">vars.to.regress =</span> <span class="fu">c</span>(<span class="st">"percent_mito"</span>, <span class="st">"nFeature_RNA"</span>), <span class="at">assay =</span> <span class="st">"RNA"</span>)</span>
+<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a>tcells <span class="ot">=</span> <span class="fu">RunPCA</span>(tcells, <span class="at">npcs =</span> <span class="dv">50</span>, <span class="at">verbose =</span> F)</span>
+<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a>tcells <span class="ot">&lt;-</span> <span class="fu">IntegrateLayers</span>(<span class="at">object =</span> tcells, </span>
+<span id="cb26-6"><a href="#cb26-6" aria-hidden="true" tabindex="-1"></a>                           <span class="at">method =</span> CCAIntegration, <span class="at">orig.reduction =</span> <span class="st">"pca"</span>, </span>
+<span id="cb26-7"><a href="#cb26-7" aria-hidden="true" tabindex="-1"></a>                           <span class="at">new.reduction =</span> <span class="st">"integrated_tcells"</span>, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb26-8"><a href="#cb26-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-9"><a href="#cb26-9" aria-hidden="true" tabindex="-1"></a>tcells <span class="ot">&lt;-</span> <span class="fu">RunUMAP</span>(tcells, <span class="at">reduction =</span> <span class="st">"integrated_tcells"</span>, <span class="at">dims =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">30</span>, <span class="at">reduction.name =</span> <span class="st">"umap_tcells"</span>)</span>
+<span id="cb26-10"><a href="#cb26-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-11"><a href="#cb26-11" aria-hidden="true" tabindex="-1"></a>tcells <span class="ot">&lt;-</span> <span class="fu">FindNeighbors</span>(tcells, <span class="at">reduction =</span> <span class="st">"integrated_tcells"</span>, <span class="at">dims =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">30</span>)</span>
+<span id="cb26-12"><a href="#cb26-12" aria-hidden="true" tabindex="-1"></a>tcells <span class="ot">&lt;-</span> <span class="fu">FindClusters</span>(tcells, <span class="at">graph.name =</span> <span class="st">"RNA_snn"</span>, <span class="at">resolution =</span> <span class="fl">0.5</span>, <span class="at">algorithm =</span> <span class="dv">1</span>, <span class="at">cluster.name =</span> <span class="st">"tcell_0.5"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Modularity Optimizer version 1.3.0 by Ludo Waltman and Nees Jan van Eck
+
+Number of nodes: 3368
+Number of edges: 202471
+
+Running Louvain algorithm...
+Maximum modularity in 10 random starts: 0.8505
+Number of communities: 9
+Elapsed time: 0 seconds</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="fu">wrap_plots</span>(</span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">DimPlot</span>(tcells, <span class="at">reduction =</span> <span class="st">"umap_cca"</span>, <span class="at">group.by =</span> <span class="st">"orig.ident"</span>)<span class="sc">+</span><span class="fu">NoAxes</span>()<span class="sc">+</span><span class="fu">ggtitle</span>(<span class="st">"Full umap"</span>),</span>
+<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">DimPlot</span>(tcells, <span class="at">reduction =</span> <span class="st">"umap_cca"</span>, <span class="at">group.by =</span> <span class="st">"RNA_snn_res.0.5"</span>, <span class="at">label =</span> T)<span class="sc">+</span><span class="fu">NoAxes</span>()<span class="sc">+</span><span class="fu">ggtitle</span>(<span class="st">"Full umap, full clust"</span>),</span>
+<span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">DimPlot</span>(tcells, <span class="at">reduction =</span> <span class="st">"umap_cca"</span>, <span class="at">group.by =</span> <span class="st">"tcell_0.5"</span>, <span class="at">label =</span> T)<span class="sc">+</span><span class="fu">NoAxes</span>()<span class="sc">+</span><span class="fu">ggtitle</span>(<span class="st">"Full umap, T-cell clust"</span>),</span>
+<span id="cb28-5"><a href="#cb28-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">DimPlot</span>(tcells, <span class="at">reduction =</span> <span class="st">"umap_tcells"</span>, <span class="at">group.by =</span> <span class="st">"orig.ident"</span>)<span class="sc">+</span><span class="fu">NoAxes</span>()<span class="sc">+</span><span class="fu">ggtitle</span>(<span class="st">"T-cell umap, T-cell clust"</span>),</span>
+<span id="cb28-6"><a href="#cb28-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">DimPlot</span>(tcells, <span class="at">reduction =</span> <span class="st">"umap_tcells"</span>, <span class="at">group.by =</span> <span class="st">"RNA_snn_res.0.5"</span>)<span class="sc">+</span><span class="fu">NoAxes</span>()<span class="sc">+</span><span class="fu">ggtitle</span>(<span class="st">"T-cell umap, full clust"</span>),</span>
+<span id="cb28-7"><a href="#cb28-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">DimPlot</span>(tcells, <span class="at">reduction =</span> <span class="st">"umap_tcells"</span>, <span class="at">group.by =</span> <span class="st">"tcell_0.5"</span>, <span class="at">label =</span> T)<span class="sc">+</span><span class="fu">NoAxes</span>()<span class="sc">+</span><span class="fu">ggtitle</span>(<span class="st">"T-cell umap"</span>),  </span>
+<span id="cb28-8"><a href="#cb28-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">ncol =</span> <span class="dv">3</span></span>
+<span id="cb28-9"><a href="#cb28-9" aria-hidden="true" tabindex="-1"></a>) <span class="sc">+</span> <span class="fu">plot_layout</span>(<span class="at">guides =</span> <span class="st">"collect"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-left">
+<figure class="figure">
+<p><a href="seurat_04_clustering_files/figure-html/unnamed-chunk-22-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-13"><img src="seurat_04_clustering_files/figure-html/unnamed-chunk-22-1.png" class="img-fluid figure-img" width="960"></a></p>
+</figure>
+</div>
+</div>
+</div>
+<p>As you can see, we do have some new clusters that did not stand out before (clusters 6,7). But in general the separation looks very similar.</p>
+<p>Lets also have a look at some genes in the new umap:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a><span class="fu">wrap_plots</span>(</span>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">FeaturePlot</span>(tcells, <span class="at">features =</span> <span class="st">"CD3E"</span>, <span class="at">reduction =</span> <span class="st">"umap_tcells"</span>, <span class="at">order =</span> T), </span>
+<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">FeaturePlot</span>(tcells, <span class="at">features =</span> <span class="st">"CD4"</span>, <span class="at">reduction =</span> <span class="st">"umap_tcells"</span>, <span class="at">order =</span> T), </span>
+<span id="cb29-4"><a href="#cb29-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">FeaturePlot</span>(tcells, <span class="at">features =</span> <span class="st">"CD8A"</span>, <span class="at">reduction =</span> <span class="st">"umap_tcells"</span>, <span class="at">order =</span> T), </span>
+<span id="cb29-5"><a href="#cb29-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">FeaturePlot</span>(tcells, <span class="at">features =</span> <span class="st">"GNLY"</span>, <span class="at">reduction =</span> <span class="st">"umap_tcells"</span>, <span class="at">order =</span> T), </span>
+<span id="cb29-6"><a href="#cb29-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">ncol =</span> <span class="dv">2</span></span>
+<span id="cb29-7"><a href="#cb29-7" aria-hidden="true" tabindex="-1"></a>) <span class="sc">+</span> <span class="fu">plot_layout</span>(<span class="at">guides =</span> <span class="st">"collect"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-left">
+<figure class="figure">
+<p><a href="seurat_04_clustering_files/figure-html/unnamed-chunk-23-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-14"><img src="seurat_04_clustering_files/figure-html/unnamed-chunk-23-1.png" class="img-fluid figure-img" width="672"></a></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="meta-session" class="level2" data-number="6">
+<h2 data-number="6" class="anchored" data-anchor-id="meta-session"><span class="header-section-number">6</span> Session info</h2>
 <details>
 <summary>
 Click here
 </summary>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb30"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>R version 4.3.0 (2023-04-21)
-Platform: x86_64-pc-linux-gnu (64-bit)
-Running under: Ubuntu 22.04.3 LTS
+<pre><code>R version 4.3.3 (2024-02-29)
+Platform: x86_64-apple-darwin13.4.0 (64-bit)
+Running under: macOS Big Sur ... 10.16
 
 Matrix products: default
-BLAS:   /usr/lib/x86_64-linux-gnu/openblas-pthread/libblas.so.3 
-LAPACK: /usr/lib/x86_64-linux-gnu/openblas-pthread/libopenblasp-r0.3.20.so;  LAPACK version 3.10.0
+BLAS/LAPACK: /Users/asabjor/miniconda3/envs/seurat5/lib/libopenblasp-r0.3.27.dylib;  LAPACK version 3.12.0
 
 locale:
- [1] LC_CTYPE=en_US.UTF-8       LC_NUMERIC=C              
- [3] LC_TIME=en_US.UTF-8        LC_COLLATE=en_US.UTF-8    
- [5] LC_MONETARY=en_US.UTF-8    LC_MESSAGES=en_US.UTF-8   
- [7] LC_PAPER=en_US.UTF-8       LC_NAME=C                 
- [9] LC_ADDRESS=C               LC_TELEPHONE=C            
-[11] LC_MEASUREMENT=en_US.UTF-8 LC_IDENTIFICATION=C       
+[1] sv_SE.UTF-8/sv_SE.UTF-8/sv_SE.UTF-8/C/sv_SE.UTF-8/sv_SE.UTF-8
 
-time zone: Etc/UTC
-tzcode source: system (glibc)
+time zone: Europe/Stockholm
+tzcode source: system (macOS)
 
 attached base packages:
 [1] stats     graphics  grDevices utils     datasets  methods   base     
 
 other attached packages:
-[1] clustree_0.5.0     ggraph_2.1.0       pheatmap_1.0.12    ggplot2_3.4.2     
-[5] patchwork_1.1.2    SeuratObject_4.1.3 Seurat_4.3.0      
+[1] clustree_0.5.1     ggraph_2.2.1       pheatmap_1.0.12    ggplot2_3.5.1     
+[5] patchwork_1.2.0    Seurat_5.1.0       SeuratObject_5.0.2 sp_2.1-4          
 
 loaded via a namespace (and not attached):
-  [1] RColorBrewer_1.1-3     rstudioapi_0.14        jsonlite_1.8.5        
-  [4] magrittr_2.0.3         spatstat.utils_3.0-3   farver_2.1.1          
-  [7] rmarkdown_2.22         vctrs_0.6.2            ROCR_1.0-11           
- [10] spatstat.explore_3.2-1 htmltools_0.5.5        sctransform_0.3.5     
- [13] parallelly_1.36.0      KernSmooth_2.23-20     htmlwidgets_1.6.2     
- [16] ica_1.0-3              plyr_1.8.8             plotly_4.10.2         
- [19] zoo_1.8-12             igraph_1.4.3           mime_0.12             
- [22] lifecycle_1.0.3        pkgconfig_2.0.3        Matrix_1.5-4          
- [25] R6_2.5.1               fastmap_1.1.1          fitdistrplus_1.1-11   
- [28] future_1.32.0          shiny_1.7.4            digest_0.6.31         
- [31] colorspace_2.1-0       tensor_1.5             irlba_2.3.5.1         
- [34] labeling_0.4.2         progressr_0.13.0       fansi_1.0.4           
- [37] spatstat.sparse_3.0-1  httr_1.4.6             polyclip_1.10-4       
- [40] abind_1.4-5            compiler_4.3.0         withr_2.5.0           
- [43] backports_1.4.1        viridis_0.6.3          ggforce_0.4.1         
- [46] MASS_7.3-58.4          tools_4.3.0            lmtest_0.9-40         
- [49] httpuv_1.6.11          future.apply_1.11.0    goftest_1.2-3         
- [52] glue_1.6.2             nlme_3.1-162           promises_1.2.0.1      
- [55] grid_4.3.0             checkmate_2.2.0        Rtsne_0.16            
- [58] cluster_2.1.4          reshape2_1.4.4         generics_0.1.3        
- [61] gtable_0.3.3           spatstat.data_3.0-1    tidyr_1.3.0           
- [64] data.table_1.14.8      tidygraph_1.2.3        sp_1.6-1              
- [67] utf8_1.2.3             spatstat.geom_3.2-1    RcppAnnoy_0.0.20      
- [70] ggrepel_0.9.3          RANN_2.6.1             pillar_1.9.0          
- [73] stringr_1.5.0          later_1.3.1            splines_4.3.0         
- [76] dplyr_1.1.2            tweenr_2.0.2           lattice_0.21-8        
- [79] survival_3.5-5         deldir_1.0-9           tidyselect_1.2.0      
- [82] miniUI_0.1.1.1         pbapply_1.7-0          knitr_1.43            
- [85] gridExtra_2.3          scattermore_1.2        xfun_0.39             
- [88] graphlayouts_1.0.0     matrixStats_1.0.0      stringi_1.7.12        
- [91] lazyeval_0.2.2         yaml_2.3.7             evaluate_0.21         
- [94] codetools_0.2-19       tibble_3.2.1           cli_3.6.1             
- [97] uwot_0.1.14            xtable_1.8-4           reticulate_1.30       
-[100] munsell_0.5.0          Rcpp_1.0.10            globals_0.16.2        
-[103] spatstat.random_3.1-5  png_0.1-8              parallel_4.3.0        
-[106] ellipsis_0.3.2         listenv_0.9.0          viridisLite_0.4.2     
-[109] scales_1.2.1           ggridges_0.5.4         leiden_0.4.3          
-[112] purrr_1.0.1            rlang_1.1.1            cowplot_1.1.1         </code></pre>
+  [1] RColorBrewer_1.1-3     jsonlite_1.8.8         magrittr_2.0.3        
+  [4] ggbeeswarm_0.7.2       spatstat.utils_3.1-0   farver_2.1.2          
+  [7] rmarkdown_2.28         vctrs_0.6.5            ROCR_1.0-11           
+ [10] memoise_2.0.1          spatstat.explore_3.2-6 htmltools_0.5.8.1     
+ [13] sctransform_0.4.1      parallelly_1.38.0      KernSmooth_2.23-24    
+ [16] htmlwidgets_1.6.4      ica_1.0-3              plyr_1.8.9            
+ [19] plotly_4.10.4          zoo_1.8-12             cachem_1.1.0          
+ [22] igraph_2.0.3           mime_0.12              lifecycle_1.0.4       
+ [25] pkgconfig_2.0.3        Matrix_1.6-5           R6_2.5.1              
+ [28] fastmap_1.2.0          fitdistrplus_1.2-1     future_1.34.0         
+ [31] shiny_1.9.1            digest_0.6.37          colorspace_2.1-1      
+ [34] tensor_1.5             RSpectra_0.16-2        irlba_2.3.5.1         
+ [37] labeling_0.4.3         progressr_0.14.0       fansi_1.0.6           
+ [40] spatstat.sparse_3.1-0  httr_1.4.7             polyclip_1.10-7       
+ [43] abind_1.4-5            compiler_4.3.3         withr_3.0.1           
+ [46] backports_1.5.0        viridis_0.6.5          fastDummies_1.7.4     
+ [49] ggforce_0.4.2          MASS_7.3-60.0.1        tools_4.3.3           
+ [52] vipor_0.4.7            lmtest_0.9-40          beeswarm_0.4.0        
+ [55] httpuv_1.6.15          future.apply_1.11.2    goftest_1.2-3         
+ [58] glue_1.7.0             nlme_3.1-165           promises_1.3.0        
+ [61] grid_4.3.3             checkmate_2.3.2        Rtsne_0.17            
+ [64] cluster_2.1.6          reshape2_1.4.4         generics_0.1.3        
+ [67] gtable_0.3.5           spatstat.data_3.1-2    tidyr_1.3.1           
+ [70] data.table_1.15.4      tidygraph_1.3.0        utf8_1.2.4            
+ [73] spatstat.geom_3.2-9    RcppAnnoy_0.0.22       ggrepel_0.9.6         
+ [76] RANN_2.6.2             pillar_1.9.0           stringr_1.5.1         
+ [79] spam_2.10-0            RcppHNSW_0.6.0         later_1.3.2           
+ [82] splines_4.3.3          dplyr_1.1.4            tweenr_2.0.3          
+ [85] lattice_0.22-6         survival_3.7-0         deldir_2.0-4          
+ [88] tidyselect_1.2.1       miniUI_0.1.1.1         pbapply_1.7-2         
+ [91] knitr_1.48             gridExtra_2.3          scattermore_1.2       
+ [94] xfun_0.47              graphlayouts_1.1.1     matrixStats_1.4.1     
+ [97] stringi_1.8.4          lazyeval_0.2.2         yaml_2.3.10           
+[100] evaluate_0.24.0        codetools_0.2-20       tibble_3.2.1          
+[103] cli_3.6.3              uwot_0.1.16            xtable_1.8-4          
+[106] reticulate_1.39.0      munsell_0.5.1          Rcpp_1.0.13           
+[109] globals_0.16.3         spatstat.random_3.2-3  png_0.1-8             
+[112] ggrastr_1.0.2          parallel_4.3.3         dotCall64_1.1-1       
+[115] listenv_0.9.1          viridisLite_0.4.2      scales_1.3.0          
+[118] ggridges_0.5.6         leiden_0.4.3.1         purrr_1.0.2           
+[121] rlang_1.1.4            cowplot_1.1.3         </code></pre>
 </div>
 </div>
 </details>
@@ -858,7 +977,7 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
 </div>
   </div>
 </footer>
-<script>var lightboxQuarto = GLightbox({"loop":true,"closeEffect":"zoom","descPosition":"bottom","selector":".lightbox","openEffect":"zoom"});</script>
+<script>var lightboxQuarto = GLightbox({"selector":".lightbox","openEffect":"zoom","loop":true,"closeEffect":"zoom","descPosition":"bottom"});</script>
 
 
 

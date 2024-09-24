@@ -653,9 +653,13 @@ abline(v = 0, lty = 1)
 
 {{< meta dge_gsea_1 >}}
 
-Before, we ran `FindMarkers()` with the default settings for reporting only significantly up/down regulated genes, but now we need statistics on a larger set of genes, so we will have to rerun the test with more lenient cutoffs.
+Before, we ran `FindMarkers()` with the default settings for reporting only significantly up/down regulated genes, but now we need statistics on a larger set of genes, so we will have to rerun the test with more lenient cutoffs. We will not use it now but this is how it should be run:
 
-```{r}
+
+
+```{r, eval=FALSE}
+## OBS! No need to run
+
 sub_data <- SetIdent(sub_data, value = "type")
 
 DGE_cell_selection2 <- FindMarkers(
@@ -673,6 +677,12 @@ DGE_cell_selection2 <- FindMarkers(
 # Create a gene rank based on the gene expression fold change
 gene_rank <- setNames(DGE_cell_selection2$avg_log2FC, casefold(rownames(DGE_cell_selection2), upper = T))
 ```
+In this case we will use the results from MAST with random effect to run GSEA, and we will use the Z-score from MAST to sort the genes.
+
+```{r}
+gene_rank <- setNames(fcHurdle2$z, casefold(fcHurdle2$primerid, upper = T))
+```
+
 
 {{< meta dge_gsea_2 >}}
 
@@ -704,7 +714,7 @@ library(fgsea)
 
 # Perform enrichemnt analysis
 fgseaRes <- fgsea(pathways = gmt, stats = gene_rank, minSize = 15, maxSize = 500)
-fgseaRes <- fgseaRes[order(fgseaRes$pval, decreasing = T), ]
+fgseaRes <- fgseaRes[order(fgseaRes$pval, decreasing = F), ]
 
 # Filter the results table to show only the top 10 UP or DOWN regulated processes (optional)
 top10_UP <- fgseaRes$pathway[1:10]

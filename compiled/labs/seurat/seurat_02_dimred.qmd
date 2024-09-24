@@ -21,8 +21,10 @@ from the previous step.
 
 ``` {r}
 # Activate conda environment to get the correct python path
-reticulate::use_condaenv("seurat", conda = "/opt/conda/bin/conda")
-reticulate::py_discover_config()
+#reticulate::use_condaenv("seurat", conda = "/opt/conda/bin/conda")
+#reticulate::py_discover_config()
+
+reticulate::use_condaenv("/Users/asabjor/miniconda3/envs/seurat5", required = TRUE)
 
 suppressPackageStartupMessages({
     library(Seurat)
@@ -79,6 +81,8 @@ running the commands below:
 
 ``` {r}
 alldata <- ScaleData(alldata, vars.to.regress = c("percent_mito", "nFeature_RNA"), assay = "RNA")
+
+#alldata <- ScaleData(alldata, assay = "RNA")
 ```
 
 ## PCA
@@ -132,6 +136,18 @@ Based on this plot, we can see that the top 8 PCs retain a lot of
 information, while other PCs contain progressively less. However, it is
 still advisable to use more PCs since they might contain information
 about rare cell types (such as platelets and DCs in this dataset)
+
+
+```{r}
+library(scater)
+sce = as.SingleCellExperiment(alldata)
+plotExplanatoryPCs(sce, nvars_to_plot = 15, npcs_to_plot = 20)
+
+```
+
+
+
+orig,ident (and ident) clearly contributes to many of the PCs, 
 
 ## tSNE
 
@@ -190,7 +206,11 @@ named "pca", "umap", "tsne" etc. depending on the function you run. Here
 we will specify an alternative name for the umap with the
 `reduction.name` parameter.
 
-``` {r}
+``` {r, eval=FALSE}
+#OBS! Skip for now, known issue with later version of umap-learn 
+# have 0.5.6
+# need to downgrade to 0.5.4, but could mess up things with numpy. 
+
 alldata <- RunUMAP(
     alldata,
     reduction.name = "UMAP10_on_PCA",
@@ -209,7 +229,7 @@ alldata <- RunUMAP(
 UMAP is plotted colored per dataset. Although less distinct as in the
 tSNE, we still see quite an effect of the different batches in the data.
 
-``` {r}
+``` {r, eval=FALSE}
 #| fig-height: 4
 #| fig-width: 12
 
@@ -274,7 +294,7 @@ genes.
 alldata <- RunUMAP(
     alldata,
     reduction.name = "UMAP_on_ScaleData",
-    features = alldata@assays$RNA@var.features,
+    features = VariableFeatures(alldata),
     assay = "RNA",
     n.components = 2,
     n.neighbors = 30,
@@ -294,13 +314,13 @@ a graph is just a matrix containing distances from cell to cell and as
 such, you can run either UMAP or tSNE using any other distance metric
 desired. Euclidean and Correlation are usually the most commonly used.
 
-``` {r}
+``` {r, eval=FALSE}
 # Build Graph
 alldata <- FindNeighbors(alldata,
     reduction = "pca",
     assay = "RNA",
     k.param = 20,
-    features = alldata@assays$RNA@var.features
+    features = VariableFeatures(alldata)
 )
 
 alldata <- RunUMAP(alldata,
@@ -314,7 +334,7 @@ alldata <- RunUMAP(alldata,
 
 We can now plot the UMAP comparing both on PCA vs ScaledSata vs Graph.
 
-``` {r}
+``` {r, eval=FALSE}
 #| fig-height: 4
 #| fig-width: 12
 
@@ -358,6 +378,17 @@ FeaturePlot(alldata, reduction = "umap", dims = 1:2, features = myfeatures, ncol
 > the separation in your data is driven by quality of the cells?
 
 </div>
+
+
+```{r}
+#| fig-height: 9
+#| fig-width: 12
+
+myfeatures <- c("nCount_RNA","nFeature_RNA", "percent_mito","percent_ribo","percent_hb","percent_plat")
+FeaturePlot(alldata, reduction = "umap", dims = 1:2, features = myfeatures, ncol = 3, order = T) +
+    NoLegend() + NoAxes() + NoGrid()
+```
+
 
 ## Save data
 

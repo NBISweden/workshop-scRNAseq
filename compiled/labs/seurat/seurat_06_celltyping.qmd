@@ -27,8 +27,10 @@ There are multiple different methods to predict celltypes, here we will
 just cover a few of those.
 
 We will use a reference PBMC dataset from the `scPred` package which is
-provided as a Seurat object with counts. And we will test classification
-based on the `scPred` and `scMap` methods. Finally we will use gene set
+provided as a Seurat object with counts. Unfortunately scPred has not been 
+updated to run with Seurat v5, so we will not use it here. 
+We will test classification based on Seurat `labelTransfer`, the `SingleR`
+method `scPred` and using `Azimuth`. Finally we will use gene set
 enrichment predict celltype based on the DEGs of each cluster.
 
 ## Read data
@@ -74,7 +76,7 @@ ctrl
 
 ## Reference data
 
-Load the reference dataset with annotated labels.
+Load the reference dataset with annotated labels that is provided by the `scPred` package, it is a subsampled set of cells from human PBMCs.
 
 ``` {r}
 reference <- scPred::pbmc_1
@@ -163,56 +165,60 @@ ggplot(ctrl@meta.data, aes(x = CCA_snn_res.0.5, fill = predicted.id)) +
     theme_classic()
 ```
 
-## scPred
+## SingleR
 
-scPred will train a classifier based on all principal components. First,
-`getFeatureSpace()` will create a scPred object stored in the `@misc`
-slot where it extracts the PCs that best separates the different
-celltypes. Then `trainModel()` will do the actual training for each
-celltype.
+```{r}
+library(celldex)
+library(SingleR)
+#surveyReferences() # not available
 
-``` {r}
-reference <- getFeatureSpace(reference, "cell_type")
-reference <- trainModel(reference)
+# current version 1.14.0 
+# installed via conda celldex_1.12.0
+
+sce = as.SingleCellExperiment(ctrl)
+
 ```
 
-We can then print how well the training worked for the different
-celltypes by printing the number of PCs used, the ROC value and
-Sensitivity/Specificity. Which celltypes do you think are harder to
-classify based on this dataset?
 
-``` {r}
-get_scpred(reference)
+### Immune cell reference
+
+```{r}
+immune = celldex::DatabaseImmuneCellExpressionData()
+singler.immune <- SingleR(test = sce, ref = immune, assay.type.test=1,
+    labels = immune$label.main)
+
+head(singler.immune)
+```
+The `labels` are the top predictions per cell, while the `pruned.labels` are the predictions that had high enough scores.
+
+
+### HPCA reference
+
+```{r}
+
+hpca <- HumanPrimaryCellAtlasData()
+singler.hpca <- SingleR(test = sce, ref = hpca, assay.type.test=1,
+    labels = hpca$label.main)
+
+head(singler.hpca)
 ```
 
-You can optimize parameters for each dataset by chaining parameters and
-testing different types of models, see more at:
-<https://powellgenomicslab.github.io/scPred/articles/introduction.html>.
-But for now, we will continue with this model. Now, let's predict
-celltypes on our data, where scPred will align the two datasets with
-Harmony and then perform classification.
+### With own reference data
 
-``` {r}
-ctrl <- scPredict(ctrl, reference)
+```{r}
+sce.ref = as.SingleCellExperiment(reference)
+singler.ref <- SingleR(test=sce, ref=sce.ref, labels=sce.ref$cell_type, de.method="wilcox")
+head(singler.ref)
 ```
 
-``` {r}
-#| fig-height: 5
-#| fig-width: 6
+```{r}
+ctrl$singler.immune = singler.immune$pruned.labels
+ctrl$singler.hpca = singler.hpca$pruned.labels
+ctrl$singler.ref = singler.ref$pruned.labels
 
-DimPlot(ctrl, group.by = "scpred_prediction", label = T, repel = T) + NoAxes()
+DimPlot(ctrl, group.by = c("singler.hpca", "singler.immune", "singler.ref"), ncol = 2)
 ```
 
-Now plot how many cells of each celltypes can be found in each cluster.
-
-``` {r}
-#| fig-height: 5
-#| fig-width: 6
-
-ggplot(ctrl@meta.data, aes(x = CCA_snn_res.0.5, fill = scpred_prediction)) +
-    geom_bar() +
-    theme_classic()
-```
 
 ## Azimuth
 
@@ -221,37 +227,31 @@ methods to integrate and do label transfer. One such resource is
 [Azimuth](https://azimuth.hubmapconsortium.org/) another one is
 [Disco](https://www.immunesinglecell.org/).
 
-Azimuth is also possible to install and run locally, but in this case we
-have used the online app and ran the predictions for you. So you just
-have to download the prediction file.
 
-This is how to save the count matrix:
+Run Azimut locally with all datasets installed.
 
-``` {r}
-#| eval: false
-
-# No need to run now.
-C = ctrl@assays$RNA@counts
-saveRDS(C, file = "data/covid/results/ctrl13_count_matrix.rds")
+```{r}
+library(Azimuth)
+library(SeuratData)
+options(future.globals.maxSize = 1e9)
 ```
 
-Instead load the results and visualize:
 
-``` {r}
-#| fig-height: 7
-#| fig-width: 8
+```{r}
 
-path_data <- "https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"
-path_file <- "data/covid/results/azimuth_pred.tsv"
-if (!dir.exists(dirname(path_file))) dir.create(dirname(path_file), recursive = TRUE)
-if (fetch_data && !file.exists(path_file)) download.file(url = file.path(path_data, "covid/results/azimuth_pred.tsv"), destfile = path_file)
-
-azimuth_pred <- read.table(path_file, sep = "\t", header = T)
-
-# add predictions to the seurat object
-ctrl$azimuth = azimuth_pred$predicted.celltype.l2[match(colnames(ctrl), azimuth_pred$cell)]
-DimPlot(ctrl, group.by = "azimuth", label = T, repel = T) + NoAxes()
+# will install the pbmcref dataset first time you run it.
+ctrl <- RunAzimuth(ctrl, reference = "pbmcref")
 ```
+
+
+Gives predictions at 3 different levels of annotation wiht `l1` being the more broad celltypes and `l3` more detailed annotation.
+
+```{r}
+DimPlot(ctrl, group.by = "predicted.celltype.l1", label = T, repel = T) + NoAxes()
+DimPlot(ctrl, group.by = "predicted.celltype.l2", label = T, repel = T) + NoAxes()
+DimPlot(ctrl, group.by = "predicted.celltype.l3", label = T, repel = T) + NoAxes()
+```
+
 
 ## Compare results
 
@@ -260,22 +260,26 @@ function in scPred `crossTab()` that prints the overlap between two
 metadata slots.
 
 ``` {r}
-crossTab(ctrl, "predicted.id", "scpred_prediction")
+crossTab(ctrl, "predicted.id", "singler.hpca")
 ```
 
 We can also plot all the different predictions side by side
 
 ``` {r}
-#| fig-height: 5
+#| fig-height: 10
 #| fig-width: 16
 
 wrap_plots(
-    DimPlot(ctrl, label = T, group.by = "predicted.id") + NoAxes(),
-    DimPlot(ctrl, label = T, group.by = "scpred_prediction") + NoAxes(),
-    DimPlot(ctrl, label = T, group.by = "azimuth") + NoAxes(),
-    ncol = 3
+    DimPlot(ctrl, label = T, group.by = "predicted.id") + NoAxes() + ggtitle("LabelTransfer"),
+    DimPlot(ctrl, label = T, group.by = "singler.hpca") + NoAxes() + ggtitle("SingleR HPCA"),
+    DimPlot(ctrl, label = T, group.by = "singler.ref") + NoAxes() + ggtitle("SingleR HPCA"),
+    DimPlot(ctrl, label = T, group.by = "predicted.celltype.l1") + NoAxes() + ggtitle("Azimuth l1"),
+    ncol = 2
 )
 ```
+
+
+As you can see, the predictions are fairly similar, but there are some minor differences, especially in the NK/T-cell group. Depending on the type of tissue you are working with and the availability for reference data, different methods may be best for your case. 
 
 ## GSEA with celltype markers
 
@@ -299,6 +303,12 @@ lenient.
 
 ``` {r}
 # run differential expression in our dataset, using clustering at resolution 0.5
+
+# first we need to join the layers
+alldata@active.assay = "RNA"
+alldata <- JoinLayers(object = alldata, layers = c("data","counts"))
+
+# set the clustering you want to use as the identity class.
 alldata <- SetIdent(alldata, value = "CCA_snn_res.0.5")
 DGE_table <- FindAllMarkers(
     alldata,
@@ -307,7 +317,7 @@ DGE_table <- FindAllMarkers(
     min.pct = 0.1,
     min.diff.pct = 0,
     only.pos = TRUE,
-    max.cells.per.ident = 20,
+    max.cells.per.ident = 100,
     return.thresh = 1,
     assay = "RNA"
 )
@@ -389,7 +399,9 @@ new.cluster.ids <- unlist(lapply(res, function(x) {
     as.data.frame(x)[1, 1]
 }))
 
-alldata$ref_gsea <- new.cluster.ids[as.character(alldata@active.ident)]
+annot = new.cluster.ids[as.character(alldata@active.ident)]
+names(annot) = colnames(alldata)
+alldata$ref_gsea <- annot
 
 wrap_plots(
     DimPlot(alldata, label = T, group.by = "CCA_snn_res.0.5") + NoAxes(),
@@ -410,8 +422,7 @@ ctrl$ref_gsea <- alldata$ref_gsea[alldata$orig.ident == "ctrl_13"]
 wrap_plots(
     DimPlot(ctrl, label = T, group.by = "ref_gsea") + NoAxes() + ggtitle("GSEA"),
     DimPlot(ctrl, label = T, group.by = "predicted.id") + NoAxes() + ggtitle("LabelTransfer"),
-    DimPlot(ctrl, label = T, group.by = "scpred_prediction") + NoAxes() + ggtitle("scPred"),
-    ncol = 3
+    ncol = 2
 )
 ```
 
@@ -489,7 +500,10 @@ Let's plot the results.
 new.cluster.ids <- unlist(lapply(res, function(x) {
     as.data.frame(x)[1, 1]
 }))
-alldata$cellmarker_gsea <- new.cluster.ids[as.character(alldata@active.ident)]
+annot = new.cluster.ids[as.character(alldata@active.ident)]
+names(annot) = colnames(alldata)
+
+alldata$cellmarker_gsea <- annot
 
 wrap_plots(
     DimPlot(alldata, label = T, group.by = "ref_gsea") + NoAxes(),
