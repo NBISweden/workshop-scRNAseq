@@ -19,6 +19,8 @@ datasets and classify celltypes based on two methods:
     then do label transfer based on closest neighbors.
 -   Using ingest to project the data onto the reference data and
     transfer labels.
+-   Using Celltypist to predicted with a pretrained pbmc model or with an 
+    own model based on the same reference data as the other methods.    
 
 {{< meta ct_read_1 >}}
 
@@ -64,7 +66,7 @@ adata
 ```{python}
 adata.uns['log1p']['base']=None
 print(adata.shape)
-print(adata.raw.shape)
+
 ```
 
 {{< meta ct_read_3 >}}
@@ -75,19 +77,15 @@ print(adata.shape)
 ```
 
 ```{python}
-adata.obs["louvain_0.6"].value_counts()
+adata.obs["leiden_0.6"].value_counts()
 ```
 
-As you can see, we have only one cell from cluster 10 in this sample, so lets remove that cell for now.
-
-```{python}
-adata = adata[adata.obs["louvain_0.6"] != "10",:]
-```
+Some clusters have very few cells from this individual, so any cluster comparisons may be biased by this. 
 
 
 ```{python}
 sc.pl.umap(
-    adata, color=["louvain_0.6"], palette=sc.pl.palettes.default_20
+    adata, color=["leiden_0.6"], palette=sc.pl.palettes.default_20
 )
 ```
 
@@ -104,6 +102,8 @@ print(adata_ref.shape)
 adata_ref.obs
 ```
 
+As you can see, the celltype annotation is in the metadata column `louvain`, so that is the column we will have to use for classification.
+
 ```{python}
 sc.pl.umap(adata_ref, color='louvain')
 ```
@@ -111,6 +111,11 @@ sc.pl.umap(adata_ref, color='louvain')
 Make sure we have the same genes in both datset by taking the intersection
 
 ```{python}
+# before filtering genes, store the full matrix in raw.
+adata.raw = adata
+# also store the umap in a new slot as it will get overwritten
+adata.obsm["X_umap_uncorr"] = adata.obsm["X_umap"]
+
 print(adata_ref.shape[1])
 print(adata.shape[1])
 var_names = adata_ref.var_names.intersection(adata.var_names)
@@ -133,7 +138,7 @@ sc.pl.umap(adata_ref, color='louvain')
 sc.pp.pca(adata)
 sc.pp.neighbors(adata)
 sc.tl.umap(adata)
-sc.pl.umap(adata, color='louvain_0.6')
+sc.pl.umap(adata, color='leiden_0.6')
 ```
 
 ## Integrate with scanorama
@@ -176,7 +181,7 @@ sc.pl.umap(adata_merged, color=["sample","louvain"])
 
 ### Label transfer
 
-Using the function in the Spatial tutorial at the scanpy website we will calculate normalized cosine distances between the two datasets and tranfer labels to the celltype with the highest scores.
+Using the functions from the [Spatial tutorial](https://scanpy.readthedocs.io/en/stable/tutorials/spatial/integration-scanorama.html) from Scanpy we will calculate normalized cosine distances between the two datasets and tranfer labels to the celltype with the highest scores.
 
 ```{python}
 from sklearn.metrics.pairwise import cosine_distances
@@ -205,28 +210,27 @@ def label_transfer(dist, labels, index):
 class_def = label_transfer(distances, adata_ref.obs.louvain, adata.obs.index)
 
 # add to obs section of the original object
-adata.obs['predicted'] = class_def
+adata.obs['label_trans'] = class_def
 
-sc.pl.umap(adata, color="predicted")
+sc.pl.umap(adata, color="label_trans")
 ```
 
 ```{python}
 # add to merged object.
-adata_merged.obs["predicted"] = pd.concat(
+adata_merged.obs["label_trans"] = pd.concat(
     [class_def, adata_ref.obs["louvain"]], axis=0
 ).tolist()
 
-sc.pl.umap(adata_merged, color=["sample","louvain",'predicted'])
+sc.pl.umap(adata_merged, color=["sample","louvain",'label_trans'])
 #plot only ctrl cells.
-sc.pl.umap(adata_merged[adata_merged.obs['sample']=='ctrl'], color='predicted')
+sc.pl.umap(adata_merged[adata_merged.obs['sample']=='ctrl'], color='label_trans')
 ```
 
 Now plot how many cells of each celltypes can be found in each cluster.
 
 ```{python}
-tmp = pd.crosstab(adata.obs['louvain_0.6'],adata.obs['predicted'], normalize='index')
+tmp = pd.crosstab(adata.obs['leiden_0.6'],adata.obs['label_trans'], normalize='index')
 tmp.plot.bar(stacked=True).legend(bbox_to_anchor=(1.8, 1),loc='upper right')
-
 ```
 
 
@@ -237,17 +241,133 @@ https://scanpy-tutorials.readthedocs.io/en/latest/integrating-data-using-ingest.
 
 ```{python}
 sc.tl.ingest(adata, adata_ref, obs='louvain')
-sc.pl.umap(adata, color=['louvain','louvain_0.6'], wspace=0.5)
+sc.pl.umap(adata, color=['louvain','leiden_0.6'], wspace=0.5)
+```
+
+As you can see, ingest has created a new umap for us, so to get consistent plotting, lets revert back to the old one for further plotting:
+
+```{python}
+adata.obsm["X_umap"] = adata.obsm["X_umap_uncorr"]
+
+sc.pl.umap(adata, color=['louvain','leiden_0.6'], wspace=0.5)
+
 ```
 
 Now plot how many cells of each celltypes can be found in each cluster.
 
 ```{python}
-tmp = pd.crosstab(adata.obs['louvain_0.6'],adata.obs['louvain'], normalize='index')
+tmp = pd.crosstab(adata.obs['leiden_0.6'],adata.obs['louvain'], normalize='index')
 tmp.plot.bar(stacked=True).legend(bbox_to_anchor=(1.8, 1),loc='upper right')
 
 ```
 
+## Celltypist
+
+[Celltypist](https://www.celltypist.org/) provides pretrained models for classification for many different human tissues and celltypes. Here, we are following the steps of this [tutorial](https://colab.research.google.com/github/Teichlab/celltypist/blob/main/docs/notebook/celltypist_tutorial.ipynb), with some adaptations for this dataset. So please check out the tutorial for more detail. 
+
+
+```{python}
+import celltypist
+from celltypist import models
+
+# there are many different models, we will only download 2 of them for now.
+models.download_models(force_update = False, model = 'Immune_All_Low.pkl')
+models.download_models(force_update = False, model = 'Immune_All_High.pkl')
+```
+
+Now select the model you want to use and show the info:
+
+```{python}
+model = models.Model.load(model = 'Immune_All_High.pkl')
+
+model
+```
+
+To infer celltype labels to our cells, we first need to convert back to the full matrix. OBS! For celltypist we want to have log1p normalised expression to 10,000 counts per cell. Which we already have in `adata.raw.X`, check by summing up the data, it should sum to 10K.
+
+```{python}
+adata = adata.raw.to_adata() 
+adata.X.expm1().sum(axis = 1)[:10]
+```
+
+```{python}
+predictions = celltypist.annotate(adata, model = 'Immune_All_High.pkl', majority_voting = True)
+
+predictions.predicted_labels
+```
+
+The first column `predicted_labels` is the predictions made for each individual cell, while `majority_voting` is done for local subclusters, the clustering identities are in column `over_clustering`. 
+
+Now we convert the predictions to an anndata object.
+
+```{python}
+adata = predictions.to_adata()
+
+sc.pl.umap(adata, color = ['leiden_0.6', 'predicted_labels', 'majority_voting'], legend_loc = 'on data')
+```
+
+:::{.callout-note title="Task"}
+Rerun predictions with Celltypist, but use another model, for instance `Immune_All_High.pkl`, or any other model you find relevant, you can find a list of models [here](https://www.celltypist.org/models). How do the results differ for you?
+:::
+
+### Celltypist custom model
+
+We can also train our own model on any reference data that we want to use. In this case we will use the pbmc data in `adata_ref` to train a model.
+
+Celltypist requires the data to be in the format of log1p normalised expression to 10,000 counts per cell, we can check if that is the case for the object we have:
+
+```{python}
+adata_ref.raw.X.expm1().sum(axis = 1)[:10]
+```
+
+These should all sum up to 10K, which is not the case, probably since some genes were removed after normalizing. Wo we will have to start from the raw counts of that dataset instead. Before we selected the data `pbmc3k_processed`, but now we will instead use `pbmc3k`. 
+
+```{python}
+adata_ref2 = sc.datasets.pbmc3k() 
+adata_ref2
+```
+
+This data is not annotated, so we will have to match the indices from the filtered and processed object. And add in the metadata with annotations.
+
+```{python}
+adata_ref2 = adata_ref2[adata_ref.obs_names,:]
+adata_ref2.obs = adata_ref.obs
+adata_ref2
+```
+
+Now we can normalize the matrix:
+
+```{python}
+sc.pp.normalize_total(adata_ref2, target_sum = 1e4)
+sc.pp.log1p(adata_ref2)
+
+# check the sums again
+adata_ref2.X.expm1().sum(axis = 1)[:10]
+```
+
+And finally train the model.
+
+```{python}
+new_model = celltypist.train(adata_ref2, labels = 'louvain', n_jobs = 10, feature_selection = True)
+```
+
+Now we can run predictions on our data
+
+```{python}
+predictions2 = celltypist.annotate(adata, model = new_model, majority_voting = True)
+```
+
+Instead of converting the predictions to anndata we will just add another column in the `adata.obs` with these new predictions since the column names from the previous celltypist runs with clash. 
+
+```{python}
+adata.obs["predicted_labels_ref"] = predictions2.predicted_labels["predicted_labels"]
+adata.obs["majority_voting_ref"] = predictions2.predicted_labels["majority_voting"]
+```
+
+```{python}
+sc.pl.umap(adata, color = ['predicted_labels', 'majority_voting','predicted_labels_ref', 'majority_voting_ref'], legend_loc = 'on data', ncols=2)
+
+```
 
 ## Compare results
 
@@ -255,10 +375,10 @@ The predictions from ingest is stored in the column 'louvain' while we
 named the label transfer with scanorama as 'predicted'
 
 ```{python}
-sc.pl.umap(adata, color=['louvain','predicted'], wspace=0.5)
+sc.pl.umap(adata, color=['louvain','label_trans','majority_voting', 'majority_voting_ref'], wspace=0.5, ncols=3)
 ```
 
-As you can see, the main celltypes are the same, but dendritic cells are mainly predicted to cluster 8 by ingest and the proportions of the different celltypes are different.
+As you can see, the main celltypes are generally the same, but there are clearly differences, especially with regards to the cells predicted as either ILC/NK/CD8 T-cells. 
 
 The only way to make sure which method you trust is to look at what genes the different celltypes express and use your biological knowledge to make decisions.
 
@@ -300,7 +420,7 @@ gene_dict = df.geneSymbol.str.split(",").to_dict()
 
 ```{python}
 # run differential expression per cluster
-sc.tl.rank_genes_groups(adata, 'louvain_0.6', method='wilcoxon', key_added = "wilcoxon")
+sc.tl.rank_genes_groups(adata, 'leiden_0.6', method='wilcoxon', key_added = "wilcoxon")
 ```
 
 ```{python}
@@ -310,14 +430,14 @@ import gseapy
 gsea_res = dict()
 pred = dict()
 
-for cl in adata.obs['louvain_0.6'].cat.categories.tolist():
+for cl in adata.obs['leiden_0.6'].cat.categories.tolist():
     print(cl)
     glist = sc.get.rank_genes_groups_df(adata, group=cl, key='wilcoxon')[
         'names'].squeeze().str.strip().tolist()
     enr_res = gseapy.enrichr(gene_list=glist[:300],
                              organism='Human',
                              gene_sets=gene_dict,
-                             background=adata.raw.shape[1],
+                             background=adata.shape[1],
                              cutoff=1)
     if enr_res.results.shape[0] == 0:
         pred[cl] = "Unass"
@@ -336,14 +456,14 @@ pred
 ```
 
 ```{python}
-prediction = [pred[x] for x in adata.obs['louvain_0.6']]
+prediction = [pred[x] for x in adata.obs['leiden_0.6']]
 adata.obs["GS_overlap_pred"] = prediction
 
 sc.pl.umap(adata, color='GS_overlap_pred')
 ```
 
 :::{.callout-note title="Discuss"}
-As you can see, it agrees to some extent with the predictions from label transfer and ingest, but there are clear differences, which do you think looks better?
+As you can see, it agrees to some extent with the predictions from the methods above, but there are clear differences, which do you think looks better?
 :::
 
 ## {{< meta session >}}
