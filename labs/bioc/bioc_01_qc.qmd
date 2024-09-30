@@ -50,6 +50,7 @@ suppressPackageStartupMessages({
     library(scran)
     library(patchwork) # combining figures
     library(org.Hs.eg.db)
+    library(scDblFinder)
 })
 ```
 
@@ -140,7 +141,7 @@ First, let Scran calculate some general qc-stats for genes and cells with the fu
 sce <- addPerCellQC(sce, flatten = T, subsets = list(mt = mito_genes, hb = hb_genes, ribo = ribo_genes))
 
 # Way2: Doing it manually
-sce@colData$percent_mito <- Matrix::colSums(counts(sce)[mito_genes, ]) / sce@colData$total
+sce@colData$percent_mito <- Matrix::colSums(counts(sce)[mito_genes, ]) / sce@colData$total * 100
 ```
 
 {{< meta qc_calqc_3 >}}
@@ -218,14 +219,14 @@ dim(sce.filt)
 
 {{< meta qc_filter_detect_4 >}}
 
-In Scater, you can also use the function `plotHighestExprs()` to plot the gene contribution, but the function is quite slow.
+In Scater, you can also use the function `plotHighestExprs()` to plot the gene contribution, but the function is quite slow, so we will do it on our own instead..
 
 ```{r}
 #| fig-height: 7
 #| fig-width: 7
 # Compute the relative expression of each gene per cell
 # Use sparse matrix operations, if your dataset is large, doing matrix devisions the regular way will take a very long time.
-C <- counts(sce)
+C <- counts(sce.filt)
 C@x <- C@x / rep.int(colSums(C), diff(C@p)) * 100
 most_expressed <- order(Matrix::rowSums(C), decreasing = T)[20:1]
 boxplot(as.matrix(t(C[most_expressed, ])), cex = .1, las = 1, xlab = "% total count per cell", col = scales::hue_pal()(20)[20:1], horizontal = TRUE)
@@ -287,7 +288,7 @@ sce.filt <- sce.filt[!grepl("^MT-", rownames(sce.filt)), ]
 # sce.filt <- sce.filt[ ! grepl("^RP[SL]", rownames(sce.filt)), ]
 
 # Filter Hemoglobin gene  (optional if that is a problem on your data)
-#sce.filt <- sce.filt[!grepl("^HB[^(P|E|S)]", rownames(sce.filt)), ]
+sce.filt <- sce.filt[!grepl("^HB[^(P|E|S)]", rownames(sce.filt)), ]
 
 dim(sce.filt)
 ```
@@ -341,7 +342,14 @@ genes.table <- genes.table[genes.table$external_gene_name %in% rownames(sce.filt
 {{< meta qc_sex_3 >}}
 
 ```{r}
+par1 = c(10001, 2781479)
+par2 = c(56887903, 57217415)
+p1.gene = genes.table$external_gene_name[genes.table$start_position > par1[1] & genes.table$start_position < par1[2] & genes.table$chromosome_name == "Y"]
+p2.gene = genes.table$external_gene_name[genes.table$start_position > par2[1] & genes.table$start_position < par2[2] & genes.table$chromosome_name == "Y"]
+
 chrY.gene <- genes.table$external_gene_name[genes.table$chromosome_name == "Y"]
+chrY.gene = setdiff(chrY.gene, c(p1.gene, p2.gene))
+
 sce.filt@colData$pct_chrY <- Matrix::colSums(counts(sce.filt)[chrY.gene, ]) / colSums(counts(sce.filt))
 ```
 
@@ -402,6 +410,8 @@ sce.filt$G1.score <- assignments$scores$G1
 sce.filt$G2M.score <- assignments$scores$G2M
 sce.filt$S.score <- assignments$scores$S
 sce.filt$phase <- assignments$phases
+
+table(sce.filt$phase)
 ```
 
 {{< meta qc_cellcycle_2 >}}
@@ -444,8 +454,6 @@ sce.filt <- runUMAP(sce.filt, pca = 10)
 ```
 
 ```{r}
-suppressPackageStartupMessages(library(scDblFinder))
-
 # run computeDoubletDensity with 10 principal components.
 sce.filt <- scDblFinder(sce.filt, dims = 10)
 ```
@@ -461,12 +469,30 @@ wrap_plots(
 )
 ```
 
+{{< meta qc_doublet_3 >}}
+
+```{r}
+plotColData(sce.filt, y = "detected", x = "scDblFinder.class")
+
+```
+
+
+
 {{< meta qc_doublet_4 >}}
 
 ```{r}
-sce.filt <- sce.filt[, sce.filt$scDblFinder.score < 2]
+sce.filt <- sce.filt[, sce.filt$scDblFinder.class == "singlet"]
 dim(sce.filt)
 ```
+
+
+{{< meta qc_doublet_5 >}}
+
+```{r}
+table(sce$sample)
+table(sce.filt$sample)
+```
+
 
 ## {{< meta qc_save >}}
 

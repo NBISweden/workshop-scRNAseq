@@ -207,7 +207,7 @@ background-size: cover;
       <div>
       <div class="quarto-title-meta-heading">Published</div>
       <div class="quarto-title-meta-contents">
-        <p class="date">05-Feb-2024</p>
+        <p class="date">25-Sep-2024</p>
       </div>
     </div>
     
@@ -298,7 +298,8 @@ Note
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">library</span>(scran)</span>
 <span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">library</span>(patchwork) <span class="co"># combining figures</span></span>
 <span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">library</span>(org.Hs.eg.db)</span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>})</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">library</span>(scDblFinder)</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>})</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>We can first load the data individually by reading directly from HDF5 file format (.h5).</p>
 <div class="cell">
@@ -357,9 +358,9 @@ Note
 <span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="co"># run garbage collect to free up memory</span></span>
 <span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="fu">gc</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>           used  (Mb) gc trigger  (Mb)  max used  (Mb)
-Ncells 10216605 545.7   17147565 915.8  13915455 743.2
-Vcells 44552381 340.0  115361768 880.2 107022714 816.6</code></pre>
+<pre><code>           used  (Mb) gc trigger   (Mb) limit (Mb)  max used  (Mb)
+Ncells 11937546 637.6   17365280  927.5         NA  17108978 913.8
+Vcells 47509097 362.5  143610096 1095.7      65536 118686521 905.6</code></pre>
 </div>
 </div>
 <p>Here is how the count matrix and the metadata look like for every cell.</p>
@@ -395,7 +396,7 @@ TCGGGCACAGTGTGGA-1       cov.1       Covid</code></pre>
 </section>
 <section id="meta-qc_calqc" class="level2" data-number="3">
 <h2 data-number="3" class="anchored" data-anchor-id="meta-qc_calqc"><span class="header-section-number">3</span> Calculate QC</h2>
-<p>Having the data in a suitable format, we can start calculating some quality metrics. We can for example calculate the percentage of mitochondrial and ribosomal genes per cell and add to the metadata. The proportion of hemoglobin genes can give an indication of red blood cell contamination. This will be helpful to visualize them across different metadata parameters (i.e.&nbsp;datasetID and chemistry version). There are several ways of doing this. The QC metrics are finally added to the metadata table.</p>
+<p>Having the data in a suitable format, we can start calculating some quality metrics. We can for example calculate the percentage of mitochondrial and ribosomal genes per cell and add to the metadata. The proportion of hemoglobin genes can give an indication of red blood cell contamination, but in some tissues it can also be the case that some celltypes have higher content of hemoglobin. This will be helpful to visualize them across different metadata parameters (i.e.&nbsp;datasetID and chemistry version). There are several ways of doing this. The QC metrics are finally added to the metadata table.</p>
 <p>Citing from Simple Single Cell workflows (Lun, McCarthy &amp; Marioni, 2017): High proportions are indicative of poor-quality cells (Islam et al.&nbsp;2014; Ilicic et al.&nbsp;2016), possibly because of loss of cytoplasmic RNA from perforated cells. The reasoning is that mitochondria are larger than individual transcript molecules and less likely to escape through tears in the cell membrane.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Mitochondrial genes</span></span>
@@ -410,7 +411,7 @@ TCGGGCACAGTGTGGA-1       cov.1       Covid</code></pre>
 <div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>sce <span class="ot">&lt;-</span> <span class="fu">addPerCellQC</span>(sce, <span class="at">flatten =</span> T, <span class="at">subsets =</span> <span class="fu">list</span>(<span class="at">mt =</span> mito_genes, <span class="at">hb =</span> hb_genes, <span class="at">ribo =</span> ribo_genes))</span>
 <span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Way2: Doing it manually</span></span>
-<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>sce<span class="sc">@</span>colData<span class="sc">$</span>percent_mito <span class="ot">&lt;-</span> Matrix<span class="sc">::</span><span class="fu">colSums</span>(<span class="fu">counts</span>(sce)[mito_genes, ]) <span class="sc">/</span> sce<span class="sc">@</span>colData<span class="sc">$</span>total</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>sce<span class="sc">@</span>colData<span class="sc">$</span>percent_mito <span class="ot">&lt;-</span> Matrix<span class="sc">::</span><span class="fu">colSums</span>(<span class="fu">counts</span>(sce)[mito_genes, ]) <span class="sc">/</span> sce<span class="sc">@</span>colData<span class="sc">$</span>total <span class="sc">*</span> <span class="dv">100</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Now you can see that we have additional data in the metadata slot.</p>
 <div class="cell">
@@ -451,12 +452,12 @@ ATTTACCCAAGCCTGC-1                    82            18.297770     12466
 GTTGTCCTCTAGAACC-1                    80            30.030680      5541
                    percent_mito
                       &lt;numeric&gt;
-AGGTAGGTCGTTGTTT-1    0.0186246
-TAGAGTCGTCCTCCAT-1    0.1153131
-CCCTGATAGCGAACTG-1    0.0802573
-TCATCATTCCACGTAA-1    0.6793665
-ATTTACCCAAGCCTGC-1    0.0550297
-GTTGTCCTCTAGAACC-1    0.1275943</code></pre>
+AGGTAGGTCGTTGTTT-1      1.86246
+TAGAGTCGTCCTCCAT-1     11.53131
+CCCTGATAGCGAACTG-1      8.02573
+TCATCATTCCACGTAA-1     67.93665
+ATTTACCCAAGCCTGC-1      5.50297
+GTTGTCCTCTAGAACC-1     12.75943</code></pre>
 </div>
 </div>
 </section>
@@ -543,11 +544,11 @@ Discuss
 <span id="cb24-10"><a href="#cb24-10" aria-hidden="true" tabindex="-1"></a><span class="co"># ncol(sce.filt)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Additionally, we can also see which genes contribute the most to such reads. We can for instance plot the percentage of counts per gene.</p>
-<p>In Scater, you can also use the function <code>plotHighestExprs()</code> to plot the gene contribution, but the function is quite slow.</p>
+<p>In Scater, you can also use the function <code>plotHighestExprs()</code> to plot the gene contribution, but the function is quite slow, so we will do it on our own instead..</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Compute the relative expression of each gene per cell</span></span>
 <span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Use sparse matrix operations, if your dataset is large, doing matrix devisions the regular way will take a very long time.</span></span>
-<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>C <span class="ot">&lt;-</span> <span class="fu">counts</span>(sce)</span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>C <span class="ot">&lt;-</span> <span class="fu">counts</span>(sce.filt)</span>
 <span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a>C<span class="sc">@</span>x <span class="ot">&lt;-</span> C<span class="sc">@</span>x <span class="sc">/</span> <span class="fu">rep.int</span>(<span class="fu">colSums</span>(C), <span class="fu">diff</span>(C<span class="sc">@</span>p)) <span class="sc">*</span> <span class="dv">100</span></span>
 <span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a>most_expressed <span class="ot">&lt;-</span> <span class="fu">order</span>(Matrix<span class="sc">::</span><span class="fu">rowSums</span>(C), <span class="at">decreasing =</span> T)[<span class="dv">20</span><span class="sc">:</span><span class="dv">1</span>]</span>
 <span id="cb25-6"><a href="#cb25-6" aria-hidden="true" tabindex="-1"></a><span class="fu">boxplot</span>(<span class="fu">as.matrix</span>(<span class="fu">t</span>(C[most_expressed, ])), <span class="at">cex =</span> .<span class="dv">1</span>, <span class="at">las =</span> <span class="dv">1</span>, <span class="at">xlab =</span> <span class="st">"% total count per cell"</span>, <span class="at">col =</span> scales<span class="sc">::</span><span class="fu">hue_pal</span>()(<span class="dv">20</span>)[<span class="dv">20</span><span class="sc">:</span><span class="dv">1</span>], <span class="at">horizontal =</span> <span class="cn">TRUE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -619,11 +620,11 @@ Discuss
 <span id="cb32-8"><a href="#cb32-8" aria-hidden="true" tabindex="-1"></a><span class="co"># sce.filt &lt;- sce.filt[ ! grepl("^RP[SL]", rownames(sce.filt)), ]</span></span>
 <span id="cb32-9"><a href="#cb32-9" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb32-10"><a href="#cb32-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Filter Hemoglobin gene  (optional if that is a problem on your data)</span></span>
-<span id="cb32-11"><a href="#cb32-11" aria-hidden="true" tabindex="-1"></a><span class="co">#sce.filt &lt;- sce.filt[!grepl("^HB[^(P|E|S)]", rownames(sce.filt)), ]</span></span>
+<span id="cb32-11"><a href="#cb32-11" aria-hidden="true" tabindex="-1"></a>sce.filt <span class="ot">&lt;-</span> sce.filt[<span class="sc">!</span><span class="fu">grepl</span>(<span class="st">"^HB[^(P|E|S)]"</span>, <span class="fu">rownames</span>(sce.filt)), ]</span>
 <span id="cb32-12"><a href="#cb32-12" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb32-13"><a href="#cb32-13" aria-hidden="true" tabindex="-1"></a><span class="fu">dim</span>(sce.filt)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>[1] 18863  7431</code></pre>
+<pre><code>[1] 18854  7431</code></pre>
 </div>
 </div>
 </section>
@@ -677,10 +678,17 @@ Tip
 <div class="sourceCode cell-code" id="cb36"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a>genes.table <span class="ot">&lt;-</span> <span class="fu">read.csv</span>(genes_file)</span>
 <span id="cb36-2"><a href="#cb36-2" aria-hidden="true" tabindex="-1"></a>genes.table <span class="ot">&lt;-</span> genes.table[genes.table<span class="sc">$</span>external_gene_name <span class="sc">%in%</span> <span class="fu">rownames</span>(sce.filt), ]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>Now that we have the chromosome information, we can calculate the proportion of reads that comes from chromosome Y per cell.</p>
+<p>Now that we have the chromosome information, we can calculate the proportion of reads that comes from chromosome Y per cell.But first we have to remove all genes in the pseudoautosmal regions of chrY that are: * chromosome:GRCh38:Y:10001 - 2781479 is shared with X: 10001 - 2781479 (PAR1) * chromosome:GRCh38:Y:56887903 - 57217415 is shared with X: 155701383 - 156030895 (PAR2)</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb37"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a>chrY.gene <span class="ot">&lt;-</span> genes.table<span class="sc">$</span>external_gene_name[genes.table<span class="sc">$</span>chromosome_name <span class="sc">==</span> <span class="st">"Y"</span>]</span>
-<span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a>sce.filt<span class="sc">@</span>colData<span class="sc">$</span>pct_chrY <span class="ot">&lt;-</span> Matrix<span class="sc">::</span><span class="fu">colSums</span>(<span class="fu">counts</span>(sce.filt)[chrY.gene, ]) <span class="sc">/</span> <span class="fu">colSums</span>(<span class="fu">counts</span>(sce.filt))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb37"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a>par1 <span class="ot">=</span> <span class="fu">c</span>(<span class="dv">10001</span>, <span class="dv">2781479</span>)</span>
+<span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a>par2 <span class="ot">=</span> <span class="fu">c</span>(<span class="dv">56887903</span>, <span class="dv">57217415</span>)</span>
+<span id="cb37-3"><a href="#cb37-3" aria-hidden="true" tabindex="-1"></a>p1.gene <span class="ot">=</span> genes.table<span class="sc">$</span>external_gene_name[genes.table<span class="sc">$</span>start_position <span class="sc">&gt;</span> par1[<span class="dv">1</span>] <span class="sc">&amp;</span> genes.table<span class="sc">$</span>start_position <span class="sc">&lt;</span> par1[<span class="dv">2</span>] <span class="sc">&amp;</span> genes.table<span class="sc">$</span>chromosome_name <span class="sc">==</span> <span class="st">"Y"</span>]</span>
+<span id="cb37-4"><a href="#cb37-4" aria-hidden="true" tabindex="-1"></a>p2.gene <span class="ot">=</span> genes.table<span class="sc">$</span>external_gene_name[genes.table<span class="sc">$</span>start_position <span class="sc">&gt;</span> par2[<span class="dv">1</span>] <span class="sc">&amp;</span> genes.table<span class="sc">$</span>start_position <span class="sc">&lt;</span> par2[<span class="dv">2</span>] <span class="sc">&amp;</span> genes.table<span class="sc">$</span>chromosome_name <span class="sc">==</span> <span class="st">"Y"</span>]</span>
+<span id="cb37-5"><a href="#cb37-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb37-6"><a href="#cb37-6" aria-hidden="true" tabindex="-1"></a>chrY.gene <span class="ot">&lt;-</span> genes.table<span class="sc">$</span>external_gene_name[genes.table<span class="sc">$</span>chromosome_name <span class="sc">==</span> <span class="st">"Y"</span>]</span>
+<span id="cb37-7"><a href="#cb37-7" aria-hidden="true" tabindex="-1"></a>chrY.gene <span class="ot">=</span> <span class="fu">setdiff</span>(chrY.gene, <span class="fu">c</span>(p1.gene, p2.gene))</span>
+<span id="cb37-8"><a href="#cb37-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb37-9"><a href="#cb37-9" aria-hidden="true" tabindex="-1"></a>sce.filt<span class="sc">@</span>colData<span class="sc">$</span>pct_chrY <span class="ot">&lt;-</span> Matrix<span class="sc">::</span><span class="fu">colSums</span>(<span class="fu">counts</span>(sce.filt)[chrY.gene, ]) <span class="sc">/</span> <span class="fu">colSums</span>(<span class="fu">counts</span>(sce.filt))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Then plot XIST expression vs chrY proportion. As you can see, the samples are clearly on either side, even if some cells do not have detection of either.</p>
 <div class="cell">
@@ -759,17 +767,24 @@ Discuss
 <span id="cb42-5"><a href="#cb42-5" aria-hidden="true" tabindex="-1"></a>sce.filt<span class="sc">$</span>G1.score <span class="ot">&lt;-</span> assignments<span class="sc">$</span>scores<span class="sc">$</span>G1</span>
 <span id="cb42-6"><a href="#cb42-6" aria-hidden="true" tabindex="-1"></a>sce.filt<span class="sc">$</span>G2M.score <span class="ot">&lt;-</span> assignments<span class="sc">$</span>scores<span class="sc">$</span>G2M</span>
 <span id="cb42-7"><a href="#cb42-7" aria-hidden="true" tabindex="-1"></a>sce.filt<span class="sc">$</span>S.score <span class="ot">&lt;-</span> assignments<span class="sc">$</span>scores<span class="sc">$</span>S</span>
-<span id="cb42-8"><a href="#cb42-8" aria-hidden="true" tabindex="-1"></a>sce.filt<span class="sc">$</span>phase <span class="ot">&lt;-</span> assignments<span class="sc">$</span>phases</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb42-8"><a href="#cb42-8" aria-hidden="true" tabindex="-1"></a>sce.filt<span class="sc">$</span>phase <span class="ot">&lt;-</span> assignments<span class="sc">$</span>phases</span>
+<span id="cb42-9"><a href="#cb42-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb42-10"><a href="#cb42-10" aria-hidden="true" tabindex="-1"></a><span class="fu">table</span>(sce.filt<span class="sc">$</span>phase)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+  G1  G2M    S 
+4334  827 1750 </code></pre>
+</div>
 </div>
 <p>We can now create a violin plot for the cell cycle scores as well.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb43"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a><span class="fu">wrap_plots</span>(</span>
-<span id="cb43-2"><a href="#cb43-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotColData</span>(sce.filt, <span class="at">y =</span> <span class="st">"G2M.score"</span>, <span class="at">x =</span> <span class="st">"G1.score"</span>, <span class="at">colour_by =</span> <span class="st">"phase"</span>),</span>
-<span id="cb43-3"><a href="#cb43-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotColData</span>(sce.filt, <span class="at">y =</span> <span class="st">"G2M.score"</span>, <span class="at">x =</span> <span class="st">"sample"</span>, <span class="at">colour_by =</span> <span class="st">"sample"</span>),</span>
-<span id="cb43-4"><a href="#cb43-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotColData</span>(sce.filt, <span class="at">y =</span> <span class="st">"G1.score"</span>, <span class="at">x =</span> <span class="st">"sample"</span>, <span class="at">colour_by =</span> <span class="st">"sample"</span>),</span>
-<span id="cb43-5"><a href="#cb43-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotColData</span>(sce.filt, <span class="at">y =</span> <span class="st">"S.score"</span>, <span class="at">x =</span> <span class="st">"sample"</span>, <span class="at">colour_by =</span> <span class="st">"sample"</span>),</span>
-<span id="cb43-6"><a href="#cb43-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">ncol =</span> <span class="dv">4</span></span>
-<span id="cb43-7"><a href="#cb43-7" aria-hidden="true" tabindex="-1"></a>) <span class="sc">+</span> <span class="fu">plot_layout</span>(<span class="at">guides =</span> <span class="st">"collect"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb44"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a><span class="fu">wrap_plots</span>(</span>
+<span id="cb44-2"><a href="#cb44-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotColData</span>(sce.filt, <span class="at">y =</span> <span class="st">"G2M.score"</span>, <span class="at">x =</span> <span class="st">"G1.score"</span>, <span class="at">colour_by =</span> <span class="st">"phase"</span>),</span>
+<span id="cb44-3"><a href="#cb44-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotColData</span>(sce.filt, <span class="at">y =</span> <span class="st">"G2M.score"</span>, <span class="at">x =</span> <span class="st">"sample"</span>, <span class="at">colour_by =</span> <span class="st">"sample"</span>),</span>
+<span id="cb44-4"><a href="#cb44-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotColData</span>(sce.filt, <span class="at">y =</span> <span class="st">"G1.score"</span>, <span class="at">x =</span> <span class="st">"sample"</span>, <span class="at">colour_by =</span> <span class="st">"sample"</span>),</span>
+<span id="cb44-5"><a href="#cb44-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotColData</span>(sce.filt, <span class="at">y =</span> <span class="st">"S.score"</span>, <span class="at">x =</span> <span class="st">"sample"</span>, <span class="at">colour_by =</span> <span class="st">"sample"</span>),</span>
+<span id="cb44-6"><a href="#cb44-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">ncol =</span> <span class="dv">4</span></span>
+<span id="cb44-7"><a href="#cb44-7" aria-hidden="true" tabindex="-1"></a>) <span class="sc">+</span> <span class="fu">plot_layout</span>(<span class="at">guides =</span> <span class="st">"collect"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
@@ -801,27 +816,25 @@ Caution
 </div>
 <p>There is a method to predict if a cluster consists of mainly doublets <code>findDoubletClusters()</code>, but we can also predict individual cells based on simulations using the function <code>computeDoubletDensity()</code> which we will do here. Doublet detection will be performed using PCA, so we need to first normalize the data and run variable gene detection, as well as UMAP for visualization. These steps will be explored in more detail in coming exercises.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb44"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a>sce.filt <span class="ot">&lt;-</span> <span class="fu">logNormCounts</span>(sce.filt)</span>
-<span id="cb44-2"><a href="#cb44-2" aria-hidden="true" tabindex="-1"></a>dec <span class="ot">&lt;-</span> <span class="fu">modelGeneVar</span>(sce.filt, <span class="at">block =</span> sce.filt<span class="sc">$</span>sample)</span>
-<span id="cb44-3"><a href="#cb44-3" aria-hidden="true" tabindex="-1"></a>hvgs <span class="ot">&lt;-</span> <span class="fu">getTopHVGs</span>(dec, <span class="at">n =</span> <span class="dv">2000</span>)</span>
-<span id="cb44-4"><a href="#cb44-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb44-5"><a href="#cb44-5" aria-hidden="true" tabindex="-1"></a>sce.filt <span class="ot">&lt;-</span> <span class="fu">runPCA</span>(sce.filt, <span class="at">subset_row =</span> hvgs)</span>
-<span id="cb44-6"><a href="#cb44-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb44-7"><a href="#cb44-7" aria-hidden="true" tabindex="-1"></a>sce.filt <span class="ot">&lt;-</span> <span class="fu">runUMAP</span>(sce.filt, <span class="at">pca =</span> <span class="dv">10</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb45"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a>sce.filt <span class="ot">&lt;-</span> <span class="fu">logNormCounts</span>(sce.filt)</span>
+<span id="cb45-2"><a href="#cb45-2" aria-hidden="true" tabindex="-1"></a>dec <span class="ot">&lt;-</span> <span class="fu">modelGeneVar</span>(sce.filt, <span class="at">block =</span> sce.filt<span class="sc">$</span>sample)</span>
+<span id="cb45-3"><a href="#cb45-3" aria-hidden="true" tabindex="-1"></a>hvgs <span class="ot">&lt;-</span> <span class="fu">getTopHVGs</span>(dec, <span class="at">n =</span> <span class="dv">2000</span>)</span>
+<span id="cb45-4"><a href="#cb45-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-5"><a href="#cb45-5" aria-hidden="true" tabindex="-1"></a>sce.filt <span class="ot">&lt;-</span> <span class="fu">runPCA</span>(sce.filt, <span class="at">subset_row =</span> hvgs)</span>
+<span id="cb45-6"><a href="#cb45-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-7"><a href="#cb45-7" aria-hidden="true" tabindex="-1"></a>sce.filt <span class="ot">&lt;-</span> <span class="fu">runUMAP</span>(sce.filt, <span class="at">pca =</span> <span class="dv">10</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb45"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a><span class="fu">suppressPackageStartupMessages</span>(<span class="fu">library</span>(scDblFinder))</span>
-<span id="cb45-2"><a href="#cb45-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb45-3"><a href="#cb45-3" aria-hidden="true" tabindex="-1"></a><span class="co"># run computeDoubletDensity with 10 principal components.</span></span>
-<span id="cb45-4"><a href="#cb45-4" aria-hidden="true" tabindex="-1"></a>sce.filt <span class="ot">&lt;-</span> <span class="fu">scDblFinder</span>(sce.filt, <span class="at">dims =</span> <span class="dv">10</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb46"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a><span class="co"># run computeDoubletDensity with 10 principal components.</span></span>
+<span id="cb46-2"><a href="#cb46-2" aria-hidden="true" tabindex="-1"></a>sce.filt <span class="ot">&lt;-</span> <span class="fu">scDblFinder</span>(sce.filt, <span class="at">dims =</span> <span class="dv">10</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb46"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a><span class="fu">wrap_plots</span>(</span>
-<span id="cb46-2"><a href="#cb46-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotUMAP</span>(sce.filt, <span class="at">colour_by =</span> <span class="st">"scDblFinder.score"</span>),</span>
-<span id="cb46-3"><a href="#cb46-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotUMAP</span>(sce.filt, <span class="at">colour_by =</span> <span class="st">"scDblFinder.class"</span>),</span>
-<span id="cb46-4"><a href="#cb46-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotUMAP</span>(sce.filt, <span class="at">colour_by =</span> <span class="st">"sample"</span>),</span>
-<span id="cb46-5"><a href="#cb46-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">ncol =</span> <span class="dv">3</span></span>
-<span id="cb46-6"><a href="#cb46-6" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb47"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb47-1"><a href="#cb47-1" aria-hidden="true" tabindex="-1"></a><span class="fu">wrap_plots</span>(</span>
+<span id="cb47-2"><a href="#cb47-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotUMAP</span>(sce.filt, <span class="at">colour_by =</span> <span class="st">"scDblFinder.score"</span>),</span>
+<span id="cb47-3"><a href="#cb47-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotUMAP</span>(sce.filt, <span class="at">colour_by =</span> <span class="st">"scDblFinder.class"</span>),</span>
+<span id="cb47-4"><a href="#cb47-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotUMAP</span>(sce.filt, <span class="at">colour_by =</span> <span class="st">"sample"</span>),</span>
+<span id="cb47-5"><a href="#cb47-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">ncol =</span> <span class="dv">3</span></span>
+<span id="cb47-6"><a href="#cb47-6" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
@@ -830,12 +843,38 @@ Caution
 </div>
 </div>
 </div>
+<p>We should expect that two cells have more detected genes than a single cell, lets check if our predicted doublets also have more detected genes in general.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb48"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb48-1"><a href="#cb48-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plotColData</span>(sce.filt, <span class="at">y =</span> <span class="st">"detected"</span>, <span class="at">x =</span> <span class="st">"scDblFinder.class"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-left">
+<figure class="figure">
+<p><a href="bioc_01_qc_files/figure-html/unnamed-chunk-30-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-10"><img src="bioc_01_qc_files/figure-html/unnamed-chunk-30-1.png" class="img-fluid figure-img" width="672"></a></p>
+</figure>
+</div>
+</div>
+</div>
 <p>Now, lets remove all predicted doublets from our data.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb47"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb47-1"><a href="#cb47-1" aria-hidden="true" tabindex="-1"></a>sce.filt <span class="ot">&lt;-</span> sce.filt[, sce.filt<span class="sc">$</span>scDblFinder.score <span class="sc">&lt;</span> <span class="dv">2</span>]</span>
-<span id="cb47-2"><a href="#cb47-2" aria-hidden="true" tabindex="-1"></a><span class="fu">dim</span>(sce.filt)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb49"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb49-1"><a href="#cb49-1" aria-hidden="true" tabindex="-1"></a>sce.filt <span class="ot">&lt;-</span> sce.filt[, sce.filt<span class="sc">$</span>scDblFinder.class <span class="sc">==</span> <span class="st">"singlet"</span>]</span>
+<span id="cb49-2"><a href="#cb49-2" aria-hidden="true" tabindex="-1"></a><span class="fu">dim</span>(sce.filt)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>[1] 18863  7431</code></pre>
+<pre><code>[1] 18854  6741</code></pre>
+</div>
+</div>
+<p>To summarize, lets check how many cells we have removed per sample, we started with 1500 cells per sample. Looking back at the intitial QC plots does it make sense that some samples have much fewer cells now?</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb51"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb51-1"><a href="#cb51-1" aria-hidden="true" tabindex="-1"></a><span class="fu">table</span>(sce<span class="sc">$</span>sample)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+  cov.1  cov.15  cov.16  cov.17 ctrl.13 ctrl.14 ctrl.19  ctrl.5 
+   1500    1500    1500    1500    1500    1500    1500    1500 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb53"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb53-1"><a href="#cb53-1" aria-hidden="true" tabindex="-1"></a><span class="fu">table</span>(sce.filt<span class="sc">$</span>sample)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+  cov.1  cov.15  cov.16  cov.17 ctrl.13 ctrl.14 ctrl.19  ctrl.5 
+    807     516     351    1030    1101     914    1069     953 </code></pre>
 </div>
 </div>
 </section>
@@ -843,7 +882,7 @@ Caution
 <h2 data-number="9" class="anchored" data-anchor-id="meta-qc_save"><span class="header-section-number">9</span> Save data</h2>
 <p>Finally, lets save the QC-filtered data for further analysis. Create output directory <code>data/covid/results</code> and save data to that folder. This will be used in downstream labs.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb49"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb49-1"><a href="#cb49-1" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(sce.filt, <span class="fu">file.path</span>(path_results, <span class="st">"bioc_covid_qc.rds"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb55"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb55-1"><a href="#cb55-1" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(sce.filt, <span class="fu">file.path</span>(path_results, <span class="st">"bioc_covid_qc.rds"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 <section id="meta-session" class="level2" data-number="10">
@@ -853,26 +892,20 @@ Caution
 Click here
 </summary>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb50"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb50-1"><a href="#cb50-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb56"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb56-1"><a href="#cb56-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>R version 4.3.0 (2023-04-21)
-Platform: x86_64-pc-linux-gnu (64-bit)
-Running under: Ubuntu 22.04.3 LTS
+<pre><code>R version 4.3.3 (2024-02-29)
+Platform: x86_64-apple-darwin13.4.0 (64-bit)
+Running under: macOS Big Sur ... 10.16
 
 Matrix products: default
-BLAS:   /usr/lib/x86_64-linux-gnu/openblas-pthread/libblas.so.3 
-LAPACK: /usr/lib/x86_64-linux-gnu/openblas-pthread/libopenblasp-r0.3.20.so;  LAPACK version 3.10.0
+BLAS/LAPACK: /Users/asabjor/miniconda3/envs/seurat5/lib/libopenblasp-r0.3.27.dylib;  LAPACK version 3.12.0
 
 locale:
- [1] LC_CTYPE=en_US.UTF-8       LC_NUMERIC=C              
- [3] LC_TIME=en_US.UTF-8        LC_COLLATE=en_US.UTF-8    
- [5] LC_MONETARY=en_US.UTF-8    LC_MESSAGES=en_US.UTF-8   
- [7] LC_PAPER=en_US.UTF-8       LC_NAME=C                 
- [9] LC_ADDRESS=C               LC_TELEPHONE=C            
-[11] LC_MEASUREMENT=en_US.UTF-8 LC_IDENTIFICATION=C       
+[1] sv_SE.UTF-8/sv_SE.UTF-8/sv_SE.UTF-8/C/sv_SE.UTF-8/sv_SE.UTF-8
 
-time zone: Etc/UTC
-tzcode source: system (glibc)
+time zone: Europe/Stockholm
+tzcode source: system (macOS)
 
 attached base packages:
 [1] stats4    stats     graphics  grDevices utils     datasets  methods  
@@ -880,93 +913,95 @@ attached base packages:
 
 other attached packages:
  [1] scDblFinder_1.16.0          org.Hs.eg.db_3.18.0        
- [3] AnnotationDbi_1.64.1        patchwork_1.1.2            
+ [3] AnnotationDbi_1.64.1        patchwork_1.2.0            
  [5] scran_1.30.0                scater_1.30.1              
- [7] ggplot2_3.4.2               scuttle_1.12.0             
+ [7] ggplot2_3.5.1               scuttle_1.12.0             
  [9] SingleCellExperiment_1.24.0 SummarizedExperiment_1.32.0
 [11] Biobase_2.62.0              GenomicRanges_1.54.1       
-[13] GenomeInfoDb_1.38.5         IRanges_2.36.0             
+[13] GenomeInfoDb_1.38.1         IRanges_2.36.0             
 [15] S4Vectors_0.40.2            BiocGenerics_0.48.1        
-[17] MatrixGenerics_1.14.0       matrixStats_1.0.0          
+[17] MatrixGenerics_1.14.0       matrixStats_1.4.1          
 
 loaded via a namespace (and not attached):
-  [1] RcppAnnoy_0.0.20          splines_4.3.0            
-  [3] later_1.3.1               BiocIO_1.12.0            
-  [5] bitops_1.0-7              tibble_3.2.1             
-  [7] polyclip_1.10-4           XML_3.99-0.14            
-  [9] lifecycle_1.0.3           edgeR_4.0.7              
- [11] hdf5r_1.3.8               globals_0.16.2           
- [13] lattice_0.21-8            MASS_7.3-58.4            
- [15] magrittr_2.0.3            limma_3.58.1             
- [17] plotly_4.10.2             rmarkdown_2.22           
- [19] yaml_2.3.7                metapod_1.10.1           
- [21] httpuv_1.6.11             Seurat_4.3.0             
- [23] sctransform_0.3.5         sp_1.6-1                 
- [25] spatstat.sparse_3.0-1     reticulate_1.30          
- [27] cowplot_1.1.1             pbapply_1.7-0            
- [29] DBI_1.1.3                 RColorBrewer_1.1-3       
- [31] abind_1.4-5               zlibbioc_1.48.0          
- [33] Rtsne_0.16                purrr_1.0.1              
- [35] RCurl_1.98-1.12           GenomeInfoDbData_1.2.11  
- [37] ggrepel_0.9.3             irlba_2.3.5.1            
- [39] listenv_0.9.0             spatstat.utils_3.0-3     
- [41] goftest_1.2-3             spatstat.random_3.1-5    
- [43] dqrng_0.3.0               fitdistrplus_1.1-11      
- [45] parallelly_1.36.0         DelayedMatrixStats_1.24.0
- [47] leiden_0.4.3              codetools_0.2-19         
- [49] DelayedArray_0.28.0       tidyselect_1.2.0         
- [51] farver_2.1.1              ScaledMatrix_1.10.0      
- [53] viridis_0.6.3             spatstat.explore_3.2-1   
- [55] GenomicAlignments_1.38.1  jsonlite_1.8.5           
- [57] BiocNeighbors_1.20.2      ellipsis_0.3.2           
- [59] progressr_0.13.0          ggridges_0.5.4           
- [61] survival_3.5-5            tools_4.3.0              
- [63] ica_1.0-3                 Rcpp_1.0.10              
- [65] glue_1.6.2                gridExtra_2.3            
- [67] SparseArray_1.2.3         xfun_0.39                
- [69] dplyr_1.1.2               withr_2.5.0              
- [71] fastmap_1.1.1             bluster_1.12.0           
- [73] fansi_1.0.4               digest_0.6.31            
- [75] rsvd_1.0.5                R6_2.5.1                 
- [77] mime_0.12                 colorspace_2.1-0         
- [79] scattermore_1.2           tensor_1.5               
- [81] spatstat.data_3.0-1       RSQLite_2.3.1            
- [83] utf8_1.2.3                tidyr_1.3.0              
- [85] generics_0.1.3            data.table_1.14.8        
- [87] rtracklayer_1.62.0        httr_1.4.6               
- [89] htmlwidgets_1.6.2         S4Arrays_1.2.0           
- [91] uwot_0.1.14               pkgconfig_2.0.3          
- [93] gtable_0.3.3              blob_1.2.4               
- [95] lmtest_0.9-40             XVector_0.42.0           
- [97] htmltools_0.5.5           SeuratObject_4.1.3       
- [99] scales_1.2.1              png_0.1-8                
-[101] knitr_1.43                rstudioapi_0.14          
-[103] rjson_0.2.21              reshape2_1.4.4           
-[105] nlme_3.1-162              cachem_1.0.8             
-[107] zoo_1.8-12                stringr_1.5.0            
-[109] KernSmooth_2.23-20        parallel_4.3.0           
-[111] miniUI_0.1.1.1            vipor_0.4.5              
-[113] restfulr_0.0.15           pillar_1.9.0             
-[115] grid_4.3.0                vctrs_0.6.2              
-[117] RANN_2.6.1                promises_1.2.0.1         
-[119] BiocSingular_1.18.0       beachmat_2.18.0          
-[121] xtable_1.8-4              cluster_2.1.4            
-[123] beeswarm_0.4.0            evaluate_0.21            
-[125] Rsamtools_2.18.0          cli_3.6.1                
-[127] locfit_1.5-9.8            compiler_4.3.0           
-[129] rlang_1.1.1               crayon_1.5.2             
-[131] future.apply_1.11.0       labeling_0.4.2           
-[133] plyr_1.8.8                ggbeeswarm_0.7.2         
-[135] stringi_1.7.12            deldir_1.0-9             
-[137] viridisLite_0.4.2         BiocParallel_1.36.0      
-[139] munsell_0.5.0             Biostrings_2.70.1        
-[141] lazyeval_0.2.2            spatstat.geom_3.2-1      
-[143] Matrix_1.5-4              sparseMatrixStats_1.14.0 
-[145] bit64_4.0.5               future_1.32.0            
-[147] KEGGREST_1.42.0           statmod_1.5.0            
-[149] shiny_1.7.4               ROCR_1.0-11              
-[151] igraph_1.4.3              memoise_2.0.1            
-[153] xgboost_1.7.5.1           bit_4.0.5                </code></pre>
+  [1] RcppAnnoy_0.0.22          splines_4.3.3            
+  [3] later_1.3.2               BiocIO_1.12.0            
+  [5] bitops_1.0-8              tibble_3.2.1             
+  [7] polyclip_1.10-7           XML_3.99-0.17            
+  [9] fastDummies_1.7.4         lifecycle_1.0.4          
+ [11] edgeR_4.0.16              hdf5r_1.3.11             
+ [13] globals_0.16.3            lattice_0.22-6           
+ [15] MASS_7.3-60.0.1           magrittr_2.0.3           
+ [17] limma_3.58.1              plotly_4.10.4            
+ [19] rmarkdown_2.28            yaml_2.3.10              
+ [21] metapod_1.10.0            httpuv_1.6.15            
+ [23] Seurat_5.1.0              sctransform_0.4.1        
+ [25] spam_2.10-0               spatstat.sparse_3.1-0    
+ [27] sp_2.1-4                  reticulate_1.39.0        
+ [29] cowplot_1.1.3             pbapply_1.7-2            
+ [31] DBI_1.2.3                 RColorBrewer_1.1-3       
+ [33] abind_1.4-5               zlibbioc_1.48.0          
+ [35] Rtsne_0.17                purrr_1.0.2              
+ [37] RCurl_1.98-1.16           GenomeInfoDbData_1.2.11  
+ [39] ggrepel_0.9.6             irlba_2.3.5.1            
+ [41] spatstat.utils_3.1-0      listenv_0.9.1            
+ [43] goftest_1.2-3             RSpectra_0.16-2          
+ [45] spatstat.random_3.2-3     dqrng_0.3.2              
+ [47] fitdistrplus_1.2-1        parallelly_1.38.0        
+ [49] DelayedMatrixStats_1.24.0 leiden_0.4.3.1           
+ [51] codetools_0.2-20          DelayedArray_0.28.0      
+ [53] tidyselect_1.2.1          farver_2.1.2             
+ [55] ScaledMatrix_1.10.0       viridis_0.6.5            
+ [57] spatstat.explore_3.2-6    GenomicAlignments_1.38.0 
+ [59] jsonlite_1.8.8            BiocNeighbors_1.20.0     
+ [61] progressr_0.14.0          ggridges_0.5.6           
+ [63] survival_3.7-0            tools_4.3.3              
+ [65] ica_1.0-3                 Rcpp_1.0.13              
+ [67] glue_1.7.0                gridExtra_2.3            
+ [69] SparseArray_1.2.2         xfun_0.47                
+ [71] dplyr_1.1.4               withr_3.0.1              
+ [73] fastmap_1.2.0             bluster_1.12.0           
+ [75] fansi_1.0.6               digest_0.6.37            
+ [77] rsvd_1.0.5                R6_2.5.1                 
+ [79] mime_0.12                 colorspace_2.1-1         
+ [81] scattermore_1.2           tensor_1.5               
+ [83] spatstat.data_3.1-2       RSQLite_2.3.7            
+ [85] utf8_1.2.4                tidyr_1.3.1              
+ [87] generics_0.1.3            data.table_1.15.4        
+ [89] rtracklayer_1.62.0        httr_1.4.7               
+ [91] htmlwidgets_1.6.4         S4Arrays_1.2.0           
+ [93] uwot_0.1.16               pkgconfig_2.0.3          
+ [95] gtable_0.3.5              blob_1.2.4               
+ [97] lmtest_0.9-40             XVector_0.42.0           
+ [99] htmltools_0.5.8.1         dotCall64_1.1-1          
+[101] SeuratObject_5.0.2        scales_1.3.0             
+[103] png_0.1-8                 knitr_1.48               
+[105] reshape2_1.4.4            rjson_0.2.21             
+[107] nlme_3.1-165              cachem_1.1.0             
+[109] zoo_1.8-12                stringr_1.5.1            
+[111] KernSmooth_2.23-24        parallel_4.3.3           
+[113] miniUI_0.1.1.1            vipor_0.4.7              
+[115] restfulr_0.0.15           pillar_1.9.0             
+[117] grid_4.3.3                vctrs_0.6.5              
+[119] RANN_2.6.2                promises_1.3.0           
+[121] BiocSingular_1.18.0       beachmat_2.18.0          
+[123] xtable_1.8-4              cluster_2.1.6            
+[125] beeswarm_0.4.0            evaluate_0.24.0          
+[127] cli_3.6.3                 locfit_1.5-9.9           
+[129] compiler_4.3.3            Rsamtools_2.18.0         
+[131] rlang_1.1.4               crayon_1.5.3             
+[133] future.apply_1.11.2       labeling_0.4.3           
+[135] plyr_1.8.9                ggbeeswarm_0.7.2         
+[137] stringi_1.8.4             deldir_2.0-4             
+[139] viridisLite_0.4.2         BiocParallel_1.36.0      
+[141] munsell_0.5.1             Biostrings_2.70.1        
+[143] lazyeval_0.2.2            spatstat.geom_3.2-9      
+[145] Matrix_1.6-5              RcppHNSW_0.6.0           
+[147] sparseMatrixStats_1.14.0  bit64_4.0.5              
+[149] future_1.34.0             KEGGREST_1.42.0          
+[151] statmod_1.5.0             shiny_1.9.1              
+[153] ROCR_1.0-11               igraph_2.0.3             
+[155] memoise_2.0.1             bit_4.0.5                
+[157] xgboost_2.1.1.1          </code></pre>
 </div>
 </div>
 </details>
@@ -1219,7 +1254,7 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
 </div>
   </div>
 </footer>
-<script>var lightboxQuarto = GLightbox({"openEffect":"zoom","loop":true,"selector":".lightbox","descPosition":"bottom","closeEffect":"zoom"});</script>
+<script>var lightboxQuarto = GLightbox({"selector":".lightbox","closeEffect":"zoom","openEffect":"zoom","descPosition":"bottom","loop":true});</script>
 
 
 
