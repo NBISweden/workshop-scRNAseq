@@ -27,6 +27,7 @@ suppressPackageStartupMessages({
     library(pheatmap)
     library(scPred)
     library(scmap)
+    library(SingleR)
 })
 ```
 
@@ -47,7 +48,7 @@ alldata <- readRDS(path_file)
 {{< meta ct_read_2 >}}
 
 ```{r}
-ctrl.sce <- alldata[, alldata@colData$sample == "ctrl.13"]
+ctrl.sce <- alldata[, alldata$sample == "ctrl.13"]
 
 # remove all old dimensionality reductions as they will mess up the analysis further down
 reducedDims(ctrl.sce) <- NULL
@@ -114,7 +115,7 @@ ctrl.sce <- runUMAP(ctrl.sce, dimred = "PCA")
 #| fig-height: 5
 #| fig-width: 6
 
-plotReducedDim(ctrl.sce, dimred = "UMAP", colour_by = "louvain_SNNk15")
+plotReducedDim(ctrl.sce, dimred = "UMAP", colour_by = "leiden_k20")
 ```
 
 ## scMap
@@ -127,7 +128,7 @@ For scmap cell type labels must be stored in the `cell_type1` column of the `col
 
 ```{r}
 # add in slot cell_type1
-ref.sce@colData$cell_type1 <- ref.sce@colData$cell_type
+ref.sce$cell_type1 <- ref.sce$cell_type
 # create a rowData slot with feature_symbol
 rd <- data.frame(feature_symbol = rownames(ref.sce))
 rownames(rd) <- rownames(ref.sce)
@@ -180,7 +181,7 @@ Then add the predictions to metadata and plot UMAP.
 #| fig-width: 6
 
 # add in predictions
-ctrl.sce@colData$scmap_cluster <- project_cluster$scmap_cluster_labs
+ctrl.sce$scmap_cluster <- project_cluster$scmap_cluster_labs
 
 plotReducedDim(ctrl.sce, dimred = "UMAP", colour_by = "scmap_cluster")
 ```
@@ -218,7 +219,7 @@ Then add the predictions to metadata and plot umap.
 #| fig-width: 6
 
 # add in predictions
-ctrl.sce@colData$scmap_cell <- cell_type_pred
+ctrl.sce$scmap_cell <- cell_type_pred
 
 plotReducedDim(ctrl.sce, dimred = "UMAP", colour_by = "scmap_cell")
 ```
@@ -236,81 +237,84 @@ wrap_plots(
 )
 ```
 
-## {{< meta ct_scpred >}}
+## {{< meta ct_singler >}}
 
-{{< meta ct_scpred_1 >}}
+{{< meta ct_singler_1 >}}
 
-scPred works with Seurat objects, so we will convert both objects to seurat objects. You may see a lot of warnings about renaming things, but as long as you do not see an Error, you should be fine.
+{{< meta ct_singler_2 >}}
 
-```{r}
-suppressPackageStartupMessages(library(Seurat))
-
-reference <- Seurat::as.Seurat(ref.sce)
-ctrl <- Seurat::as.Seurat(ctrl.sce)
-```
-
-The loadings matrix is lost when converted to Seurat object, and scPred needs that information. So we need to rerun PCA with Seurat and the same hvgs.
+### Immune cell reference
 
 ```{r}
-VariableFeatures(reference) <- hvg.ref
-reference <- reference %>%
-    ScaleData(verbose = F) %>%
-    RunPCA(verbose = F)
+immune = celldex::DatabaseImmuneCellExpressionData()
+singler.immune <- SingleR(test = ctrl.sce, ref = immune, assay.type.test=1,
+    labels = immune$label.main)
 
-VariableFeatures(ctrl) <- hvg.ctrl
-ctrl <- ctrl %>%
-    ScaleData(verbose = F) %>%
-    RunPCA(verbose = F)
+head(singler.immune)
 ```
+
+
+### HPCA reference
 
 ```{r}
-reference <- getFeatureSpace(reference, "cell_type")
-reference <- trainModel(reference)
+
+hpca <- HumanPrimaryCellAtlasData()
+singler.hpca <- SingleR(test = ctrl.sce, ref = hpca, assay.type.test=1,
+    labels = hpca$label.main)
+
+head(singler.hpca)
 ```
 
-{{< meta ct_scpred_1 >}}
+### With own reference data
 
 ```{r}
-get_scpred(reference)
+singler.ref <- SingleR(test=ctrl.sce, ref=ref.sce, labels=ref.sce$cell_type, de.method="wilcox")
+head(singler.ref)
 ```
 
-{{< meta ct_scpred_3 >}}
-
-```{r}
-ctrl <- scPredict(ctrl, reference)
-```
+Compare results:
 
 ```{r}
 #| fig-height: 5
-#| fig-width: 7
+#| fig-width: 10
 
-DimPlot(ctrl, group.by = "scpred_prediction", label = T, repel = T) + NoAxes()
+ctrl.sce$singler.immune = singler.immune$pruned.labels
+ctrl.sce$singler.hpca = singler.hpca$pruned.labels
+ctrl.sce$singler.ref = singler.ref$pruned.labels
+
+wrap_plots(
+    plotReducedDim(ctrl.sce, dimred = "UMAP", colour_by = "singler.immune"),
+    plotReducedDim(ctrl.sce, dimred = "UMAP", colour_by = "singler.hpca"),
+    plotReducedDim(ctrl.sce, dimred = "UMAP", colour_by = "singler.ref"),
+    ncol = 3
+)
 ```
 
-{{< meta ct_scpred_4 >}}
 
-```{r}
-#| fig-height: 5
-#| fig-width: 7
 
-ggplot(ctrl@meta.data, aes(x = louvain_SNNk15, fill = scpred_prediction)) +
-    geom_bar() +
-    theme_classic()
-```
-
-Add the predictions into the SCE object
-
-```{r}
-ctrl.sce@colData$scpred_prediction <- ctrl$scpred_prediction
-```
 
 ## {{< meta ct_compare >}}
 
 {{< meta ct_compare_1 >}}
 
 ```{r}
-crossTab(ctrl, "scmap_cell", "scpred_prediction")
+table(ctrl.sce$scmap_cell, ctrl.sce$singler.hpca)
 ```
+
+Or plot onto umap:
+
+```{r}
+wrap_plots(
+    plotReducedDim(ctrl.sce, dimred = "UMAP", colour_by = "scmap_cluster"),
+    plotReducedDim(ctrl.sce, dimred = "UMAP", colour_by = "scmap_cell"),
+    plotReducedDim(ctrl.sce, dimred = "UMAP", colour_by = "singler.immune"),
+    plotReducedDim(ctrl.sce, dimred = "UMAP", colour_by = "singler.hpca"),
+    plotReducedDim(ctrl.sce, dimred = "UMAP", colour_by = "singler.ref"),
+    ncol = 3
+)
+```
+
+As you can see, the methods using the same reference all have similar results. While for instance singleR with different references give quite different predictions. This really shows that a relevant reference is the key in having reliable celltype predictions rather than the method used. 
 
 ## {{< meta ct_gsea >}}
 
@@ -324,7 +328,7 @@ crossTab(ctrl, "scmap_cell", "scpred_prediction")
 # run differential expression in our dataset, using clustering at resolution 0.3
 DGE_list <- scran::findMarkers(
     x = alldata,
-    groups = as.character(alldata@colData$louvain_SNNk15),
+    groups = as.character(alldata$leiden_k20),
     pval.type = "all",
     min.prop = 0
 )
@@ -334,7 +338,7 @@ DGE_list <- scran::findMarkers(
 # Compute differential gene expression in reference dataset (that has cell annotation)
 ref_DGE <- scran::findMarkers(
     x = ref.sce,
-    groups = as.character(ref.sce@colData$cell_type),
+    groups = as.character(ref.sce$cell_type),
     pval.type = "all",
     direction = "up"
 )
@@ -392,10 +396,10 @@ new.cluster.ids <- unlist(lapply(res, function(x) {
     as.data.frame(x)[1, 1]
 }))
 
-alldata@colData$ref_gsea <- new.cluster.ids[as.character(alldata@colData$louvain_SNNk15)]
+alldata$ref_gsea <- new.cluster.ids[as.character(alldata$leiden_k20)]
 
 wrap_plots(
-    plotReducedDim(alldata, dimred = "UMAP", colour_by = "louvain_SNNk15"),
+    plotReducedDim(alldata, dimred = "UMAP", colour_by = "leiden_k20"),
     plotReducedDim(alldata, dimred = "UMAP", colour_by = "ref_gsea"),
     ncol = 2
 )
@@ -407,12 +411,12 @@ wrap_plots(
 #| fig-height: 3.5
 #| fig-width: 12
 
-ctrl.sce@colData$ref_gsea <- alldata@colData$ref_gsea[alldata@colData$sample == "ctrl.13"]
+ctrl.sce$ref_gsea <- alldata$ref_gsea[alldata$sample == "ctrl.13"]
 
 wrap_plots(
     plotReducedDim(ctrl.sce, dimred = "UMAP", colour_by = "ref_gsea"),
     plotReducedDim(ctrl.sce, dimred = "UMAP", colour_by = "scmap_cell"),
-    plotReducedDim(ctrl.sce, dimred = "UMAP", colour_by = "scpred_prediction"),
+    plotReducedDim(ctrl.sce, dimred = "UMAP", colour_by = "singler.hpca"),
     ncol = 3
 )
 ```
@@ -487,7 +491,7 @@ lapply(res, head, 3)
 new.cluster.ids <- unlist(lapply(res, function(x) {
     as.data.frame(x)[1, 1]
 }))
-alldata@colData$cellmarker_gsea <- new.cluster.ids[as.character(alldata@colData$louvain_SNNk15)]
+alldata$cellmarker_gsea <- new.cluster.ids[as.character(alldata$leiden_k20)]
 
 wrap_plots(
     plotReducedDim(alldata, dimred = "UMAP", colour_by = "cellmarker_gsea"),

@@ -207,7 +207,7 @@ background-size: cover;
       <div>
       <div class="quarto-title-meta-heading">Published</div>
       <div class="quarto-title-meta-contents">
-        <p class="date">05-Feb-2024</p>
+        <p class="date">01-Oct-2024</p>
       </div>
     </div>
     
@@ -235,7 +235,8 @@ background-size: cover;
   <li><a href="#meta-clust_hier_clust" id="toc-meta-clust_hier_clust" class="nav-link" data-scroll-target="#meta-clust_hier_clust"><span class="header-section-number">3.2</span> Clustering cells</a></li>
   </ul></li>
   <li><a href="#meta-clust_distribution" id="toc-meta-clust_distribution" class="nav-link" data-scroll-target="#meta-clust_distribution"><span class="header-section-number">4</span> Distribution of clusters</a></li>
-  <li><a href="#meta-session" id="toc-meta-session" class="nav-link" data-scroll-target="#meta-session"><span class="header-section-number">5</span> Session info</a></li>
+  <li><a href="#meta-clust_sub" id="toc-meta-clust_sub" class="nav-link" data-scroll-target="#meta-clust_sub"><span class="header-section-number">5</span> Subclustering of T and NK-cells</a></li>
+  <li><a href="#meta-session" id="toc-meta-session" class="nav-link" data-scroll-target="#meta-session"><span class="header-section-number">6</span> Session info</a></li>
   </ul>
 </nav>
     </div>
@@ -259,7 +260,7 @@ Note
 <p>Code chunks run R commands unless otherwise specified.</p>
 </div>
 </div>
-<p>In this tutorial, we will continue the analysis of the integrated dataset. We will use the integrated PCA to perform the clustering. First, we will construct a <span class="math inline">\(k\)</span>-nearest neighbor graph in order to perform a clustering on the graph. We will also show how to perform hierarchical clustering and k-means clustering on PCA space.</p>
+<p>In this tutorial, we will continue the analysis of the integrated dataset. We will use the integrated PCA or CCA to perform the clustering. First, we will construct a <span class="math inline">\(k\)</span>-nearest neighbor graph in order to perform a clustering on the graph. We will also show how to perform hierarchical clustering and k-means clustering on the selected space.</p>
 <p>Let’s first load all necessary libraries and also the integrated dataset from the previous step.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">suppressPackageStartupMessages</span>({</span>
@@ -270,7 +271,8 @@ Note
 <span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">library</span>(pheatmap)</span>
 <span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="fu">library</span>(igraph)</span>
 <span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="fu">library</span>(clustree)</span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>})</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    <span class="fu">library</span>(bluster)</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>})</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># download pre-computed data if missing or long compute</span></span>
@@ -285,7 +287,7 @@ Note
 <span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(<span class="fu">reducedDims</span>(sce))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>List of length 15
-names(15): PCA UMAP tSNE_on_PCA ... Scanorama_PCA UMAP_on_Scanorama</code></pre>
+names(15): PCA UMAP tSNE_on_PCA ... UMAP_on_Harmony Scanorama UMAP_on_Scanorama</code></pre>
 </div>
 </div>
 <section id="meta-clust_graphclust" class="level2" data-number="1">
@@ -299,11 +301,11 @@ names(15): PCA UMAP tSNE_on_PCA ... Scanorama_PCA UMAP_on_Scanorama</code></pre>
 <p>The first step into graph clustering is to construct a k-nn graph, in case you don’t have one. For this, we will use the PCA space. Thus, as done for dimensionality reduction, we will use ony the top <em>N</em> PCA dimensions for this purpose (the same used for computing UMAP / tSNE).</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># These 2 lines are for demonstration purposes only</span></span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>g <span class="ot">&lt;-</span> <span class="fu">buildKNNGraph</span>(sce, <span class="at">k =</span> <span class="dv">30</span>, <span class="at">use.dimred =</span> <span class="st">"MNN"</span>)</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>g <span class="ot">&lt;-</span> <span class="fu">buildKNNGraph</span>(sce, <span class="at">k =</span> <span class="dv">30</span>, <span class="at">use.dimred =</span> <span class="st">"harmony"</span>)</span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="fu">reducedDim</span>(sce, <span class="st">"KNN"</span>) <span class="ot">&lt;-</span> igraph<span class="sc">::</span><span class="fu">as_adjacency_matrix</span>(g)</span>
 <span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="co"># These 2 lines are the most recommended</span></span>
-<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>g <span class="ot">&lt;-</span> <span class="fu">buildSNNGraph</span>(sce, <span class="at">k =</span> <span class="dv">30</span>, <span class="at">use.dimred =</span> <span class="st">"MNN"</span>)</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="co"># These 2 lines are the most recommended, it first run the KNN graph construction and then creates the SNN graph.</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>g <span class="ot">&lt;-</span> <span class="fu">buildSNNGraph</span>(sce, <span class="at">k =</span> <span class="dv">30</span>, <span class="at">use.dimred =</span> <span class="st">"harmony"</span>)</span>
 <span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="fu">reducedDim</span>(sce, <span class="st">"SNN"</span>) <span class="ot">&lt;-</span> <span class="fu">as_adjacency_matrix</span>(g, <span class="at">attr =</span> <span class="st">"weight"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>We can take a look at the kNN and SNN graphs. The kNN graph is a matrix where every connection between cells is represented as <span class="math inline">\(1\)</span>s. This is called a <strong>unweighted</strong> graph (default in Seurat). In the SNN graph on the other hand, some cell connections have more importance than others, and the graph scales from <span class="math inline">\(0\)</span> to a maximum distance (in this case <span class="math inline">\(1\)</span>). Usually, the smaller the distance, the closer two points are, and stronger is their connection. This is called a <strong>weighted</strong> graph. Both weighted and unweighted graphs are suitable for clustering, but clustering on unweighted graphs is faster for large datasets (&gt; 100k cells).</p>
@@ -335,33 +337,60 @@ names(15): PCA UMAP tSNE_on_PCA ... Scanorama_PCA UMAP_on_Scanorama</code></pre>
 </div>
 </div>
 <p>As you can see, the way Scran computes the SNN graph is different to Seurat. It gives edges to all cells that shares a neighbor, but weights the edges by how similar the neighbors are. Hence, the SNN graph has more edges than the KNN graph.</p>
+<p>There are 3 different options how to define the SNN these are:</p>
+<ul>
+<li><code>rank</code>- scoring based on shared close neighbors, i.e.&nbsp;ranking the neighbors of two cells and comparing the ranks.</li>
+<li><code>number</code> - number of shared neighbors</li>
+<li><code>jaccard</code> - calculate Jaccard similarity, same as in Seurat.</li>
+</ul>
 </section>
 <section id="meta-clust_graphclust_graph" class="level3" data-number="1.2">
 <h3 data-number="1.2" class="anchored" data-anchor-id="meta-clust_graphclust_graph"><span class="header-section-number">1.2</span> Clustering on a graph</h3>
 <p>Once the graph is built, we can now perform graph clustering. The clustering is done respective to a resolution which can be interpreted as how coarse you want your cluster to be. Higher resolution means higher number of clusters.</p>
+<p>For clustering we can use the function <code>clusterCells()</code> which actually runs the steps of building the KNN and SNN graph for us, and also does the graph partition. All the clustering builds on the <code>bluster</code> package and we specify the different options using the <code>NNGraphParam()</code> class.</p>
+<p>Some parameters to consider are:</p>
+<ul>
+<li><code>shared</code>, can be TRUE/FALSE - construct SNN graph (TRUE) or cluster on the KNN graph (FALSE)</li>
+<li><code>type</code> - for SNN graph method, can be <code>rank</code>, <code>number</code> or <code>jaccard</code></li>
+<li><code>k</code> - number of neighbors in the KNN construction. Can be any function implemented in ighraph</li>
+<li><code>cluster.fun</code> - which community detection method.</li>
+<li><code>cluster.args</code> - paramters to the different clustering functions</li>
+</ul>
+<p>So to find out what the different options are for the different methods you would have to check the documentation in the igraph package, e.g.&nbsp;<code>?igraph::cluster_leiden</code>.</p>
+<p>Here we will use the integration with Harmony to build the graph, and the umap built on Harmony for visualization.</p>
+<p>OBS! There is no method to select fewer than the total 50 components in the embedding for creating the graph, so here we create a new <code>reducedDim</code> instance with only 20 components.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>g <span class="ot">&lt;-</span> <span class="fu">buildSNNGraph</span>(sce, <span class="at">k =</span> <span class="dv">5</span>, <span class="at">use.dimred =</span> <span class="st">"MNN"</span>)</span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>sce<span class="sc">$</span>louvain_SNNk5 <span class="ot">&lt;-</span> <span class="fu">factor</span>(<span class="fu">cluster_louvain</span>(g)<span class="sc">$</span>membership)</span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>g <span class="ot">&lt;-</span> <span class="fu">buildSNNGraph</span>(sce, <span class="at">k =</span> <span class="dv">10</span>, <span class="at">use.dimred =</span> <span class="st">"MNN"</span>)</span>
-<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>sce<span class="sc">$</span>louvain_SNNk10 <span class="ot">&lt;-</span> <span class="fu">factor</span>(<span class="fu">cluster_louvain</span>(g)<span class="sc">$</span>membership)</span>
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">reducedDims</span>(sce)<span class="sc">$</span>harmony2 <span class="ot">=</span> <span class="fu">reducedDims</span>(sce)<span class="sc">$</span>harmony[,<span class="dv">1</span><span class="sc">:</span><span class="dv">20</span>]</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>sce<span class="sc">$</span>louvain_k30 <span class="ot">&lt;-</span> <span class="fu">clusterCells</span>(sce, <span class="at">use.dimred =</span> <span class="st">"harmony2"</span>, <span class="at">BLUSPARAM=</span><span class="fu">SNNGraphParam</span>(<span class="at">k=</span><span class="dv">30</span>, <span class="at">cluster.fun=</span><span class="st">"louvain"</span>,  <span class="at">cluster.args =</span> <span class="fu">list</span>(<span class="at">resolution=</span><span class="fl">0.5</span>)))</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>sce<span class="sc">$</span>louvain_k20 <span class="ot">&lt;-</span> <span class="fu">clusterCells</span>(sce, <span class="at">use.dimred =</span> <span class="st">"harmony2"</span>, <span class="at">BLUSPARAM=</span><span class="fu">SNNGraphParam</span>(<span class="at">k=</span><span class="dv">20</span>, <span class="at">cluster.fun=</span><span class="st">"louvain"</span>,  <span class="at">cluster.args =</span> <span class="fu">list</span>(<span class="at">resolution=</span><span class="fl">0.5</span>)))</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>sce<span class="sc">$</span>louvain_k10 <span class="ot">&lt;-</span> <span class="fu">clusterCells</span>(sce, <span class="at">use.dimred =</span> <span class="st">"harmony2"</span>, <span class="at">BLUSPARAM=</span><span class="fu">SNNGraphParam</span>(<span class="at">k=</span><span class="dv">10</span>, <span class="at">cluster.fun=</span><span class="st">"louvain"</span>,  <span class="at">cluster.args =</span> <span class="fu">list</span>(<span class="at">resolution=</span><span class="fl">0.5</span>)))</span>
 <span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>g <span class="ot">&lt;-</span> <span class="fu">buildSNNGraph</span>(sce, <span class="at">k =</span> <span class="dv">15</span>, <span class="at">use.dimred =</span> <span class="st">"MNN"</span>)</span>
-<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>sce<span class="sc">$</span>louvain_SNNk15 <span class="ot">&lt;-</span> <span class="fu">factor</span>(<span class="fu">cluster_louvain</span>(g)<span class="sc">$</span>membership)</span>
-<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a><span class="fu">wrap_plots</span>(</span>
-<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotReducedDim</span>(sce, <span class="at">dimred =</span> <span class="st">"UMAP_on_MNN"</span>, <span class="at">colour_by =</span> <span class="st">"louvain_SNNk5"</span>) <span class="sc">+</span></span>
-<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>        ggplot2<span class="sc">::</span><span class="fu">ggtitle</span>(<span class="at">label =</span> <span class="st">"louvain_SNNk5"</span>),</span>
-<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotReducedDim</span>(sce, <span class="at">dimred =</span> <span class="st">"UMAP_on_MNN"</span>, <span class="at">colour_by =</span> <span class="st">"louvain_SNNk10"</span>) <span class="sc">+</span></span>
-<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a>        ggplot2<span class="sc">::</span><span class="fu">ggtitle</span>(<span class="at">label =</span> <span class="st">"louvain_SNNk10"</span>),</span>
-<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotReducedDim</span>(sce, <span class="at">dimred =</span> <span class="st">"UMAP_on_MNN"</span>, <span class="at">colour_by =</span> <span class="st">"louvain_SNNk15"</span>) <span class="sc">+</span></span>
-<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a>        ggplot2<span class="sc">::</span><span class="fu">ggtitle</span>(<span class="at">label =</span> <span class="st">"louvain_SNNk15"</span>),</span>
-<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a>    <span class="at">ncol =</span> <span class="dv">3</span></span>
-<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>sce<span class="sc">$</span>leiden_k30 <span class="ot">&lt;-</span> <span class="fu">clusterCells</span>(sce, <span class="at">use.dimred =</span> <span class="st">"harmony2"</span>, <span class="at">BLUSPARAM=</span><span class="fu">SNNGraphParam</span>(<span class="at">k=</span><span class="dv">30</span>, <span class="at">cluster.fun=</span><span class="st">"leiden"</span>,  <span class="at">cluster.args =</span> <span class="fu">list</span>(<span class="at">resolution_parameter=</span><span class="fl">0.3</span>)))</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>sce<span class="sc">$</span>leiden_k20 <span class="ot">&lt;-</span> <span class="fu">clusterCells</span>(sce, <span class="at">use.dimred =</span> <span class="st">"harmony2"</span>, <span class="at">BLUSPARAM=</span><span class="fu">SNNGraphParam</span>(<span class="at">k=</span><span class="dv">20</span>, <span class="at">cluster.fun=</span><span class="st">"leiden"</span>,  <span class="at">cluster.args =</span> <span class="fu">list</span>(<span class="at">resolution_parameter=</span><span class="fl">0.3</span>)))</span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>sce<span class="sc">$</span>leiden_k10 <span class="ot">&lt;-</span> <span class="fu">clusterCells</span>(sce, <span class="at">use.dimred =</span> <span class="st">"harmony2"</span>, <span class="at">BLUSPARAM=</span><span class="fu">SNNGraphParam</span>(<span class="at">k=</span><span class="dv">10</span>, <span class="at">cluster.fun=</span><span class="st">"leiden"</span>,  <span class="at">cluster.args =</span> <span class="fu">list</span>(<span class="at">resolution_parameter=</span><span class="fl">0.3</span>)))</span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a><span class="fu">wrap_plots</span>(</span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotReducedDim</span>(sce, <span class="at">dimred =</span> <span class="st">"UMAP_on_Harmony"</span>, <span class="at">colour_by =</span> <span class="st">"louvain_k30"</span>) <span class="sc">+</span></span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a>        ggplot2<span class="sc">::</span><span class="fu">ggtitle</span>(<span class="at">label =</span> <span class="st">"louvain_k30"</span>),  </span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotReducedDim</span>(sce, <span class="at">dimred =</span> <span class="st">"UMAP_on_Harmony"</span>, <span class="at">colour_by =</span> <span class="st">"louvain_k20"</span>) <span class="sc">+</span></span>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a>        ggplot2<span class="sc">::</span><span class="fu">ggtitle</span>(<span class="at">label =</span> <span class="st">"louvain_k20"</span>),</span>
+<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotReducedDim</span>(sce, <span class="at">dimred =</span> <span class="st">"UMAP_on_Harmony"</span>, <span class="at">colour_by =</span> <span class="st">"louvain_k10"</span>) <span class="sc">+</span></span>
+<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a>        ggplot2<span class="sc">::</span><span class="fu">ggtitle</span>(<span class="at">label =</span> <span class="st">"louvain_k10"</span>),</span>
+<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotReducedDim</span>(sce, <span class="at">dimred =</span> <span class="st">"UMAP_on_Harmony"</span>, <span class="at">colour_by =</span> <span class="st">"leiden_k30"</span>) <span class="sc">+</span></span>
+<span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a>        ggplot2<span class="sc">::</span><span class="fu">ggtitle</span>(<span class="at">label =</span> <span class="st">"leiden_k30"</span>),</span>
+<span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotReducedDim</span>(sce, <span class="at">dimred =</span> <span class="st">"UMAP_on_Harmony"</span>, <span class="at">colour_by =</span> <span class="st">"leiden_k20"</span>) <span class="sc">+</span></span>
+<span id="cb7-23"><a href="#cb7-23" aria-hidden="true" tabindex="-1"></a>        ggplot2<span class="sc">::</span><span class="fu">ggtitle</span>(<span class="at">label =</span> <span class="st">"leiden_k20"</span>),</span>
+<span id="cb7-24"><a href="#cb7-24" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotReducedDim</span>(sce, <span class="at">dimred =</span> <span class="st">"UMAP_on_Harmony"</span>, <span class="at">colour_by =</span> <span class="st">"leiden_k10"</span>) <span class="sc">+</span></span>
+<span id="cb7-25"><a href="#cb7-25" aria-hidden="true" tabindex="-1"></a>        ggplot2<span class="sc">::</span><span class="fu">ggtitle</span>(<span class="at">label =</span> <span class="st">"leiden_k10"</span>),</span>
+<span id="cb7-26"><a href="#cb7-26" aria-hidden="true" tabindex="-1"></a>    <span class="at">ncol =</span> <span class="dv">3</span></span>
+<span id="cb7-27"><a href="#cb7-27" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="bioc_04_clustering_files/figure-html/unnamed-chunk-5-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-4"><img src="bioc_04_clustering_files/figure-html/unnamed-chunk-5-1.png" class="img-fluid figure-img" width="1152"></a></p>
+<p><a href="bioc_04_clustering_files/figure-html/unnamed-chunk-5-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-4"><img src="bioc_04_clustering_files/figure-html/unnamed-chunk-5-1.png" class="img-fluid figure-img" width="960"></a></p>
 </figure>
 </div>
 </div>
@@ -369,7 +398,7 @@ names(15): PCA UMAP tSNE_on_PCA ... Scanorama_PCA UMAP_on_Scanorama</code></pre>
 <p>We can now use the <code>clustree</code> package to visualize how cells are distributed between clusters depending on resolution.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">suppressPackageStartupMessages</span>(<span class="fu">library</span>(clustree))</span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="fu">clustree</span>(sce, <span class="at">prefix =</span> <span class="st">"louvain_SNNk"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="fu">clustree</span>(sce, <span class="at">prefix =</span> <span class="st">"louvain_k"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
@@ -384,19 +413,23 @@ names(15): PCA UMAP tSNE_on_PCA ... Scanorama_PCA UMAP_on_Scanorama</code></pre>
 <h2 data-number="2" class="anchored" data-anchor-id="meta-clust_kmean"><span class="header-section-number">2</span> K-means clustering</h2>
 <p>K-means is a generic clustering algorithm that has been used in many application areas. In R, it can be applied via the <code>kmeans()</code> function. Typically, it is applied to a reduced dimension representation of the expression data (most often PCA, because of the interpretability of the low-dimensional distances). We need to define the number of clusters in advance. Since the results depend on the initialization of the cluster centers, it is typically recommended to run K-means with multiple starting configurations (via the <code>nstart</code> argument).</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>sce<span class="sc">$</span>kmeans_5 <span class="ot">&lt;-</span> <span class="fu">factor</span>(<span class="fu">kmeans</span>(<span class="at">x =</span> <span class="fu">reducedDim</span>(sce, <span class="st">"MNN"</span>), <span class="at">centers =</span> <span class="dv">5</span>)<span class="sc">$</span>cluster)</span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>sce<span class="sc">$</span>kmeans_10 <span class="ot">&lt;-</span> <span class="fu">factor</span>(<span class="fu">kmeans</span>(<span class="at">x =</span> <span class="fu">reducedDim</span>(sce, <span class="st">"MNN"</span>), <span class="at">centers =</span> <span class="dv">10</span>)<span class="sc">$</span>cluster)</span>
-<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>sce<span class="sc">$</span>kmeans_15 <span class="ot">&lt;-</span> <span class="fu">factor</span>(<span class="fu">kmeans</span>(<span class="at">x =</span> <span class="fu">reducedDim</span>(sce, <span class="st">"MNN"</span>), <span class="at">centers =</span> <span class="dv">15</span>)<span class="sc">$</span>cluster)</span>
-<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="fu">wrap_plots</span>(</span>
-<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotReducedDim</span>(sce, <span class="at">dimred =</span> <span class="st">"UMAP_on_MNN"</span>, <span class="at">colour_by =</span> <span class="st">"kmeans_5"</span>) <span class="sc">+</span></span>
-<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>        ggplot2<span class="sc">::</span><span class="fu">ggtitle</span>(<span class="at">label =</span> <span class="st">"KMeans5"</span>),</span>
-<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotReducedDim</span>(sce, <span class="at">dimred =</span> <span class="st">"UMAP_on_MNN"</span>, <span class="at">colour_by =</span> <span class="st">"kmeans_10"</span>) <span class="sc">+</span></span>
-<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>        ggplot2<span class="sc">::</span><span class="fu">ggtitle</span>(<span class="at">label =</span> <span class="st">"KMeans10"</span>),</span>
-<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotReducedDim</span>(sce, <span class="at">dimred =</span> <span class="st">"UMAP_on_MNN"</span>, <span class="at">colour_by =</span> <span class="st">"kmeans_15"</span>) <span class="sc">+</span></span>
-<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>        ggplot2<span class="sc">::</span><span class="fu">ggtitle</span>(<span class="at">label =</span> <span class="st">"KMeans15"</span>),</span>
-<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">ncol =</span> <span class="dv">3</span></span>
-<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>sce<span class="sc">$</span>kmeans_5 <span class="ot">&lt;-</span> <span class="fu">clusterCells</span>(sce, <span class="at">use.dimred =</span> <span class="st">"harmony2"</span>, <span class="at">BLUSPARAM=</span><span class="fu">KmeansParam</span>(<span class="at">centers=</span><span class="dv">5</span>))</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>sce<span class="sc">$</span>kmeans_10 <span class="ot">&lt;-</span> <span class="fu">clusterCells</span>(sce, <span class="at">use.dimred =</span> <span class="st">"harmony2"</span>, <span class="at">BLUSPARAM=</span><span class="fu">KmeansParam</span>(<span class="at">centers=</span><span class="dv">10</span>))  </span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>sce<span class="sc">$</span>kmeans_15 <span class="ot">&lt;-</span> <span class="fu">clusterCells</span>(sce, <span class="at">use.dimred =</span> <span class="st">"harmony2"</span>, <span class="at">BLUSPARAM=</span><span class="fu">KmeansParam</span>(<span class="at">centers=</span><span class="dv">15</span>))</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>sce<span class="sc">$</span>kmeans_20 <span class="ot">&lt;-</span> <span class="fu">clusterCells</span>(sce, <span class="at">use.dimred =</span> <span class="st">"harmony2"</span>, <span class="at">BLUSPARAM=</span><span class="fu">KmeansParam</span>(<span class="at">centers=</span><span class="dv">20</span>))</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a><span class="fu">wrap_plots</span>(</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotReducedDim</span>(sce, <span class="at">dimred =</span> <span class="st">"UMAP_on_Harmony"</span>, <span class="at">colour_by =</span> <span class="st">"kmeans_5"</span>) <span class="sc">+</span></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>        ggplot2<span class="sc">::</span><span class="fu">ggtitle</span>(<span class="at">label =</span> <span class="st">"KMeans5"</span>),</span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotReducedDim</span>(sce, <span class="at">dimred =</span> <span class="st">"UMAP_on_Harmony"</span>, <span class="at">colour_by =</span> <span class="st">"kmeans_10"</span>) <span class="sc">+</span></span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>        ggplot2<span class="sc">::</span><span class="fu">ggtitle</span>(<span class="at">label =</span> <span class="st">"KMeans10"</span>),</span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotReducedDim</span>(sce, <span class="at">dimred =</span> <span class="st">"UMAP_on_Harmony"</span>, <span class="at">colour_by =</span> <span class="st">"kmeans_15"</span>) <span class="sc">+</span></span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>        ggplot2<span class="sc">::</span><span class="fu">ggtitle</span>(<span class="at">label =</span> <span class="st">"KMeans15"</span>),</span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotReducedDim</span>(sce, <span class="at">dimred =</span> <span class="st">"UMAP_on_Harmony"</span>, <span class="at">colour_by =</span> <span class="st">"kmeans_15"</span>) <span class="sc">+</span></span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a>        ggplot2<span class="sc">::</span><span class="fu">ggtitle</span>(<span class="at">label =</span> <span class="st">"KMeans20"</span>),</span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">ncol =</span> <span class="dv">2</span></span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
@@ -418,11 +451,12 @@ names(15): PCA UMAP tSNE_on_PCA ... Scanorama_PCA UMAP_on_Scanorama</code></pre>
 </section>
 <section id="meta-clust_hier" class="level2" data-number="3">
 <h2 data-number="3" class="anchored" data-anchor-id="meta-clust_hier"><span class="header-section-number">3</span> Hierarchical clustering</h2>
+<p>There is the optioni to run hierarchical clustering in the <code>clusterCells</code> function using <code>HclustParam</code>, but there are limited options to specify distances such as correlations that we show below, so we will run the clustering with our own implementation.</p>
 <section id="meta-clust_hier_dist" class="level3" data-number="3.1">
 <h3 data-number="3.1" class="anchored" data-anchor-id="meta-clust_hier_dist"><span class="header-section-number">3.1</span> Defining distance between cells</h3>
 <p>The base R <code>stats</code> package already contains a function <code>dist</code> that calculates distances between all pairs of samples. Since we want to compute distances between samples, rather than among genes, we need to transpose the data before applying it to the <code>dist</code> function. This can be done by simply adding the transpose function <code>t()</code> to the data. The distance methods available in <code>dist</code> are: ‘euclidean’, ‘maximum’, ‘manhattan’, ‘canberra’, ‘binary’ or ‘minkowski’.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>d <span class="ot">&lt;-</span> <span class="fu">dist</span>(<span class="fu">reducedDim</span>(sce, <span class="st">"MNN"</span>), <span class="at">method =</span> <span class="st">"euclidean"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>d <span class="ot">&lt;-</span> <span class="fu">dist</span>(<span class="fu">reducedDim</span>(sce, <span class="st">"harmony2"</span>), <span class="at">method =</span> <span class="st">"euclidean"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>As you might have realized, correlation is not a method implemented in the <code>dist()</code> function. However, we can create our own distances and transform them to a distance object. We can first compute sample correlations using the <code>cor</code> function.<br>
 As you already know, correlation range from -1 to 1, where 1 indicates that two samples are closest, -1 indicates that two samples are the furthest and 0 is somewhat in between. This, however, creates a problem in defining distances because a distance of 0 indicates that two samples are closest, 1 indicates that two samples are the furthest and distance of -1 is not meaningful. We thus need to transform the correlations to a positive scale (a.k.a. <strong>adjacency</strong>):<br>
@@ -430,7 +464,7 @@ As you already know, correlation range from -1 to 1, where 1 indicates that two 
 Once we transformed the correlations to a 0-1 scale, we can simply convert it to a distance object using <code>as.dist()</code> function. The transformation does not need to have a maximum of 1, but it is more intuitive to have it at 1, rather than at any other number.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Compute sample correlations</span></span>
-<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>sample_cor <span class="ot">&lt;-</span> <span class="fu">cor</span>(Matrix<span class="sc">::</span><span class="fu">t</span>(<span class="fu">reducedDim</span>(sce, <span class="st">"MNN"</span>)))</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>sample_cor <span class="ot">&lt;-</span> <span class="fu">cor</span>(Matrix<span class="sc">::</span><span class="fu">t</span>(<span class="fu">reducedDim</span>(sce, <span class="st">"harmony2"</span>)))</span>
 <span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Transform the scale from correlations</span></span>
 <span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>sample_cor <span class="ot">&lt;-</span> (<span class="dv">1</span> <span class="sc">-</span> sample_cor) <span class="sc">/</span> <span class="dv">2</span></span>
@@ -462,17 +496,17 @@ Once we transformed the correlations to a 0-1 scale, we can simply convert it to
 <span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>sce<span class="sc">$</span>hc_corelation_15 <span class="ot">&lt;-</span> <span class="fu">factor</span>(<span class="fu">cutree</span>(h_correlation, <span class="at">k =</span> <span class="dv">15</span>))</span>
 <span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a><span class="fu">wrap_plots</span>(</span>
-<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotReducedDim</span>(sce, <span class="at">dimred =</span> <span class="st">"UMAP_on_MNN"</span>, <span class="at">colour_by =</span> <span class="st">"hc_euclidean_5"</span>) <span class="sc">+</span></span>
+<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotReducedDim</span>(sce, <span class="at">dimred =</span> <span class="st">"UMAP_on_Harmony"</span>, <span class="at">colour_by =</span> <span class="st">"hc_euclidean_5"</span>) <span class="sc">+</span></span>
 <span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a>        ggplot2<span class="sc">::</span><span class="fu">ggtitle</span>(<span class="at">label =</span> <span class="st">"HC_euclidean_5"</span>),</span>
-<span id="cb14-14"><a href="#cb14-14" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotReducedDim</span>(sce, <span class="at">dimred =</span> <span class="st">"UMAP_on_MNN"</span>, <span class="at">colour_by =</span> <span class="st">"hc_euclidean_10"</span>) <span class="sc">+</span></span>
+<span id="cb14-14"><a href="#cb14-14" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotReducedDim</span>(sce, <span class="at">dimred =</span> <span class="st">"UMAP_on_Harmony"</span>, <span class="at">colour_by =</span> <span class="st">"hc_euclidean_10"</span>) <span class="sc">+</span></span>
 <span id="cb14-15"><a href="#cb14-15" aria-hidden="true" tabindex="-1"></a>        ggplot2<span class="sc">::</span><span class="fu">ggtitle</span>(<span class="at">label =</span> <span class="st">"HC_euclidean_10"</span>),</span>
-<span id="cb14-16"><a href="#cb14-16" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotReducedDim</span>(sce, <span class="at">dimred =</span> <span class="st">"UMAP_on_MNN"</span>, <span class="at">colour_by =</span> <span class="st">"hc_euclidean_15"</span>) <span class="sc">+</span></span>
+<span id="cb14-16"><a href="#cb14-16" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotReducedDim</span>(sce, <span class="at">dimred =</span> <span class="st">"UMAP_on_Harmony"</span>, <span class="at">colour_by =</span> <span class="st">"hc_euclidean_15"</span>) <span class="sc">+</span></span>
 <span id="cb14-17"><a href="#cb14-17" aria-hidden="true" tabindex="-1"></a>        ggplot2<span class="sc">::</span><span class="fu">ggtitle</span>(<span class="at">label =</span> <span class="st">"HC_euclidean_15"</span>),</span>
-<span id="cb14-18"><a href="#cb14-18" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotReducedDim</span>(sce, <span class="at">dimred =</span> <span class="st">"UMAP_on_MNN"</span>, <span class="at">colour_by =</span> <span class="st">"hc_corelation_5"</span>) <span class="sc">+</span></span>
+<span id="cb14-18"><a href="#cb14-18" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotReducedDim</span>(sce, <span class="at">dimred =</span> <span class="st">"UMAP_on_Harmony"</span>, <span class="at">colour_by =</span> <span class="st">"hc_corelation_5"</span>) <span class="sc">+</span></span>
 <span id="cb14-19"><a href="#cb14-19" aria-hidden="true" tabindex="-1"></a>        ggplot2<span class="sc">::</span><span class="fu">ggtitle</span>(<span class="at">label =</span> <span class="st">"HC_correlation_5"</span>),</span>
-<span id="cb14-20"><a href="#cb14-20" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotReducedDim</span>(sce, <span class="at">dimred =</span> <span class="st">"UMAP_on_MNN"</span>, <span class="at">colour_by =</span> <span class="st">"hc_corelation_10"</span>) <span class="sc">+</span></span>
+<span id="cb14-20"><a href="#cb14-20" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotReducedDim</span>(sce, <span class="at">dimred =</span> <span class="st">"UMAP_on_Harmony"</span>, <span class="at">colour_by =</span> <span class="st">"hc_corelation_10"</span>) <span class="sc">+</span></span>
 <span id="cb14-21"><a href="#cb14-21" aria-hidden="true" tabindex="-1"></a>        ggplot2<span class="sc">::</span><span class="fu">ggtitle</span>(<span class="at">label =</span> <span class="st">"HC_correlation_10"</span>),</span>
-<span id="cb14-22"><a href="#cb14-22" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotReducedDim</span>(sce, <span class="at">dimred =</span> <span class="st">"UMAP_on_MNN"</span>, <span class="at">colour_by =</span> <span class="st">"hc_corelation_15"</span>) <span class="sc">+</span></span>
+<span id="cb14-22"><a href="#cb14-22" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotReducedDim</span>(sce, <span class="at">dimred =</span> <span class="st">"UMAP_on_Harmony"</span>, <span class="at">colour_by =</span> <span class="st">"hc_corelation_15"</span>) <span class="sc">+</span></span>
 <span id="cb14-23"><a href="#cb14-23" aria-hidden="true" tabindex="-1"></a>        ggplot2<span class="sc">::</span><span class="fu">ggtitle</span>(<span class="at">label =</span> <span class="st">"HC_correlation_15"</span>),</span>
 <span id="cb14-24"><a href="#cb14-24" aria-hidden="true" tabindex="-1"></a>    <span class="at">ncol =</span> <span class="dv">3</span></span>
 <span id="cb14-25"><a href="#cb14-25" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -494,9 +528,9 @@ Once we transformed the correlations to a 0-1 scale, we can simply convert it to
 <h2 data-number="4" class="anchored" data-anchor-id="meta-clust_distribution"><span class="header-section-number">4</span> Distribution of clusters</h2>
 <p>Now, we can select one of our clustering methods and compare the proportion of samples across the clusters.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>p1 <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(<span class="fu">as.data.frame</span>(<span class="fu">colData</span>(sce)), <span class="fu">aes</span>(<span class="at">x =</span> louvain_SNNk10, <span class="at">fill =</span> sample)) <span class="sc">+</span></span>
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>p1 <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(<span class="fu">as.data.frame</span>(<span class="fu">colData</span>(sce)), <span class="fu">aes</span>(<span class="at">x =</span> leiden_k20, <span class="at">fill =</span> sample)) <span class="sc">+</span></span>
 <span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_bar</span>(<span class="at">position =</span> <span class="st">"fill"</span>)</span>
-<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>p2 <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(<span class="fu">as.data.frame</span>(<span class="fu">colData</span>(sce)), <span class="fu">aes</span>(<span class="at">x =</span> louvain_SNNk10, <span class="at">fill =</span> type)) <span class="sc">+</span></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>p2 <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(<span class="fu">as.data.frame</span>(<span class="fu">colData</span>(sce)), <span class="fu">aes</span>(<span class="at">x =</span> leiden_k20, <span class="at">fill =</span> type)) <span class="sc">+</span></span>
 <span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_bar</span>(<span class="at">position =</span> <span class="st">"fill"</span>)</span>
 <span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>p1 <span class="sc">+</span> p2</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -511,7 +545,7 @@ Once we transformed the correlations to a 0-1 scale, we can simply convert it to
 <p>In this case we have quite good representation of each sample in each cluster. But there are clearly some biases with more cells from one sample in some clusters and also more covid cells in some of the clusters.</p>
 <p>We can also plot it in the other direction, the proportion of each cluster per sample.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(<span class="fu">as.data.frame</span>(<span class="fu">colData</span>(sce)), <span class="fu">aes</span>(<span class="at">x =</span> sample, <span class="at">fill =</span> louvain_SNNk10)) <span class="sc">+</span></span>
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(<span class="fu">as.data.frame</span>(<span class="fu">colData</span>(sce)), <span class="fu">aes</span>(<span class="at">x =</span> sample, <span class="at">fill =</span> leiden_k20)) <span class="sc">+</span></span>
 <span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_bar</span>(<span class="at">position =</span> <span class="st">"fill"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
@@ -534,96 +568,208 @@ Discuss
 <p>By now you should know how to plot different features onto your data. Take the QC metrics that were calculated in the first exercise, that should be stored in your data object, and plot it as violin plots per cluster using the clustering method of your choice. For example, plot number of UMIS, detected genes, percent mitochondrial reads. Then, check carefully if there is any bias in how your data is separated by quality metrics. Could it be explained biologically, or could there be a technical bias there?</p>
 </div>
 </div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="fu">wrap_plots</span>(</span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotColData</span>(sce, <span class="at">y =</span> <span class="st">"detected"</span>, <span class="at">x =</span> <span class="st">"leiden_k20"</span>, <span class="at">colour_by =</span> <span class="st">"leiden_k20"</span>),</span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotColData</span>(sce, <span class="at">y =</span> <span class="st">"total"</span>, <span class="at">x =</span> <span class="st">"leiden_k20"</span>, <span class="at">colour_by =</span> <span class="st">"leiden_k20"</span>),</span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotColData</span>(sce, <span class="at">y =</span> <span class="st">"subsets_mt_percent"</span>, <span class="at">x =</span> <span class="st">"leiden_k20"</span>, <span class="at">colour_by =</span> <span class="st">"leiden_k20"</span>),</span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotColData</span>(sce, <span class="at">y =</span> <span class="st">"subsets_ribo_percent"</span>, <span class="at">x =</span> <span class="st">"leiden_k20"</span>, <span class="at">colour_by =</span> <span class="st">"leiden_k20"</span>),</span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotColData</span>(sce, <span class="at">y =</span> <span class="st">"subsets_hb_percent"</span>, <span class="at">x =</span> <span class="st">"leiden_k20"</span>, <span class="at">colour_by =</span> <span class="st">"leiden_k20"</span>),</span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">ncol =</span> <span class="dv">3</span></span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>) <span class="sc">+</span> <span class="fu">plot_layout</span>(<span class="at">guides =</span> <span class="st">"collect"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-left">
+<figure class="figure">
+<p><a href="bioc_04_clustering_files/figure-html/unnamed-chunk-16-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-11"><img src="bioc_04_clustering_files/figure-html/unnamed-chunk-16-1.png" class="img-fluid figure-img" width="960"></a></p>
+</figure>
+</div>
+</div>
+</div>
+<p>Some clusters that are clearly defined by higher number of genes and counts. These are either doublets or a larger celltype. And some clusters with low values on these metrics that are either low quality cells or a smaller celltype. You will have to explore these clusters in more detail to judge what you believe them to be.</p>
 </section>
-<section id="meta-session" class="level2" data-number="5">
-<h2 data-number="5" class="anchored" data-anchor-id="meta-session"><span class="header-section-number">5</span> Session info</h2>
+<section id="meta-clust_sub" class="level2" data-number="5">
+<h2 data-number="5" class="anchored" data-anchor-id="meta-clust_sub"><span class="header-section-number">5</span> Subclustering of T and NK-cells</h2>
+<p>It is common that the subtypes of cells within a cluster is not so well separated when you have a heterogeneous dataset. In such a case it could be a good idea to run subclustering of individual celltypes. The main reason for subclustering is that the variable genes and the first principal components in the full analysis are mainly driven by differences between celltypes, while with subclustering we may detect smaller differences between subtypes within celltypes.</p>
+<p>So first, lets find out where our T-cell and NK-cell clusters are. We know that T-cells express CD3E, and the main subtypes are CD4 and CD8, while NK-cells express GNLY.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="fu">wrap_plots</span>(</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotReducedDim</span>(sce, <span class="at">dimred =</span> <span class="st">"UMAP_on_Harmony"</span>, <span class="at">colour_by =</span> <span class="st">"leiden_k30"</span>),</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotReducedDim</span>(sce, <span class="at">dimred =</span> <span class="st">"UMAP_on_Harmony"</span>, <span class="at">colour_by =</span> <span class="st">"CD3E"</span>),</span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotReducedDim</span>(sce, <span class="at">dimred =</span> <span class="st">"UMAP_on_Harmony"</span>, <span class="at">colour_by =</span> <span class="st">"CD4"</span>),</span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotReducedDim</span>(sce, <span class="at">dimred =</span> <span class="st">"UMAP_on_Harmony"</span>, <span class="at">colour_by =</span> <span class="st">"CD8A"</span>),</span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotReducedDim</span>(sce, <span class="at">dimred =</span> <span class="st">"UMAP_on_Harmony"</span>, <span class="at">colour_by =</span> <span class="st">"GNLY"</span>),</span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">ncol =</span> <span class="dv">3</span></span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-left">
+<figure class="figure">
+<p><a href="bioc_04_clustering_files/figure-html/unnamed-chunk-17-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-12"><img src="bioc_04_clustering_files/figure-html/unnamed-chunk-17-1.png" class="img-fluid figure-img" width="960"></a></p>
+</figure>
+</div>
+</div>
+</div>
+<p>We can clearly see what clusters are T-cell clusters, so lets subset the data for those cells</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>tcells <span class="ot">=</span> sce[,sce<span class="sc">$</span>leiden_k30 <span class="sc">%in%</span> <span class="fu">c</span>(<span class="dv">3</span>,<span class="dv">4</span>)]</span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a><span class="fu">table</span>(tcells<span class="sc">$</span>sample)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+  cov.1  cov.15  cov.16  cov.17 ctrl.13 ctrl.14 ctrl.19  ctrl.5 
+    221     154     109     245     604     432     498     632 </code></pre>
+</div>
+</div>
+<p>Ideally we should rerun all steps of integration with that subset of cells instead of just taking the joint embedding. If you have too few cells per sample in the celltype that you want to cluster it may not be possible. We will start with selecting a new set of genes that better reflecs the variability within this celltype</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>var.out <span class="ot">&lt;-</span> <span class="fu">modelGeneVar</span>(tcells, <span class="at">block =</span> tcells<span class="sc">$</span>sample)</span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>hvgs.tcell <span class="ot">&lt;-</span> <span class="fu">getTopHVGs</span>(var.out, <span class="at">n =</span> <span class="dv">2000</span>)</span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a><span class="co"># check overlap with the variable genes using all the data</span></span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a><span class="fu">length</span>(<span class="fu">intersect</span>(<span class="fu">metadata</span>(sce)<span class="sc">$</span>hvgs, hvgs.tcell))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 915</code></pre>
+</div>
+</div>
+<p>We clearly have a very different geneset now, so hopefully it should better capture the variability within T-cells.</p>
+<p>Now we have to run the full pipeline with scaling, pca, integration and clustering on this subset of cells, using the new set of variable genes</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>tcells <span class="ot">=</span> <span class="fu">runPCA</span>(tcells, <span class="at">exprs_values =</span> <span class="st">"logcounts"</span>, <span class="at">ncomponents =</span> <span class="dv">30</span>, <span class="at">subset_row =</span> hvgs.tcell, <span class="at">scale =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(harmony)</span>
+<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a>tcells <span class="ot">&lt;-</span> <span class="fu">RunHarmony</span>(</span>
+<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a>    tcells,</span>
+<span id="cb24-7"><a href="#cb24-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">group.by.vars =</span> <span class="st">"sample"</span>,</span>
+<span id="cb24-8"><a href="#cb24-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">reduction.save =</span> <span class="st">"harmony"</span>,</span>
+<span id="cb24-9"><a href="#cb24-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">reduction =</span> <span class="st">"PCA"</span></span>
+<span id="cb24-10"><a href="#cb24-10" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb24-11"><a href="#cb24-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-12"><a href="#cb24-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Here we use all PCs computed from Harmony for UMAP calculation</span></span>
+<span id="cb24-13"><a href="#cb24-13" aria-hidden="true" tabindex="-1"></a>tcells <span class="ot">&lt;-</span> <span class="fu">runUMAP</span>(tcells, <span class="at">dimred =</span> <span class="st">"harmony"</span>, <span class="at">n_dimred =</span> <span class="dv">30</span>, <span class="at">ncomponents =</span> <span class="dv">2</span>, <span class="at">name =</span> <span class="st">"UMAP_tcell"</span>)</span>
+<span id="cb24-14"><a href="#cb24-14" aria-hidden="true" tabindex="-1"></a>tcells<span class="sc">$</span>leiden_tcell_k20 <span class="ot">&lt;-</span> <span class="fu">clusterCells</span>(tcells, <span class="at">use.dimred =</span> <span class="st">"harmony"</span>, <span class="at">BLUSPARAM=</span><span class="fu">SNNGraphParam</span>(<span class="at">k=</span><span class="dv">20</span>, <span class="at">cluster.fun=</span><span class="st">"leiden"</span>,  <span class="at">cluster.args =</span> <span class="fu">list</span>(<span class="at">resolution_parameter=</span><span class="fl">0.3</span>)))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="fu">wrap_plots</span>(</span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotReducedDim</span>(tcells, <span class="at">dimred =</span> <span class="st">"UMAP_on_Harmony"</span>, <span class="at">colour_by =</span> <span class="st">"sample"</span>) <span class="sc">+</span><span class="fu">ggtitle</span>(<span class="st">"Full umap"</span>),</span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotReducedDim</span>(tcells, <span class="at">dimred =</span> <span class="st">"UMAP_on_Harmony"</span>, <span class="at">colour_by =</span> <span class="st">"leiden_k20"</span>) <span class="sc">+</span><span class="fu">ggtitle</span>(<span class="st">"Full umap, full clust"</span>),</span>
+<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotReducedDim</span>(tcells, <span class="at">dimred =</span> <span class="st">"UMAP_on_Harmony"</span>, <span class="at">colour_by =</span> <span class="st">"leiden_tcell_k20"</span>) <span class="sc">+</span><span class="fu">ggtitle</span>(<span class="st">"Full umap, T-cell clust"</span>),</span>
+<span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotReducedDim</span>(tcells, <span class="at">dimred =</span> <span class="st">"UMAP_tcell"</span>, <span class="at">colour_by =</span> <span class="st">"sample"</span>) <span class="sc">+</span><span class="fu">ggtitle</span>(<span class="st">"T-cell umap"</span>),</span>
+<span id="cb25-6"><a href="#cb25-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotReducedDim</span>(tcells, <span class="at">dimred =</span> <span class="st">"UMAP_tcell"</span>, <span class="at">colour_by =</span> <span class="st">"leiden_k20"</span>) <span class="sc">+</span><span class="fu">ggtitle</span>(<span class="st">"T-cell umap, full clust"</span>),</span>
+<span id="cb25-7"><a href="#cb25-7" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotReducedDim</span>(tcells, <span class="at">dimred =</span> <span class="st">"UMAP_tcell"</span>, <span class="at">colour_by =</span> <span class="st">"leiden_tcell_k20"</span>) <span class="sc">+</span><span class="fu">ggtitle</span>(<span class="st">"T-cell umap, T-cell clust"</span>),</span>
+<span id="cb25-8"><a href="#cb25-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">ncol =</span> <span class="dv">3</span></span>
+<span id="cb25-9"><a href="#cb25-9" aria-hidden="true" tabindex="-1"></a>)<span class="sc">+</span> <span class="fu">plot_layout</span>(<span class="at">guides =</span> <span class="st">"collect"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-left">
+<figure class="figure">
+<p><a href="bioc_04_clustering_files/figure-html/unnamed-chunk-21-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-13"><img src="bioc_04_clustering_files/figure-html/unnamed-chunk-21-1.png" class="img-fluid figure-img" width="960"></a></p>
+</figure>
+</div>
+</div>
+</div>
+<p>As you can see, we do have some new clusters that did not stand out before. But in general the separation looks very similar.</p>
+<p>Lets also have a look at the same genes in the new umap:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="fu">wrap_plots</span>(</span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotReducedDim</span>(tcells, <span class="at">dimred =</span> <span class="st">"UMAP_tcell"</span>, <span class="at">colour_by =</span> <span class="st">"CD3E"</span>),</span>
+<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotReducedDim</span>(tcells, <span class="at">dimred =</span> <span class="st">"UMAP_tcell"</span>, <span class="at">colour_by =</span> <span class="st">"CD4"</span>),</span>
+<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotReducedDim</span>(tcells, <span class="at">dimred =</span> <span class="st">"UMAP_tcell"</span>, <span class="at">colour_by =</span> <span class="st">"CD8A"</span>),</span>
+<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plotReducedDim</span>(tcells, <span class="at">dimred =</span> <span class="st">"UMAP_tcell"</span>, <span class="at">colour_by =</span> <span class="st">"GNLY"</span>),</span>
+<span id="cb26-6"><a href="#cb26-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">ncol =</span> <span class="dv">2</span></span>
+<span id="cb26-7"><a href="#cb26-7" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-left">
+<figure class="figure">
+<p><a href="bioc_04_clustering_files/figure-html/unnamed-chunk-22-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-14"><img src="bioc_04_clustering_files/figure-html/unnamed-chunk-22-1.png" class="img-fluid figure-img" width="672"></a></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="meta-session" class="level2" data-number="6">
+<h2 data-number="6" class="anchored" data-anchor-id="meta-session"><span class="header-section-number">6</span> Session info</h2>
 <details>
 <summary>
 Click here
 </summary>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>R version 4.3.0 (2023-04-21)
-Platform: x86_64-pc-linux-gnu (64-bit)
-Running under: Ubuntu 22.04.3 LTS
+<pre><code>R version 4.3.3 (2024-02-29)
+Platform: x86_64-apple-darwin13.4.0 (64-bit)
+Running under: macOS Big Sur ... 10.16
 
 Matrix products: default
-BLAS:   /usr/lib/x86_64-linux-gnu/openblas-pthread/libblas.so.3 
-LAPACK: /usr/lib/x86_64-linux-gnu/openblas-pthread/libopenblasp-r0.3.20.so;  LAPACK version 3.10.0
+BLAS/LAPACK: /Users/asabjor/miniconda3/envs/seurat5/lib/libopenblasp-r0.3.27.dylib;  LAPACK version 3.12.0
 
 locale:
- [1] LC_CTYPE=en_US.UTF-8       LC_NUMERIC=C              
- [3] LC_TIME=en_US.UTF-8        LC_COLLATE=en_US.UTF-8    
- [5] LC_MONETARY=en_US.UTF-8    LC_MESSAGES=en_US.UTF-8   
- [7] LC_PAPER=en_US.UTF-8       LC_NAME=C                 
- [9] LC_ADDRESS=C               LC_TELEPHONE=C            
-[11] LC_MEASUREMENT=en_US.UTF-8 LC_IDENTIFICATION=C       
+[1] sv_SE.UTF-8/sv_SE.UTF-8/sv_SE.UTF-8/C/sv_SE.UTF-8/sv_SE.UTF-8
 
-time zone: Etc/UTC
-tzcode source: system (glibc)
+time zone: Europe/Stockholm
+tzcode source: system (macOS)
 
 attached base packages:
 [1] stats4    stats     graphics  grDevices utils     datasets  methods  
 [8] base     
 
 other attached packages:
- [1] clustree_0.5.0              ggraph_2.1.0               
- [3] igraph_1.4.3                pheatmap_1.0.12            
- [5] patchwork_1.1.2             scran_1.30.0               
- [7] scater_1.30.1               ggplot2_3.4.2              
- [9] scuttle_1.12.0              SingleCellExperiment_1.24.0
-[11] SummarizedExperiment_1.32.0 Biobase_2.62.0             
-[13] GenomicRanges_1.54.1        GenomeInfoDb_1.38.5        
-[15] IRanges_2.36.0              S4Vectors_0.40.2           
-[17] BiocGenerics_0.48.1         MatrixGenerics_1.14.0      
-[19] matrixStats_1.0.0          
+ [1] harmony_1.2.1               Rcpp_1.0.13                
+ [3] bluster_1.12.0              clustree_0.5.1             
+ [5] ggraph_2.2.1                igraph_2.0.3               
+ [7] pheatmap_1.0.12             patchwork_1.2.0            
+ [9] scran_1.30.0                scater_1.30.1              
+[11] ggplot2_3.5.1               scuttle_1.12.0             
+[13] SingleCellExperiment_1.24.0 SummarizedExperiment_1.32.0
+[15] Biobase_2.62.0              GenomicRanges_1.54.1       
+[17] GenomeInfoDb_1.38.1         IRanges_2.36.0             
+[19] S4Vectors_0.40.2            BiocGenerics_0.48.1        
+[21] MatrixGenerics_1.14.0       matrixStats_1.4.1          
 
 loaded via a namespace (and not attached):
- [1] bitops_1.0-7              gridExtra_2.3            
- [3] rlang_1.1.1               magrittr_2.0.3           
- [5] compiler_4.3.0            DelayedMatrixStats_1.24.0
- [7] vctrs_0.6.2               pkgconfig_2.0.3          
- [9] crayon_1.5.2              fastmap_1.1.1            
-[11] backports_1.4.1           XVector_0.42.0           
-[13] labeling_0.4.2            utf8_1.2.3               
-[15] rmarkdown_2.22            ggbeeswarm_0.7.2         
-[17] purrr_1.0.1               xfun_0.39                
-[19] bluster_1.12.0            zlibbioc_1.48.0          
-[21] beachmat_2.18.0           jsonlite_1.8.5           
+ [1] bitops_1.0-8              gridExtra_2.3            
+ [3] rlang_1.1.4               magrittr_2.0.3           
+ [5] compiler_4.3.3            DelayedMatrixStats_1.24.0
+ [7] vctrs_0.6.5               pkgconfig_2.0.3          
+ [9] crayon_1.5.3              fastmap_1.2.0            
+[11] backports_1.5.0           XVector_0.42.0           
+[13] labeling_0.4.3            utf8_1.2.4               
+[15] rmarkdown_2.28            ggbeeswarm_0.7.2         
+[17] purrr_1.0.2               xfun_0.47                
+[19] cachem_1.1.0              zlibbioc_1.48.0          
+[21] beachmat_2.18.0           jsonlite_1.8.8           
 [23] DelayedArray_0.28.0       BiocParallel_1.36.0      
-[25] tweenr_2.0.2              irlba_2.3.5.1            
-[27] parallel_4.3.0            cluster_2.1.4            
+[25] tweenr_2.0.3              irlba_2.3.5.1            
+[27] parallel_4.3.3            cluster_2.1.6            
 [29] R6_2.5.1                  RColorBrewer_1.1-3       
-[31] limma_3.58.1              Rcpp_1.0.10              
-[33] knitr_1.43                Matrix_1.5-4             
-[35] tidyselect_1.2.0          rstudioapi_0.14          
-[37] abind_1.4-5               yaml_2.3.7               
-[39] viridis_0.6.3             codetools_0.2-19         
-[41] lattice_0.21-8            tibble_3.2.1             
-[43] withr_2.5.0               evaluate_0.21            
-[45] polyclip_1.10-4           pillar_1.9.0             
-[47] checkmate_2.2.0           generics_0.1.3           
-[49] RCurl_1.98-1.12           sparseMatrixStats_1.14.0 
-[51] munsell_0.5.0             scales_1.2.1             
-[53] glue_1.6.2                metapod_1.10.1           
-[55] tools_4.3.0               BiocNeighbors_1.20.2     
-[57] ScaledMatrix_1.10.0       locfit_1.5-9.8           
-[59] graphlayouts_1.0.0        cowplot_1.1.1            
-[61] tidygraph_1.2.3           grid_4.3.0               
-[63] tidyr_1.3.0               edgeR_4.0.7              
-[65] colorspace_2.1-0          GenomeInfoDbData_1.2.11  
+[31] limma_3.58.1              knitr_1.48               
+[33] FNN_1.1.4                 Matrix_1.6-5             
+[35] tidyselect_1.2.1          abind_1.4-5              
+[37] yaml_2.3.10               viridis_0.6.5            
+[39] codetools_0.2-20          lattice_0.22-6           
+[41] tibble_3.2.1              withr_3.0.1              
+[43] evaluate_0.24.0           polyclip_1.10-7          
+[45] pillar_1.9.0              checkmate_2.3.2          
+[47] generics_0.1.3            RCurl_1.98-1.16          
+[49] sparseMatrixStats_1.14.0  munsell_0.5.1            
+[51] scales_1.3.0              RhpcBLASctl_0.23-42      
+[53] glue_1.7.0                metapod_1.10.0           
+[55] tools_4.3.3               BiocNeighbors_1.20.0     
+[57] ScaledMatrix_1.10.0       locfit_1.5-9.9           
+[59] graphlayouts_1.1.1        cowplot_1.1.3            
+[61] tidygraph_1.3.0           grid_4.3.3               
+[63] tidyr_1.3.1               edgeR_4.0.16             
+[65] colorspace_2.1-1          GenomeInfoDbData_1.2.11  
 [67] beeswarm_0.4.0            BiocSingular_1.18.0      
-[69] ggforce_0.4.1             vipor_0.4.5              
-[71] cli_3.6.1                 rsvd_1.0.5               
-[73] fansi_1.0.4               S4Arrays_1.2.0           
-[75] viridisLite_0.4.2         dplyr_1.1.2              
-[77] gtable_0.3.3              digest_0.6.31            
-[79] SparseArray_1.2.3         ggrepel_0.9.3            
-[81] dqrng_0.3.0               htmlwidgets_1.6.2        
-[83] farver_2.1.1              htmltools_0.5.5          
-[85] lifecycle_1.0.3           statmod_1.5.0            
-[87] MASS_7.3-58.4            </code></pre>
+[69] ggforce_0.4.2             vipor_0.4.7              
+[71] cli_3.6.3                 rsvd_1.0.5               
+[73] fansi_1.0.6               S4Arrays_1.2.0           
+[75] viridisLite_0.4.2         dplyr_1.1.4              
+[77] uwot_0.1.16               gtable_0.3.5             
+[79] digest_0.6.37             SparseArray_1.2.2        
+[81] ggrepel_0.9.6             dqrng_0.3.2              
+[83] htmlwidgets_1.6.4         farver_2.1.2             
+[85] memoise_2.0.1             htmltools_0.5.8.1        
+[87] lifecycle_1.0.4           statmod_1.5.0            
+[89] MASS_7.3-60.0.1          </code></pre>
 </div>
 </div>
 </details>
@@ -876,7 +1022,7 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
 </div>
   </div>
 </footer>
-<script>var lightboxQuarto = GLightbox({"selector":".lightbox","closeEffect":"zoom","loop":true,"openEffect":"zoom","descPosition":"bottom"});</script>
+<script>var lightboxQuarto = GLightbox({"selector":".lightbox","openEffect":"zoom","closeEffect":"zoom","loop":true,"descPosition":"bottom"});</script>
 
 
 
