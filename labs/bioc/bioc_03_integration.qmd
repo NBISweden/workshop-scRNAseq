@@ -24,10 +24,6 @@ Code chunks run R commands unless otherwise specified.
 
 
 ```{r}
-# Activate scanorama Python venv
-#reticulate::use_virtualenv("/opt/venv/scanorama")
-#reticulate::py_discover_config()
-reticulate::use_condaenv("/Users/asabjor/miniconda3/envs/seurat5")
 
 suppressPackageStartupMessages({
     library(scater)
@@ -36,9 +32,11 @@ suppressPackageStartupMessages({
     library(ggplot2)
     library(batchelor)
     library(harmony)
-    library(reticulate)
+    library(basilisk)
 })
 
+# path to conda env for python environment with scanorama.
+condapath =  "/Users/asabjor/miniconda3/envs/scanpy_2024_nopip"
 
 ```
 
@@ -95,7 +93,9 @@ As you can see, there are a lot of genes that are variable in just one dataset. 
 The best way to select features for integration is to combine the information on variable genes across the dataset. This
 is what we have in the `all` section where the information on variable features in the different datasets is combined.
 
-For all downstream integration we will use this set of genes so that it is comparable across the methods. We already used that set of genes in the dimensionality reduction exercise to run scaling and pca. But still, we will store the list in the object for future use.
+For all downstream integration we will use this set of genes so that it is comparable across the methods. We already used that set of genes in the dimensionality reduction exercise to run scaling and pca.
+
+We also store the variable gene information in the object for use furhter down the line. 
 
 ```{r}
 metadata(sce)$hvgs = hvgs
@@ -206,10 +206,6 @@ plotReducedDim(sce, dimred = "UMAP_on_Harmony", colour_by = "sample", point_size
 
 ## {{< meta dimred_scanorama >}}
 
-:::{.callout-important}
-If you are running locally using Docker and you have a Mac with ARM chip, the Scanorama reticulate module is known to crash. In this case, you might want to skip this section.
-:::
-
 {{< meta dimred_scanorama_1 >}}
 
 {{< meta dimred_scanorama_2 >}}
@@ -226,15 +222,22 @@ genelist =  rep(list(hvgs),length(scelist))
 lapply(scelist, dim)
 ```
 
-Now we can run scanorama:
+Scanorama is implemented in python, but through reticulate we can load python packages and run python functions. In this case we also use the `basilisk` package for a more clean activation of python environment.
+
+At the top of this script, we set the variable `condapath` to point to the conda environment where scanorama is included.
 
 ```{r}
 #| fig-height: 5
 #| fig-width: 15
 
-scanorama <- reticulate::import("scanorama")
 
-integrated.data <- scanorama$integrate(datasets_full = scelist, genes_list = genelist)
+# run scanorama via basilisk with scelist and genelist as input.
+integrated.data = basiliskRun(env=condapath, fun=function(datas, genes) {
+  scanorama <- reticulate::import("scanorama")
+  output <- scanorama$integrate(datasets_full = datas,
+                                         genes_list = genes )
+  return(output)
+}, datas = scelist, genes = genelist, testload="scanorama")
 
 intdimred <- do.call(rbind, integrated.data[[1]])
 colnames(intdimred) <- paste0("PC_", 1:100)
