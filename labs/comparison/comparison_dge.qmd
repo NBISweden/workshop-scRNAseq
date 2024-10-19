@@ -1,0 +1,464 @@
+---
+title: "Comparison of DGE results"
+subtitle: "{{< meta subtitle_seurat >}} {{< meta subtitle_bioc >}} {{< meta subtitle_scanpy >}}"
+description: "Overview of all three pipeline results."
+format: html
+---
+
+
+```{r}
+force_rerun = FALSE
+if (force_rerun){
+  reticulate::use_condaenv("/Users/asabjor/miniconda3/envs/scanpy_2024_nopip/")
+  reticulate::py_config()
+}
+```
+
+
+
+Load libraries
+
+```{r}
+suppressPackageStartupMessages({
+    library(Seurat)
+    library(Matrix)
+    library(ggplot2)
+    library(patchwork)
+    library(scran)
+    library(basilisk)
+    library(basilisk.utils)
+    library(zellkonverter)
+    library(ComplexHeatmap)
+})
+
+devtools::source_url("https://raw.githubusercontent.com/asabjorklund/single_cell_R_scripts/main/overlap_phyper_v2.R")
+
+```
+
+Load data
+
+```{r}
+
+
+
+path_results <- "data/covid/results"
+all = readRDS(file.path(path_results,"merged_all.rds"))
+```
+
+```{r}
+#| fig-height: 4
+#| fig-width: 10
+
+wrap_plots(
+    DimPlot(all, group.by = "orig.ident", reduction = "umap_harmony") + NoAxes() + ggtitle("Seurat harmony"),
+    DimPlot(all, group.by = "orig.ident", reduction = "umap_bioc_harmony") + NoAxes() + ggtitle("Bioc harmony"),
+    DimPlot(all, group.by = "orig.ident", reduction = "umap_scpy_harmony") + NoAxes() + ggtitle("Scanpy harmony"),
+    ncol = 3
+)
+```
+
+Select one clustering and use that for DGE detection in all the different methods. Use clustering with Seurat and `louvain_0.5`. 
+
+```{r}
+sel.clust = "RNA_snn_res.0.5"
+all$clusters = all[[sel.clust]]
+
+
+wrap_plots(
+    DimPlot(all, group.by = sel.clust, reduction = "umap_harmony", label = T) + NoAxes() + ggtitle("Seurat harmony"),
+    DimPlot(all, group.by = sel.clust, reduction = "umap_bioc_harmony", label = T) + NoAxes() + ggtitle("Bioc harmony"),
+    DimPlot(all, group.by = sel.clust, reduction = "umap_scpy_harmony", label = T) + NoAxes() + ggtitle("Scanpy harmony"),
+    ncol = 3
+) + plot_layout(guides="collect")
+```
+
+```{r}
+# Also merge the layers
+all <- JoinLayers(object = all, layers = c("data","counts"))
+```
+
+
+### Subsample
+
+Subsample to 200 cells per cluster.
+
+```{r}
+all = SetIdent(all, value = sel.clust)
+table(all@active.ident)
+all.sub = all[, WhichCells(all, downsample = 200)]
+table(all.sub@active.ident)
+```
+
+
+
+
+## Seurat DGE
+
+Run seurat `FindAllMarkers` with Wilcoxon, both the new implementation (`wilcox`) and similar to seurat v4 (`wilcox_limma`), `MAST` and `T-test`. 
+
+```{r, eval=TRUE}
+
+outfile = file.path(path_results, "seurat_dge.rds")
+if (file.exists(outfile) & !force_rerun ){ 
+  markersS = readRDS(outfile)
+}else {
+
+  markersS = list()
+  markersS$wilc = FindAllMarkers(all.sub, test.use = "wilcox", only.pos = T)
+  markersS$wilcL = FindAllMarkers(all.sub, test.use = "wilcox_limma", only.pos = T)
+  markersS$Ttest = FindAllMarkers(all.sub, test.use = "t", only.pos = T)
+  markersS$mast = FindAllMarkers(all.sub, test.use = "MAST", only.pos = T)
+  saveRDS(markersS, file = outfile)
+}
+```
+
+## Bioc DGE
+
+
+For Bioc no need to do the subsampling, if not for speed. Still use the subsampled object for comparable numbers of cells.
+
+Run with Wilcoxon, T-test and Binomial test.
+
+```{r}
+sce = as.SingleCellExperiment(all.sub)
+```
+
+```{r, eval=TRUE}
+outfile = file.path(path_results, "bioc_dge.rds")
+if (file.exists(outfile) & !force_rerun ){ 
+  markersB = readRDS(outfile)
+}else {
+
+  markersB = list()
+  markersB$wilc<- scran::findMarkers( sce, groups = sce$clusters,
+    test.type = "wilcox", pval.type = "all",     direction = "up")
+
+  markersB$Ttest<- scran::findMarkers( sce, groups = sce$clusters,
+    test.type = "t", pval.type = "all",     direction = "up")
+
+  markersB$binom<- scran::findMarkers( sce, groups = sce$clusters,
+    test.type = "binom", pval.type = "all",     direction = "up")
+  
+  saveRDS(markersB, file = outfile)
+}
+
+
+```
+
+## Scanpy DGE
+
+First, save SCE as an h5ad matrix. with zellkonverter. Then run python code with basilisk.
+
+```
+## Python code example
+import scanpy 
+
+fpath = "/Users/asabjor/courses/course_git/temp/workshop-scRNAseq/labs/comparison/data/covid/results/merged_all.h5ad"
+adata = scanpy.read_h5ad(fpath)
+
+print(adata.shape)
+print(adata.X[1:10,1:10])
+
+scanpy.pp.normalize_per_cell(adata, counts_per_cell_after=1e4)
+scanpy.pp.log1p(adata)
+print(adata.shape)
+print(adata.X[1:10,1:10])
+    
+scanpy.tl.rank_genes_groups(adata, 'clusters', method='t-test', key_added = "Ttest")
+print(adata.uns.Ttest.names[1:10])
+scanpy$tl$rank_genes_groups(adata, 'clusters', method='t-test_overestim_var', key_added = "Ttest_o")
+scanpy$tl$rank_genes_groups(adata, 'clusters', method='wilcoxon', key_added = "wilc")
+scanpy$pp$scale(adata) # scale before logreg.
+scanpy$tl$rank_genes_groups(adata, 'clusters', method='logreg', key_added = "logreg")
+
+```
+
+```{r}
+outfile = file.path(path_results, "scanpy_dge.rds")
+if (file.exists(outfile) & !force_rerun ){ 
+  dge.scanpy = readRDS(outfile)
+}else {
+zellkonverter::writeH5AD(sce, file.path(path_results,"merged_all.h5ad"))
+reticulate::py_config()
+
+penv = "/Users/asabjor/miniconda3/envs/scanpy_2024_nopip"
+dge.scanpy = basiliskRun(env=penv, fun=function(fpath) {
+    scanpy <- reticulate::import("scanpy")
+    adata = scanpy$read_h5ad(fpath)
+    
+    output = list()
+    output$shape1 = adata$shape
+    output$head1 = adata$X[1:10,1:10]
+    print(adata$shape)
+    print(adata$X[1:10,1:10])
+    scanpy$pp$normalize_per_cell(adata, counts_per_cell_after=1e4)
+    scanpy$pp$log1p(adata)
+    print(adata$shape)
+    print(adata$X[1:10,1:10])
+    output$shape2 = adata$shape
+    output$head2 = adata$X[1:10,1:10]
+    
+    scanpy$tl$rank_genes_groups(adata, 'clusters', method='t-test', key_added = "Ttest")
+    print(adata$uns['Ttest']['names'])
+    scanpy$tl$rank_genes_groups(adata, 'clusters', method='t-test_overestim_var', key_added = "Ttest_o")
+    scanpy$tl$rank_genes_groups(adata, 'clusters', method='wilcoxon', key_added = "wilc")
+    scanpy$pp$scale(adata) # scale before logreg.
+    scanpy$tl$rank_genes_groups(adata, 'clusters', method='logreg', key_added = "logreg")
+    output$Ttest = adata$uns['Ttest']
+    return(adata$uns)
+    
+}, fpath = "/Users/asabjor/courses/course_git/temp/workshop-scRNAseq/labs/comparison/data/covid/results/merged_all.h5ad",  testload="scanpy")
+reticulate::py_config()
+
+saveRDS(dge.scanpy, file = outfile)
+}
+```
+
+Parse all scanpy results into dataframes
+
+```{r}
+scanpy.tests = names(dge.scanpy)[-1:-2]
+clusters = sort(unique(all$clusters))
+
+# convert from lists to dfs.
+markers_scanpy = list()
+for (tname in scanpy.tests){
+  x = dge.scanpy[[tname]]
+  markers_scanpy[[tname]] = list()
+  for (i in 1:length(clusters)){ 
+    df = data.frame(Reduce(cbind, lapply(x[-1:-2], function(y) { y[,i]})))
+    colnames(df) = names(x[-1:-2])
+    rownames(df) = x$names[,i]
+    markers_scanpy[[tname]][[i]] = df
+  }
+}
+
+
+```
+
+
+## Compare significant genes.
+
+Create a list object with all the significant dge genes. 
+
+* FDR from BioC `findMarkers` is the BH-adjusted p-value.
+* BioC `scoreMarkers` does not provide p-values in the same way, cannot compare here.
+* Adjusted p-value from scanpy is BH-adjusted p-value. Scanpy logreg does not have p-values.
+* P-values in Seurat are identical to scanpy for wilcoxon, so also BH.
+
+Set cutoff for significant at 0.01.
+
+
+```{r}
+pval.cut = 0.01
+
+sign.scanpy = lapply(markers_scanpy, function(x) { 
+  tmp = lapply(x, function(y) y[y$pvals_adj <= pval.cut,])
+  names(tmp) = as.character(clusters) 
+  return(tmp)
+  })
+
+sign.dge = unlist(sign.scanpy, recursive = F)
+names(sign.dge) = sub("Ttest_o", "TtestO", names(sign.dge))
+names(sign.dge) = paste0("scpy_", names(sign.dge))
+```
+
+```{r}
+
+sign.bioc = lapply(markersB, function(x) { 
+  lapply(x, function(y) y[y$FDR <= pval.cut,])
+  })
+names(sign.bioc) = paste0("bioc_", names(sign.bioc))
+sign.bioc = unlist(sign.bioc, recursive = F)
+
+```
+
+```{r}
+
+sign.seu = lapply(markersS, function(x){
+  x = x[x$p_val_adj <= pval.cut,]
+  x = split(x, x$cluster)
+  x = lapply(x, function(y) { 
+    rownames(y) = y$gene
+    return(y) })    
+  x
+})
+
+
+names(sign.seu) = paste0("seu_", names(sign.seu))
+sign.seu = unlist(sign.seu, recursive = F)
+
+```
+
+
+```{r}
+sign.dge = c(sign.dge, sign.seu, sign.bioc)
+
+saveRDS(sign.dge, file = file.path(path_results, "all_sign_dge.Rds"))
+```
+
+Number of dge genes
+
+```{r}
+#| fig-height: 5
+#| fig-width: 12
+
+nG = unlist(lapply(sign.dge, nrow))
+pipeline = Reduce(rbind,strsplit(names(nG),"_"))[,1]
+par(mar = c(8,5,2,2))
+barplot(nG, las = 2, col = factor(pipeline), main = "Number of significant genes", cex.names = 0.5)
+```
+
+
+Turns out that the two different wilcoxon runs in Seurat have identical results, so remove one. 
+sign.dge
+
+
+Overlap of DGE genes is calculated with a phyper test using all expressed genes as the background. The heatmaps display the `-log10(p-value)` from the phyper test.
+
+```{r}
+#| fig-height: 10
+#| fig-width: 12
+
+sign.dge = sign.dge[!grepl("wilcL",names(sign.dge))]
+
+tmp = lapply(sign.dge, rownames)
+o = overlap_phyper2(tmp, tmp, nsize = 5, bg = nrow(all), remove.diag = T)
+```
+
+Cluster and plot with annotation.
+
+
+```{r}
+#| fig-height: 10
+#| fig-width: 12
+
+n = names(sign.dge)
+
+s = Reduce(rbind, strsplit(n, "[\\._]"))
+annot.tests = data.frame(s)
+colnames(annot.tests) = c("Pipe","Test","Cluster")
+rownames(annot.tests) = names(sign.dge)
+annot.tests$TestName = paste(s[,1],s[,2], sep= "_")
+
+pheatmap(-log10(o$P[1:100,1:100]+1e-230),annotation_col = annot.tests)
+```
+
+Very different number of genes, so unfair comparison. 
+
+
+## Compare top genes
+
+Create a list object with all the dge genes as ranked lists to compare top X genes.
+
+```{r}
+ranked.scanpy = lapply(markers_scanpy, function(x) { 
+  tmp = lapply(x, rownames)
+  names(tmp) = clusters
+  return(tmp)
+  })
+
+names(ranked.scanpy) = paste0("scpy_", names(ranked.scanpy))
+names(ranked.scanpy) = sub("Ttest_o", "TtestO", names(ranked.scanpy))
+ranked.scanpy = unlist(ranked.scanpy, recursive = F)
+
+
+getRankSeu = function(x) {
+  x = split(x, x$cluster)
+  lapply(x, function(y) { 
+    y$gene } )
+}
+
+rank.seu = lapply(markersS, getRankSeu)
+names(rank.seu) = paste0("seu_", names(rank.seu))
+rank.seu = unlist(rank.seu, recursive = F)
+
+# remove wilcoxonL
+rank.seu = rank.seu[!grepl("wilcL", names(rank.seu))]
+
+
+rank.bioc = lapply(markersB, function(x) { 
+  lapply(x, rownames)
+})
+names(rank.bioc) = paste0("bioc_", names(rank.bioc))
+rank.bioc = unlist(rank.bioc, recursive = F)
+
+
+all.rank = c(ranked.scanpy, rank.seu, rank.bioc )
+
+saveRDS(all.rank, file = file.path(path_results, "all_ranked_dge.Rds"))
+```
+
+
+### Top 50
+
+```{r}
+#| fig-height: 10
+#| fig-width: 12
+
+topG = lapply(all.rank, function(x) x[1:50])
+
+o = overlap_phyper2(topG,topG, nsize = 5, bg = nrow(all), remove.diag = T)
+
+pheatmap(-log10(o$P[1:100,1:100]+1e-320),annotation_col = annot.tests)
+```
+
+
+Clearly more unique genes per cluster with the bioC methods. 
+
+
+
+Merge all top genes from all clusters. 
+
+OBS! Skip using background, all overlaps are significant, so we will get a false scale of the p-values, but is more visual.
+
+```{r}
+#| fig-height: 10
+#| fig-width: 12
+
+tmp = split(topG, annot.tests$TestName)
+tmp = lapply(tmp, unlist)
+tmp = lapply(tmp, unique)
+
+o = overlap_phyper2(tmp,tmp, remove.diag = T)
+
+# with grouping.
+pheatmap(-log10(o$P + 1e-320)[1:length(tmp), 1:length(tmp)], display_numbers = o$M[1:length(tmp), 1:length(tmp)])
+```
+
+
+Binomial test stands out, but some similarty to the other bioC tests. Also, all unique genes per cluster. 
+
+### Top 200
+
+Same but with top200 genes.
+
+```{r}
+#| fig-height: 10
+#| fig-width: 12
+
+topG = lapply(all.rank, function(x) x[1:200])
+tmp = split(topG, annot.tests$TestName)
+tmp = lapply(tmp, unlist)
+tmp = lapply(tmp, unique)
+
+o = overlap_phyper2(tmp,tmp, remove.diag = T)
+
+# with grouping.
+pheatmap(-log10(o$P + 1e-320)[1:length(tmp), 1:length(tmp)], display_numbers = o$M[1:length(tmp), 1:length(tmp)])
+ 
+```
+
+BioC stands out from the rest. Wilcoxon in Seurat and Scanpy are different.
+
+
+## {{< meta session >}}
+
+<details>
+  <summary>Click here</summary>
+
+```{r}
+sessionInfo()
+```
+
+</details>
