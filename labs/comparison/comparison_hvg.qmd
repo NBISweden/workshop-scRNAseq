@@ -1,0 +1,443 @@
+---
+title: "Comparison of HVGs"
+subtitle: "{{< meta subtitle_seurat >}} {{< meta subtitle_bioc >}} {{< meta subtitle_scanpy >}}"
+description: "Overview of all three pipeline results."
+format: html
+---
+
+
+{{< meta qc_data_2 >}}
+
+```{r}
+suppressPackageStartupMessages({
+    library(Seurat)
+    library(zellkonverter)
+    library(Matrix)
+    library(ggplot2)
+    library(patchwork)
+    library(scran)
+    library(ComplexHeatmap)
+    library(basilisk)
+})
+
+devtools::source_url("https://raw.githubusercontent.com/asabjorklund/single_cell_R_scripts/main/overlap_phyper_v2.R")
+
+```
+
+
+## Load data
+
+
+OBS! Zellkonverter installs conda env with basilisk! Takes a while to run first time!!
+
+
+```{r}
+path_results <- "data/covid/results"
+if (!dir.exists(path_results)) dir.create(path_results, recursive = T)
+
+path_seurat = "../seurat/data/covid/results/"
+path_bioc = "../bioc/data/covid/results/"
+path_scanpy = "../scanpy/data/covid/results/"
+
+path_results <- "data/covid/results"
+if (!dir.exists(path_results)) dir.create(path_results, recursive = T)
+
+path_seurat = "../seurat/data/covid/results/"
+path_bioc = "../bioc/data/covid/results/"
+path_scanpy = "../scanpy/data/covid/results/"
+
+# fetch the files with qc and dimred for each 
+
+# seurat
+sobj = readRDS(file.path(path_seurat,"seurat_covid_qc_dr_int_cl.rds"))
+
+# bioc
+sce = readRDS(file.path(path_bioc,"bioc_covid_qc_dr_int_cl.rds"))
+bioc = as.Seurat(sce)
+
+# scanpy
+scanpy.sce = readH5AD(file.path(path_scanpy, "scanpy_covid_qc_dr_scanorama_cl.h5ad"))
+scanpy = as.Seurat(scanpy.sce, counts = NULL, data = "X") # only have the var.genes data that is scaled.
+```
+
+## Umaps
+
+```{r}
+#| fig-height: 4
+#| fig-width: 10
+
+wrap_plots(
+    DimPlot(sobj, group.by = "orig.ident") + NoAxes() + ggtitle("Seurat"),
+    DimPlot(bioc, group.by = "sample") + NoAxes() + ggtitle("Bioc"),
+    DimPlot(scanpy, group.by = "sample", reduction = "X_umap_uncorr") + NoAxes() + ggtitle("Scanpy"),
+    ncol = 3
+)
+```
+
+Create one dataset with the cells that are present in all samples. Also add in umap from all 3 pipelines.
+
+```{r}
+meta.seurat = sobj@meta.data
+meta.scanpy = scanpy@meta.data
+meta.bioc = bioc@meta.data
+
+meta.bioc$cell = rownames(meta.bioc)
+meta.scanpy$cell = sapply(rownames(meta.scanpy), function(x) substr(x,1,nchar(x)-2))
+meta.seurat$cell = unlist(lapply(strsplit(rownames(meta.seurat),"_"), function(x) x[3]))
+```
+
+
+```{r}
+in.all = intersect(intersect(meta.scanpy$cell, meta.seurat$cell), meta.bioc$cell)
+
+tmp1 = meta.bioc[match(in.all, meta.bioc$cell),]
+colnames(tmp1) = paste0(colnames(tmp1),"_bioc")
+tmp2 = meta.scanpy[match(in.all, meta.scanpy$cell),]
+colnames(tmp2) = paste0(colnames(tmp2),"_scpy")
+
+all = sobj[,match(in.all, meta.seurat$cell)]
+
+meta.all = cbind(all@meta.data, tmp1,tmp2)
+all@meta.data = meta.all
+
+Reductions(all)
+
+tmp = bioc@reductions$UMAP_on_PCA@cell.embeddings[match(in.all, meta.bioc$cell),]
+rownames(tmp) = colnames(all)
+all[["umap_bioc"]] = CreateDimReducObject(tmp, key = "umapbioc_", assay = "RNA")
+tmp = scanpy@reductions$X_umap_uncorr@cell.embeddings[match(in.all, meta.scanpy$cell),]
+rownames(tmp) = colnames(all)
+all[["umap_scpy"]] = CreateDimReducObject(tmp, key = "umapscpy_", assay = "RNA")
+
+Reductions(all)
+```
+
+## Variable features
+
+In Seurat, `FindVariableFeatures` is not batch aware unless the data is split into layers by samples, here we have the variable genes created with layers. In Bioc `modelGeneVar` we used sample as a blocking parameter, e.g calculates the variable genes per sample and combines the variances. Similar in scanpy we used the samples as `batch_key`. 
+
+
+```{r}
+hvgs = list()
+hvgs$seurat = VariableFeatures(sobj)
+hvgs$bioc = sce@metadata$hvgs
+# scanpy has no strict number on selection, instead uses dispersion cutoff. So select instead top 2000 dispersion genes.
+scpy.hvg = rowData(scanpy.sce)
+hvgs_scanpy = rownames(scpy.hvg)[scpy.hvg$highly_variable]
+hvgs$scanpy = rownames(scpy.hvg)[order(scpy.hvg$dispersions_norm, decreasing = T)][1:2000]
+
+cmat = make_comb_mat(hvgs)
+print(cmat)
+
+UpSet(cmat)
+```
+Surprisingly low overlap between the methods and many genes that are unique to one pipeline. With discrepancies in the doublet filtering the cells used differ to some extent, but otherwise the variation should be similar. Even if it is estimated in different ways.
+
+Is the differences more due to the combination of ranks/dispersions or also found within a single dataset?
+
+Only Seurat have the dispersions for each individual dataset stored in the object. 
+
+### Compare dispersions
+
+Recalculate for bioc.
+
+```{r}
+var.out <- modelGeneVar(sce, block = sce$sample)
+hvgs_bioc <- getTopHVGs(var.out, n = 2000)
+cutoff <- rownames(var.out) %in% hvgs_bioc
+```
+
+
+```{r}
+#| fig-height: 10
+#| fig-width: 12
+
+# Merge all hvg info
+
+all.genes = intersect(rownames(var.out), rownames(scpy.hvg))
+
+scpy.hvg = rowData(scanpy.sce)
+colnames(scpy.hvg) = paste0(colnames(scpy.hvg), "_scpy")
+colnames(var.out) = paste0(colnames(var.out), "_bioc")
+
+seu.hvg = HVFInfo(all) 
+
+all.hvg = cbind(seu.hvg[all.genes,], scpy.hvg[all.genes,], var.out[all.genes,])
+
+
+par(mfrow=c(2,2))
+plot(all.hvg$means_scpy, all.hvg$dispersions_norm_scpy, main = "Scanpy",pch = 16, cex = 0.4)
+points(all.hvg$means_scpy[all.hvg$highly_variable_scpy], all.hvg$dispersions_norm_scpy[all.hvg$highly_variable_scpy], col="red",pch = 16, cex = 0.4)
+
+plot(all.hvg$mean_bioc, all.hvg$bio_bioc, pch = 16, cex = 0.4, main = "Bioc")
+points(all.hvg$mean_bioc[rownames(all.hvg) %in% hvgs$bioc], all.hvg$bio_bioc[rownames(all.hvg) %in% hvgs$bioc], col = "red", pch = 16, cex = .6)
+
+   
+plot(log1p(all.hvg$mean), all.hvg$variance.standardized, main = "Seurat",pch = 16, cex = 0.4)    
+points(log1p(all.hvg$mean)[match(hvgs$seurat, rownames(all.hvg))], all.hvg$variance.standardized[match(hvgs$seurat, rownames(all.hvg))],col="red",pch = 16, cex = 0.4)    
+
+
+
+```
+
+Scanpy uses min_disp=0.5, min_mean=0.0125, max_mean=3, so the highly expressed ones are not included.
+
+
+
+```{r}
+all.hvg$mean_log = log1p(all.hvg$mean)
+sel.means = c("mean","mean_log","means_scpy", "mean_bioc")
+pairs(all.hvg[,sel.means])
+
+sel.disp = c("variance.standardized","dispersions_norm_scpy", "bio_bioc","total_bioc")
+pairs(all.hvg[,sel.disp])
+```
+
+Difference in what cells were used, and also in how the dispersions across the samples is combined into one value. Do for just one sample instead.
+
+### For one sample
+
+Compare for ctrl.13 sample, Seurat uses `variance.standardized` to rank the genes. Bioc uses the `bio` slot with estimated biological variation.   
+
+#### Seurat
+
+Try the different methods implemented in Seurat. From the help section:
+
+* “vst”: First, fits a line to the relationship of log(variance) and log(mean) using local polynomial regression (loess). Then standardizes the feature values using the observed mean and expected variance (given by the fitted line). Feature variance is then calculated on the standardized values after clipping to a maximum (see clip.max parameter).
+* “mean.var.plot” (mvp): First, uses a function to calculate average expression (mean.function) and dispersion (dispersion.function) for each feature. Next, divides features into num.bin (deafult 20) bins based on their average expression, and calculates z-scores for dispersion within each bin. The purpose of this is to identify variable features while controlling for the strong relationship between variability and average expression
+* “dispersion” (disp): selects the genes with the highest dispersion values
+
+
+
+```{r}
+ctrl = all[,all$orig.ident == "ctrl_13"]
+ctrl@assays$RNA@meta.data[,1:ncol(ctrl@assays$RNA@meta.data)] = NULL
+
+ctrl = FindVariableFeatures(ctrl)
+hvg_seu = list()
+hvg_seu$vst = VariableFeatures(ctrl)
+#top20 <- head(hvg_seu$vst, 20)
+#LabelPoints(plot = VariableFeaturePlot(ctrl), points = top20, repel = TRUE)
+
+
+ctrl = FindVariableFeatures(ctrl, selection.method = "mean.var.plot")
+hvg_seu$mvp = VariableFeatures(ctrl)
+#top20 <- head(hvg_seu$mvp, 20)
+#LabelPoints(plot = VariableFeaturePlot(ctrl), points = top20, repel = TRUE)
+
+ctrl = FindVariableFeatures(ctrl, selection.method = "dispersion")
+hvg_seu$disp = VariableFeatures(ctrl)
+#top20 <- head(hvg_seu$disp, 20)
+#LabelPoints(plot = VariableFeaturePlot(ctrl), points = top20, repel = TRUE)
+
+cmat = make_comb_mat(hvg_seu)
+cmat
+```
+
+Very little overlap between the methods within Seurat. Mvp and disp are calculated on `data`, while vst is done on `counts`. 
+
+
+```{r}
+vinfo.seu = ctrl@assays$RNA@meta.data
+rownames(vinfo.seu) = rownames(ctrl)
+
+vinfo.seu$vg_vst = rownames(vinfo.seu) %in% hvg_seu$vst
+vinfo.seu$vg_disp = rownames(vinfo.seu) %in% hvg_seu$disp
+vinfo.seu$vg_mvp = rownames(vinfo.seu) %in% hvg_seu$mvp
+vinfo.seu$vg_vst_disp = vinfo.seu$vg_vst + vinfo.seu$vg_disp == 2
+vinfo.seu$hvinfo = ifelse(vinfo.seu$vg_vst, "VST",NA)
+vinfo.seu$hvinfo[vinfo.seu$vg_mvp] = "MVP"
+vinfo.seu$hvinfo[vinfo.seu$vg_disp] = "DISP"
+vinfo.seu$hvinfo[vinfo.seu$vg_vst_disp] = "VST/DISP"
+
+
+means = colnames(vinfo.seu)[grepl("mean", colnames(vinfo.seu))]
+disp = c("vf_vst_counts.ctrl_13_variance.standardized","vf_disp_data.ctrl_13_mvp.dispersion.scaled","vf_mvp_data.ctrl_13_mvp.dispersion.scaled")
+pairs(vinfo.seu[,means])
+
+
+plot_hvg = function(df, m,d,vg, log=FALSE){
+  top20 = head(vg,20)
+  p = ggplot(df, aes(x=.data[[m]], y=.data[[d]], color=hvinfo)) + geom_point() + theme_classic() 
+  if (log) { p = p + scale_x_log10()}
+  LabelPoints(plot = p, points = top20, repel = TRUE)
+}
+
+p1 =   plot_hvg(vinfo.seu, "vf_vst_counts.ctrl_13_mean", "vf_vst_counts.ctrl_13_variance.standardized",hvg_seu$vst, log=TRUE)
+p2 =   plot_hvg(vinfo.seu, "vf_disp_data.ctrl_13_mvp.mean", "vf_disp_data.ctrl_13_mvp.dispersion.scaled",hvg_seu$disp)
+p3 =   plot_hvg(vinfo.seu, "vf_mvp_data.ctrl_13_mvp.mean", "vf_mvp_data.ctrl_13_mvp.dispersion.scaled",hvg_seu$mvp)
+wrap_plots(p1,p2,p3,   ncol=2)
+
+
+```
+
+
+#### Bioc
+
+```{r}
+ctrl.sce = as.SingleCellExperiment(ctrl)
+var.out <- modelGeneVar(ctrl.sce)
+hvgs_bioc <- getTopHVGs(var.out, n = 2000)
+
+var.out.df = data.frame(var.out)
+var.out.df$hvg = rownames(var.out) %in% hvgs_bioc
+p = ggplot(var.out.df, aes(x=mean, y=total, colour = hvg)) + geom_point() + theme_classic()
+
+top20 <- head(hvgs_bioc, 20)
+pB = LabelPoints(plot = p, points = top20, repel = TRUE)
+pB
+
+
+```
+
+#### Scanpy
+
+```{r}
+penv = "/Users/asabjor/miniconda3/envs/scanpy_2024_nopip"
+hvg.scanpy = basiliskRun(env=penv, fun=function(counts) {
+    scanpy <- reticulate::import("scanpy")
+    ad = reticulate::import("anndata")
+    adata = ad$AnnData(counts)
+    print(adata$X[1:10,1:10])
+    scanpy$pp$normalize_per_cell(adata, counts_per_cell_after=1e4)
+    scanpy$pp$log1p(adata)
+    print(adata$X[1:10,1:10])
+    scanpy$pp$highly_variable_genes(adata)
+    return(adata$var)
+    
+}, counts = t(ctrl@assays$RNA@layers$counts.ctrl_13),  testload="scanpy")
+
+head(hvg.scanpy)
+
+#flavor
+#Literal['seurat', 'cell_ranger', 'seurat_v3', 'seurat_v3_paper'] (default: 'seurat')
+```
+
+
+```{r}
+rownames(hvg.scanpy) = rownames(ctrl)
+
+top20 <- head(rownames(hvg.scanpy)[order(hvg.scanpy$dispersions_norm, decreasing = T)], 20)
+p = ggplot(hvg.scanpy, aes(x=means, y=dispersions_norm, colour = highly_variable)) + geom_point() + theme_classic()
+
+
+pS = LabelPoints(plot = p, points = top20, repel = TRUE)
+
+pS 
+```
+
+### All together
+
+```{r}
+colnames(hvg.scanpy) = paste0(colnames(hvg.scanpy), "_scpy")
+colnames(var.out) = paste0(colnames(var.out), "_bioc")
+ctrl.hvg = cbind(vinfo.seu, var.out, hvg.scanpy)
+```
+
+```{r}
+#| fig-height: 10
+#| fig-width: 12
+
+
+wrap_plots(p1,p2,p3,pB,pS, ncol=3)
+ 
+```
+
+
+
+```{r}
+
+hvgs = hvg_seu
+hvgs$scpy = rownames(hvg.scanpy)[hvg.scanpy$highly_variable]
+hvgs$bioc = hvgs_bioc
+
+
+cmat = make_comb_mat(hvgs)
+print(cmat)
+UpSet(cmat)
+```
+
+```{r}
+o = overlap_phyper2(hvgs,hvgs, remove.diag = T)
+```
+
+Vst clearly stands out as more different, but is also based on counts instead of lognorm data. 
+
+The variance estimate for the same sample is quite different. Even the top variable genes are not the same and are very different gene groups.
+
+
+### Top genes
+
+Explore top  genes with vst,  bioc and scanpy
+
+```{r}
+topG = lapply(hvgs, head, 10)
+
+# same for mvp and dips, remove one.
+topG$mvp = NULL
+
+# sort for scanpy.
+topG$scpy = rownames(ctrl.hvg)[order(ctrl.hvg$dispersions_norm_scpy, decreasing = T)][1:10]
+
+print(topG)
+
+table(unlist(topG))
+```
+
+
+
+
+```{r}
+#| fig-height: 10
+#| fig-width: 12
+
+small.leg <- theme(legend.text = element_text(size=3), legend.key.size = unit(0.5,"point"))
+
+FeaturePlot(ctrl, reduction = "umap_harmony", features = unique(unlist(topG)), order = T, ncol=5) + small.leg
+```
+
+More clear celltype genes in the Bioc selection. More B-cell genes for Scanpy/Seurat.
+
+
+Expression levels of the variable genes.
+
+```{r}
+#| fig-height: 8
+#| fig-width: 12
+
+ctrl.hvg$nC = rowSums(ctrl@assays$RNA@layers$counts.ctrl_13)
+ctrl.hvg$meanE = rowMeans(ctrl@assays$RNA@layers$data.ctrl_13)
+ctrl.hvg$vg_bioc = rownames(ctrl.hvg) %in% hvgs_bioc
+
+wrap_plots(
+ggplot(ctrl.hvg, aes(x=nC, fill=vg_vst)) + geom_histogram( alpha=0.5, position="identity") + scale_x_log10() + NoLegend() + ggtitle("VST"),
+ggplot(ctrl.hvg, aes(x=meanE, fill=vg_vst)) + geom_histogram( alpha=0.5, position="identity") + scale_x_log10() + NoLegend() + ggtitle("VST"), 
+
+ggplot(ctrl.hvg, aes(x=nC, fill=vg_disp)) + geom_histogram( alpha=0.5, position="identity") + scale_x_log10() + NoLegend() + ggtitle("Disp"), 
+ggplot(ctrl.hvg, aes(x=meanE, fill=vg_disp)) + geom_histogram( alpha=0.5, position="identity") + scale_x_log10() + NoLegend() + ggtitle("Disp"), 
+
+ggplot(ctrl.hvg, aes(x=nC, fill=highly_variable_scpy)) + geom_histogram( alpha=0.5, position="identity") + scale_x_log10() + NoLegend() + ggtitle("Scanpy"),
+ggplot(ctrl.hvg, aes(x=meanE, fill=highly_variable_scpy)) + geom_histogram( alpha=0.5, position="identity") + scale_x_log10() + NoLegend() + ggtitle("Scanpy"), 
+
+ggplot(ctrl.hvg, aes(x=nC, fill=vg_bioc)) + geom_histogram( alpha=0.5, position="identity") + scale_x_log10() + NoLegend() + ggtitle("Bioc"), 
+ggplot(ctrl.hvg, aes(x=meanE, fill=vg_bioc)) + geom_histogram( alpha=0.5, position="identity") + scale_x_log10() + NoLegend()+ ggtitle("Bioc"), 
+ncol =4
+)
+
+
+```
+
+
+
+
+
+## {{< meta session >}}
+
+<details>
+  <summary>Click here</summary>
+
+```{r}
+sessionInfo()
+```
+
+</details>

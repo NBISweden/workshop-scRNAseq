@@ -51,6 +51,8 @@ scanpy = as.Seurat(scanpy.sce, counts = NULL, data = "X") # only have the var.ge
 
 ```
 
+## Umaps
+
 ```{r}
 #| fig-height: 4
 #| fig-width: 10
@@ -63,7 +65,40 @@ wrap_plots(
 )
 ```
 
+Settings for umap differs:
 
+* Seurat 
+
+    * dims = 1:30,
+    * n.neighbors = 30,
+    * n.epochs = 200,
+    * min.dist = 0.3,
+    * learning.rate = 1,
+    * spread = 1
+* Bioc
+
+    * n_dimred = 30, 
+    * n_neighbors = 15,   
+    * spread = 1,
+    * min_dist = 0.01, 
+    * n_epchs = 200
+  
+* Scanpy
+
+  * does not use the umap algorithm for neigbors, feeds the KNN to the umap function.
+  * n_pcs = 30, 
+  * n_neighbors = 20,
+  * min_dist=0.5, 
+  * spread=1.0,
+
+
+## Doublet predictions
+
+In all 3 pipelines we run the filtering of cells in the exact same way, but doublet detection is different.
+
+* In Seurat - `DoubletFinder` with predefined 4% doublets.
+* In Scanpy - `Scrublet`, done per batch. No predefined cutoff. 
+* In Bioc - `scDblFinder` - default cutoffs, no batch separation. 
 
 ```{r}
 cat("Seurat: ", dim(sobj),"\n")
@@ -91,13 +126,9 @@ meta.scanpy$cell = sapply(rownames(meta.scanpy), function(x) substr(x,1,nchar(x)
 meta.seurat$cell = unlist(lapply(strsplit(rownames(meta.seurat),"_"), function(x) x[3]))
 ```
 
-## Doublet predictions
 
-In all 3 pipelines we run the filtering of cells in the exact same way, but doublet detection is different.
 
-* In Seurat - `DoubletFinder` with predefined 4% doublets.
-* In Scanpy - `Scrublet`, done per batch. No predefined cutoff. 
-* In Bioc - `scDblFinder` - default cutoffs, no batch separation. 
+
 
 Visualize overlap of cells using an UpSet plot in the `ComplexHeatmap` package.
 
@@ -199,6 +230,44 @@ In seurat, most T/B-cells look like cycling.
 With bioc, more mixed. 
 With scanpy also more in B/T-cells, but much more G1 prediction.
 
+Plot the scores. 
+
+```{r}
+#| fig-height: 10
+#| fig-width: 12
+
+cc.scores = c("S.Score", "G2M.Score","G1.score_bioc", "G2M.score_bioc", "S.score_bioc","S_score_scpy", "G2M_score_scpy")
+
+
+# copied from pairs help section.
+panel.cor <- function(x, y, digits = 2, prefix = "", cex.cor, ...) {
+    usr <- par("usr")
+    on.exit(par(usr))
+    par(usr = c(0, 1, 0, 1))
+    nas = is.na(x) | is.na(y)
+    Cor <- cor(x[!nas], y[!nas], method = "spearman") # Remove abs function if desired
+    txt <- paste0(prefix, format(c(Cor, 0.123456789), digits = digits)[1])
+    if(missing(cex.cor)) {
+        cex.cor <- 0.4 / strwidth(txt)
+    }
+    text(0.5, 0.5, txt,
+         cex = 1 + cex.cor) 
+} 
+
+pairs(all@meta.data[,cc.scores], a.action = na.omit,
+      upper.panel = panel.cor,    # Correlation panel
+      lower.panel = panel.smooth)
+
+```
+
+
+Use spearman cor as the distributions are very different
+
+* S and G2M scores in Scanpy and Seurat are correlated to eachother 
+* S vs G2M are also correlated.
+* In BioC all scores are anticorrelated.
+
+
 
 ## Variable features
 
@@ -225,135 +294,7 @@ Is the differences more due to the combination of ranks/dispersions or also foun
 
 Only Seurat have the dispersions for each individual dataset stored in the object. 
 
-### Same set of cells
-
-For a fair comparison, select one sample and rerun for the same exact set of cells. 
-
-
-```{r}
-# Bioc
-sce.sel = sce[,match(in.all, meta.bioc$cell)]
-
-var.out <- modelGeneVar(sce.sel, block = sce.sel$sample)
-hvgs_bioc <- getTopHVGs(var.out, n = 2000)
-```
-
-```{r}
-# Seurat, have all the same cells in the object `all` 
-
-all = FindVariableFeatures(all)
-```
-
-```{r}
-# with different cells
-length(intersect(hvgs$bioc, hvgs$seurat))
-
-# with same set of cells
-length(intersect(hvgs_bioc, VariableFeatures(all)))
-```
-
-Still very low overlap, now the main difference is the sample blocking parameter. But also Seurat was run for each layer separately and then combined the ranks.  So instead run for one sample.
-
-### For one sample
-
-Compare for ctrl.13 sample, Seurat uses `variance.standardized` to rank the genes. Bioc uses the `bio` slot with estimated biological variation.   
-
-```{r}
-tmpB = var.out$per.block$ctrl.13
-tmpS = all@assays$RNA@meta.data
-rownames(tmpS) = rownames(all)
-
-# genes are in same order in both objects. So just plot vs eachoter.
-plot(tmpS$vf_vst_counts.ctrl_13_variance.standardized, tmpB$bio)
-tmp = cbind(tmpB, tmpS)
-tmp$gene = rownames(tmp)
-
-ggplot(tmp, aes(x=vf_vst_counts.ctrl_13_variance.standardized, y=bio, color="red")) + geom_point() + geom_text(data=subset(tmp, vf_vst_counts.ctrl_13_variance.standardized > 7 | bio > 3),aes(vf_vst_counts.ctrl_13_variance.standardized,bio,label=gene), color="black")
-```
-
-The variance estimate for the same sample is quite different. Even the top variable genes are not the same and are very different gene groups.
-
-Try the different methods implemented in Seurat. From the help section:
-
-* “vst”: First, fits a line to the relationship of log(variance) and log(mean) using local polynomial regression (loess). Then standardizes the feature values using the observed mean and expected variance (given by the fitted line). Feature variance is then calculated on the standardized values after clipping to a maximum (see clip.max parameter).
-* “mean.var.plot” (mvp): First, uses a function to calculate average expression (mean.function) and dispersion (dispersion.function) for each feature. Next, divides features into num.bin (deafult 20) bins based on their average expression, and calculates z-scores for dispersion within each bin. The purpose of this is to identify variable features while controlling for the strong relationship between variability and average expression
-* “dispersion” (disp): selects the genes with the highest dispersion values
-
-
-
-```{r}
-all = FindVariableFeatures(all, selection.method = "mean.var.plot")
-
-tmpS = all@assays$RNA@meta.data
-rownames(tmpS) = rownames(all)
-
-tmp = cbind(tmpB, tmpS)
-tmp$gene = rownames(tmp)
-
-length(intersect(hvgs$seurat, VariableFeatures(all)))
-hvgs$seurat_mvp = VariableFeatures(all)
-
-ggplot(tmp, aes(x=vf_vst_counts.ctrl_13_variance.standardized, y=vf_mvp_data.ctrl_13_mvp.dispersion.scaled, color="red")) + geom_point() + geom_text(data=subset(tmp, vf_vst_counts.ctrl_13_variance.standardized > 7 | vf_mvp_data.ctrl_13_mvp.dispersion.scaled > 7),aes(vf_vst_counts.ctrl_13_variance.standardized,vf_mvp_data.ctrl_13_mvp.dispersion.scaled,label=gene), color="black")
-```
-
-Also quite different between the methods!
-
-```{r}
-all = FindVariableFeatures(all, selection.method = "dispersion")
-
-tmpS = all@assays$RNA@meta.data
-rownames(tmpS) = rownames(all)
-
-tmp = cbind(tmpB, tmpS)
-tmp$gene = rownames(tmp)
-
-length(intersect(hvgs$seurat, VariableFeatures(all)))
-hvgs$seurat_disp = VariableFeatures(all)
-
-ggplot(tmp, aes(x=vf_vst_counts.ctrl_13_variance.standardized, y=vf_disp_data.ctrl_13_mvp.dispersion.scaled, color="red")) + geom_point() + geom_text(data=subset(tmp, vf_vst_counts.ctrl_13_variance.standardized > 7 | vf_disp_data.ctrl_13_mvp.dispersion.scaled > 7),aes(vf_vst_counts.ctrl_13_variance.standardized,vf_disp_data.ctrl_13_mvp.dispersion.scaled,label=gene), color="black")
-
-ggplot(tmp, aes(x=vf_mvp_data.ctrl_13_mvp.dispersion.scaled, y=vf_disp_data.ctrl_13_mvp.dispersion.scaled, color="red")) + geom_point() + geom_text(data=subset(tmp, vf_mvp_data.ctrl_13_mvp.dispersion.scaled > 7 | vf_disp_data.ctrl_13_mvp.dispersion.scaled > 7),aes(vf_mvp_data.ctrl_13_mvp.dispersion.scaled,vf_disp_data.ctrl_13_mvp.dispersion.scaled,label=gene), color="black")
-
-
-```
-Identical results with "dispersion" or "mean.var.plot"!
-
-Compare mvp to Bioc. 
-
-```{r}
-ggplot(tmp, aes(x=vf_disp_data.ctrl_13_mvp.dispersion.scaled, y=bio, color="red")) + geom_point() + geom_text(data=subset(tmp, vf_disp_data.ctrl_13_mvp.dispersion.scaled > 7 | bio > 3),aes(vf_disp_data.ctrl_13_mvp.dispersion.scaled,bio,label=gene), color="black")
-```
-
-Explore top  genes with vst,  bioc and scanpy
-
-```{r}
-topB = rownames(tmp)[order(tmp$bio, decreasing = T)][1:10]
-topS = rownames(tmp)[order(tmp$vf_vst_counts.ctrl_13_variance.standardized, decreasing = T)][1:10]
-
-tmp2 = rowData(scanpy.sce)
-topSP = rownames(tmp2)[order(tmp2$dispersions_norm, decreasing = T)][1:10]
-```
-
-We have some overlapping genes:
-
-```{r}
-cat("Bioc" , topB, "\n")
-cat("Seurat", topS, "\n") 
-cat("Scanpy", topSP, "\n")
-cat("Bioc & Seurat", intersect(topS,topB), "\n")
-cat("Scanpy & Seurat", intersect(topS,topSP), "\n")
-cat("Bioc & Scanpy", intersect(topB,topSP), "\n")
-```
-
-
-
-```{r}
-#| fig-height: 10
-#| fig-width: 12
-FeaturePlot(all, features = c(topB,topS,topSP), order = T, ncol=5)
-```
-
-More clear celltype genes in the Bioc selection. More B-cell genes for Scanpy/Seurat.
+Explore more in the `comparison_hvg.qmd` script.
 
 ## Integrations
 
@@ -675,12 +616,143 @@ ggplot(annot, aes(x=nC, y = score, color=Pipe)) + geom_point()
 ```
 
 
-
-## Save 
-
 ```{r}
 saveRDS(all, "data/covid/results/merged_all.rds")
 ```
+
+
+## Celltype prediction.
+
+Done only for sample `ctrl13`, load all the results.
+
+```{r}
+
+sobj = readRDS(file.path(path_seurat, "seurat_covid_qc_dr_int_cl_ct-ctrl13.rds"))
+
+sce = readRDS(file.path(path_bioc, "bioc_covid_qc_dr_int_cl_ct-ctrl13.rds"))
+bioc = as.Seurat(sce)
+bioc$scmap_cluster = sce$scmap_cluster #for some reason that column dissappears when running as.Seurat.
+
+scanpy.sce = readH5AD(file.path(path_scanpy, "scanpy_covid_qc_dr_int_cl_ct-ctrl13.h5ad"))
+scanpy = as.Seurat(scanpy.sce, counts = NULL, data = "X")
+```
+Merge into one object.
+
+```{r}
+meta.seurat = sobj@meta.data
+meta.scanpy = scanpy@meta.data
+meta.bioc = bioc@meta.data
+
+meta.bioc$cell = rownames(meta.bioc)
+meta.scanpy$cell = sapply(rownames(meta.scanpy), function(x) substr(x,1,nchar(x)-2))
+meta.seurat$cell = unlist(lapply(strsplit(rownames(meta.seurat),"_"), function(x) x[3]))
+
+in.all = intersect(intersect(meta.scanpy$cell, meta.seurat$cell), meta.bioc$cell)
+
+tmp1 = meta.bioc[match(in.all, meta.bioc$cell),]
+colnames(tmp1) = paste0(colnames(tmp1),"_bioc")
+tmp2 = meta.scanpy[match(in.all, meta.scanpy$cell),]
+colnames(tmp2) = paste0(colnames(tmp2),"_scpy")
+
+all = sobj[,match(in.all, meta.seurat$cell)]
+
+meta.all = cbind(all@meta.data, tmp1,tmp2)
+all@meta.data = meta.all
+
+
+```
+
+Celltype predictions:
+
+
+* Seurat
+  * `predicted.id` - `TransferData`
+  * `singler.immune` - singleR with `DatabaseImmuneCellExpressionData`
+  * `singler.hpca`- singleR with `HumanPrimaryCellAtlasData`
+  * `singler.ref`- singleR with own ref.
+  * `predicted.celltype.l1`, `predicted.celltype.l2`, `predicted.celltype.l3` - Azimuth predictions at different levels.
+  
+* Bioc
+
+  * `scmap_cluster` - scMap with clusters in ref data
+  * `scmap_cell` - scMap with all cells in ref data
+  * `singler.immune` - singleR with `DatabaseImmuneCellExpressionData`
+  * `singler.hpca`- singleR with `HumanPrimaryCellAtlasData`
+  * `singler.ref`- singleR with own ref.
+
+* Scanpy
+
+  * `label_trans` - label transfer with scanorama
+  * `louvain` - bbknn
+  * `predicted_labels`, `majority_voting` - celltypist "Immune_All_High" reference
+  * `predicted_labels_ref`, `majority_voting_ref` - celltypist with own reference
+  
+  
+  
+
+```{r}
+#| fig-height: 10
+#| fig-width: 12
+
+all.pred = c("label_trans_scpy",   "louvain_scpy",  "predicted_labels_scpy", "majority_voting_scpy", "predicted_labels_ref_scpy",  "majority_voting_ref_scpy",      "scmap_cluster_bioc", "scmap_cell_bioc",  "singler.immune_bioc", "singler.hpca_bioc",  "singler.ref_bioc", "predicted.id", "singler.immune", "singler.hpca",  "singler.ref", "predicted.celltype.l1", "predicted.celltype.l2", "predicted.celltype.l3")
+
+ct = all@meta.data[,all.pred]
+
+plots = sapply(all.pred, function(x) DimPlot(all, reduction = "umap_harmony", group.by = x) + NoAxes() + ggtitle(x))
+
+wrap_plots(plots[1:9], ncol = 3)
+wrap_plots(plots[10:18], ncol = 3)
+```
+Subset for ones that are using same ref:
+
+```{r}
+#| fig-height: 10
+#| fig-width: 12
+
+
+ref.pred = c("label_trans_scpy",   "louvain_scpy", "predicted_labels_ref_scpy",  "majority_voting_ref_scpy",      "scmap_cluster_bioc", "scmap_cell_bioc",   "singler.ref_bioc", "predicted.id",  "singler.ref")
+
+lev = sort(unique(unlist(apply(all@meta.data[,ref.pred],2,unique))))
+lev = unique(sub("cells","cell",lev))
+
+#"FCGR3A+ Monocytes" -> "ncMono"
+#"CD14+ Monocytes" -> "cMono"
+#"Dendritic cell" -> "cDC"
+lev = lev[!grepl("\\+",lev)]
+lev = lev[!grepl("Dendr",lev)]
+
+for (rp in ref.pred){
+  tmp = as.character(all@meta.data[,rp])
+  tmp = sub("cells","cell",tmp)
+  tmp = sub("FCGR3A\\+ Monocytes","ncMono",tmp)
+  tmp = sub("CD14\\+ Monocytes","cMono",tmp)
+  tmp = sub("Dendritic cell","cDC",tmp)
+  tmp[is.na(tmp)] = "unassigned"
+  all@meta.data[,paste0(rp,"2")] = factor(tmp,levels = lev)
+  
+}
+
+coldef =  RColorBrewer::brewer.pal(9,"Paired")
+names(coldef) = lev
+plots2 = sapply(paste0(ref.pred,"2"), function(x) DimPlot(all, reduction = "umap_harmony", group.by = x) + NoAxes() + ggtitle(x) + scale_color_manual(values = coldef))
+
+
+wrap_plots(plots2, ncol = 3) + plot_layout(guides = "collect")
+```
+
+
+```{r}
+ref.pred2 = paste0(ref.pred,"2")
+
+tmp = all@meta.data[,ref.pred2]
+
+counts = sapply(ref.pred2,function(x) table(tmp[,x]))
+counts = reshape2::melt(counts)
+
+
+ggplot(counts, aes(x=Var2, y=value, fill=Var1)) + geom_bar(stat = "identity") + RotatedAxis() 
+```
+
 
 
 ## {{< meta session >}}
