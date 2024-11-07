@@ -195,18 +195,27 @@ pairs(all.hvg[,sel.disp])
 
 Difference in what cells were used, and also in how the dispersions across the samples is combined into one value. Do for just one sample instead.
 
-### For one sample
+## For one sample
 
 Compare for ctrl.13 sample, Seurat uses `variance.standardized` to rank the genes. Bioc uses the `bio` slot with estimated biological variation.   
 
-#### Seurat
+Use default settings in all the different methods.
+
+### Seurat
 
 Try the different methods implemented in Seurat. From the help section:
 
+```
 * “vst”: First, fits a line to the relationship of log(variance) and log(mean) using local polynomial regression (loess). Then standardizes the feature values using the observed mean and expected variance (given by the fitted line). Feature variance is then calculated on the standardized values after clipping to a maximum (see clip.max parameter).
 * “mean.var.plot” (mvp): First, uses a function to calculate average expression (mean.function) and dispersion (dispersion.function) for each feature. Next, divides features into num.bin (deafult 20) bins based on their average expression, and calculates z-scores for dispersion within each bin. The purpose of this is to identify variable features while controlling for the strong relationship between variability and average expression
 * “dispersion” (disp): selects the genes with the highest dispersion values
+```
 
+Feature selection for individual datasets
+
+In each dataset, we next aimed to identify a subset of features (e.g., genes) exhibiting high variability across cells, and therefore represent heterogeneous features to prioritize for downstream analysis. Choosing genes solely based on their log-normalized single-cell variance fails to account for the mean-variance relationship that is inherent to single-cell RNA-seq. Therefore, we first applied a variance-stabilizing transformation to correct for this [Mayer et al., 2018, Hafemeister and Satija, 2019].
+To learn the mean-variance relationship from the data, we computed the mean and variance of each gene using the unnormalized data (i.e., UMI or counts matrix), and applied 
+-transformation to both. We then fit a curve to predict the variance of each gene as a function of its mean, by calculating a local fitting of polynomials of degree 2 (R function loess, span = 0.3). This global fit provided us with a regularized estimator of variance given the mean of a feature. As such, we could use it to standardize feature counts without removing higher-than-expected variation.
 
 
 ```{r}
@@ -263,16 +272,16 @@ plot_hvg = function(df, m,d,vg, log=FALSE){
   LabelPoints(plot = p, points = top20, repel = TRUE)
 }
 
-p1 =   plot_hvg(vinfo.seu, "vf_vst_counts.ctrl_13_mean", "vf_vst_counts.ctrl_13_variance.standardized",hvg_seu$vst, log=TRUE)
-p2 =   plot_hvg(vinfo.seu, "vf_disp_data.ctrl_13_mvp.mean", "vf_disp_data.ctrl_13_mvp.dispersion.scaled",hvg_seu$disp)
-p3 =   plot_hvg(vinfo.seu, "vf_mvp_data.ctrl_13_mvp.mean", "vf_mvp_data.ctrl_13_mvp.dispersion.scaled",hvg_seu$mvp)
-wrap_plots(p1,p2,p3,   ncol=2)
+p1S =   plot_hvg(vinfo.seu, "vf_vst_counts.ctrl_13_mean", "vf_vst_counts.ctrl_13_variance.standardized",hvg_seu$vst, log=TRUE)
+p2S =   plot_hvg(vinfo.seu, "vf_disp_data.ctrl_13_mvp.mean", "vf_disp_data.ctrl_13_mvp.dispersion.scaled",hvg_seu$disp)
+p3S =   plot_hvg(vinfo.seu, "vf_mvp_data.ctrl_13_mvp.mean", "vf_mvp_data.ctrl_13_mvp.dispersion.scaled",hvg_seu$mvp)
+wrap_plots(p1S,p2S,p3S,   ncol=2)
 
 
 ```
 
 
-#### Bioc
+### Bioc
 
 ```{r}
 ctrl.sce = as.SingleCellExperiment(ctrl)
@@ -288,9 +297,31 @@ pB = LabelPoints(plot = p, points = top20, repel = TRUE)
 pB
 
 
+p2 = ggplot(var.out.df, aes(x=mean, y=bio, colour = hvg)) + geom_point() + theme_classic()
+
+top20 <- head(hvgs_bioc, 20)
+pB2 = LabelPoints(plot = p2, points = top20, repel = TRUE)
+pB2
+
 ```
 
-#### Scanpy
+### Scanpy
+
+Run with both `seurat` and `seurat_v3` 
+
+Cannot run seurat_v3 with normalized data: 
+```
+UserWarning: `flavor='seurat_v3'` expects raw count data, but non-integers were found.
+  warnings.warn(
+```
+
+
+
+For the dispersion-based methods (flavor='seurat' Satija et al. [2015] and flavor='cell_ranger' Zheng et al. [2017]), the normalized dispersion is obtained by scaling with the mean and standard deviation of the dispersions for genes falling into a given bin for mean expression of genes. This means that for each bin of mean expression, highly variable genes are selected.
+
+For flavor='seurat_v3'/'seurat_v3_paper' [Stuart et al., 2019], a normalized variance for each gene is computed. First, the data are standardized (i.e., z-score normalization per feature) with a regularized standard deviation. Next, the normalized variance is computed as the variance of each gene after the transformation. Genes are ranked by the normalized variance. Only if batch_key is not None, the two flavors differ: For flavor='seurat_v3', genes are first sorted by the median (across batches) rank, with ties broken by the number of batches a gene is a HVG. For flavor='seurat_v3_paper', genes are first sorted by the number of batches a gene is a HVG, with ties broken by the median (across batches) rank.
+
+
 
 ```{r}
 penv = "/Users/asabjor/miniconda3/envs/scanpy_2024_nopip"
@@ -299,15 +330,15 @@ hvg.scanpy = basiliskRun(env=penv, fun=function(counts) {
     ad = reticulate::import("anndata")
     adata = ad$AnnData(counts)
     print(adata$X[1:10,1:10])
+    var1 = scanpy$pp$highly_variable_genes(adata, flavor = "seurat_v3", inplace=FALSE)
     scanpy$pp$normalize_per_cell(adata, counts_per_cell_after=1e4)
     scanpy$pp$log1p(adata)
     print(adata$X[1:10,1:10])
     scanpy$pp$highly_variable_genes(adata)
-    return(adata$var)
+    return(list(disp=adata$var, vst=var1))
     
 }, counts = t(ctrl@assays$RNA@layers$counts.ctrl_13),  testload="scanpy")
 
-head(hvg.scanpy)
 
 #flavor
 #Literal['seurat', 'cell_ranger', 'seurat_v3', 'seurat_v3_paper'] (default: 'seurat')
@@ -315,23 +346,31 @@ head(hvg.scanpy)
 
 
 ```{r}
-rownames(hvg.scanpy) = rownames(ctrl)
+rownames(hvg.scanpy$disp) = rownames(ctrl)
+rownames(hvg.scanpy$vst) = rownames(ctrl)
 
-top20 <- head(rownames(hvg.scanpy)[order(hvg.scanpy$dispersions_norm, decreasing = T)], 20)
-p = ggplot(hvg.scanpy, aes(x=means, y=dispersions_norm, colour = highly_variable)) + geom_point() + theme_classic()
 
+top20 <- head(rownames(hvg.scanpy$disp)[order(hvg.scanpy$disp$dispersions_norm, decreasing = T)], 20)
+p = ggplot(hvg.scanpy$disp, aes(x=means, y=dispersions_norm, colour = highly_variable)) + geom_point() + theme_classic() + ggtitle("Scanpy disp")
 
 pS = LabelPoints(plot = p, points = top20, repel = TRUE)
-
 pS 
+
+top20 <- head(rownames(hvg.scanpy$vst)[order(hvg.scanpy$vst$variances_norm, decreasing = T)], 20)
+p2 = ggplot(hvg.scanpy$vst, aes(x=means, y=variances_norm, colour = highly_variable)) + geom_point() + theme_classic() + ggtitle("Scanpy vst") + scale_x_log10()
+
+pS2 = LabelPoints(plot = p2, points = top20, repel = TRUE)
+pS2
+
 ```
 
 ### All together
 
 ```{r}
-colnames(hvg.scanpy) = paste0(colnames(hvg.scanpy), "_scpy")
+colnames(hvg.scanpy$disp) = paste0(colnames(hvg.scanpy$disp), "_scpyD")
+colnames(hvg.scanpy$vst) = paste0(colnames(hvg.scanpy$vst), "_scpyV")
 colnames(var.out) = paste0(colnames(var.out), "_bioc")
-ctrl.hvg = cbind(vinfo.seu, var.out, hvg.scanpy)
+ctrl.hvg = cbind(vinfo.seu, var.out, hvg.scanpy$disp, hvg.scanpy$vst)
 ```
 
 ```{r}
@@ -339,25 +378,36 @@ ctrl.hvg = cbind(vinfo.seu, var.out, hvg.scanpy)
 #| fig-width: 12
 
 
-wrap_plots(p1,p2,p3,pB,pS, ncol=3)
+wrap_plots(p1S + ggtitle("Seurat vst"),p2S + ggtitle("Seurat disp"),p3S + ggtitle("Seurat mvp"),pB + ggtitle("Bioc total"),pS,pS2, ncol=3)
  
 ```
 
+
+```{r}
+sel = c("vf_vst_counts.ctrl_13_variance.standardized","vf_disp_data.ctrl_13_mvp.dispersion.scaled","bio_bioc", "dispersions_norm_scpyD", "variances_norm_scpyV")
+
+pairs(ctrl.hvg[,sel])
+```
+
+```{r}
+sel = c("vf_vst_counts.ctrl_13_mean_log","vf_disp_data.ctrl_13_mvp.mean", "mean_bioc", "means_scpyD", "means_scpyV_log")
+
+ctrl.hvg$vf_vst_counts.ctrl_13_mean_log = log1p(ctrl.hvg$vf_vst_counts.ctrl_13_mean)
+ctrl.hvg$means_scpyV_log = log1p(ctrl.hvg$means_scpyV)
+
+pairs(ctrl.hvg[,sel])
+```
+
+Mean Bioc stands out the most, mvp in seurat and scanpy is identical.
 
 
 ```{r}
 
 hvgs = hvg_seu
-hvgs$scpy = rownames(hvg.scanpy)[hvg.scanpy$highly_variable]
+hvgs$scpyD = rownames(hvg.scanpy$disp)[hvg.scanpy$disp$highly_variable_scpyD]
+hvgs$scpyV = rownames(hvg.scanpy$disp)[hvg.scanpy$vst$highly_variable_scpyV]
 hvgs$bioc = hvgs_bioc
 
-
-cmat = make_comb_mat(hvgs)
-print(cmat)
-UpSet(cmat)
-```
-
-```{r}
 o = overlap_phyper2(hvgs,hvgs, remove.diag = T)
 ```
 
@@ -377,13 +427,16 @@ topG = lapply(hvgs, head, 10)
 topG$mvp = NULL
 
 # sort for scanpy.
-topG$scpy = rownames(ctrl.hvg)[order(ctrl.hvg$dispersions_norm_scpy, decreasing = T)][1:10]
+topG$scpyD = rownames(ctrl.hvg)[order(ctrl.hvg$dispersions_norm_scpyD, decreasing = T)][1:10]
+topG$scpyV = rownames(ctrl.hvg)[order(ctrl.hvg$variances_norm_scpyV, decreasing = T)][1:10]
+
 
 print(topG)
 
 table(unlist(topG))
 ```
 
+VST with seurat or scanpy are the same. Some difference in the dispersion ones.
 
 
 
@@ -394,6 +447,8 @@ table(unlist(topG))
 small.leg <- theme(legend.text = element_text(size=3), legend.key.size = unit(0.5,"point"))
 
 FeaturePlot(ctrl, reduction = "umap_harmony", features = unique(unlist(topG)), order = T, ncol=5) + small.leg
+
+VlnPlot(ctrl, features = unique(unlist(topG)), ncol = 5)
 ```
 
 More clear celltype genes in the Bioc selection. More B-cell genes for Scanpy/Seurat.
@@ -411,23 +466,85 @@ ctrl.hvg$vg_bioc = rownames(ctrl.hvg) %in% hvgs_bioc
 
 wrap_plots(
 ggplot(ctrl.hvg, aes(x=nC, fill=vg_vst)) + geom_histogram( alpha=0.5, position="identity") + scale_x_log10() + NoLegend() + ggtitle("VST"),
-ggplot(ctrl.hvg, aes(x=meanE, fill=vg_vst)) + geom_histogram( alpha=0.5, position="identity") + scale_x_log10() + NoLegend() + ggtitle("VST"), 
-
 ggplot(ctrl.hvg, aes(x=nC, fill=vg_disp)) + geom_histogram( alpha=0.5, position="identity") + scale_x_log10() + NoLegend() + ggtitle("Disp"), 
+ggplot(ctrl.hvg, aes(x=nC, fill=highly_variable_scpyD)) + geom_histogram( alpha=0.5, position="identity") + scale_x_log10() + NoLegend() + ggtitle("Scanpy Disp"),
+ggplot(ctrl.hvg, aes(x=nC, fill=highly_variable_scpyV)) + geom_histogram( alpha=0.5, position="identity") + scale_x_log10() + NoLegend() + ggtitle("Scanpy VST"),
+ggplot(ctrl.hvg, aes(x=nC, fill=vg_bioc)) + geom_histogram( alpha=0.5, position="identity") + scale_x_log10() + NoLegend() + ggtitle("Bioc"),
+
+ggplot(ctrl.hvg, aes(x=meanE, fill=vg_vst)) + geom_histogram( alpha=0.5, position="identity") + scale_x_log10() + NoLegend() + ggtitle("VST"), 
 ggplot(ctrl.hvg, aes(x=meanE, fill=vg_disp)) + geom_histogram( alpha=0.5, position="identity") + scale_x_log10() + NoLegend() + ggtitle("Disp"), 
-
-ggplot(ctrl.hvg, aes(x=nC, fill=highly_variable_scpy)) + geom_histogram( alpha=0.5, position="identity") + scale_x_log10() + NoLegend() + ggtitle("Scanpy"),
-ggplot(ctrl.hvg, aes(x=meanE, fill=highly_variable_scpy)) + geom_histogram( alpha=0.5, position="identity") + scale_x_log10() + NoLegend() + ggtitle("Scanpy"), 
-
-ggplot(ctrl.hvg, aes(x=nC, fill=vg_bioc)) + geom_histogram( alpha=0.5, position="identity") + scale_x_log10() + NoLegend() + ggtitle("Bioc"), 
+ggplot(ctrl.hvg, aes(x=meanE, fill=highly_variable_scpyD)) + geom_histogram( alpha=0.5, position="identity") + scale_x_log10() + NoLegend() + ggtitle("Scanpy Disp"), 
+ggplot(ctrl.hvg, aes(x=meanE, fill=highly_variable_scpyV)) + geom_histogram( alpha=0.5, position="identity") + scale_x_log10() + NoLegend() + ggtitle("Scanpy VST"), 
 ggplot(ctrl.hvg, aes(x=meanE, fill=vg_bioc)) + geom_histogram( alpha=0.5, position="identity") + scale_x_log10() + NoLegend()+ ggtitle("Bioc"), 
-ncol =4
+ncol =5
 )
 
 
 ```
 
+BioC distibution shifted to more highly expressed genes. 
 
+Dispersion gives the extremely higly expressed genes. 
+
+## Discussion
+
+* Seurat v3 paper suggests vst on counts, but then uses the variable genes in lognorm space
+
+* From SC best practices, suggests scry for HVG selection.
+
+log-transformation is not possible for exact zeros, analysts often add a small pseudo count, e.g., 1 (log1p), to all normalized counts before log transforming the data. Choosing the pseudo count, however, is arbitrary and can introduce biases to the transformed data. This arbitrariness has then also an effect on the feature selection as the observed variability depends on the chosen pseudo count. A small pseudo count value close to zero is increasing the variance of genes with zero counts [Townes et al., 2019].
+
+From Townes paper:
+
+Zero inflation is an artifact of log normalization
+
+
+Select a few of the top genes and compare. IGKC,IGLC2 is top gene with vst, CAVIN2, C1QA with dispersion, GNLY,NKG7  with bioc, S100A9 ranks high in all, but most in bioc.
+
+
+
+```{r}
+#| fig-height: 5
+#| fig-width: 12
+
+selG = c("IGKC","IGLC2","CAVIN2","C1QA","GNLY","NKG7", "S100A9" )
+
+# violin plots for each slot.
+VlnPlot(ctrl,selG, ncol = 7, layer = "counts", group.by = "orig.ident")
+VlnPlot(ctrl,selG, ncol = 7, layer = "data", group.by = "orig.ident")
+VlnPlot(ctrl,selG, ncol = 7, layer = "scale.data", group.by = "orig.ident")
+```
+
+Try normalizing and logtrans with different pseudocounts and scale factors.
+
+Default scale factor is 10K 
+
+```{r}
+#| fig-height: 5
+#| fig-width: 12
+
+selG = c("IGKC","IGLC2","CAVIN2","C1QA","GNLY","NKG7", "S100A9" )
+
+C = ctrl@assays$RNA@layers$counts.ctrl_13
+rownames(C) = rownames(ctrl)
+hist(colSums(C),100)
+
+C.norm = C/colSums(C)
+# do log1p or log(x+1e-6)
+# scale factor 15K or 4k
+
+LayerData(ctrl,"norm_15k_1p") = log1p(C.norm*15000)
+LayerData(ctrl,"norm_4k_1p") = log1p(C.norm*4000)
+LayerData(ctrl,"norm_15k_e6p") = log(C.norm*15000 + 1e-6)
+LayerData(ctrl,"norm_4k_e6p") = log(C.norm*4000 + 1e-6)
+
+# violin plots for each slot.
+VlnPlot(ctrl,selG, ncol = 7, layer = "norm_15k_1p", group.by = "orig.ident")
+VlnPlot(ctrl,selG, ncol = 7, layer = "norm_4k_1p", group.by = "orig.ident")
+VlnPlot(ctrl,selG, ncol = 7, layer = "norm_15k_e6p", group.by = "orig.ident")
+VlnPlot(ctrl,selG, ncol = 7, layer = "norm_4k_e6p", group.by = "orig.ident")
+
+```
 
 
 
