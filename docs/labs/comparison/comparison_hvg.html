@@ -207,7 +207,7 @@ background-size: cover;
       <div>
       <div class="quarto-title-meta-heading">Published</div>
       <div class="quarto-title-meta-contents">
-        <p class="date">07-Nov-2024</p>
+        <p class="date">18-Nov-2024</p>
       </div>
     </div>
     
@@ -237,7 +237,10 @@ background-size: cover;
   <li><a href="#all-together" id="toc-all-together" class="nav-link" data-scroll-target="#all-together"><span class="header-section-number">4.4</span> All together</a></li>
   <li><a href="#top-genes" id="toc-top-genes" class="nav-link" data-scroll-target="#top-genes"><span class="header-section-number">4.5</span> Top genes</a></li>
   </ul></li>
-  <li><a href="#discussion" id="toc-discussion" class="nav-link" data-scroll-target="#discussion"><span class="header-section-number">5</span> Discussion</a></li>
+  <li><a href="#discussion" id="toc-discussion" class="nav-link" data-scroll-target="#discussion"><span class="header-section-number">5</span> Discussion</a>
+  <ul>
+  <li><a href="#scry" id="toc-scry" class="nav-link" data-scroll-target="#scry"><span class="header-section-number">5.1</span> scry</a></li>
+  </ul></li>
   <li><a href="#meta-session" id="toc-meta-session" class="nav-link" data-scroll-target="#meta-session"><span class="header-section-number">6</span> Session info</a></li>
   </ul>
 </nav>
@@ -807,7 +810,7 @@ $bioc
 <p>More clear celltype genes in the Bioc selection. More B-cell genes for Scanpy/Seurat.</p>
 <p>Expression levels of the variable genes.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb38"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a>ctrl.hvg<span class="sc">$</span>nC <span class="ot">=</span> <span class="fu">rowSums</span>(ctrl<span class="sc">@</span>assays<span class="sc">$</span>RNA<span class="sc">@</span>layers<span class="sc">$</span>counts.ctrl_13)</span>
+<div class="sourceCode cell-code" id="cb38"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a>ctrl.hvg<span class="sc">$</span>nC <span class="ot">=</span> <span class="fu">rowSums</span>(ctrl<span class="sc">@</span>assays<span class="sc">$</span>RNA<span class="sc">@</span>layers<span class="sc">$</span>counts.ctrl_13<span class="sc">&gt;</span><span class="dv">0</span>)</span>
 <span id="cb38-2"><a href="#cb38-2" aria-hidden="true" tabindex="-1"></a>ctrl.hvg<span class="sc">$</span>meanE <span class="ot">=</span> <span class="fu">rowMeans</span>(ctrl<span class="sc">@</span>assays<span class="sc">$</span>RNA<span class="sc">@</span>layers<span class="sc">$</span>data.ctrl_13)</span>
 <span id="cb38-3"><a href="#cb38-3" aria-hidden="true" tabindex="-1"></a>ctrl.hvg<span class="sc">$</span>vg_bioc <span class="ot">=</span> <span class="fu">rownames</span>(ctrl.hvg) <span class="sc">%in%</span> hvgs_bioc</span>
 <span id="cb38-4"><a href="#cb38-4" aria-hidden="true" tabindex="-1"></a></span>
@@ -841,7 +844,7 @@ $bioc
 <h2 data-number="5" class="anchored" data-anchor-id="discussion"><span class="header-section-number">5</span> Discussion</h2>
 <ul>
 <li><p>Seurat v3 paper suggests vst on counts, but then uses the variable genes in lognorm space</p></li>
-<li><p>From SC best practices, suggests scry for HVG selection.</p></li>
+<li><p>From SC best practices, suggests scry for HVG selection. https://www.sc-best-practices.org/preprocessing_visualization/feature_selection.html</p></li>
 </ul>
 <p>log-transformation is not possible for exact zeros, analysts often add a small pseudo count, e.g., 1 (log1p), to all normalized counts before log transforming the data. Choosing the pseudo count, however, is arbitrary and can introduce biases to the transformed data. This arbitrariness has then also an effect on the feature selection as the observed variability depends on the chosen pseudo count. A small pseudo count value close to zero is increasing the variance of genes with zero counts [Townes et al., 2019].</p>
 <p>From Townes paper:</p>
@@ -934,6 +937,81 @@ $bioc
 </div>
 </div>
 </div>
+<section id="scry" class="level3" data-number="5.1">
+<h3 data-number="5.1" class="anchored" data-anchor-id="scry"><span class="header-section-number">5.1</span> scry</h3>
+<p>Run scry deviance function and select top 2k genes.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb47"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb47-1"><a href="#cb47-1" aria-hidden="true" tabindex="-1"></a>ctrl.sce<span class="ot">&lt;-</span>scry<span class="sc">::</span><span class="fu">devianceFeatureSelection</span>(ctrl.sce, <span class="at">assay=</span><span class="st">"counts"</span>, <span class="at">sorted=</span><span class="cn">TRUE</span>)</span>
+<span id="cb47-2"><a href="#cb47-2" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(<span class="fu">rowData</span>(ctrl.sce)<span class="sc">$</span>binomial_deviance, <span class="at">type=</span><span class="st">"l"</span>, <span class="at">xlab=</span><span class="st">"ranked genes"</span>,</span>
+<span id="cb47-3"><a href="#cb47-3" aria-hidden="true" tabindex="-1"></a>     <span class="at">ylab=</span><span class="st">"binomial deviance"</span>, <span class="at">main=</span><span class="st">"Feature Selection with Deviance"</span>)</span>
+<span id="cb47-4"><a href="#cb47-4" aria-hidden="true" tabindex="-1"></a><span class="fu">abline</span>(<span class="at">v=</span><span class="dv">2000</span>, <span class="at">lty=</span><span class="dv">2</span>, <span class="at">col=</span><span class="st">"red"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-left">
+<figure class="figure">
+<p><a href="comparison_hvg_files/figure-html/unnamed-chunk-25-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-28"><img src="comparison_hvg_files/figure-html/unnamed-chunk-25-1.png" class="img-fluid figure-img" width="672"></a></p>
+</figure>
+</div>
+</div>
+<div class="sourceCode cell-code" id="cb48"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb48-1"><a href="#cb48-1" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(<span class="fu">rowData</span>(ctrl.sce))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>DataFrame with 6 rows and 1 column
+       binomial_deviance
+               &lt;numeric&gt;
+S100A9           74334.8
+FTL              53992.9
+GNLY             53233.9
+LYZ              48562.6
+S100A8           42285.1
+NKG7             37002.5</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb50"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb50-1"><a href="#cb50-1" aria-hidden="true" tabindex="-1"></a>ctrl.hvg<span class="sc">$</span>deviance <span class="ot">=</span> <span class="fu">rowData</span>(ctrl.sce)<span class="sc">$</span>binomial_deviance[<span class="fu">match</span>(<span class="fu">rownames</span>(ctrl.hvg), <span class="fu">rownames</span>(<span class="fu">rowData</span>(ctrl.sce)))]</span>
+<span id="cb50-2"><a href="#cb50-2" aria-hidden="true" tabindex="-1"></a>ctrl.hvg<span class="sc">$</span>devG <span class="ot">=</span> <span class="fu">rownames</span>(ctrl.hvg) <span class="sc">%in%</span> <span class="fu">head</span>(<span class="fu">rownames</span>(<span class="fu">rowData</span>(ctrl.sce)),<span class="dv">2000</span>)</span>
+<span id="cb50-3"><a href="#cb50-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb50-4"><a href="#cb50-4" aria-hidden="true" tabindex="-1"></a><span class="fu">wrap_plots</span>(</span>
+<span id="cb50-5"><a href="#cb50-5" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(ctrl.hvg, <span class="fu">aes</span>(<span class="at">x=</span>nC, <span class="at">y=</span>deviance, <span class="at">color=</span>devG)) <span class="sc">+</span> <span class="fu">geom_point</span>() <span class="sc">+</span> <span class="fu">theme_classic</span>() <span class="sc">+</span> <span class="fu">ggtitle</span>(<span class="st">"nCell vs deviance"</span>),</span>
+<span id="cb50-6"><a href="#cb50-6" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(ctrl.hvg, <span class="fu">aes</span>(<span class="at">x=</span>meanE, <span class="at">y=</span>deviance, <span class="at">color=</span>devG)) <span class="sc">+</span> <span class="fu">geom_point</span>() <span class="sc">+</span> <span class="fu">theme_classic</span>() <span class="sc">+</span> <span class="fu">ggtitle</span>(<span class="st">"mean expression vs deviance"</span>),</span>
+<span id="cb50-7"><a href="#cb50-7" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(ctrl.hvg, <span class="fu">aes</span>(<span class="at">x=</span>dispersions_norm_scpyD, <span class="at">y=</span>deviance, <span class="at">color=</span>devG)) <span class="sc">+</span> <span class="fu">geom_point</span>() <span class="sc">+</span> <span class="fu">theme_classic</span>() <span class="sc">+</span> <span class="fu">ggtitle</span>(<span class="st">"Dispersion vs deviance"</span>),</span>
+<span id="cb50-8"><a href="#cb50-8" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(ctrl.hvg, <span class="fu">aes</span>(<span class="at">x=</span>variances_norm_scpyV, <span class="at">y=</span>deviance, <span class="at">color=</span>devG)) <span class="sc">+</span> <span class="fu">geom_point</span>() <span class="sc">+</span> <span class="fu">theme_classic</span>() <span class="sc">+</span> <span class="fu">ggtitle</span>(<span class="st">"VST vs deviance"</span>),</span>
+<span id="cb50-9"><a href="#cb50-9" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(ctrl.hvg, <span class="fu">aes</span>(<span class="at">x=</span>bio_bioc, <span class="at">y=</span>deviance, <span class="at">color=</span>devG)) <span class="sc">+</span> <span class="fu">geom_point</span>() <span class="sc">+</span> <span class="fu">theme_classic</span>() <span class="sc">+</span> <span class="fu">ggtitle</span>(<span class="st">"bioc bio vs deviance"</span>),</span>
+<span id="cb50-10"><a href="#cb50-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb50-11"><a href="#cb50-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb50-12"><a href="#cb50-12" aria-hidden="true" tabindex="-1"></a><span class="at">ncol =</span> <span class="dv">3</span></span>
+<span id="cb50-13"><a href="#cb50-13" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-left">
+<figure class="figure">
+<p><a href="comparison_hvg_files/figure-html/unnamed-chunk-26-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-29"><img src="comparison_hvg_files/figure-html/unnamed-chunk-26-1.png" class="img-fluid figure-img" width="672"></a></p>
+</figure>
+</div>
+</div>
+<div class="sourceCode cell-code" id="cb51"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb51-1"><a href="#cb51-1" aria-hidden="true" tabindex="-1"></a><span class="fu">wrap_plots</span>(</span>
+<span id="cb51-2"><a href="#cb51-2" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(ctrl.hvg, <span class="fu">aes</span>(<span class="at">y=</span>dispersions_norm_scpyD, <span class="at">x=</span>means_scpyD, <span class="at">color=</span>devG)) <span class="sc">+</span> <span class="fu">geom_point</span>() <span class="sc">+</span> <span class="fu">theme_classic</span>() <span class="sc">+</span> <span class="fu">ggtitle</span>(<span class="st">"Mean vs Dispersion"</span>),</span>
+<span id="cb51-3"><a href="#cb51-3" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(ctrl.hvg, <span class="fu">aes</span>(<span class="at">y=</span>variances_norm_scpyV, <span class="at">x=</span>means_scpyV, <span class="at">color=</span>devG)) <span class="sc">+</span> <span class="fu">geom_point</span>() <span class="sc">+</span> <span class="fu">theme_classic</span>() <span class="sc">+</span> <span class="fu">ggtitle</span>(<span class="st">"Mean vs VST"</span>) <span class="sc">+</span> <span class="fu">scale_x_log10</span>(),</span>
+<span id="cb51-4"><a href="#cb51-4" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(ctrl.hvg, <span class="fu">aes</span>(<span class="at">y=</span>nC, <span class="at">x=</span>meanE, <span class="at">color=</span>devG)) <span class="sc">+</span> <span class="fu">geom_point</span>() <span class="sc">+</span> <span class="fu">theme_classic</span>() <span class="sc">+</span> <span class="fu">ggtitle</span>(<span class="st">"Mean vs nCells"</span>),</span>
+<span id="cb51-5"><a href="#cb51-5" aria-hidden="true" tabindex="-1"></a><span class="at">ncol =</span> <span class="dv">2</span></span>
+<span id="cb51-6"><a href="#cb51-6" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-left">
+<figure class="figure">
+<p><a href="comparison_hvg_files/figure-html/unnamed-chunk-26-2.png" class="lightbox" data-gallery="quarto-lightbox-gallery-30"><img src="comparison_hvg_files/figure-html/unnamed-chunk-26-2.png" class="img-fluid figure-img" width="672"></a></p>
+</figure>
+</div>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb52"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb52-1"><a href="#cb52-1" aria-hidden="true" tabindex="-1"></a>hvgs<span class="sc">$</span>deviance <span class="ot">=</span> <span class="fu">head</span>(<span class="fu">rownames</span>(<span class="fu">rowData</span>(ctrl.sce)),<span class="dv">2000</span>)</span>
+<span id="cb52-2"><a href="#cb52-2" aria-hidden="true" tabindex="-1"></a>o <span class="ot">=</span> <span class="fu">overlap_phyper2</span>(hvgs,hvgs, <span class="at">remove.diag =</span> T)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-left">
+<figure class="figure">
+<p><a href="comparison_hvg_files/figure-html/unnamed-chunk-27-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-31"><img src="comparison_hvg_files/figure-html/unnamed-chunk-27-1.png" class="img-fluid figure-img" width="672"></a></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
 </section>
 <section id="meta-session" class="level2" data-number="6">
 <h2 data-number="6" class="anchored" data-anchor-id="meta-session"><span class="header-section-number">6</span> Session info</h2>
@@ -942,7 +1020,7 @@ $bioc
 Click here
 </summary>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb47"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb47-1"><a href="#cb47-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb53"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb53-1"><a href="#cb53-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>R version 4.3.3 (2024-02-29)
 Platform: x86_64-apple-darwin13.4.0 (64-bit)
@@ -1028,33 +1106,34 @@ loaded via a namespace (and not attached):
 [101] htmltools_0.5.8.1         pkgconfig_2.0.3          
 [103] sparseMatrixStats_1.14.0  fastmap_1.2.0            
 [105] rlang_1.1.4               GlobalOptions_0.1.2      
-[107] htmlwidgets_1.6.4         shiny_1.9.1              
-[109] DelayedMatrixStats_1.24.0 farver_2.1.2             
-[111] zoo_1.8-12                jsonlite_1.8.8           
-[113] BiocParallel_1.36.0       BiocSingular_1.18.0      
-[115] RCurl_1.98-1.16           magrittr_2.0.3           
-[117] GenomeInfoDbData_1.2.11   dotCall64_1.1-1          
-[119] munsell_0.5.1             Rcpp_1.0.13              
-[121] reticulate_1.39.0         stringi_1.8.4            
-[123] zlibbioc_1.48.0           MASS_7.3-60.0.1          
-[125] plyr_1.8.9                pkgbuild_1.4.4           
-[127] parallel_4.3.3            listenv_0.9.1            
-[129] ggrepel_0.9.6             deldir_2.0-4             
-[131] splines_4.3.3             tensor_1.5               
-[133] circlize_0.4.16           locfit_1.5-9.9           
-[135] igraph_2.0.3              spatstat.geom_3.2-9      
-[137] RcppHNSW_0.6.0            reshape2_1.4.4           
-[139] ScaledMatrix_1.10.0       pkgload_1.4.0            
-[141] evaluate_0.24.0           foreach_1.5.2            
-[143] httpuv_1.6.15             RANN_2.6.2               
-[145] tidyr_1.3.1               purrr_1.0.2              
-[147] polyclip_1.10-7           future_1.34.0            
-[149] clue_0.3-65               scattermore_1.2          
-[151] rsvd_1.0.5                xtable_1.8-4             
-[153] RSpectra_0.16-2           later_1.3.2              
-[155] viridisLite_0.4.2         tibble_3.2.1             
-[157] memoise_2.0.1             beeswarm_0.4.0           
-[159] cluster_2.1.6             globals_0.16.3           </code></pre>
+[107] htmlwidgets_1.6.4         scry_1.14.0              
+[109] shiny_1.9.1               DelayedMatrixStats_1.24.0
+[111] farver_2.1.2              zoo_1.8-12               
+[113] jsonlite_1.8.8            BiocParallel_1.36.0      
+[115] BiocSingular_1.18.0       RCurl_1.98-1.16          
+[117] magrittr_2.0.3            GenomeInfoDbData_1.2.11  
+[119] dotCall64_1.1-1           munsell_0.5.1            
+[121] Rcpp_1.0.13               reticulate_1.39.0        
+[123] stringi_1.8.4             zlibbioc_1.48.0          
+[125] MASS_7.3-60.0.1           plyr_1.8.9               
+[127] pkgbuild_1.4.4            parallel_4.3.3           
+[129] listenv_0.9.1             ggrepel_0.9.6            
+[131] deldir_2.0-4              splines_4.3.3            
+[133] tensor_1.5                circlize_0.4.16          
+[135] locfit_1.5-9.9            igraph_2.0.3             
+[137] spatstat.geom_3.2-9       RcppHNSW_0.6.0           
+[139] reshape2_1.4.4            ScaledMatrix_1.10.0      
+[141] pkgload_1.4.0             evaluate_0.24.0          
+[143] foreach_1.5.2             httpuv_1.6.15            
+[145] RANN_2.6.2                tidyr_1.3.1              
+[147] purrr_1.0.2               polyclip_1.10-7          
+[149] future_1.34.0             clue_0.3-65              
+[151] scattermore_1.2           rsvd_1.0.5               
+[153] xtable_1.8-4              RSpectra_0.16-2          
+[155] later_1.3.2               viridisLite_0.4.2        
+[157] tibble_3.2.1              memoise_2.0.1            
+[159] beeswarm_0.4.0            cluster_2.1.6            
+[161] globals_0.16.3           </code></pre>
 </div>
 </div>
 </details>
@@ -1307,7 +1386,7 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
 </div>
   </div>
 </footer>
-<script>var lightboxQuarto = GLightbox({"loop":true,"descPosition":"bottom","selector":".lightbox","closeEffect":"zoom","openEffect":"zoom"});</script>
+<script>var lightboxQuarto = GLightbox({"descPosition":"bottom","selector":".lightbox","closeEffect":"zoom","loop":true,"openEffect":"zoom"});</script>
 
 
 

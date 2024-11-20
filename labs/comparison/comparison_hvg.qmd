@@ -460,7 +460,7 @@ Expression levels of the variable genes.
 #| fig-height: 8
 #| fig-width: 12
 
-ctrl.hvg$nC = rowSums(ctrl@assays$RNA@layers$counts.ctrl_13)
+ctrl.hvg$nC = rowSums(ctrl@assays$RNA@layers$counts.ctrl_13>0)
 ctrl.hvg$meanE = rowMeans(ctrl@assays$RNA@layers$data.ctrl_13)
 ctrl.hvg$vg_bioc = rownames(ctrl.hvg) %in% hvgs_bioc
 
@@ -490,7 +490,7 @@ Dispersion gives the extremely higly expressed genes.
 
 * Seurat v3 paper suggests vst on counts, but then uses the variable genes in lognorm space
 
-* From SC best practices, suggests scry for HVG selection.
+* From SC best practices, suggests scry for HVG selection. https://www.sc-best-practices.org/preprocessing_visualization/feature_selection.html
 
 log-transformation is not possible for exact zeros, analysts often add a small pseudo count, e.g., 1 (log1p), to all normalized counts before log transforming the data. Choosing the pseudo count, however, is arbitrary and can introduce biases to the transformed data. This arbitrariness has then also an effect on the feature selection as the observed variability depends on the chosen pseudo count. A small pseudo count value close to zero is increasing the variance of genes with zero counts [Townes et al., 2019].
 
@@ -544,6 +544,47 @@ VlnPlot(ctrl,selG, ncol = 7, layer = "norm_4k_1p", group.by = "orig.ident")
 VlnPlot(ctrl,selG, ncol = 7, layer = "norm_15k_e6p", group.by = "orig.ident")
 VlnPlot(ctrl,selG, ncol = 7, layer = "norm_4k_e6p", group.by = "orig.ident")
 
+```
+
+
+### scry
+
+Run scry deviance function and select top 2k genes. 
+
+```{r}
+ctrl.sce<-scry::devianceFeatureSelection(ctrl.sce, assay="counts", sorted=TRUE)
+plot(rowData(ctrl.sce)$binomial_deviance, type="l", xlab="ranked genes",
+     ylab="binomial deviance", main="Feature Selection with Deviance")
+abline(v=2000, lty=2, col="red")
+
+head(rowData(ctrl.sce))
+```
+```{r}
+
+ctrl.hvg$deviance = rowData(ctrl.sce)$binomial_deviance[match(rownames(ctrl.hvg), rownames(rowData(ctrl.sce)))]
+ctrl.hvg$devG = rownames(ctrl.hvg) %in% head(rownames(rowData(ctrl.sce)),2000)
+
+wrap_plots(
+ggplot(ctrl.hvg, aes(x=nC, y=deviance, color=devG)) + geom_point() + theme_classic() + ggtitle("nCell vs deviance"),
+ggplot(ctrl.hvg, aes(x=meanE, y=deviance, color=devG)) + geom_point() + theme_classic() + ggtitle("mean expression vs deviance"),
+ggplot(ctrl.hvg, aes(x=dispersions_norm_scpyD, y=deviance, color=devG)) + geom_point() + theme_classic() + ggtitle("Dispersion vs deviance"),
+ggplot(ctrl.hvg, aes(x=variances_norm_scpyV, y=deviance, color=devG)) + geom_point() + theme_classic() + ggtitle("VST vs deviance"),
+ggplot(ctrl.hvg, aes(x=bio_bioc, y=deviance, color=devG)) + geom_point() + theme_classic() + ggtitle("bioc bio vs deviance"),
+
+
+ncol = 3
+)
+wrap_plots(
+ggplot(ctrl.hvg, aes(y=dispersions_norm_scpyD, x=means_scpyD, color=devG)) + geom_point() + theme_classic() + ggtitle("Mean vs Dispersion"),
+ggplot(ctrl.hvg, aes(y=variances_norm_scpyV, x=means_scpyV, color=devG)) + geom_point() + theme_classic() + ggtitle("Mean vs VST") + scale_x_log10(),
+ggplot(ctrl.hvg, aes(y=nC, x=meanE, color=devG)) + geom_point() + theme_classic() + ggtitle("Mean vs nCells"),
+ncol = 2
+)
+```
+
+```{r}
+hvgs$deviance = head(rownames(rowData(ctrl.sce)),2000)
+o = overlap_phyper2(hvgs,hvgs, remove.diag = T)
 ```
 
 

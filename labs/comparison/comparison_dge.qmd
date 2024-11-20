@@ -24,6 +24,7 @@ suppressPackageStartupMessages({
     library(Matrix)
     library(ggplot2)
     library(patchwork)
+    library(dplyr)
     library(scran)
     library(basilisk)
     library(basilisk.utils)
@@ -31,6 +32,8 @@ suppressPackageStartupMessages({
     library(ComplexHeatmap)
 })
 
+
+#source("~/projects/sc-devop/single_cell_R_scripts/overlap_phyper_v2.R")
 devtools::source_url("https://raw.githubusercontent.com/asabjorklund/single_cell_R_scripts/main/overlap_phyper_v2.R")
 
 ```
@@ -61,8 +64,6 @@ Select one clustering and use that for DGE detection in all the different method
 
 ```{r}
 sel.clust = "RNA_snn_res.0.5"
-all$clusters = all[[sel.clust]]
-
 
 wrap_plots(
     DimPlot(all, group.by = sel.clust, reduction = "umap_harmony", label = T) + NoAxes() + ggtitle("Seurat harmony"),
@@ -71,6 +72,41 @@ wrap_plots(
     ncol = 3
 ) + plot_layout(guides="collect")
 ```
+
+Rename clusters by celltypes to easier follow annotations.
+
+* 0 - Mono/DC
+* 1 - NK
+* 2 - CD8T
+* 3 - Bcell
+* 4 - CD4T
+* 5 - Mono
+* 6 - Bcell
+* 7 - CD4T
+* 8 - unclear
+* 9 - unclear
+
+```{r}
+trans = c("M-0","NK-1","CD8-2","B-3","CD4-4","M-5","B-6","CD4-7","U-8","U-9")
+names(trans) = as.character(0:9)
+
+tmp = factor(trans[as.character(all[[sel.clust]][,1])], levels = sort(trans))
+names(tmp) = colnames(all)
+
+all$cluster = tmp
+all = SetIdent(all, value = "cluster")
+
+
+wrap_plots(
+    DimPlot(all, group.by = "cluster", reduction = "umap_harmony", label = T) + NoAxes() + ggtitle("Seurat harmony"),
+    DimPlot(all, group.by = "cluster", reduction = "umap_bioc_harmony", label = T) + NoAxes() + ggtitle("Bioc harmony"),
+    DimPlot(all, group.by = "cluster", reduction = "umap_scpy_harmony", label = T) + NoAxes() + ggtitle("Scanpy harmony"),
+    ncol = 3
+) + plot_layout(guides="collect")
+```
+
+
+
 
 ```{r}
 # Also merge the layers
@@ -83,7 +119,6 @@ all <- JoinLayers(object = all, layers = c("data","counts"))
 Subsample to 200 cells per cluster.
 
 ```{r}
-all = SetIdent(all, value = sel.clust)
 table(all@active.ident)
 all.sub = all[, WhichCells(all, downsample = 200)]
 table(all.sub@active.ident)
@@ -112,10 +147,22 @@ if (file.exists(outfile) & !force_rerun ){
 }
 ```
 
-## Bioc DGE
+## Bioc findMarkers
 
 
-For Bioc no need to do the subsampling, if not for speed. Still use the subsampled object for comparable numbers of cells.
+For Bioc no need to do the subsampling, if not for speed. It runs all pairwise comparisons and then combines the p-values across all tests. 
+
+Can run DGE with "all", "some" and "any". 
+
+* "any" - require  significance in one pw test. 
+* "all" - dge in all pw tests. A
+* "some" - combined p-value is calculated by taking the middlemost value of the Holm-corrected p-values for each gene. (By default, this the median for odd numbers of contrasts and one-after-the-median for even numbers, but the exact proportion can be changed by setting min.prop - see ?combineParallelPValues.) Here, the null hypothesis is that the gene is not DE in at least half of the contrasts.
+
+
+If pval.type="all", the null hypothesis is that the gene is not DE in all contrasts. A combined p-value for each gene is computed using Berger's intersection union test (IUT). Ranking based on the IUT p-value will focus on genes that are DE in that cluster compared to all other clusters. This strategy is particularly effective when dealing with distinct clusters that have a unique expression profile. In such cases, it yields a highly focused marker set that concisely captures the differences between clusters.
+
+
+Still use the subsampled object for comparable numbers of cells.
 
 Run with Wilcoxon, T-test and Binomial test.
 
@@ -130,13 +177,13 @@ if (file.exists(outfile) & !force_rerun ){
 }else {
 
   markersB = list()
-  markersB$wilc<- scran::findMarkers( sce, groups = sce$clusters,
+  markersB$wilc<- scran::findMarkers( sce, groups = sce$cluster,
     test.type = "wilcox", pval.type = "all",     direction = "up")
 
-  markersB$Ttest<- scran::findMarkers( sce, groups = sce$clusters,
+  markersB$Ttest<- scran::findMarkers( sce, groups = sce$cluster,
     test.type = "t", pval.type = "all",     direction = "up")
 
-  markersB$binom<- scran::findMarkers( sce, groups = sce$clusters,
+  markersB$binom<- scran::findMarkers( sce, groups = sce$cluster,
     test.type = "binom", pval.type = "all",     direction = "up")
   
   saveRDS(markersB, file = outfile)
@@ -145,7 +192,88 @@ if (file.exists(outfile) & !force_rerun ){
 
 ```
 
+
+
+```{r, eval=TRUE}
+outfile = file.path(path_results, "bioc_dge_some.rds")
+if (file.exists(outfile) & !force_rerun ){ 
+  markersBsome = readRDS(outfile)
+}else {
+
+  markersBsome = list()
+  markersBsome$wilc<- scran::findMarkers( sce, groups = sce$cluster,
+    test.type = "wilcox", pval.type = "some",     direction = "up")
+
+  markersBsome$Ttest<- scran::findMarkers( sce, groups = sce$cluster,
+    test.type = "t", pval.type = "some",     direction = "up")
+
+  markersBsome$binom<- scran::findMarkers( sce, groups = sce$cluster,
+    test.type = "binom", pval.type = "some",     direction = "up")
+  
+  saveRDS(markersBsome, file = outfile)
+}
+
+
+```
+
+
+## Bioc ScoreMarkers
+
+From help section:
+
+Compared to findMarkers, this function represents a simpler and more intuitive summary of the differences between the groups. We do this by realizing that the p-values for these types of comparisons are largely meaningless; individual cells are not meaningful units of experimental replication, while the groups themselves are defined from the data. Thus, by discarding the p-values, we can simplify our marker selection by focusing only on the effect sizes between groups.
+
+Here, the strategy is to perform pairwise comparisons between each pair of groups to obtain various effect sizes. For each group X, we summarize the effect sizes across all pairwise comparisons involving that group, e.g., mean, min, max and so on. This yields a DataFrame for each group where each column contains a different summarized effect and each row corresponds to a gene in x. Reordering the rows by the summary of choice can yield a ranking of potential marker genes for downstream analyses.
+
+
+
+```{r, eval=TRUE}
+outfile = file.path(path_results, "bioc_dge_score.rds")
+if (file.exists(outfile) & !force_rerun ){ 
+  markersBS = readRDS(outfile)
+}else {
+  markersBS <- scoreMarkers(sce, sce$cluster)
+  saveRDS(markersBS, file = outfile)
+}
+
+
+```
+
+Extract top ranked per cluster for `mean.AUC`, `mean.logFC.cohen`, `mean.logFC.detected`
+
+The logFC.cohen columns contain the standardized log-fold change, i.e., Cohen's d. For each pairwise comparison, this is defined as the difference in the mean log-expression for each group scaled by the average standard deviation across the two groups. (Technically, we should use the pooled variance; however, this introduces some unpleasant asymmetry depending on the variance of the larger group, so we take a simple average instead.) Cohen's d is analogous to the t-statistic in a two-sample t-test and avoids spuriously large effect sizes from comparisons between highly variable groups. We can also interpret Cohen's d as the number of standard deviations between the two group means.
+
+The AUC columns contain the area under the curve. This is the probability that a randomly chosen observation in one group is greater than a randomly chosen observation in the other group. The AUC is closely related to the U-statistic used in the Wilcoxon rank sum test. Values greater than 0.5 indicate that a gene is upregulated in the first group.
+
+The key difference between the AUC and Cohen's d is that the former is less sensitive to the variance within each group
+
+Finally, the logFC.detected columns contain the log-fold change in the proportion of cells with detected (i.e., non-zero) expression between groups. 
+
+
+
+
+```{r}
+
+Sstats = c("mean.AUC", "mean.logFC.cohen", "mean.logFC.detected")
+names(Sstats) = c("bioc_AUC", "bioc_Cohen", "bioc_det")
+
+clusters = levels(all$cluster)
+
+rankedBS = list()
+for (n in names(Sstats)){
+  rankedBS[[n]] = list()
+  for (cl in clusters){
+    rankedBS[[n]][[cl]] = rownames(markersBS[[cl]])[order(markersBS[[cl]][,Sstats[n]], decreasing = TRUE)]
+  }
+}
+
+
+```
+
+
 ## Scanpy DGE
+
+Running tests `t-test`, `t-test_overestim_var`, `wilcoxon`, `logreg`.
 
 First, save SCE as an h5ad matrix. with zellkonverter. Then run python code with basilisk.
 
@@ -164,12 +292,12 @@ scanpy.pp.log1p(adata)
 print(adata.shape)
 print(adata.X[1:10,1:10])
     
-scanpy.tl.rank_genes_groups(adata, 'clusters', method='t-test', key_added = "Ttest")
+scanpy.tl.rank_genes_groups(adata, 'cluster', method='t-test', key_added = "Ttest")
 print(adata.uns.Ttest.names[1:10])
-scanpy$tl$rank_genes_groups(adata, 'clusters', method='t-test_overestim_var', key_added = "Ttest_o")
-scanpy$tl$rank_genes_groups(adata, 'clusters', method='wilcoxon', key_added = "wilc")
+scanpy$tl$rank_genes_groups(adata, 'cluster', method='t-test_overestim_var', key_added = "Ttest_o")
+scanpy$tl$rank_genes_groups(adata, 'cluster', method='wilcoxon', key_added = "wilc")
 scanpy$pp$scale(adata) # scale before logreg.
-scanpy$tl$rank_genes_groups(adata, 'clusters', method='logreg', key_added = "logreg")
+scanpy$tl$rank_genes_groups(adata, 'cluster', method='logreg', key_added = "logreg")
 
 ```
 
@@ -198,12 +326,12 @@ dge.scanpy = basiliskRun(env=penv, fun=function(fpath) {
     output$shape2 = adata$shape
     output$head2 = adata$X[1:10,1:10]
     
-    scanpy$tl$rank_genes_groups(adata, 'clusters', method='t-test', key_added = "Ttest")
+    scanpy$tl$rank_genes_groups(adata, 'cluster', method='t-test', key_added = "Ttest")
     print(adata$uns['Ttest']['names'])
-    scanpy$tl$rank_genes_groups(adata, 'clusters', method='t-test_overestim_var', key_added = "Ttest_o")
-    scanpy$tl$rank_genes_groups(adata, 'clusters', method='wilcoxon', key_added = "wilc")
+    scanpy$tl$rank_genes_groups(adata, 'cluster', method='t-test_overestim_var', key_added = "Ttest_o")
+    scanpy$tl$rank_genes_groups(adata, 'cluster', method='wilcoxon', key_added = "wilc")
     scanpy$pp$scale(adata) # scale before logreg.
-    scanpy$tl$rank_genes_groups(adata, 'clusters', method='logreg', key_added = "logreg")
+    scanpy$tl$rank_genes_groups(adata, 'cluster', method='logreg', key_added = "logreg")
     output$Ttest = adata$uns['Ttest']
     return(adata$uns)
     
@@ -218,7 +346,7 @@ Parse all scanpy results into dataframes
 
 ```{r}
 scanpy.tests = names(dge.scanpy)[-1:-2]
-clusters = sort(unique(all$clusters))
+clusters = sort(unique(all$cluster))
 
 # convert from lists to dfs.
 markers_scanpy = list()
@@ -242,9 +370,11 @@ for (tname in scanpy.tests){
 Create a list object with all the significant dge genes. 
 
 * FDR from BioC `findMarkers` is the BH-adjusted p-value.
-* BioC `scoreMarkers` does not provide p-values in the same way, cannot compare here.
 * Adjusted p-value from scanpy is BH-adjusted p-value. Scanpy logreg does not have p-values.
-* P-values in Seurat are identical to scanpy for wilcoxon, so also BH.
+* P-values in Seurat are also BH.
+* **OBS!** BioC `scoreMarkers` does not provide p-values in the same way, cannot compare here.
+
+Not sure how they define the BH background, all genes, or genes after prefiltering.
 
 Set cutoff for significant at 0.01.
 
@@ -271,6 +401,13 @@ sign.bioc = lapply(markersB, function(x) {
 names(sign.bioc) = paste0("bioc_", names(sign.bioc))
 sign.bioc = unlist(sign.bioc, recursive = F)
 
+sign.biocS = lapply(markersBsome, function(x) { 
+  lapply(x, function(y) y[y$FDR <= pval.cut,])
+  })
+names(sign.biocS) = paste0("bioc_SOME-", names(sign.biocS))
+sign.biocS = unlist(sign.biocS, recursive = F)
+
+
 ```
 
 ```{r}
@@ -292,7 +429,7 @@ sign.seu = unlist(sign.seu, recursive = F)
 
 
 ```{r}
-sign.dge = c(sign.dge, sign.seu, sign.bioc)
+sign.dge = c(sign.dge, sign.seu, sign.bioc, sign.biocS)
 
 saveRDS(sign.dge, file = file.path(path_results, "all_sign_dge.Rds"))
 ```
@@ -383,8 +520,15 @@ rank.bioc = lapply(markersB, function(x) {
 names(rank.bioc) = paste0("bioc_", names(rank.bioc))
 rank.bioc = unlist(rank.bioc, recursive = F)
 
+rank.biocSOME = lapply(markersBsome, function(x) { 
+  lapply(x, rownames)
+})
+names(rank.biocSOME) = paste0("bioc_SOME-", names(rank.biocSOME))
+rank.biocSOME = unlist(rank.biocSOME, recursive = F)
 
-all.rank = c(ranked.scanpy, rank.seu, rank.bioc )
+rank.biocS = unlist(rankedBS, recursive = F)
+
+all.rank = c(ranked.scanpy, rank.seu, rank.bioc, rank.biocSOME,rank.biocS )
 
 saveRDS(all.rank, file = file.path(path_results, "all_ranked_dge.Rds"))
 ```
@@ -396,11 +540,20 @@ saveRDS(all.rank, file = file.path(path_results, "all_ranked_dge.Rds"))
 #| fig-height: 10
 #| fig-width: 12
 
+n = names(all.rank)
+s = Reduce(rbind, strsplit(n, "[\\._]"))
+annot.tests = data.frame(s)
+colnames(annot.tests) = c("Pipe","Test","Cluster")
+rownames(annot.tests) = n
+annot.tests$TestName = paste(s[,1],s[,2], sep= "_")
+
+
 topG = lapply(all.rank, function(x) x[1:50])
 
 o = overlap_phyper2(topG,topG, nsize = 5, bg = nrow(all), remove.diag = T)
+pvals = o$P[1:(ncol(o$P)-1), 1:(ncol(o$P)-1)]
 
-pheatmap(-log10(o$P[1:100,1:100]+1e-320),annotation_col = annot.tests)
+pheatmap(-log10(pvals+1e-320),annotation_col = annot.tests)
 ```
 
 
@@ -451,6 +604,230 @@ pheatmap(-log10(o$P + 1e-320)[1:length(tmp), 1:length(tmp)], display_numbers = o
 
 BioC stands out from the rest. Wilcoxon in Seurat and Scanpy are different.
 
+### Expression distribution
+
+Expression distribution of the top 200 genes, both as number of cells expressed or as mean lognorm expression. 
+
+```{r}
+
+
+stats.df = data.frame(row.names = rownames(all.sub))
+stats.df$nC = rowSums(all.sub@assays$RNA@layers$counts>0)
+stats.df$meanE = rowMeans(all.sub@assays$RNA@layers$data)
+
+# remove non-expressed genes
+stats.df = stats.df[stats.df$nC>0 & stats.df$meanE > 0,]
+
+top200 = tmp
+for (n in names(tmp)){
+  stats.df[[n]] = rownames(stats.df) %in% tmp[[n]]
+}
+```
+
+Number of cells detected.
+
+```{r}
+#| fig-height: 10
+#| fig-width: 12
+
+plots = list()
+plots$all = ggplot(stats.df, aes(x=nC)) + geom_histogram( alpha=0.5, position="identity", binwidth = 0.05)  + scale_x_log10(limits = c(0.9,2000)) + NoLegend() + ggtitle("All genes") 
+for (n in names(tmp)){
+  plots[[n]] = ggplot(stats.df[stats.df[,n],], aes(x=nC)) + geom_histogram( alpha=0.5, position="identity", binwidth=0.05) + scale_x_log10(limits = c(0.9,2000)) + NoLegend() + ggtitle(n) 
+}
+
+wrap_plots(plots, ncol=4)
+```
+
+Mean expression
+
+```{r}
+#| fig-height: 10
+#| fig-width: 12
+
+plots = list()
+plots$all = ggplot(stats.df, aes(x=meanE)) + geom_histogram( alpha=0.5, position="identity", binwidth = 0.05)  + scale_x_log10(limits = c(0.0001,5)) + NoLegend() + ggtitle("All genes") +RotatedAxis()
+for (n in names(tmp)){
+  plots[[n]] = ggplot(stats.df[stats.df[,n],], aes(x=meanE)) + geom_histogram( alpha=0.5, position="identity", binwidth=0.05) + scale_x_log10(limits = c(0.0001,5)) + NoLegend() + ggtitle(n) + RotatedAxis()
+}
+
+wrap_plots(plots, ncol=4)
+```
+
+### Separation of clusters
+
+For each geneset with top 200 genes per cluster, test running dim reduction and clustering and see how well it overlaps. 
+
+```{r}
+all.sub = FindVariableFeatures(all.sub, verbose = F)
+all.sub = all.sub %>% ScaleData(verbose = F) %>% RunPCA(verbose = F) %>% RunUMAP(verbose = F, dims = 1:30) %>% FindNeighbors(verbose = F, dims = 1:30) %>% FindClusters(verbose = F)
+all.sub@reductions$umap_hgv = all.sub@reductions$umap
+
+for (n in names(top200)){
+  VariableFeatures(all.sub) = top200[[n]]
+  all.sub = all.sub %>% ScaleData(verbose = F) %>% RunPCA(verbose = F) %>% RunUMAP(verbose = F, dims = 1:30) %>% FindNeighbors(verbose = F, dims = 1:30) %>% FindClusters(verbose = F)
+  all.sub[[paste0("clusters_",n)]] = all.sub@active.ident
+  all.sub@reductions[[paste0("umap_",n)]] = all.sub@reductions$umap
+}
+```
+
+
+```{r}
+#| fig-height: 10
+#| fig-width: 12
+
+plots = list()
+plots$hgv = DimPlot(all.sub, group.by = "cluster", reduction = "umap_hgv", label = T) + NoAxes() + NoLegend() + ggtitle("HGV")
+
+for (n in names(top200)){
+  plots[[n]] = DimPlot(all.sub, group.by = "cluster", reduction = paste0("umap_",n), label = T) + NoAxes() + NoLegend() + ggtitle(n)
+}
+
+wrap_plots(plots, ncol = 4)
+
+```
+
+
+
+## For one cluster
+
+Select one cluster and compare the DGEs for that cluster across all methods. 
+
+```{r}
+clust = "CD4-7"
+sel = which(annot.tests$Cluster == clust)
+ranked.sel = all.rank[sel]
+
+```
+
+Top 50 genes:
+
+```{r}
+topG = lapply(ranked.sel, function(x) x[1:50])
+
+o = overlap_phyper2(topG,topG, nsize = 5, bg = nrow(all), remove.diag = T)
+
+head(sort(table(unlist(topG)),decreasing = T),10)
+```
+
+Only 2 genes selected in all 16 tests.
+
+Top 10 genes:
+
+```{r}
+topG = lapply(ranked.sel, function(x) x[1:10])
+
+o = overlap_phyper2(topG,topG, nsize = 5, bg = nrow(all), remove.diag = T)
+
+head(sort(table(unlist(topG)),decreasing = T),10)
+```
+
+```{r}
+#| fig-height: 10
+#| fig-width: 12
+
+genes = sort(unique(unlist(topG)))
+
+#D = all.sub@assays$RNA@layers$data[sort(unique(unlist(topG))),]
+tmp = all.sub[genes,]
+D = as.matrix(tmp@assays$RNA@layers$data)
+rownames(D) = genes 
+colnames(D) = colnames(all.sub)
+# reorder D
+D = D[,order(all.sub$cluster)]
+
+coldef = c("red","blue")
+names(coldef) = c("FALSE","TRUE")
+
+annotG = data.frame(row.names = genes)
+annot.col = list()
+for (n in names(topG)){
+  annotG[[n]] = as.character(rownames(annotG) %in% topG[[n]])
+  annot.col[[n]] = coldef
+}  
+
+annotC = data.frame(cluster=all.sub$cluster)
+rownames(annotC) = colnames(all.sub)
+
+coldef = c("blue","red")
+names(coldef) = c("TRUE","FALSE")
+cols2 <- RColorBrewer::brewer.pal(10, "Set3")
+names(cols2) = clusters
+coldef = c(coldef, cols2)
+
+pheatmap(D, annotation_row = annotG, cluster_cols = F, cluster_rows = T, labels_col = F, annotation_colors = annot.col, annotation_col = annotC)
+
+
+```
+
+
+The ribosomal proteins are high in all B/T cells. 
+
+Proportion ribosomal among the top200 across all clusters:
+
+```{r}
+
+nR = data.frame(Reduce(rbind,lapply(top200, function(x) c(sum(grepl("^RP[SL]",x)), length(x)))))
+rownames(nR) = names(top200)
+colnames(nR) = c("nR","nTot")
+nR$perc = nR$nR / nR$nTot * 100
+
+nR
+
+VlnPlot(all.sub, "percent_ribo", group.by = "cluster")
+
+```
+
+Around 6% of the genes for Ttest, wilcox and mast. Except for bioc wilcox. Also high for AUC/Cohen.
+
+
+Same but for a B-cell cluster, take "B-3" 
+
+```{r}
+clust = "B-3"
+sel = which(annot.tests$Cluster == clust)
+topG = lapply(all.rank[sel], function(x) x[1:10])
+
+```
+
+
+```{r}
+#| fig-height: 10
+#| fig-width: 12
+
+genes = sort(unique(unlist(topG)))
+
+#D = all.sub@assays$RNA@layers$data[sort(unique(unlist(topG))),]
+tmp = all.sub[genes,]
+D = as.matrix(tmp@assays$RNA@layers$data)
+rownames(D) = genes 
+colnames(D) = colnames(all.sub)
+# reorder D
+D = D[,order(all.sub$cluster)]
+
+coldef = c("red","blue")
+names(coldef) = c("FALSE","TRUE")
+
+annotG = data.frame(row.names = genes)
+annot.col = list()
+for (n in names(topG)){
+  annotG[[n]] = as.character(rownames(annotG) %in% topG[[n]])
+  annot.col[[n]] = coldef
+}  
+
+annotC = data.frame(cluster=all.sub$cluster)
+rownames(annotC) = colnames(all.sub)
+
+coldef = c("blue","red")
+names(coldef) = c("TRUE","FALSE")
+cols2 <- RColorBrewer::brewer.pal(10, "Set3")
+names(cols2) = clusters
+coldef = c(coldef, cols2)
+
+pheatmap(D, annotation_row = annotG, cluster_cols = F, cluster_rows = T, labels_col = F, annotation_colors = annot.col, annotation_col = annotC)
+
+
+```
 
 ## {{< meta session >}}
 
