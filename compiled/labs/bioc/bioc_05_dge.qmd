@@ -51,6 +51,17 @@ sce <- readRDS(path_file)
 print(reducedDims(sce))
 ```
 
+## **?meta:dge_numbers**
+
+**?meta:dge_numbers_1**
+
+However, `findMarker` in Scran is implemented so that the tests are run
+in a pariwise manner, e.g. each cluster is tested agains all the others
+individually. Then a combined p-value is calculated across all the tests
+using `combineMarkers`. So for this method, one large cluster will not
+influence the results in the same way as `FindMarkers` in Seurat or
+`rank_genes_groups` in Scanpy.
+
 ## Cell marker genes
 
 Let us first compute a ranking for the highly differential genes in each
@@ -59,11 +70,15 @@ can be used to refine your results. When looking for marker genes, we
 want genes that are positively expressed in a cell type and possibly not
 expressed in others.
 
+In the scran function `findMarkers` t-test, wilcoxon test and binomial
+test implemented.
+
 ``` {r}
 # Compute differentiall expression
 markers_genes <- scran::findMarkers(
     x = sce,
-    groups = as.character(sce$louvain_SNNk15),
+    groups = as.character(sce$leiden_k20),
+    test.type = "wilcox",
     lfc = .5,
     pval.type = "all",
     direction = "up"
@@ -73,7 +88,7 @@ markers_genes <- scran::findMarkers(
 markers_genes
 
 # Visualizing the expression of one
-markers_genes[["1"]]
+head(markers_genes[["1"]])
 ```
 
 We can now select the top 25 overexpressed genes for plotting.
@@ -91,6 +106,8 @@ top25$p.value[top25$p.value == 0] <- 1e-300
 top25
 ```
 
+We can plot them as barplots per cluster.
+
 ``` {r}
 #| fig-height: 6
 #| fig-width: 7
@@ -98,7 +115,7 @@ top25
 par(mfrow = c(1, 5), mar = c(4, 6, 3, 1))
 for (i in unique(top25$cluster)) {
     barplot(sort(setNames(-log10(top25$p.value), top25$gene)[top25$cluster == i], F),
-        horiz = T, las = 1, main = paste0(i, " vs. rest"), border = "white", yaxs = "i", xlab = "-log10FC"
+        horiz = T, las = 1, main = paste0(i, " vs. rest"), border = "white", yaxs = "i", xlab = "-log10pval"
     )
     abline(v = c(0, -log10(0.05)), lty = c(1, 2))
 }
@@ -110,14 +127,15 @@ We can visualize them as a heatmap. Here we are selecting the top 5.
 #| fig-height: 6
 #| fig-width: 8
 
-as_tibble(top25) %>%
+top25 %>%
     group_by(cluster) %>%
-    top_n(-5, p.value) -> top5
+    slice_min(p.value, n = 5, with_ties = FALSE) -> top5
 
-scater::plotHeatmap(sce[, order(sce$louvain_SNNk15)],
+
+scater::plotHeatmap(sce[, order(sce$leiden_k20)],
     features = unique(top5$gene),
     center = T, zlim = c(-3, 3),
-    colour_columns_by = "louvain_SNNk15",
+    colour_columns_by = "leiden_k20",
     show_colnames = F, cluster_cols = F,
     fontsize_row = 6,
     color = colorRampPalette(c("purple", "black", "yellow"))(90)
@@ -130,7 +148,18 @@ We can also plot a violin plot for each gene.
 #| fig-height: 12
 #| fig-width: 13
 
-scater::plotExpression(sce, features = unique(top5$gene), x = "louvain_SNNk15", ncol = 5, colour_by = "louvain_SNNk15", scales = "free")
+scater::plotExpression(sce, features = unique(top5$gene), x = "leiden_k20", ncol = 5, colour_by = "leiden_k20", scales = "free")
+```
+
+Another way is by representing the overall group expression and
+detection rates in a dot-plot.
+
+``` {r}
+#| fig-height: 8
+#| fig-width: 10
+
+
+plotDots(sce, features = unique(top5$gene), group="leiden_k20")
 ```
 
 ## DGE across conditions
@@ -148,7 +177,7 @@ cluster, then change the cell identities to the variable of comparison
 #| fig-width: 5
 
 # Filter cells from that cluster
-cell_selection <- sce[, sce$louvain_SNNk15 == 8]
+cell_selection <- sce[, sce$leiden_k20 == 2]
 
 # Compute differentiall expression
 DGE_cell_selection <- findMarkers(
@@ -177,19 +206,24 @@ We can now plot the expression across the **type**.
 scater::plotExpression(cell_selection, features = unique(top5_cell_selection$gene), x = "type", ncol = 5, colour_by = "type")
 ```
 
-#DGE_ALL6.2:
+Or we can plot them as dotplots to see the expression in each individual
+sample.
 
 ``` {r}
 #| fig-height: 8
 #| fig-width: 13
 
-plotlist <- list()
-for (i in unique(top5_cell_selection$gene)) {
-    plotlist[[i]] <- plotReducedDim(sce, dimred = "UMAP_on_MNN", colour_by = i, by_exprs_values = "logcounts") +
-        ggtitle(label = i) + theme(plot.title = element_text(size = 20))
-}
-wrap_plots(plotlist, ncol = 3)
+
+plotDots(cell_selection, unique(top5_cell_selection$gene), group="sample")
 ```
+
+Clearly many of the top Covid genes are only high in the covid_17
+sample, and not a general feature of covid patients. In this case using
+a method that can control for pseudreplication or pseudobulk methods
+would be appropriate. We have a more thorough discussion on this issue
+with sample batch effects in differential expression across conditions
+in the [Seurat
+tutorial](https://nbisweden.github.io/workshop-scRNAseq/labs/seurat/seurat_05_dge.html#meta-dge_cond).
 
 ## Gene Set Analysis (GSA)
 

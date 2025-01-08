@@ -1,0 +1,401 @@
+---
+description: Identify genes that are significantly over or
+  under-expressed between conditions in specific cell populations.
+subtitle:  Bioconductor Toolkit
+title:  Differential gene expression
+---
+
+<div>
+
+> **Note**
+>
+> Code chunks run R commands unless otherwise specified.
+
+</div>
+
+In this tutorial we will cover differential gene expression, which
+comprises an extensive range of topics and methods. In single cell,
+differential expresison can have multiple functionalities such as
+identifying marker genes for cell populations, as well as identifying
+differentially regulated genes across conditions (healthy vs control).
+We will also cover controlling batch effect in your test.
+
+We can first load the data from the clustering session. Moreover, we can
+already decide which clustering resolution to use. First let's define
+using the `louvain` clustering to identifying differentially expressed
+genes.
+
+``` {r}
+suppressPackageStartupMessages({
+    library(scater)
+    library(scran)
+    # library(venn)
+    library(patchwork)
+    library(ggplot2)
+    library(pheatmap)
+    library(igraph)
+    library(dplyr)
+})
+
+devtools::source_url("https://raw.githubusercontent.com/asabjorklund/single_cell_R_scripts/main/overlap_phyper_v2.R")
+```
+
+``` {r}
+# download pre-computed data if missing or long compute
+fetch_data <- TRUE
+
+# url for source and intermediate data
+path_data <- "https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"
+path_file <- "data/covid/results/bioc_covid_qc_dr_int_cl.rds"
+if (!dir.exists(dirname(path_file))) dir.create(dirname(path_file), recursive = TRUE)
+if (fetch_data && !file.exists(path_file)) download.file(url = file.path(path_data, "covid/results/bioc_covid_qc_dr_int_cl.rds"), destfile = path_file)
+sce <- readRDS(path_file)
+print(reducedDims(sce))
+```
+
+## Cell marker genes
+
+Let us first compute a ranking for the highly differential genes in each
+cluster. There are many different tests and parameters to be chosen that
+can be used to refine your results. When looking for marker genes, we
+want genes that are positively expressed in a cell type and possibly not
+expressed in others.
+
+In the scran function `findMarkers` t-test, wilcoxon test and binomial
+test implemented.
+
+``` {r}
+# Compute differentiall expression
+markers_genes <- scran::findMarkers(
+    x = sce,
+    groups = sce$leiden_k20,
+    test.type = "wilcox",
+    lfc = .5,
+    pval.type = "all",
+    direction = "up"
+)
+
+# List of dataFrames with the results for each cluster
+markers_genes
+
+# Visualizing the expression of one
+head(markers_genes[["1"]])
+```
+
+We can now select the top 25 overexpressed genes for plotting.
+
+``` {r}
+# Colect the top 25 genes for each cluster and put the into a single table
+top25 <- lapply(names(markers_genes), function(x) {
+    temp <- markers_genes[[x]][1:25, 1:2]
+    temp$gene <- rownames(markers_genes[[x]])[1:25]
+    temp$cluster <- x
+    return(temp)
+})
+top25 <- as_tibble(do.call(rbind, top25))
+top25$p.value[top25$p.value == 0] <- 1e-300 # set to very small number if p-value is zero.
+top25
+```
+
+We can plot them as barplots per cluster.
+
+``` {r}
+#| fig-height: 6
+#| fig-width: 7
+
+par(mfrow = c(1, 5), mar = c(4, 6, 3, 1))
+for (i in names(markers_genes)) {
+    barplot(sort(setNames(-log10(top25$p.value), top25$gene)[top25$cluster == i], F),
+        horiz = T, las = 1, main = paste0(i, " vs. rest"), border = "white", yaxs = "i", xlab = "-log10pval"
+    )
+    abline(v = c(0, -log10(0.05)), lty = c(1, 2))
+}
+```
+
+We can visualize them as a heatmap. Here we are selecting the top 5.
+
+``` {r}
+#| fig-height: 6
+#| fig-width: 8
+
+top25 %>%
+    group_by(cluster) %>%
+    slice_min(p.value, n = 5, with_ties = FALSE) -> top5
+
+
+scater::plotHeatmap(sce[, order(sce$leiden_k20)],
+    features = unique(top5$gene),
+    center = T, zlim = c(-3, 3),
+    colour_columns_by = "leiden_k20",
+    show_colnames = F, cluster_cols = F,
+    fontsize_row = 6,
+    color = colorRampPalette(c("purple", "black", "yellow"))(90)
+)
+```
+
+Another way is by representing the overall group expression and
+detection rates in a dot-plot.
+
+``` {r}
+#| fig-height: 8
+#| fig-width: 10
+
+
+plotDots(sce, features = unique(top5$gene), group="leiden_k20")
+```
+
+NOTE! Perhaps add in t-test and binomial?
+
+### One cluster
+
+Select one cluster to visualize and compare for now. Cluster1 has no
+significant genes.
+
+``` {r}
+cl.sel = "2"
+
+tmp = markers_genes[[cl.sel]]
+
+plotExpression(sce, features=head(rownames(tmp),9),ncol=3, 
+    x="leiden_k20", colour_by="leiden_k20")
+```
+
+### Binomial
+
+``` {r}
+
+markers_genesB <- scran::findMarkers(
+    x = sce,
+    groups = sce$leiden_k20,
+    test.type = "binom",
+    lfc = .5,
+    pval.type = "all",
+    direction = "up"
+)
+```
+
+``` {r}
+tmp = markers_genesB[[cl.sel]]
+plotExpression(sce, features=head(rownames(tmp),9),ncol=3, 
+    x="leiden_k20", colour_by="leiden_k20")
+```
+
+### T-test
+
+``` {r}
+
+markers_genesT <- scran::findMarkers(
+    x = sce,
+    groups = sce$leiden_k20,
+    test.type = "t",
+    lfc = .5,
+    pval.type = "all",
+    direction = "up"
+)
+```
+
+``` {r}
+tmp = markers_genesT[[cl.sel]]
+plotExpression(sce, features=head(rownames(tmp),9),ncol=3, 
+    x="leiden_k20", colour_by="leiden_k20")
+```
+
+### With blocking
+
+For all the tests above there is the option to add a blocking parameter,
+eg. different batch effects. Lets try the 3 methods but with sample as
+the blocking parameter.
+
+``` {r}
+markers_genes.block <- scran::findMarkers(
+    x = sce,
+    groups = sce$leiden_k20,
+    test.type = "wilcox",
+    lfc = .5,
+    pval.type = "all",
+    direction = "up",
+    block = sce$sample
+)
+```
+
+``` {r}
+markers_genesT.block <- scran::findMarkers(
+    x = sce,
+    groups = sce$leiden_k20,
+    test.type = "t",
+    lfc = .5,
+    pval.type = "all",
+    direction = "up",
+    block = sce$sample
+)
+```
+
+``` {r}
+markers_genesB.block <- scran::findMarkers(
+    x = sce,
+    groups = sce$leiden_k20,
+    test.type = "binom",
+    lfc = .5,
+    pval.type = "all",
+    direction = "up",
+    block = sce$sample
+)
+```
+
+``` {r}
+top50 = list()
+
+top50$Wilc = lapply(markers_genes, function(x) rownames(x)[1:50])
+top50$T = lapply(markers_genesT, function(x) rownames(x)[1:50])
+top50$Bin = lapply(markers_genesB, function(x) rownames(x)[1:50])
+top50$WilcB = lapply(markers_genes.block, function(x) rownames(x)[1:50])
+top50$TB = lapply(markers_genesT.block, function(x) rownames(x)[1:50])
+top50$BinB = lapply(markers_genesB.block, function(x) rownames(x)[1:50])
+
+
+all.top = unlist(top50, recursive = F)
+all.top = all.top[sort(names(all.top))]
+```
+
+``` {r}
+#| fig-height: 10
+#| fig-width: 12
+
+
+o = overlap_phyper2(all.top,all.top, bg=nrow(markers_genes[[1]]), nsize = 5, remove.diag = T)
+```
+
+## scoreMarkers
+
+From help section:
+
+We do this by realizing that the p-values for these types of comparisons
+are largely meaningless; individual cells are not meaningful units of
+experimental replication, while the groups themselves are defined from
+the data. Thus, by discarding the p-values, we can simplify our marker
+selection by focusing only on the effect sizes between groups.
+
+Run score markers with sample as blocking parameter.
+
+``` {r}
+marker.info <- scoreMarkers(sce, sce$leiden_k20, block = sce$sample)
+
+head(marker.info[[cl.sel]])
+```
+
+### AUC:
+
+A value of 1 corresponds to upregulation, where all values of our
+cluster of interest are greater than any value from the other cluster; a
+value of 0.5 means that there is no net difference in the location of
+the distributions; and a value of 0 corresponds to downregulation. The
+AUC is closely related to the U statistic in the Wilcoxon ranked sum
+test (a.k.a., Mann-Whitney U-test).
+
+``` {r}
+chosen <- marker.info[[cl.sel]]
+ordered <- chosen[order(chosen$mean.AUC, decreasing=TRUE),]
+head(ordered[,1:4]) # showing basic stats only, for brevity.
+```
+
+``` {r}
+plotExpression(sce, features=head(rownames(ordered),9),ncol=3, 
+    x="leiden_k20", colour_by="leiden_k20")
+```
+
+### Cohen:
+
+Cohen's d is a standardized log-fold change where the difference in the
+mean log-expression between groups is scaled by the average standard
+deviation across groups. In other words, it is the number of standard
+deviations that separate the means of the two groups. The interpretation
+is similar to the log-fold change; positive values indicate that the
+gene is upregulated in our cluster of interest, negative values indicate
+downregulation and values close to zero indicate that there is little
+difference. Cohen's d is roughly analogous to the t -statistic in
+various two-sample t -tests.
+
+``` {r}
+ordered <- chosen[order(chosen$mean.logFC.cohen, decreasing=TRUE),]
+head(ordered[,1:4]) # showing basic stats only, for brevity.
+plotExpression(sce, features=head(rownames(ordered),9),ncol=3, 
+    x="leiden_k20", colour_by="leiden_k20")
+```
+
+### Detected:
+
+Finally, we also compute the log-fold change in the proportion of cells
+with detected expression between clusters. This ignores any information
+about the magnitude of expression, only considering whether any
+expression is detected at all. Again, positive values indicate that a
+greater proportion of cells express the gene in our cluster of interest
+compared to the other cluster. Note that a pseudo-count is added to
+avoid undefined log-fold changes when no cells express the gene in
+either group.
+
+``` {r}
+ordered <- chosen[order(chosen$mean.logFC.detected, decreasing=TRUE),]
+head(ordered[,1:4]) # showing basic stats only, for brevity.
+plotExpression(sce, features=head(rownames(ordered),9),ncol=3, 
+    x="leiden_k20", colour_by="leiden_k20")
+```
+
+## Compare for each cluster
+
+Take all top 50 genes from each of the methods that includes sample as
+block.
+
+``` {r}
+top50 = list()
+
+top50$Wilc = lapply(markers_genes.block, function(x) rownames(x)[1:50])
+top50$T = lapply(markers_genesT.block, function(x) rownames(x)[1:50])
+top50$Bin = lapply(markers_genesB.block, function(x) rownames(x)[1:50])
+top50$AUC = lapply(marker.info, function(x) rownames(x)[order(x$mean.AUC, decreasing = T)][1:50])
+top50$cohen = lapply(marker.info, function(x) rownames(x)[order(x$mean.logFC.cohen, decreasing = T)][1:50])
+top50$det = lapply(marker.info, function(x) rownames(x)[order(x$mean.logFC.detected, decreasing = T)][1:50])
+
+
+all.top = unlist(top50, recursive = F)
+```
+
+``` {r}
+#| fig-height: 10
+#| fig-width: 12
+
+
+o = overlap_phyper2(all.top,all.top, bg=nrow(marker.info[[1]]), nsize = 5)
+```
+
+More non-unique markers with the scoreMarkers function.
+
+One cluster at a time:
+
+``` {r}
+for (n in names(marker.info)){
+  tmp = lapply(top50, function(x) x[[n]])
+  o = overlap_phyper2(tmp,tmp, bg=nrow(marker.info[[1]]), nsize = 10, title = paste0("cluster_",n), remove.diag = F)
+}
+```
+
+Mainly high overlap betwen Wilcox / T-test and AUC / Cohen.
+
+## Session info
+
+```{=html}
+<details>
+```
+```{=html}
+<summary>
+```
+Click here
+```{=html}
+</summary>
+```
+``` {r}
+sessionInfo()
+```
+
+```{=html}
+</details>
+```

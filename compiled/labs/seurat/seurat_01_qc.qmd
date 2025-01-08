@@ -139,10 +139,11 @@ sdata.ctrl19$type <- "Ctrl"
 
 # Merge datasets into one single seurat object
 alldata <- merge(sdata.cov1, c(sdata.cov15, sdata.cov16, sdata.cov17, sdata.ctrl5, sdata.ctrl13, sdata.ctrl14, sdata.ctrl19), add.cell.ids = c("covid_1", "covid_15", "covid_16", "covid_17", "ctrl_5", "ctrl_13", "ctrl_14", "ctrl_19"))
-alldata
 ```
 
-In Seurat v5, merging creates a single object, but keeps the expression information split into different layers for integration. If not proceeding with integration, rejoin the layers after merging.
+In Seurat v5, merging creates a single object, but keeps the expression
+information split into different layers for integration. If not
+proceeding with integration, rejoin the layers after merging.
 
 ``` {r}
 alldata <- JoinLayers(alldata)
@@ -164,7 +165,6 @@ Here is how the count matrix and the metadata look like for every cell.
 
 ``` {r}
 alldata[["RNA"]]$counts[1:10, 1:4] 
-
 head(alldata@meta.data, 10)
 ```
 
@@ -174,10 +174,11 @@ Having the data in a suitable format, we can start calculating some
 quality metrics. We can for example calculate the percentage of
 mitochondrial and ribosomal genes per cell and add to the metadata. The
 proportion of hemoglobin genes can give an indication of red blood cell
-contamination. This will be helpful to visualize them across different
-metadata parameters (i.e. datasetID and chemistry version). There are
-several ways of doing this. The QC metrics are finally added to the
-metadata table.
+contamination, but in some tissues it can also be the case that some
+celltypes have higher content of hemoglobin. This will be helpful to
+visualize them across different metadata parameters (i.e. datasetID and
+chemistry version). There are several ways of doing this. The QC metrics
+are finally added to the metadata table.
 
 Citing from Simple Single Cell workflows (Lun, McCarthy & Marioni,
 2017): High proportions are indicative of poor-quality cells (Islam et
@@ -336,8 +337,6 @@ cutoff. We will also remove cells with less than 5% ribosomal reads.
 #| fig-width: 15
 
 data.filt <- subset(data.filt, percent_mito < 20 & percent_ribo > 5)
-
-
 dim(data.filt)
 table(data.filt$orig.ident)
 ```
@@ -450,13 +449,13 @@ genes.table <- genes.table[genes.table$external_gene_name %in% rownames(data.fil
 ```
 
 Now that we have the chromosome information, we can calculate the
-proportion of reads that comes from chromosome Y per cell. But first we have to remove all genes in the pseudoautosmal regions of chrY that are:
-
-* chromosome:GRCh38:Y:10001 - 2781479 is shared with X: 10001 - 2781479 (PAR1)
-* chromosome:GRCh38:Y:56887903 - 57217415 is shared with X: 155701383 - 156030895 (PAR2)
+proportion of reads that comes from chromosome Y per cell.But first we
+have to remove all genes in the pseudoautosmal regions of chrY that are:
+\* chromosome:GRCh38:Y:10001 - 2781479 is shared with X: 10001 - 2781479
+(PAR1) \* chromosome:GRCh38:Y:56887903 - 57217415 is shared with X:
+155701383 - 156030895 (PAR2)
 
 ``` {r}
-
 par1 = c(10001, 2781479)
 par2 = c(56887903, 57217415)
 p1.gene = genes.table$external_gene_name[genes.table$start_position > par1[1] & genes.table$start_position < par1[2] & genes.table$chromosome_name == "Y"]
@@ -466,7 +465,6 @@ chrY.gene <- genes.table$external_gene_name[genes.table$chromosome_name == "Y"]
 chrY.gene = setdiff(chrY.gene, c(p1.gene, p2.gene))
 
 data.filt <- PercentageFeatureSet(data.filt, features = chrY.gene, col.name = "pct_chrY")
-
 ```
 
 Then plot XIST expression vs chrY proportion. As you can see, the
@@ -624,6 +622,15 @@ Now, lets remove all predicted doublets from our data.
 ``` {r}
 data.filt <- data.filt[, data.filt@meta.data[, DF.name] == "Singlet"]
 dim(data.filt)
+```
+
+To summarize, lets check how many cells we have removed per sample, we
+started with 1500 cells per sample. Looking back at the intitial QC
+plots does it make sense that some samples have much fewer cells now?
+
+``` {r}
+table(alldata$orig.ident)
+table(data.filt$orig.ident)
 ```
 
 ## Save data

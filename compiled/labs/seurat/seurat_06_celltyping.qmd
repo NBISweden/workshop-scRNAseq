@@ -17,8 +17,10 @@ Celltype prediction can either be performed on indiviudal cells where
 each cell gets a predicted celltype label, or on the level of clusters.
 All methods are based on similarity to other datasets, single cell or
 sorted bulk RNAseq, or uses known marker genes for each cell type.\
-We will select one sample from the Covid data, `ctrl_13` and predict
-celltype by cell on that sample.\
+Ideally celltype predictions should be run on each sample separately and
+not using the integrated data. In this case we will select one sample
+from the Covid data, `ctrl_13` and predict celltype by cell on that
+sample.\
 Some methods will predict a celltype to each cell based on what it is
 most similar to, even if that celltype is not included in the reference.
 Other methods include an uncertainty so that cells with low similarity
@@ -27,9 +29,9 @@ There are multiple different methods to predict celltypes, here we will
 just cover a few of those.
 
 We will use a reference PBMC dataset from the `scPred` package which is
-provided as a Seurat object with counts. Unfortunately scPred has not been 
-updated to run with Seurat v5, so we will not use it here. 
-We will test classification based on Seurat `labelTransfer`, the `SingleR`
+provided as a Seurat object with counts. Unfortunately scPred has not
+been updated to run with Seurat v5, so we will not use it here. We will
+test classification based on Seurat `labelTransfer`, the `SingleR`
 method `scPred` and using `Azimuth`. Finally we will use gene set
 enrichment predict celltype based on the DEGs of each cluster.
 
@@ -44,8 +46,11 @@ suppressPackageStartupMessages({
     library(patchwork)
     library(ggplot2)
     library(pheatmap)
-    # remotes::install_github("powellgenomicslab/scPred")
     library(scPred)
+    library(celldex)
+    library(SingleR)
+    library(SeuratData)
+    library(Azimuth)
 })
 ```
 
@@ -67,16 +72,12 @@ Subset one patient.
 
 ``` {r}
 ctrl <- alldata[, alldata$orig.ident == "ctrl_13"]
-
-# set active assay to RNA and remove the CCA assay
-ctrl@active.assay <- "RNA"
-ctrl[["CCA"]] <- NULL
-ctrl
 ```
 
 ## Reference data
 
-Load the reference dataset with annotated labels that is provided by the `scPred` package, it is a subsampled set of cells from human PBMCs.
+Load the reference dataset with annotated labels that is provided by the
+`scPred` package, it is a subsampled set of cells from human PBMCs.
 
 ``` {r}
 reference <- scPred::pbmc_1
@@ -109,8 +110,8 @@ Run all steps of the analysis for the **ctrl** sample as well. Use the
 clustering from the integration lab with resolution 0.5.
 
 ``` {r}
-# Set the identity as louvain with resolution 0.3
-ctrl <- SetIdent(ctrl, value = "CCA_snn_res.0.5")
+# Set the identity as louvain with resolution 0.5
+ctrl <- SetIdent(ctrl, value = "RNA_snn_res.0.5")
 
 ctrl <- ctrl %>%
     NormalizeData() %>%
@@ -160,41 +161,44 @@ Now plot how many cells of each celltypes can be found in each cluster.
 #| fig-height: 5
 #| fig-width: 6
 
-ggplot(ctrl@meta.data, aes(x = CCA_snn_res.0.5, fill = predicted.id)) +
+ggplot(ctrl@meta.data, aes(x = RNA_snn_res.0.5, fill = predicted.id)) +
     geom_bar() +
     theme_classic()
 ```
 
-## SingleR
+## SinlgeR
 
-```{r}
-library(celldex)
-library(SingleR)
-#surveyReferences() # not available
+SingleR is performs unbiased cell type recognition from single-cell RNA
+sequencing data, by leveraging reference transcriptomic datasets of pure
+cell types to infer the cell of origin of each single cell
+independently.
 
-# current version 1.14.0 
-# installed via conda celldex_1.12.0
+We first have to convert the Seurat object to a SingleCellExperiment
+object.
 
+``` {r}
 sce = as.SingleCellExperiment(ctrl)
-
 ```
 
+There are multiple datasets included in the `celldex` package that can
+be used for celltype prediction, here we will test two different ones,
+the `DatabaseImmuneCellExpressionData` and the
+`HumanPrimaryCellAtlasData`. In addition we will use the same reference
+dataset that we used for label transfer above but using SingleR instead.
 
 ### Immune cell reference
 
-```{r}
+``` {r}
 immune = celldex::DatabaseImmuneCellExpressionData()
 singler.immune <- SingleR(test = sce, ref = immune, assay.type.test=1,
     labels = immune$label.main)
 
 head(singler.immune)
 ```
-The `labels` are the top predictions per cell, while the `pruned.labels` are the predictions that had high enough scores.
-
 
 ### HPCA reference
 
-```{r}
+``` {r}
 
 hpca <- HumanPrimaryCellAtlasData()
 singler.hpca <- SingleR(test = sce, ref = hpca, assay.type.test=1,
@@ -205,20 +209,24 @@ head(singler.hpca)
 
 ### With own reference data
 
-```{r}
+``` {r}
 sce.ref = as.SingleCellExperiment(reference)
 singler.ref <- SingleR(test=sce, ref=sce.ref, labels=sce.ref$cell_type, de.method="wilcox")
 head(singler.ref)
 ```
 
-```{r}
+Compare results:
+
+``` {r}
+#| fig-height: 7
+#| fig-width: 8
+
 ctrl$singler.immune = singler.immune$pruned.labels
 ctrl$singler.hpca = singler.hpca$pruned.labels
 ctrl$singler.ref = singler.ref$pruned.labels
 
 DimPlot(ctrl, group.by = c("singler.hpca", "singler.immune", "singler.ref"), ncol = 2)
 ```
-
 
 ## Azimuth
 
@@ -227,31 +235,26 @@ methods to integrate and do label transfer. One such resource is
 [Azimuth](https://azimuth.hubmapconsortium.org/) another one is
 [Disco](https://www.immunesinglecell.org/).
 
+Here we will use the PBMC reference provided with Azimuth. Which in
+principle runs label transfer of your dataset onto a large curated
+reference. The first time you run the command, the `pbmcref` dataset
+will be downloaded to your local computer.
 
-Run Azimut locally with all datasets installed.
-
-```{r}
-library(Azimuth)
-library(SeuratData)
+``` {r}
 options(future.globals.maxSize = 1e9)
-```
-
-
-```{r}
 
 # will install the pbmcref dataset first time you run it.
 ctrl <- RunAzimuth(ctrl, reference = "pbmcref")
 ```
 
+This dataset has predictions at 3 different levels of annotation wiht
+`l1` being the more broad celltypes and `l3` more detailed annotation.
 
-Gives predictions at 3 different levels of annotation wiht `l1` being the more broad celltypes and `l3` more detailed annotation.
-
-```{r}
+``` {r}
 DimPlot(ctrl, group.by = "predicted.celltype.l1", label = T, repel = T) + NoAxes()
 DimPlot(ctrl, group.by = "predicted.celltype.l2", label = T, repel = T) + NoAxes()
 DimPlot(ctrl, group.by = "predicted.celltype.l3", label = T, repel = T) + NoAxes()
 ```
-
 
 ## Compare results
 
@@ -272,14 +275,11 @@ We can also plot all the different predictions side by side
 wrap_plots(
     DimPlot(ctrl, label = T, group.by = "predicted.id") + NoAxes() + ggtitle("LabelTransfer"),
     DimPlot(ctrl, label = T, group.by = "singler.hpca") + NoAxes() + ggtitle("SingleR HPCA"),
-    DimPlot(ctrl, label = T, group.by = "singler.ref") + NoAxes() + ggtitle("SingleR HPCA"),
+    DimPlot(ctrl, label = T, group.by = "singler.ref") + NoAxes() + ggtitle("SingleR Ref"),
     DimPlot(ctrl, label = T, group.by = "predicted.celltype.l1") + NoAxes() + ggtitle("Azimuth l1"),
     ncol = 2
 )
 ```
-
-
-As you can see, the predictions are fairly similar, but there are some minor differences, especially in the NK/T-cell group. Depending on the type of tissue you are working with and the availability for reference data, different methods may be best for your case. 
 
 ## GSEA with celltype markers
 
@@ -303,13 +303,12 @@ lenient.
 
 ``` {r}
 # run differential expression in our dataset, using clustering at resolution 0.5
-
 # first we need to join the layers
 alldata@active.assay = "RNA"
 alldata <- JoinLayers(object = alldata, layers = c("data","counts"))
 
 # set the clustering you want to use as the identity class.
-alldata <- SetIdent(alldata, value = "CCA_snn_res.0.5")
+alldata <- SetIdent(alldata, value = "RNA_snn_res.0.5")
 DGE_table <- FindAllMarkers(
     alldata,
     logfc.threshold = 0,
@@ -404,7 +403,7 @@ names(annot) = colnames(alldata)
 alldata$ref_gsea <- annot
 
 wrap_plots(
-    DimPlot(alldata, label = T, group.by = "CCA_snn_res.0.5") + NoAxes(),
+    DimPlot(alldata, label = T, group.by = "RNA_snn_res.0.5") + NoAxes(),
     DimPlot(alldata, label = T, group.by = "ref_gsea") + NoAxes(),
     ncol = 2
 )
@@ -502,7 +501,6 @@ new.cluster.ids <- unlist(lapply(res, function(x) {
 }))
 annot = new.cluster.ids[as.character(alldata@active.ident)]
 names(annot) = colnames(alldata)
-
 alldata$cellmarker_gsea <- annot
 
 wrap_plots(

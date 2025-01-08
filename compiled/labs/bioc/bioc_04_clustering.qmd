@@ -15,10 +15,11 @@ title:  Clustering
 </div>
 
 In this tutorial, we will continue the analysis of the integrated
-dataset. We will use the integrated PCA to perform the clustering.
-First, we will construct a $k$-nearest neighbor graph in order to
-perform a clustering on the graph. We will also show how to perform
-hierarchical clustering and k-means clustering on PCA space.
+dataset. We will use the integrated PCA or CCA to perform the
+clustering. First, we will construct a $k$-nearest neighbor graph in
+order to perform a clustering on the graph. We will also show how to
+perform hierarchical clustering and k-means clustering on the selected
+space.
 
 Let's first load all necessary libraries and also the integrated dataset
 from the previous step.
@@ -32,6 +33,7 @@ suppressPackageStartupMessages({
     library(pheatmap)
     library(igraph)
     library(clustree)
+    library(bluster)
 })
 ```
 
@@ -67,11 +69,11 @@ dimensions for this purpose (the same used for computing UMAP / tSNE).
 
 ``` {r}
 # These 2 lines are for demonstration purposes only
-g <- buildKNNGraph(sce, k = 30, use.dimred = "MNN")
+g <- buildKNNGraph(sce, k = 30, use.dimred = "harmony")
 reducedDim(sce, "KNN") <- igraph::as_adjacency_matrix(g)
 
-# These 2 lines are the most recommended
-g <- buildSNNGraph(sce, k = 30, use.dimred = "MNN")
+# These 2 lines are the most recommended, it first run the KNN graph construction and then creates the SNN graph.
+g <- buildSNNGraph(sce, k = 30, use.dimred = "harmony")
 reducedDim(sce, "SNN") <- as_adjacency_matrix(g, attr = "weight")
 ```
 
@@ -109,6 +111,13 @@ Seurat. It gives edges to all cells that shares a neighbor, but weights
 the edges by how similar the neighbors are. Hence, the SNN graph has
 more edges than the KNN graph.
 
+There are 3 different options how to define the SNN these are:
+
+-   `rank`- scoring based on shared close neighbors, i.e. ranking the
+    neighbors of two cells and comparing the ranks.
+-   `number` - number of shared neighbors
+-   `jaccard` - calculate Jaccard similarity, same as in Seurat.
+
 ### Clustering on a graph
 
 Once the graph is built, we can now perform graph clustering. The
@@ -116,26 +125,61 @@ clustering is done respective to a resolution which can be interpreted
 as how coarse you want your cluster to be. Higher resolution means
 higher number of clusters.
 
+For clustering we can use the function `clusterCells()` which actually
+runs the steps of building the KNN and SNN graph for us, and also does
+the graph partition. All the clustering builds on the `bluster` package
+and we specify the different options using the `NNGraphParam()` class.
+
+Some parameters to consider are:
+
+-   `shared`, can be TRUE/FALSE - construct SNN graph (TRUE) or cluster
+    on the KNN graph (FALSE)
+-   `type` - for SNN graph method, can be `rank`, `number` or `jaccard`
+-   `k` - number of neighbors in the KNN construction. Can be any
+    function implemented in ighraph
+-   `cluster.fun` - which community detection method.
+-   `cluster.args` - paramters to the different clustering functions
+
+So to find out what the different options are for the different methods
+you would have to check the documentation in the igraph package,
+e.g. `?igraph::cluster_leiden`.
+
+Here we will use the integration with Harmony to build the graph, and
+the umap built on Harmony for visualization.
+
+OBS! There is no method to select fewer than the total 50 components in
+the embedding for creating the graph, so here we create a new
+`reducedDim` instance with only 20 components.
+
 ``` {r}
-#| fig-height: 3
-#| fig-width: 12
+#| fig-height: 8
+#| fig-width: 10
 
-g <- buildSNNGraph(sce, k = 5, use.dimred = "MNN")
-sce$louvain_SNNk5 <- factor(cluster_louvain(g)$membership)
+reducedDims(sce)$harmony2 = reducedDims(sce)$harmony[,1:20]
 
-g <- buildSNNGraph(sce, k = 10, use.dimred = "MNN")
-sce$louvain_SNNk10 <- factor(cluster_louvain(g)$membership)
+sce$louvain_k30 <- clusterCells(sce, use.dimred = "harmony2", BLUSPARAM=SNNGraphParam(k=30, cluster.fun="louvain",  cluster.args = list(resolution=0.5)))
+sce$louvain_k20 <- clusterCells(sce, use.dimred = "harmony2", BLUSPARAM=SNNGraphParam(k=20, cluster.fun="louvain",  cluster.args = list(resolution=0.5)))
+sce$louvain_k10 <- clusterCells(sce, use.dimred = "harmony2", BLUSPARAM=SNNGraphParam(k=10, cluster.fun="louvain",  cluster.args = list(resolution=0.5)))
 
-g <- buildSNNGraph(sce, k = 15, use.dimred = "MNN")
-sce$louvain_SNNk15 <- factor(cluster_louvain(g)$membership)
+sce$leiden_k30 <- clusterCells(sce, use.dimred = "harmony2", BLUSPARAM=SNNGraphParam(k=30, cluster.fun="leiden",  cluster.args = list(resolution_parameter=0.3)))
+sce$leiden_k20 <- clusterCells(sce, use.dimred = "harmony2", BLUSPARAM=SNNGraphParam(k=20, cluster.fun="leiden",  cluster.args = list(resolution_parameter=0.3)))
+sce$leiden_k10 <- clusterCells(sce, use.dimred = "harmony2", BLUSPARAM=SNNGraphParam(k=10, cluster.fun="leiden",  cluster.args = list(resolution_parameter=0.3)))
+
+
 
 wrap_plots(
-    plotReducedDim(sce, dimred = "UMAP_on_MNN", colour_by = "louvain_SNNk5") +
-        ggplot2::ggtitle(label = "louvain_SNNk5"),
-    plotReducedDim(sce, dimred = "UMAP_on_MNN", colour_by = "louvain_SNNk10") +
-        ggplot2::ggtitle(label = "louvain_SNNk10"),
-    plotReducedDim(sce, dimred = "UMAP_on_MNN", colour_by = "louvain_SNNk15") +
-        ggplot2::ggtitle(label = "louvain_SNNk15"),
+    plotReducedDim(sce, dimred = "UMAP_on_Harmony", colour_by = "louvain_k30") +
+        ggplot2::ggtitle(label = "louvain_k30"),  
+    plotReducedDim(sce, dimred = "UMAP_on_Harmony", colour_by = "louvain_k20") +
+        ggplot2::ggtitle(label = "louvain_k20"),
+    plotReducedDim(sce, dimred = "UMAP_on_Harmony", colour_by = "louvain_k10") +
+        ggplot2::ggtitle(label = "louvain_k10"),
+    plotReducedDim(sce, dimred = "UMAP_on_Harmony", colour_by = "leiden_k30") +
+        ggplot2::ggtitle(label = "leiden_k30"),
+    plotReducedDim(sce, dimred = "UMAP_on_Harmony", colour_by = "leiden_k20") +
+        ggplot2::ggtitle(label = "leiden_k20"),
+    plotReducedDim(sce, dimred = "UMAP_on_Harmony", colour_by = "leiden_k10") +
+        ggplot2::ggtitle(label = "leiden_k10"),
     ncol = 3
 )
 ```
@@ -148,7 +192,7 @@ distributed between clusters depending on resolution.
 #| fig-width: 8
 
 suppressPackageStartupMessages(library(clustree))
-clustree(sce, prefix = "louvain_SNNk")
+clustree(sce, prefix = "louvain_k")
 ```
 
 ## K-means clustering
@@ -163,21 +207,25 @@ centers, it is typically recommended to run K-means with multiple
 starting configurations (via the `nstart` argument).
 
 ``` {r}
-#| fig-height: 3
+#| fig-height: 8
 #| fig-width: 10
 
-sce$kmeans_5 <- factor(kmeans(x = reducedDim(sce, "MNN"), centers = 5)$cluster)
-sce$kmeans_10 <- factor(kmeans(x = reducedDim(sce, "MNN"), centers = 10)$cluster)
-sce$kmeans_15 <- factor(kmeans(x = reducedDim(sce, "MNN"), centers = 15)$cluster)
+sce$kmeans_5 <- clusterCells(sce, use.dimred = "harmony2", BLUSPARAM=KmeansParam(centers=5))
+sce$kmeans_10 <- clusterCells(sce, use.dimred = "harmony2", BLUSPARAM=KmeansParam(centers=10))  
+sce$kmeans_15 <- clusterCells(sce, use.dimred = "harmony2", BLUSPARAM=KmeansParam(centers=15))
+sce$kmeans_20 <- clusterCells(sce, use.dimred = "harmony2", BLUSPARAM=KmeansParam(centers=20))
+
 
 wrap_plots(
-    plotReducedDim(sce, dimred = "UMAP_on_MNN", colour_by = "kmeans_5") +
+    plotReducedDim(sce, dimred = "UMAP_on_Harmony", colour_by = "kmeans_5") +
         ggplot2::ggtitle(label = "KMeans5"),
-    plotReducedDim(sce, dimred = "UMAP_on_MNN", colour_by = "kmeans_10") +
+    plotReducedDim(sce, dimred = "UMAP_on_Harmony", colour_by = "kmeans_10") +
         ggplot2::ggtitle(label = "KMeans10"),
-    plotReducedDim(sce, dimred = "UMAP_on_MNN", colour_by = "kmeans_15") +
+    plotReducedDim(sce, dimred = "UMAP_on_Harmony", colour_by = "kmeans_15") +
         ggplot2::ggtitle(label = "KMeans15"),
-    ncol = 3
+    plotReducedDim(sce, dimred = "UMAP_on_Harmony", colour_by = "kmeans_15") +
+        ggplot2::ggtitle(label = "KMeans20"),
+    ncol = 2
 )
 ```
 
@@ -190,6 +238,11 @@ clustree(sce, prefix = "kmeans_")
 
 ## Hierarchical clustering
 
+There is the optioni to run hierarchical clustering in the
+`clusterCells` function using `HclustParam`, but there are limited
+options to specify distances such as correlations that we show below, so
+we will run the clustering with our own implementation.
+
 ### Defining distance between cells
 
 The base R `stats` package already contains a function `dist` that
@@ -201,7 +254,7 @@ distance methods available in `dist` are: 'euclidean', 'maximum',
 'manhattan', 'canberra', 'binary' or 'minkowski'.
 
 ``` {r}
-d <- dist(reducedDim(sce, "MNN"), method = "euclidean")
+d <- dist(reducedDim(sce, "harmony2"), method = "euclidean")
 ```
 
 As you might have realized, correlation is not a method implemented in
@@ -223,7 +276,7 @@ intuitive to have it at 1, rather than at any other number.
 
 ``` {r}
 # Compute sample correlations
-sample_cor <- cor(Matrix::t(reducedDim(sce, "MNN")))
+sample_cor <- cor(Matrix::t(reducedDim(sce, "harmony2")))
 
 # Transform the scale from correlations
 sample_cor <- (1 - sample_cor) / 2
@@ -272,17 +325,17 @@ sce$hc_corelation_10 <- factor(cutree(h_correlation, k = 10))
 sce$hc_corelation_15 <- factor(cutree(h_correlation, k = 15))
 
 wrap_plots(
-    plotReducedDim(sce, dimred = "UMAP_on_MNN", colour_by = "hc_euclidean_5") +
+    plotReducedDim(sce, dimred = "UMAP_on_Harmony", colour_by = "hc_euclidean_5") +
         ggplot2::ggtitle(label = "HC_euclidean_5"),
-    plotReducedDim(sce, dimred = "UMAP_on_MNN", colour_by = "hc_euclidean_10") +
+    plotReducedDim(sce, dimred = "UMAP_on_Harmony", colour_by = "hc_euclidean_10") +
         ggplot2::ggtitle(label = "HC_euclidean_10"),
-    plotReducedDim(sce, dimred = "UMAP_on_MNN", colour_by = "hc_euclidean_15") +
+    plotReducedDim(sce, dimred = "UMAP_on_Harmony", colour_by = "hc_euclidean_15") +
         ggplot2::ggtitle(label = "HC_euclidean_15"),
-    plotReducedDim(sce, dimred = "UMAP_on_MNN", colour_by = "hc_corelation_5") +
+    plotReducedDim(sce, dimred = "UMAP_on_Harmony", colour_by = "hc_corelation_5") +
         ggplot2::ggtitle(label = "HC_correlation_5"),
-    plotReducedDim(sce, dimred = "UMAP_on_MNN", colour_by = "hc_corelation_10") +
+    plotReducedDim(sce, dimred = "UMAP_on_Harmony", colour_by = "hc_corelation_10") +
         ggplot2::ggtitle(label = "HC_correlation_10"),
-    plotReducedDim(sce, dimred = "UMAP_on_MNN", colour_by = "hc_corelation_15") +
+    plotReducedDim(sce, dimred = "UMAP_on_Harmony", colour_by = "hc_corelation_15") +
         ggplot2::ggtitle(label = "HC_correlation_15"),
     ncol = 3
 )
@@ -303,9 +356,9 @@ proportion of samples across the clusters.
 #| fig-height: 4
 #| fig-width: 9
 
-p1 <- ggplot(as.data.frame(colData(sce)), aes(x = louvain_SNNk10, fill = sample)) +
+p1 <- ggplot(as.data.frame(colData(sce)), aes(x = leiden_k20, fill = sample)) +
     geom_bar(position = "fill")
-p2 <- ggplot(as.data.frame(colData(sce)), aes(x = louvain_SNNk10, fill = type)) +
+p2 <- ggplot(as.data.frame(colData(sce)), aes(x = leiden_k20, fill = type)) +
     geom_bar(position = "fill")
 
 p1 + p2
@@ -320,7 +373,7 @@ We can also plot it in the other direction, the proportion of each
 cluster per sample.
 
 ``` {r}
-ggplot(as.data.frame(colData(sce)), aes(x = sample, fill = louvain_SNNk10)) +
+ggplot(as.data.frame(colData(sce)), aes(x = sample, fill = leiden_k20)) +
     geom_bar(position = "fill")
 ```
 
@@ -338,6 +391,131 @@ ggplot(as.data.frame(colData(sce)), aes(x = sample, fill = louvain_SNNk10)) +
 > a technical bias there?
 
 </div>
+
+``` {r}
+#| fig-height: 8
+#| fig-width: 10
+
+wrap_plots(
+    plotColData(sce, y = "detected", x = "leiden_k20", colour_by = "leiden_k20"),
+    plotColData(sce, y = "total", x = "leiden_k20", colour_by = "leiden_k20"),
+    plotColData(sce, y = "subsets_mt_percent", x = "leiden_k20", colour_by = "leiden_k20"),
+    plotColData(sce, y = "subsets_ribo_percent", x = "leiden_k20", colour_by = "leiden_k20"),
+    plotColData(sce, y = "subsets_hb_percent", x = "leiden_k20", colour_by = "leiden_k20"),
+    ncol = 3
+) + plot_layout(guides = "collect")
+```
+
+Some clusters that are clearly defined by higher number of genes and
+counts. These are either doublets or a larger celltype. And some
+clusters with low values on these metrics that are either low quality
+cells or a smaller celltype. You will have to explore these clusters in
+more detail to judge what you believe them to be.
+
+## Subclustering of T and NK-cells
+
+It is common that the subtypes of cells within a cluster is not so well
+separated when you have a heterogeneous dataset. In such a case it could
+be a good idea to run subclustering of individual celltypes. The main
+reason for subclustering is that the variable genes and the first
+principal components in the full analysis are mainly driven by
+differences between celltypes, while with subclustering we may detect
+smaller differences between subtypes within celltypes.
+
+So first, lets find out where our T-cell and NK-cell clusters are. We
+know that T-cells express CD3E, and the main subtypes are CD4 and CD8,
+while NK-cells express GNLY.
+
+``` {r}
+#| fig-height: 8
+#| fig-width: 10
+
+wrap_plots(
+    plotReducedDim(sce, dimred = "UMAP_on_Harmony", colour_by = "leiden_k30"),
+    plotReducedDim(sce, dimred = "UMAP_on_Harmony", colour_by = "CD3E"),
+    plotReducedDim(sce, dimred = "UMAP_on_Harmony", colour_by = "CD4"),
+    plotReducedDim(sce, dimred = "UMAP_on_Harmony", colour_by = "CD8A"),
+    plotReducedDim(sce, dimred = "UMAP_on_Harmony", colour_by = "GNLY"),
+    ncol = 3
+)
+```
+
+We can clearly see what clusters are T-cell clusters, so lets subset the
+data for those cells
+
+``` {r}
+tcells = sce[,sce$leiden_k30 %in% c(3,4)]
+
+table(tcells$sample)
+```
+
+Ideally we should rerun all steps of integration with that subset of
+cells instead of just taking the joint embedding. If you have too few
+cells per sample in the celltype that you want to cluster it may not be
+possible. We will start with selecting a new set of genes that better
+reflecs the variability within this celltype
+
+``` {r}
+var.out <- modelGeneVar(tcells, block = tcells$sample)
+hvgs.tcell <- getTopHVGs(var.out, n = 2000)
+
+# check overlap with the variable genes using all the data
+length(intersect(metadata(sce)$hvgs, hvgs.tcell))
+```
+
+We clearly have a very different geneset now, so hopefully it should
+better capture the variability within T-cells.
+
+Now we have to run the full pipeline with scaling, pca, integration and
+clustering on this subset of cells, using the new set of variable genes
+
+``` {r}
+tcells = runPCA(tcells, exprs_values = "logcounts", ncomponents = 30, subset_row = hvgs.tcell, scale = TRUE)
+
+
+library(harmony)
+tcells <- RunHarmony(
+    tcells,
+    group.by.vars = "sample",
+    reduction.save = "harmony",
+    reduction = "PCA"
+)
+
+# Here we use all PCs computed from Harmony for UMAP calculation
+tcells <- runUMAP(tcells, dimred = "harmony", n_dimred = 30, ncomponents = 2, name = "UMAP_tcell")
+tcells$leiden_tcell_k20 <- clusterCells(tcells, use.dimred = "harmony", BLUSPARAM=SNNGraphParam(k=20, cluster.fun="leiden",  cluster.args = list(resolution_parameter=0.3)))
+```
+
+``` {r}
+#| fig-height: 6
+#| fig-width: 10
+
+wrap_plots(
+    plotReducedDim(tcells, dimred = "UMAP_on_Harmony", colour_by = "sample") +ggtitle("Full umap"),
+    plotReducedDim(tcells, dimred = "UMAP_on_Harmony", colour_by = "leiden_k20") +ggtitle("Full umap, full clust"),
+    plotReducedDim(tcells, dimred = "UMAP_on_Harmony", colour_by = "leiden_tcell_k20") +ggtitle("Full umap, T-cell clust"),
+    plotReducedDim(tcells, dimred = "UMAP_tcell", colour_by = "sample") +ggtitle("T-cell umap"),
+    plotReducedDim(tcells, dimred = "UMAP_tcell", colour_by = "leiden_k20") +ggtitle("T-cell umap, full clust"),
+    plotReducedDim(tcells, dimred = "UMAP_tcell", colour_by = "leiden_tcell_k20") +ggtitle("T-cell umap, T-cell clust"),
+    ncol = 3
+)+ plot_layout(guides = "collect")
+```
+
+As you can see, we do have some new clusters that did not stand out
+before. But in general the separation looks very similar.
+
+Lets also have a look at the same genes in the new umap:
+
+``` {r}
+
+wrap_plots(
+    plotReducedDim(tcells, dimred = "UMAP_tcell", colour_by = "CD3E"),
+    plotReducedDim(tcells, dimred = "UMAP_tcell", colour_by = "CD4"),
+    plotReducedDim(tcells, dimred = "UMAP_tcell", colour_by = "CD8A"),
+    plotReducedDim(tcells, dimred = "UMAP_tcell", colour_by = "GNLY"),
+    ncol = 2
+)
+```
 
 ## Session info
 

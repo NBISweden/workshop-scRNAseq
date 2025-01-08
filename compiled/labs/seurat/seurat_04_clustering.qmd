@@ -15,10 +15,11 @@ title:  Clustering
 </div>
 
 In this tutorial, we will continue the analysis of the integrated
-dataset. We will use the integrated CCA to perform the clustering.
-First, we will construct a $k$-nearest neighbor graph in order to
-perform a clustering on the graph. We will also show how to perform
-hierarchical clustering and k-means clustering on PCA space.
+dataset. We will use the integrated PCA or CCA to perform the
+clustering. First, we will construct a $k$-nearest neighbor graph in
+order to perform a clustering on the graph. We will also show how to
+perform hierarchical clustering and k-means clustering on the selected
+space.
 
 Let's first load all necessary libraries and also the integrated dataset
 from the previous step.
@@ -70,9 +71,12 @@ for additional options.
 
 The main options to consider are:
 
-* **dims** - the number of dimensions from the initial reduction to include when calculating distances between cells.
-* **k.param** - the number of neighbors per cell to include in the KNN graph.
-* **prune.SNN** - sets the cutoff for Jaccard index when pruning the graph.
+-   **dims** - the number of dimensions from the initial reduction to
+    include when calculating distances between cells.
+-   **k.param** - the number of neighbors per cell to include in the KNN
+    graph.
+-   **prune.SNN** - sets the cutoff for Jaccard index when pruning the
+    graph.
 
 ``` {r}
 # use the CCA integration to create the neighborhood graph.
@@ -304,7 +308,7 @@ saveRDS(alldata, "data/covid/results/seurat_covid_qc_dr_int_cl.rds")
 Now, we can select one of our clustering methods and compare the
 proportion of samples across the clusters.
 
-Select the **CCA_snn_res.0.5** and plot proportion of samples per
+Select the **RNA_snn_res.0.5** and plot proportion of samples per
 cluster and also proportion covid vs ctrl.
 
 ``` {r}
@@ -347,26 +351,39 @@ ggplot(alldata@meta.data, aes(x = orig.ident, fill = RNA_snn_res.0.5)) +
 
 </div>
 
-```{r}
+``` {r}
 #| fig-height: 4
 #| fig-width: 9
 
 VlnPlot(alldata, group.by = "RNA_snn_res.0.5", features = c("nFeature_RNA", "percent_mito"))
 ```
 
+Some clusters that are clearly defined by higher number of genes and
+counts. These are either doublets or a larger celltype. And some
+clusters with low values on these metrics that are either low quality
+cells or a smaller celltype. You will have to explore these clusters in
+more detail to judge what you believe them to be.
 
-## Subclustering NK & T-cells
+## Subclustering of T and NK-cells
 
-It is common that the subtypes of cells within a cluster is not so well separated when you have a heterogeneous dataset. In such a case it could be a good idea to run subclustering of individual celltypes. The main reason for subclustering is that the variable genes and the first principal components in the full analysis are mainly driven by differences between celltypes, while with subclustering we may detect smaller differences between subtypes within celltypes.
+It is common that the subtypes of cells within a cluster is not so well
+separated when you have a heterogeneous dataset. In such a case it could
+be a good idea to run subclustering of individual celltypes. The main
+reason for subclustering is that the variable genes and the first
+principal components in the full analysis are mainly driven by
+differences between celltypes, while with subclustering we may detect
+smaller differences between subtypes within celltypes.
 
-So first, lets find out where our T-cell and NK-cell clusters are. We know that T-cells express CD3E, and the main subtypes are CD4 and CD8, while NK-cells express GNLY. 
+So first, lets find out where our T-cell and NK-cell clusters are. We
+know that T-cells express CD3E, and the main subtypes are CD4 and CD8,
+while NK-cells express GNLY.
 
-```{r}
+``` {r}
 #| fig-height: 9
 #| fig-width: 14
 
 # check with the lowest resolution
-p1 = DimPlot(alldata, reduction = "umap_cca", group.by = "RNA_snn_res.0.1", label = T) + ggtitle("louvain_0.5")
+p1 = DimPlot(alldata, reduction = "umap_cca", group.by = "RNA_snn_res.0.1", label = T) + ggtitle("louvain_0.1")
 p2 = FeaturePlot(alldata, features = "CD3E", reduction = "umap_cca", order = T) 
 p3 = FeaturePlot(alldata, features = "CD4", reduction = "umap_cca", order = T) 
 p4 = FeaturePlot(alldata, features = "CD8A", reduction = "umap_cca", order = T) 
@@ -375,25 +392,37 @@ p5 = FeaturePlot(alldata, features = "GNLY", reduction = "umap_cca", order = T)
 
 wrap_plots(p1,p2,p3,p4,p5, ncol=3) + plot_layout(guides = "collect")
 ```
-So we can clearly see that clusters 1 and 3 are T-cell clusters, so lets subset the data for those cells
 
-```{r}
-tcells = alldata[,alldata$RNA_snn_res.0.1 %in% c(1,3)]
+We can clearly see what clusters are T-cell clusters, so lets subset the
+data for those cells
+
+``` {r}
+tcells = alldata[,alldata$RNA_snn_res.0.1 %in% c(0,3)]
 
 table(tcells$orig.ident)
 ```
 
-Ideally we should rerun all steps of integration with that subset of cells instead of just taking the joint embedding. If you have too few cells per sample in the celltype that you want to cluster it may not be possible.
+Ideally we should rerun all steps of integration with that subset of
+cells instead of just taking the joint embedding. If you have too few
+cells per sample in the celltype that you want to cluster it may not be
+possible. We will start with selecting a new set of genes that better
+reflecs the variability within this celltype
 
-```{r}
+``` {r}
 tcells = FindVariableFeatures(tcells, verbose = FALSE)
 
 # check overlap with the variable genes using all the data
 length(intersect(VariableFeatures(alldata), VariableFeatures(tcells)))
 ```
-We clearly have a very different geneset now, so hopefully it should better capture the variability within T-cells.
 
-```{r}
+We clearly have a very different geneset now, so hopefully it should
+better capture the variability within T-cells.
+
+Now we have to run the full pipeline with scaling, pca, integration and
+clustering on this subset of cells, using the new set of variable genes
+
+``` {r}
+# run all the steps from before:
 tcells = ScaleData(tcells, vars.to.regress = c("percent_mito", "nFeature_RNA"), assay = "RNA")
 tcells = RunPCA(tcells, npcs = 50, verbose = F)
 
@@ -406,7 +435,8 @@ tcells <- RunUMAP(tcells, reduction = "integrated_tcells", dims = 1:30, reductio
 tcells <- FindNeighbors(tcells, reduction = "integrated_tcells", dims = 1:30)
 tcells <- FindClusters(tcells, graph.name = "RNA_snn", resolution = 0.5, algorithm = 1, cluster.name = "tcell_0.5")
 ```
-```{r}
+
+``` {r}
 #| fig-height: 6
 #| fig-width: 10
 
@@ -421,10 +451,12 @@ wrap_plots(
 ) + plot_layout(guides = "collect")
 ```
 
-As you can see, we do have some new clusters that did not stand out before (clusters 6,7). But in general the separation looks very similar.
+As you can see, we do have some new clusters that did not stand out
+before (clusters 6,7). But in general the separation looks very similar.
 
+Lets also have a look at some genes in the new umap:
 
-```{r}
+``` {r}
 wrap_plots(
   FeaturePlot(tcells, features = "CD3E", reduction = "umap_tcells", order = T), 
   FeaturePlot(tcells, features = "CD4", reduction = "umap_tcells", order = T), 
@@ -432,10 +464,7 @@ wrap_plots(
   FeaturePlot(tcells, features = "GNLY", reduction = "umap_tcells", order = T), 
   ncol = 2
 ) + plot_layout(guides = "collect")
-
 ```
-
-
 
 ## Session info
 

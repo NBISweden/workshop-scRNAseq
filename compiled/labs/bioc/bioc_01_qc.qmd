@@ -58,6 +58,7 @@ suppressPackageStartupMessages({
     library(scran)
     library(patchwork) # combining figures
     library(org.Hs.eg.db)
+    library(scDblFinder)
 })
 ```
 
@@ -140,10 +141,11 @@ Having the data in a suitable format, we can start calculating some
 quality metrics. We can for example calculate the percentage of
 mitochondrial and ribosomal genes per cell and add to the metadata. The
 proportion of hemoglobin genes can give an indication of red blood cell
-contamination. This will be helpful to visualize them across different
-metadata parameters (i.e. datasetID and chemistry version). There are
-several ways of doing this. The QC metrics are finally added to the
-metadata table.
+contamination, but in some tissues it can also be the case that some
+celltypes have higher content of hemoglobin. This will be helpful to
+visualize them across different metadata parameters (i.e. datasetID and
+chemistry version). There are several ways of doing this. The QC metrics
+are finally added to the metadata table.
 
 Citing from Simple Single Cell workflows (Lun, McCarthy & Marioni,
 2017): High proportions are indicative of poor-quality cells (Islam et
@@ -170,7 +172,7 @@ genes are mitochondrial, ribosomal and hemoglobin.
 sce <- addPerCellQC(sce, flatten = T, subsets = list(mt = mito_genes, hb = hb_genes, ribo = ribo_genes))
 
 # Way2: Doing it manually
-sce@colData$percent_mito <- Matrix::colSums(counts(sce)[mito_genes, ]) / sce@colData$total
+sce@colData$percent_mito <- Matrix::colSums(counts(sce)[mito_genes, ]) / sce@colData$total * 100
 ```
 
 Now you can see that we have additional data in the metadata slot.
@@ -273,14 +275,15 @@ Additionally, we can also see which genes contribute the most to such
 reads. We can for instance plot the percentage of counts per gene.
 
 In Scater, you can also use the function `plotHighestExprs()` to plot
-the gene contribution, but the function is quite slow.
+the gene contribution, but the function is quite slow, so we will do it
+on our own instead..
 
 ``` {r}
 #| fig-height: 7
 #| fig-width: 7
 # Compute the relative expression of each gene per cell
 # Use sparse matrix operations, if your dataset is large, doing matrix devisions the regular way will take a very long time.
-C <- counts(sce)
+C <- counts(sce.filt)
 C@x <- C@x / rep.int(colSums(C), diff(C@p)) * 100
 most_expressed <- order(Matrix::rowSums(C), decreasing = T)[20:1]
 boxplot(as.matrix(t(C[most_expressed, ])), cex = .1, las = 1, xlab = "% total count per cell", col = scales::hue_pal()(20)[20:1], horizontal = TRUE)
@@ -366,7 +369,7 @@ sce.filt <- sce.filt[!grepl("^MT-", rownames(sce.filt)), ]
 # sce.filt <- sce.filt[ ! grepl("^RP[SL]", rownames(sce.filt)), ]
 
 # Filter Hemoglobin gene  (optional if that is a problem on your data)
-#sce.filt <- sce.filt[!grepl("^HB[^(P|E|S)]", rownames(sce.filt)), ]
+sce.filt <- sce.filt[!grepl("^HB[^(P|E|S)]", rownames(sce.filt)), ]
 
 dim(sce.filt)
 ```
@@ -435,10 +438,21 @@ genes.table <- genes.table[genes.table$external_gene_name %in% rownames(sce.filt
 ```
 
 Now that we have the chromosome information, we can calculate the
-proportion of reads that comes from chromosome Y per cell.
+proportion of reads that comes from chromosome Y per cell.But first we
+have to remove all genes in the pseudoautosmal regions of chrY that are:
+\* chromosome:GRCh38:Y:10001 - 2781479 is shared with X: 10001 - 2781479
+(PAR1) \* chromosome:GRCh38:Y:56887903 - 57217415 is shared with X:
+155701383 - 156030895 (PAR2)
 
 ``` {r}
+par1 = c(10001, 2781479)
+par2 = c(56887903, 57217415)
+p1.gene = genes.table$external_gene_name[genes.table$start_position > par1[1] & genes.table$start_position < par1[2] & genes.table$chromosome_name == "Y"]
+p2.gene = genes.table$external_gene_name[genes.table$start_position > par2[1] & genes.table$start_position < par2[2] & genes.table$chromosome_name == "Y"]
+
 chrY.gene <- genes.table$external_gene_name[genes.table$chromosome_name == "Y"]
+chrY.gene = setdiff(chrY.gene, c(p1.gene, p2.gene))
+
 sce.filt@colData$pct_chrY <- Matrix::colSums(counts(sce.filt)[chrY.gene, ]) / colSums(counts(sce.filt))
 ```
 
@@ -510,6 +524,8 @@ sce.filt$G1.score <- assignments$scores$G1
 sce.filt$G2M.score <- assignments$scores$G2M
 sce.filt$S.score <- assignments$scores$S
 sce.filt$phase <- assignments$phases
+
+table(sce.filt$phase)
 ```
 
 We can now create a violin plot for the cell cycle scores as well.
@@ -584,8 +600,6 @@ sce.filt <- runUMAP(sce.filt, pca = 10)
 ```
 
 ``` {r}
-suppressPackageStartupMessages(library(scDblFinder))
-
 # run computeDoubletDensity with 10 principal components.
 sce.filt <- scDblFinder(sce.filt, dims = 10)
 ```
@@ -601,11 +615,28 @@ wrap_plots(
 )
 ```
 
+We should expect that two cells have more detected genes than a single
+cell, lets check if our predicted doublets also have more detected genes
+in general.
+
+``` {r}
+plotColData(sce.filt, y = "detected", x = "scDblFinder.class")
+```
+
 Now, lets remove all predicted doublets from our data.
 
 ``` {r}
-sce.filt <- sce.filt[, sce.filt$scDblFinder.score < 2]
+sce.filt <- sce.filt[, sce.filt$scDblFinder.class == "singlet"]
 dim(sce.filt)
+```
+
+To summarize, lets check how many cells we have removed per sample, we
+started with 1500 cells per sample. Looking back at the intitial QC
+plots does it make sense that some samples have much fewer cells now?
+
+``` {r}
+table(sce$sample)
+table(sce.filt$sample)
 ```
 
 ## Save data

@@ -48,23 +48,34 @@ dataset to distinguish cell types. For this purpose, we need to find
 genes that are highly variable across cells, which in turn will also
 provide a good separation of the cell clusters.
 
+With `modelGeneVar` we can specify a blocking parameter, so the trend
+fitting and variance decomposition is done separately for each batch.
+
+``` {r}
+
+
+sce <- computeSumFactors(sce, sizes = c(20, 40, 60, 80))
+sce <- logNormCounts(sce)
+var.out <- modelGeneVar(sce, block = sce$sample)
+hvgs <- getTopHVGs(var.out, n = 2000)
+```
+
+We can plot the *total* variance and the *biological* variance vs mean
+expressioni for one of the samples.
+
 ``` {r}
 #| fig-height: 4
 #| fig-width: 8
 
-sce <- computeSumFactors(sce, sizes = c(20, 40, 60, 80))
-sce <- logNormCounts(sce)
-var.out <- modelGeneVar(sce, method = "loess")
-hvgs <- getTopHVGs(var.out, n = 2000)
-
 par(mfrow = c(1, 2))
 # plot mean over TOTAL variance
 # Visualizing the fit:
-fit.var <- metadata(var.out)
+fit.var <- metadata(var.out$per.block[[1]])
 {
     plot(fit.var$mean, fit.var$var,
         xlab = "Mean of log-expression",
-        ylab = "Variance of log-expression"
+        ylab = "Variance of log-expression",
+        main = "Total variance"
     )
     curve(fit.var$trend(x), col = "dodgerblue", add = TRUE, lwd = 2)
 
@@ -77,11 +88,43 @@ fit.var <- metadata(var.out)
 }
 
 {
-    # plot mean over BIOLOGICAL variance
-    plot(var.out$mean, var.out$bio, pch = 16, cex = 0.4, xlab = "Mean log-expression", ylab = "Variance of log-expression")
-    lines(c(min(var.out$mean), max(var.out$mean)), c(0, 0), col = "dodgerblue", lwd = 2)
-    points(var.out$mean[cutoff], var.out$bio[cutoff], col = "red", pch = 16, cex = .6)
+    # plot mean over BIOLOGICAL variance for same sample
+    plot(var.out$per.block[[1]]$mean, var.out$per.block[[1]]$bio, pch = 16, cex = 0.4, 
+         xlab = "Mean log-expression", 
+         ylab = "Variance of log-expression",
+         main = "Biological variance")
+    lines(c(min(var.out$per.block[[1]]$mean), max(var.out$per.block[[1]]$mean)), c(0, 0), col = "dodgerblue", lwd = 2)
+    points(var.out$per.block[[1]]$mean[cutoff], var.out$per.block[[1]]$bio[cutoff], col = "red", pch = 16, cex = .6)
 }
+```
+
+We can plot the same for all the samples, also showing the technical
+variance.
+
+``` {r}
+#| fig-height: 4
+#| fig-width: 8
+
+cutoff <- rownames(var.out) %in% hvgs
+
+par(mfrow = c(1, 3))
+    plot(var.out$mean, var.out$total, pch = 16, cex = 0.4, 
+         xlab = "Mean log-expression", 
+         ylab = "Variance of log-expression",
+         main = "Total variance")
+    points(var.out$mean[cutoff], var.out$total[cutoff], col = "red", pch = 16, cex = .6)
+
+    plot(var.out$mean, var.out$bio, pch = 16, cex = 0.4, 
+         xlab = "Mean log-expression", 
+         ylab = "Variance of log-expression",
+         main = "Biological variance")
+    points(var.out$mean[cutoff], var.out$bio[cutoff], col = "red", pch = 16, cex = .6)
+    
+    plot(var.out$mean, var.out$tech, pch = 16, cex = 0.4, 
+         xlab = "Mean log-expression", 
+         ylab = "Variance of log-expression",
+         main = "Technical variance")
+    points(var.out$mean[cutoff], var.out$tech[cutoff], col = "red", pch = 16, cex = .6)    
 ```
 
 ## Z-score transformation
@@ -123,7 +166,7 @@ scale each gene.
 
 ``` {r}
 # runPCA and specify the variable genes to use for dim reduction with subset_row
-sce <- runPCA(sce, exprs_values = "logcounts", ncomponents = 50, subset_row = hvg.out, scale = TRUE)
+sce <- runPCA(sce, exprs_values = "logcounts", ncomponents = 50, subset_row = hvgs, scale = TRUE)
 ```
 
 We then plot the first principal components.
@@ -153,8 +196,11 @@ you may have in your data.
 #| fig-height: 3.5
 #| fig-width: 10
 
-plotExplanatoryPCs(sce)
+plotExplanatoryPCs(sce,nvars_to_plot = 15)
 ```
+
+Clearly, the sample id contributes to many of the PCs and PC7 but you
+can also see that many PCs are effected by different QC parameters.
 
 We can also plot the amount of variance explained by each PC.
 
@@ -341,6 +387,21 @@ wrap_plots(plotlist, ncol = 3)
 > the separation in your data is driven by quality of the cells?
 
 </div>
+
+``` {r}
+#| fig-height: 8
+#| fig-width: 11
+
+
+    
+plotlist <- list()
+for (i in c("detected", "total", "subsets_mt_percent","subsets_ribo_percent","subsets_hb_percent")) { 
+    plotlist[[i]] <- plotReducedDim(sce, dimred = "UMAP_on_PCA", colour_by = i, by_exprs_values = "logcounts") +
+        scale_fill_gradientn(colours = colorRampPalette(c("grey90", "orange3", "firebrick", "firebrick", "red", "red"))(10)) +
+        ggtitle(label = i) + theme(plot.title = element_text(size = 20))
+}
+wrap_plots(plotlist, ncol = 3)
+```
 
 ## Save data
 

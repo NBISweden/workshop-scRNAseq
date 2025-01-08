@@ -17,8 +17,10 @@ Celltype prediction can either be performed on indiviudal cells where
 each cell gets a predicted celltype label, or on the level of clusters.
 All methods are based on similarity to other datasets, single cell or
 sorted bulk RNAseq, or uses known marker genes for each cell type.\
-We will select one sample from the Covid data, `ctrl_13` and predict
-celltype by cell on that sample.\
+Ideally celltype predictions should be run on each sample separately and
+not using the integrated data. In this case we will select one sample
+from the Covid data, `ctrl_13` and predict celltype by cell on that
+sample.\
 Some methods will predict a celltype to each cell based on what it is
 most similar to, even if that celltype is not included in the reference.
 Other methods include an uncertainty so that cells with low similarity
@@ -45,6 +47,7 @@ suppressPackageStartupMessages({
     library(pheatmap)
     library(scPred)
     library(scmap)
+    library(SingleR)
 })
 ```
 
@@ -65,7 +68,7 @@ alldata <- readRDS(path_file)
 Let's read in the saved Covid-19 data object from the clustering step.
 
 ``` {r}
-ctrl.sce <- alldata[, alldata@colData$sample == "ctrl.13"]
+ctrl.sce <- alldata[, alldata$sample == "ctrl.13"]
 
 # remove all old dimensionality reductions as they will mess up the analysis further down
 reducedDims(ctrl.sce) <- NULL
@@ -73,7 +76,8 @@ reducedDims(ctrl.sce) <- NULL
 
 ## Reference data
 
-Load the reference dataset with annotated labels.
+Load the reference dataset with annotated labels that is provided by the
+`scPred` package, it is a subsampled set of cells from human PBMCs.
 
 ``` {r}
 reference <- scPred::pbmc_1
@@ -134,7 +138,7 @@ ctrl.sce <- runUMAP(ctrl.sce, dimred = "PCA")
 #| fig-height: 5
 #| fig-width: 6
 
-plotReducedDim(ctrl.sce, dimred = "UMAP", colour_by = "louvain_SNNk15")
+plotReducedDim(ctrl.sce, dimred = "UMAP", colour_by = "leiden_k20")
 ```
 
 ## scMap
@@ -153,7 +157,7 @@ slots.
 
 ``` {r}
 # add in slot cell_type1
-ref.sce@colData$cell_type1 <- ref.sce@colData$cell_type
+ref.sce$cell_type1 <- ref.sce$cell_type
 # create a rowData slot with feature_symbol
 rd <- data.frame(feature_symbol = rownames(ref.sce))
 rownames(rd) <- rownames(ref.sce)
@@ -207,7 +211,7 @@ Then add the predictions to metadata and plot UMAP.
 #| fig-width: 6
 
 # add in predictions
-ctrl.sce@colData$scmap_cluster <- project_cluster$scmap_cluster_labs
+ctrl.sce$scmap_cluster <- project_cluster$scmap_cluster_labs
 
 plotReducedDim(ctrl.sce, dimred = "UMAP", colour_by = "scmap_cluster")
 ```
@@ -248,7 +252,7 @@ Then add the predictions to metadata and plot umap.
 #| fig-width: 6
 
 # add in predictions
-ctrl.sce@colData$scmap_cell <- cell_type_pred
+ctrl.sce$scmap_cell <- cell_type_pred
 
 plotReducedDim(ctrl.sce, dimred = "UMAP", colour_by = "scmap_cell")
 ```
@@ -266,89 +270,63 @@ wrap_plots(
 )
 ```
 
-## scPred
+## SinlgeR
 
-scPred will train a classifier based on all principal components. First,
-`getFeatureSpace()` will create a scPred object stored in the `@misc`
-slot where it extracts the PCs that best separates the different
-celltypes. Then `trainModel()` will do the actual training for each
-celltype.
+SingleR is performs unbiased cell type recognition from single-cell RNA
+sequencing data, by leveraging reference transcriptomic datasets of pure
+cell types to infer the cell of origin of each single cell
+independently.
 
-scPred works with Seurat objects, so we will convert both objects to
-seurat objects. You may see a lot of warnings about renaming things, but
-as long as you do not see an Error, you should be fine.
+There are multiple datasets included in the `celldex` package that can
+be used for celltype prediction, here we will test two different ones,
+the `DatabaseImmuneCellExpressionData` and the
+`HumanPrimaryCellAtlasData`. In addition we will use the same reference
+dataset that we used for label transfer above but using SingleR instead.
 
-``` {r}
-suppressPackageStartupMessages(library(Seurat))
-
-reference <- Seurat::as.Seurat(ref.sce)
-ctrl <- Seurat::as.Seurat(ctrl.sce)
-```
-
-The loadings matrix is lost when converted to Seurat object, and scPred
-needs that information. So we need to rerun PCA with Seurat and the same
-hvgs.
+### Immune cell reference
 
 ``` {r}
-VariableFeatures(reference) <- hvg.ref
-reference <- reference %>%
-    ScaleData(verbose = F) %>%
-    RunPCA(verbose = F)
+immune = celldex::DatabaseImmuneCellExpressionData()
+singler.immune <- SingleR(test = ctrl.sce, ref = immune, assay.type.test=1,
+    labels = immune$label.main)
 
-VariableFeatures(ctrl) <- hvg.ctrl
-ctrl <- ctrl %>%
-    ScaleData(verbose = F) %>%
-    RunPCA(verbose = F)
+head(singler.immune)
 ```
+
+### HPCA reference
 
 ``` {r}
-reference <- getFeatureSpace(reference, "cell_type")
-reference <- trainModel(reference)
+
+hpca <- HumanPrimaryCellAtlasData()
+singler.hpca <- SingleR(test = ctrl.sce, ref = hpca, assay.type.test=1,
+    labels = hpca$label.main)
+
+head(singler.hpca)
 ```
 
-scPred will train a classifier based on all principal components. First,
-`getFeatureSpace()` will create a scPred object stored in the `@misc`
-slot where it extracts the PCs that best separates the different
-celltypes. Then `trainModel()` will do the actual training for each
-celltype.
+### With own reference data
 
 ``` {r}
-get_scpred(reference)
+singler.ref <- SingleR(test=ctrl.sce, ref=ref.sce, labels=ref.sce$cell_type, de.method="wilcox")
+head(singler.ref)
 ```
 
-You can optimize parameters for each dataset by chaining parameters and
-testing different types of models, see more at:
-<https://powellgenomicslab.github.io/scPred/articles/introduction.html>.
-But for now, we will continue with this model. Now, let's predict
-celltypes on our data, where scPred will align the two datasets with
-Harmony and then perform classification.
-
-``` {r}
-ctrl <- scPredict(ctrl, reference)
-```
+Compare results:
 
 ``` {r}
 #| fig-height: 5
-#| fig-width: 7
+#| fig-width: 10
 
-DimPlot(ctrl, group.by = "scpred_prediction", label = T, repel = T) + NoAxes()
-```
+ctrl.sce$singler.immune = singler.immune$pruned.labels
+ctrl.sce$singler.hpca = singler.hpca$pruned.labels
+ctrl.sce$singler.ref = singler.ref$pruned.labels
 
-Now plot how many cells of each celltypes can be found in each cluster.
-
-``` {r}
-#| fig-height: 5
-#| fig-width: 7
-
-ggplot(ctrl@meta.data, aes(x = louvain_SNNk15, fill = scpred_prediction)) +
-    geom_bar() +
-    theme_classic()
-```
-
-Add the predictions into the SCE object
-
-``` {r}
-ctrl.sce@colData$scpred_prediction <- ctrl$scpred_prediction
+wrap_plots(
+    plotReducedDim(ctrl.sce, dimred = "UMAP", colour_by = "singler.immune"),
+    plotReducedDim(ctrl.sce, dimred = "UMAP", colour_by = "singler.hpca"),
+    plotReducedDim(ctrl.sce, dimred = "UMAP", colour_by = "singler.ref"),
+    ncol = 3
+)
 ```
 
 ## Compare results
@@ -358,8 +336,27 @@ function in scPred `crossTab()` that prints the overlap between two
 metadata slots.
 
 ``` {r}
-crossTab(ctrl, "scmap_cell", "scpred_prediction")
+table(ctrl.sce$scmap_cell, ctrl.sce$singler.hpca)
 ```
+
+Or plot onto umap:
+
+``` {r}
+wrap_plots(
+    plotReducedDim(ctrl.sce, dimred = "UMAP", colour_by = "scmap_cluster"),
+    plotReducedDim(ctrl.sce, dimred = "UMAP", colour_by = "scmap_cell"),
+    plotReducedDim(ctrl.sce, dimred = "UMAP", colour_by = "singler.immune"),
+    plotReducedDim(ctrl.sce, dimred = "UMAP", colour_by = "singler.hpca"),
+    plotReducedDim(ctrl.sce, dimred = "UMAP", colour_by = "singler.ref"),
+    ncol = 3
+)
+```
+
+As you can see, the methods using the same reference all have similar
+results. While for instance singleR with different references give quite
+different predictions. This really shows that a relevant reference is
+the key in having reliable celltype predictions rather than the method
+used.
 
 ## GSEA with celltype markers
 
@@ -385,7 +382,7 @@ lenient.
 # run differential expression in our dataset, using clustering at resolution 0.3
 DGE_list <- scran::findMarkers(
     x = alldata,
-    groups = as.character(alldata@colData$louvain_SNNk15),
+    groups = as.character(alldata$leiden_k20),
     pval.type = "all",
     min.prop = 0
 )
@@ -395,7 +392,7 @@ DGE_list <- scran::findMarkers(
 # Compute differential gene expression in reference dataset (that has cell annotation)
 ref_DGE <- scran::findMarkers(
     x = ref.sce,
-    groups = as.character(ref.sce@colData$cell_type),
+    groups = as.character(ref.sce$cell_type),
     pval.type = "all",
     direction = "up"
 )
@@ -461,10 +458,10 @@ new.cluster.ids <- unlist(lapply(res, function(x) {
     as.data.frame(x)[1, 1]
 }))
 
-alldata@colData$ref_gsea <- new.cluster.ids[as.character(alldata@colData$louvain_SNNk15)]
+alldata$ref_gsea <- new.cluster.ids[as.character(alldata$leiden_k20)]
 
 wrap_plots(
-    plotReducedDim(alldata, dimred = "UMAP", colour_by = "louvain_SNNk15"),
+    plotReducedDim(alldata, dimred = "UMAP", colour_by = "leiden_k20"),
     plotReducedDim(alldata, dimred = "UMAP", colour_by = "ref_gsea"),
     ncol = 2
 )
@@ -477,12 +474,12 @@ Compare the results with the other celltype prediction methods in the
 #| fig-height: 3.5
 #| fig-width: 12
 
-ctrl.sce@colData$ref_gsea <- alldata@colData$ref_gsea[alldata@colData$sample == "ctrl.13"]
+ctrl.sce$ref_gsea <- alldata$ref_gsea[alldata$sample == "ctrl.13"]
 
 wrap_plots(
     plotReducedDim(ctrl.sce, dimred = "UMAP", colour_by = "ref_gsea"),
     plotReducedDim(ctrl.sce, dimred = "UMAP", colour_by = "scmap_cell"),
-    plotReducedDim(ctrl.sce, dimred = "UMAP", colour_by = "scpred_prediction"),
+    plotReducedDim(ctrl.sce, dimred = "UMAP", colour_by = "singler.hpca"),
     ncol = 3
 )
 ```
@@ -560,7 +557,7 @@ lapply(res, head, 3)
 new.cluster.ids <- unlist(lapply(res, function(x) {
     as.data.frame(x)[1, 1]
 }))
-alldata@colData$cellmarker_gsea <- new.cluster.ids[as.character(alldata@colData$louvain_SNNk15)]
+alldata$cellmarker_gsea <- new.cluster.ids[as.character(alldata$leiden_k20)]
 
 wrap_plots(
     plotReducedDim(alldata, dimred = "UMAP", colour_by = "cellmarker_gsea"),

@@ -32,7 +32,7 @@ integration:
   Conos             R                 conos             [Nat.
                                                         Methods](https://www.nature.com/articles/s41592-019-0466-z?error=cookies_not_supported&code=5680289b-6edb-40ad-9934-415dac4fdb2f)
 
-  Conos             R                 Harmony           [Nat. Methods](https://www.nature.com/articles/s41592-019-0619-0)
+  Harmony           R                 Harmony           [Nat. Methods](https://www.nature.com/articles/s41592-019-0619-0)
 
   Scanorama         Python            scanorama         [Nat. Biotech.](https://www.nature.com/articles/s41587-019-0113-3)
   -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -47,12 +47,10 @@ suppressPackageStartupMessages({
     library(Seurat)
     library(ggplot2)
     library(patchwork)
-    library(reticulate)
+    library(basilisk)
 })
 
-# Activate scanorama Python venv
-#reticulate::use_virtualenv("/opt/venv/scanorama")
-#reticulate::py_discover_config()
+condapath = "/Users/asabjor/miniconda3/envs/scanpy_2024_nopip"
 ```
 
 ``` {r}
@@ -68,27 +66,35 @@ alldata <- readRDS(path_file)
 print(names(alldata@reductions))
 ```
 
-We split the combined object into a list, with each dataset as an
-element. We perform standard preprocessing (log-normalization), and
-identify variable features individually for each dataset based on a
-variance stabilizing transformation (**vst**).
+With Seurat5 we can split the `RNA` assay into multiple `Layers` with
+one count matrix and one data matrix per sample. When we then run
+`FindVariableFeatures` on the object it will run it for each of the
+samples separately, but also compute the overall variable features by
+combining their ranks.
 
 ``` {r}
 #| fig-height: 6
 #| fig-width: 8
 
-alldata.list <- SplitObject(alldata, split.by = "orig.ident")
+# get the variable genes from all the datasets without batch information.
+hvgs_old = VariableFeatures(alldata)
 
-for (i in 1:length(alldata.list)) {
-    alldata.list[[i]] <- NormalizeData(alldata.list[[i]], verbose = FALSE)
-    alldata.list[[i]] <- FindVariableFeatures(alldata.list[[i]], selection.method = "vst", nfeatures = 2000,verbose = FALSE)
-}
+# now split the object into layers
+alldata[["RNA"]] <- split(alldata[["RNA"]], f = alldata$orig.ident)
 
-# get the variable genes from all the datasets.
-hvgs_per_dataset <- lapply(alldata.list, VariableFeatures )
+# detect HVGs
+alldata <- FindVariableFeatures(alldata, selection.method = "vst", nfeatures = 2000, verbose = FALSE)
 
-# also add in the variable genes that was selected on the whole dataset
-hvgs_per_dataset$all = VariableFeatures(alldata)
+# to get the HVGs for each layer we have to fetch them individually
+data.layers <- Layers(alldata)[grep("data.",Layers(alldata))]
+print(data.layers)
+
+hvgs_per_dataset <- lapply(data.layers, function(x) VariableFeatures(alldata, layer = x) )
+names(hvgs_per_dataset) = data.layers
+
+# also add in the variable genes that was selected on the whole dataset and the old ones 
+hvgs_per_dataset$all <- VariableFeatures(alldata)
+hvgs_per_dataset$old <- hvgs_old
 
 temp <- unique(unlist(hvgs_per_dataset))
 overlap <- sapply( hvgs_per_dataset , function(x) { temp %in% x } )
@@ -102,72 +108,51 @@ using all the data that are not variable in any of the individual
 datasets. These are most likely genes driven by batch effects.
 
 A better way to select features for integration is to combine the
-information on variable genes across the dataset. This can be done with
-the function `SelectIntegrationFeatures` that combines the ranks of the
-variable features in the different datasets.
+information on variable genes across the dataset. This is what we have
+in the `all` section where the ranks of the variable features in the
+different datasets is combined.
+
+For all downstream integration we will use this set of genes so that it
+is comparable across the methods. Before doing anything else we need to
+rerun `ScaleData` and `PCA` with that set of genes.
 
 ``` {r}
-hvgs_all = SelectIntegrationFeatures(alldata.list)
-hvgs_per_dataset$all_ranks = hvgs_all
+hvgs_all = hvgs_per_dataset$all
 
-temp <- unique(unlist(hvgs_per_dataset))
-overlap <- sapply( hvgs_per_dataset , function(x) { temp %in% x } )
-pheatmap::pheatmap(t(overlap*1),cluster_rows = F ,
-                   color = c("grey90","grey20"))
+alldata = ScaleData(alldata, features = hvgs_all, vars.to.regress = c("percent_mito", "nFeature_RNA"))
+alldata = RunPCA(alldata, features = hvgs_all, verbose = FALSE)
 ```
-
-For all downstream integration we will use this set of genes.
-
-Add discussion point!
 
 ## CCA
 
-We identify anchors using the `FindIntegrationAnchors()` function, which
-takes a list of Seurat objects as input.
+In Seurat v4 we run the integration in two steps, first finding anchors
+between datasets with `FindIntegrationAnchors()` and then running the
+actual integration with `IntegrateData()`. Since Seurat v5 this is done
+in a single command using the function `IntegrateLayers()`, we specify
+the name for the integration as `integrated_cca`.
 
 ``` {r}
-alldata.anchors <- FindIntegrationAnchors(object.list = alldata.list, dims = 1:30,reduction = "cca", anchor.features = hvgs_all)
+alldata <- IntegrateLayers(object = alldata, 
+                           method = CCAIntegration, orig.reduction = "pca", 
+                           new.reduction = "integrated_cca", verbose = FALSE)
 ```
 
-We then pass these anchors to the `IntegrateData()` function, which
-returns a Seurat object.
+We should now have a new dimensionality reduction slot
+(`integrated_cca`) in the object:
 
 ``` {r}
-alldata.int <- IntegrateData(anchorset = alldata.anchors, dims = 1:30, new.assay.name = "CCA")
+names(alldata@reductions)
 ```
 
-We can observe that a new assay slot is now created under the name
-`CCA`. If you do not specify the assay name, the default will be
-`integrated`.
+Using this new integrated dimensionality reduction we can now run UMAP
+and tSNE on that object, and we again specify the names of the new
+reductions so that the old UMAP and tSNE are not overwritten.
 
 ``` {r}
-names(alldata.int@assays)
+alldata <- RunUMAP(alldata, reduction = "integrated_cca", dims = 1:30, reduction.name = "umap_cca")
+alldata <- RunTSNE(alldata, reduction = "integrated_cca", dims = 1:30, reduction.name = "tsne_cca")
 
-# by default, Seurat now sets the integrated assay as the default assay, so any operation you now perform will be on the integrated data.
-alldata.int@active.assay
-```
-
-After running `IntegrateData()`, the Seurat object will contain a new
-Assay with the integrated (or **batch-corrected**) expression matrix.
-Note that the original (uncorrected values) are still stored in the
-object in the "RNA" assay, so you can switch back and forth. We can then
-use this new integrated matrix for downstream analysis and
-visualization. Here we scale the integrated data, run PCA, and visualize
-the results with UMAP and TSNE. The integrated datasets cluster by cell
-type, instead of by technology.
-
-As `CCA` is the `active.assay` now, the functions will by default run on
-the data in that assay. But you could also specify in each of the
-functions to run them in a specific assay with the parameter
-`assay = "CCA"`.
-
-
-``` {r}
-#Run Dimensionality reduction on integrated space
-alldata.int <- ScaleData(alldata.int, verbose = FALSE)
-alldata.int <- RunPCA(alldata.int, npcs = 30, verbose = FALSE)
-alldata.int <- RunUMAP(alldata.int, dims = 1:30)
-alldata.int <- RunTSNE(alldata.int, dims = 1:30)
+names(alldata@reductions)
 ```
 
 We can now plot the unintegrated and the integrated space reduced
@@ -182,33 +167,14 @@ wrap_plots(
   DimPlot(alldata, reduction = "tsne", group.by = "orig.ident")+NoAxes()+ggtitle("tSNE raw_data"),
   DimPlot(alldata, reduction = "umap", group.by = "orig.ident")+NoAxes()+ggtitle("UMAP raw_data"),
   
-  DimPlot(alldata.int, reduction = "pca", group.by = "orig.ident")+NoAxes()+ggtitle("PCA integrated"),
-  DimPlot(alldata.int, reduction = "tsne", group.by = "orig.ident")+NoAxes()+ggtitle("tSNE integrated"),
-  DimPlot(alldata.int, reduction = "umap", group.by = "orig.ident")+NoAxes()+ggtitle("UMAP integrated"),
+  DimPlot(alldata, reduction = "integrated_cca", group.by = "orig.ident")+NoAxes()+ggtitle("CCA integrated"),
+  DimPlot(alldata, reduction = "tsne_cca", group.by = "orig.ident")+NoAxes()+ggtitle("tSNE integrated"),
+  DimPlot(alldata, reduction = "umap_cca", group.by = "orig.ident")+NoAxes()+ggtitle("UMAP integrated"),
   ncol = 3
 ) + plot_layout(guides = "collect")
 ```
 
-### Clean memory
-
-Again we have a lot of large objects in the memory. We have the original
-data `alldata` but also the integrated data in `alldata.int`. We also
-have the split objects in `alldata.list` and the anchors in
-`alldata.anchors`. In principle we only need the integrated object for
-now, but we will also keep the list for running Scanorama further down
-in the tutorial.
-
-We also want to keep the original umap for visualization purposes, so we
-copy it over to the integrated object.
-
-``` {r}
-alldata.int[["umap_raw"]] = alldata@reductions$umap
-
-# remove all objects that will not be used.
-rm(alldata,  alldata.anchors)
-# run garbage collect to free up memory
-gc()
-```
+### Marker genes
 
 Let's plot some marker genes for different cell types onto the
 embedding.
@@ -229,7 +195,7 @@ embedding.
 #| fig-width: 10
 
 myfeatures <- c("CD3E", "CD4", "CD8A", "NKG7", "GNLY", "MS4A1", "CD14", "LYZ", "MS4A7", "FCGR3A", "CST3", "FCER1A")
-FeaturePlot(alldata.int, reduction = "umap", dims = 1:2, features = myfeatures, ncol = 4, order = T) + NoLegend() + NoAxes() + NoGrid()
+FeaturePlot(alldata, reduction = "umap_cca", dims = 1:2, features = myfeatures, ncol = 4, order = T) + NoLegend() + NoAxes() + NoGrid()
 ```
 
 ## Harmony
@@ -238,55 +204,29 @@ An alternative method for integration is Harmony, for more details on
 the method, please se their paper [Nat.
 Methods](https://www.nature.com/articles/s41592-019-0619-0). This method
 runs the integration on a dimensionality reduction, in most applications
-the PCA. So first, we will rerun scaling and PCA with the same set of
-genes that were used for the CCA integration.
+the PCA. So first, we prefer to have scaling and PCA with the same set
+of genes that were used for the CCA integration, which we ran earlier.
 
-OBS! Make sure to revert back to the `RNA` assay.
-
-``` {r}
-alldata.int@active.assay = "RNA"
-VariableFeatures(alldata.int) = hvgs_all
-alldata.int = ScaleData(alldata.int, vars.to.regress = c("percent_mito", "nFeature_RNA"))
-alldata.int = RunPCA(alldata.int, reduction.name = "pca_harmony")
-```
-
-Now we are ready to run Harmony.
+We can use the same function `IntegrateLayers()` but intstead specify
+the method `HarmonyIntegration`. And as above, we run UMAP on the new
+reduction from Harmony.
 
 ``` {r}
 #| fig-height: 10
 #| fig-width: 13
 
-library(harmony)
+alldata <- IntegrateLayers(
+  object = alldata, method = HarmonyIntegration,
+  orig.reduction = "pca", new.reduction = "harmony",
+  verbose = FALSE
+)
 
-alldata.int <- RunHarmony(
-  alldata.int,
-  group.by.vars = "orig.ident",
-  reduction.use = "pca_harmony",
-  dims.use = 1:50,
-  assay.use = "RNA")
-```
 
-Harmony will create another reduction slot in your seurat object with
-the name **harmony**, so now we can use that reduction instead of PCA to
-run UMAP.
-
-``` {r}
-alldata.int <- RunUMAP(alldata.int, dims = 1:50, reduction = "harmony", reduction.name = "umap_harmony")
-
-DimPlot(alldata.int, reduction = "umap_harmony", group.by = "orig.ident") + NoAxes() + ggtitle("Harmony UMAP")
+alldata <- RunUMAP(alldata, dims = 1:30, reduction = "harmony", reduction.name = "umap_harmony")
+DimPlot(alldata, reduction = "umap_harmony", group.by = "orig.ident") + NoAxes() + ggtitle("Harmony UMAP")
 ```
 
 ## Scanorama
-
-<div>
-
-> **Important**
->
-> If you are running locally using Docker and you have a Mac with ARM
-> chip, the Scanorama reticulate module is known to crash. In this case,
-> you might want to skip this section.
-
-</div>
 
 Another integration method is Scanorama (see [Nat.
 Biotech.](https://www.nature.com/articles/s41587-019-0113-3)). This
@@ -296,43 +236,82 @@ Reticulate package.
 We will run it with the same set of variable genes, but first we have to
 create a list of all the objects per sample.
 
-``` {r}
-#| fig-height: 5
-#| fig-width: 16
+Keep in mind that for most python tools that uses `AnnData` format the
+gene x cell matrix is transposed so that genes are rows and cells are
+columns.
 
-assaylist <- list()
-genelist <- list()
-for(i in 1:length(alldata.list)) {
-  assaylist[[i]] <- t(as.matrix(GetAssayData(alldata.list[[i]], layer = "counts", assay = "RNA")[hvgs_all,]))
-  genelist[[i]] <- hvgs_all
-}
+``` {r}
+# get data matrices from all samples, with only the variable genes.
+data.layers <- Layers(alldata)[grep("data.",Layers(alldata))]
+print(data.layers)
+
+assaylist <- lapply(data.layers, function(x) t(as.matrix(LayerData(alldata, layer = x)[hvgs_all,])))
+genelist =  rep(list(hvgs_all),length(assaylist))
 
 lapply(assaylist,dim)
 ```
 
-Then, we use the `scanorama` function through reticulate. The integrated
-data is added back into the Seurat object as a new Reduction.
+Scanorama is implemented in python, but through reticulate we can load
+python packages and run python functions. In this case we also use the
+`basilisk` package for a more clean activation of python environment.
+
+At the top of this script, we set the variable `condapath` to point to
+the conda environment where scanorama is included.
 
 ``` {r}
-#| fig-height: 5
-#| fig-width: 16
+# run scanorama via basilisk with assaylis and genelist as input.
+integrated.data = basiliskRun(env=condapath, fun=function(datas, genes) {
+  scanorama <- reticulate::import("scanorama")
+  output <- scanorama$integrate(datasets_full = datas,
+                                         genes_list = genes )
+  return(output)
+}, datas = assaylist, genes = genelist, testload="scanorama")
 
-# Activate scanorama Python venv
-scanorama <- reticulate::import("scanorama")
-
-integrated.data <- scanorama$integrate(datasets_full = assaylist,
-                                       genes_list = genelist )
 
 # Now we create a new dim reduction object in the format that Seurat uses
 intdimred <- do.call(rbind, integrated.data[[1]])
 colnames(intdimred) <- paste0("Scanorama_", 1:100)
-rownames(intdimred) <- colnames(alldata.int)
+rownames(intdimred) <- colnames(alldata)
 
 # Add standard deviations in order to draw Elbow Plots in Seurat
 stdevs <- apply(intdimred, MARGIN = 2, FUN = sd)
 
 # Create a new dim red object.
-alldata.int[["scanorama"]] <- CreateDimReducObject(
+alldata[["scanorama"]] <- CreateDimReducObject(
+  embeddings = intdimred,
+  stdev      = stdevs,
+  key        = "Scanorama_",
+  assay      = "RNA")
+```
+
+Try the same but using counts instead of data.
+
+``` {r}
+
+# get count matrices from all samples, with only the variable genes.
+count.layers <- Layers(alldata)[grep("counts.",Layers(alldata))]
+print(count.layers)
+assaylist <- lapply(count.layers, function(x) t(as.matrix(LayerData(alldata, layer = x)[hvgs_all,])))
+
+# run scanorama via basilisk with assaylis and genelist as input.
+integrated.data = basiliskRun(env=condapath, fun=function(datas, genes) {
+  scanorama <- reticulate::import("scanorama")
+  output <- scanorama$integrate(datasets_full = datas,
+                                         genes_list = genes )
+  return(output)
+}, datas = assaylist, genes = genelist, testload="scanorama")
+
+# Now we create a new dim reduction object in the format that Seurat uses
+# The scanorama output has 100 dimensions.
+intdimred <- do.call(rbind, integrated.data[[1]])
+colnames(intdimred) <- paste0("Scanorama_", 1:100)
+rownames(intdimred) <- colnames(alldata)
+
+# Add standard deviations in order to draw Elbow Plots in Seurat
+stdevs <- apply(intdimred, MARGIN = 2, FUN = sd)
+
+# Create a new dim red object.
+alldata[["scanoramaC"]] <- CreateDimReducObject(
   embeddings = intdimred,
   stdev      = stdevs,
   key        = "Scanorama_",
@@ -340,10 +319,18 @@ alldata.int[["scanorama"]] <- CreateDimReducObject(
 ```
 
 ``` {r}
-#Here we use all PCs computed from Scanorama for UMAP calculation
-alldata.int <- RunUMAP(alldata.int, dims = 1:100, reduction = "scanorama",reduction.name = "umap_scanorama")
+#| fig-height: 8
+#| fig-width: 14
 
-DimPlot(alldata.int, reduction = "umap_scanorama", group.by = "orig.ident") + NoAxes() + ggtitle("Scanorama UMAP")
+#Here we use all PCs computed from Scanorama for UMAP calculation
+alldata <- RunUMAP(alldata, dims = 1:100, reduction = "scanorama",reduction.name = "umap_scanorama")
+alldata <- RunUMAP(alldata, dims = 1:100, reduction = "scanoramaC",reduction.name = "umap_scanoramaC")
+
+
+p1 = DimPlot(alldata, reduction = "umap_scanorama", group.by = "orig.ident") + NoAxes() + ggtitle("Scanorama UMAP")
+p2 = DimPlot(alldata, reduction = "umap_scanoramaC", group.by = "orig.ident") + NoAxes() + ggtitle("ScanoramaC UMAP")
+
+wrap_plots(p1,p2)
 ```
 
 ## Overview all methods
@@ -354,10 +341,10 @@ Now we will plot UMAPS with all three integration methods side by side.
 #| fig-height: 8
 #| fig-width: 9
 
-p1 <- DimPlot(alldata.int, reduction = "umap_raw", group.by = "orig.ident") + ggtitle("UMAP raw_data")
-p2 <- DimPlot(alldata.int, reduction = "umap", group.by = "orig.ident") + ggtitle("UMAP CCA")
-p3 <- DimPlot(alldata.int, reduction = "umap_harmony", group.by = "orig.ident") + ggtitle("UMAP Harmony")
-p4 <- DimPlot(alldata.int, reduction = "umap_scanorama", group.by = "orig.ident")+ggtitle("UMAP Scanorama")
+p1 <- DimPlot(alldata, reduction = "umap", group.by = "orig.ident") + ggtitle("UMAP raw_data")
+p2 <- DimPlot(alldata, reduction = "umap_cca", group.by = "orig.ident") + ggtitle("UMAP CCA")
+p3 <- DimPlot(alldata, reduction = "umap_harmony", group.by = "orig.ident") + ggtitle("UMAP Harmony")
+p4 <- DimPlot(alldata, reduction = "umap_scanorama", group.by = "orig.ident")+ggtitle("UMAP Scanorama")
 
 wrap_plots(p1, p2, p3, p4, nrow = 2) + plot_layout(guides = "collect")
 ```
@@ -376,7 +363,7 @@ wrap_plots(p1, p2, p3, p4, nrow = 2) + plot_layout(guides = "collect")
 Let's save the integrated data for further analysis.
 
 ``` {r}
-saveRDS(alldata.int,"data/covid/results/seurat_covid_qc_dr_int.rds")
+saveRDS(alldata,"data/covid/results/seurat_covid_qc_dr_int.rds")
 ```
 
 ## Extra task

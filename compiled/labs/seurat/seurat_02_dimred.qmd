@@ -21,9 +21,8 @@ from the previous step.
 
 ``` {r}
 # Activate conda environment to get the correct python path
-#reticulate::use_condaenv("seurat", conda = "/opt/conda/bin/conda")
+#eticulate::use_condaenv("seurat", conda = "/opt/conda/bin/conda")
 #reticulate::py_discover_config()
-
 reticulate::use_condaenv("/Users/asabjor/miniconda3/envs/seurat5", required = TRUE)
 
 suppressPackageStartupMessages({
@@ -81,8 +80,6 @@ running the commands below:
 
 ``` {r}
 alldata <- ScaleData(alldata, vars.to.regress = c("percent_mito", "nFeature_RNA"), assay = "RNA")
-
-#alldata <- ScaleData(alldata, assay = "RNA")
 ```
 
 ## PCA
@@ -137,17 +134,20 @@ information, while other PCs contain progressively less. However, it is
 still advisable to use more PCs since they might contain information
 about rare cell types (such as platelets and DCs in this dataset)
 
+With the `scater` package we can check how different metadata variables
+contribute to each PCs. This can be important to look at to understand
+different biases you may have in your data.
 
-```{r}
-library(scater)
-sce = as.SingleCellExperiment(alldata)
-plotExplanatoryPCs(sce, nvars_to_plot = 15, npcs_to_plot = 20)
+``` {r}
+#| fig-height: 4
+#| fig-width: 10
 
+scater::plotExplanatoryPCs(as.SingleCellExperiment(alldata), nvars_to_plot = 15, npcs_to_plot = 20)
 ```
 
-
-
-orig,ident (and ident) clearly contributes to many of the PCs, 
+Clearly, `orig,ident` (and `ident` which is created by
+`SingleCellExperiment`) clearly contributes to many of the PCs and PC7
+is trongly influenced by cell cycle,
 
 ## tSNE
 
@@ -206,11 +206,7 @@ named "pca", "umap", "tsne" etc. depending on the function you run. Here
 we will specify an alternative name for the umap with the
 `reduction.name` parameter.
 
-``` {r, eval=FALSE}
-#OBS! Skip for now, known issue with later version of umap-learn 
-# have 0.5.6
-# need to downgrade to 0.5.4, but could mess up things with numpy. 
-
+``` {r}
 alldata <- RunUMAP(
     alldata,
     reduction.name = "UMAP10_on_PCA",
@@ -229,7 +225,7 @@ alldata <- RunUMAP(
 UMAP is plotted colored per dataset. Although less distinct as in the
 tSNE, we still see quite an effect of the different batches in the data.
 
-``` {r, eval=FALSE}
+``` {r}
 #| fig-height: 4
 #| fig-width: 12
 
@@ -314,35 +310,31 @@ a graph is just a matrix containing distances from cell to cell and as
 such, you can run either UMAP or tSNE using any other distance metric
 desired. Euclidean and Correlation are usually the most commonly used.
 
-``` {r, eval=FALSE}
+\`\`\`{r, eval = FALSE} #OBS! Skip for now, known issue with later
+version of umap-learn in Seurat5 \# have 0.5.6 now, tested downgrading
+to 0.5.4 or 0.5.3 but still have same error.
+
 # Build Graph
-alldata <- FindNeighbors(alldata,
-    reduction = "pca",
-    assay = "RNA",
-    k.param = 20,
-    features = VariableFeatures(alldata)
-)
 
-alldata <- RunUMAP(alldata,
-    reduction.name = "UMAP_on_Graph",
-    umap.method = "umap-learn",
-    graph = "RNA_snn",
-    n.epochs = 200,
-    assay = "RNA"
-)
-```
+alldata \<- FindNeighbors(alldata, reduction = "pca", assay = "RNA",
+k.param = 20, features = VariableFeatures(alldata) )
 
-We can now plot the UMAP comparing both on PCA vs ScaledSata vs Graph.
+alldata \<- RunUMAP(alldata, reduction.name = "UMAP_on_Graph",
+umap.method = "umap-learn", graph = "RNA_snn", n.epochs = 200, assay =
+"RNA" )
 
-``` {r, eval=FALSE}
-#| fig-height: 4
-#| fig-width: 12
 
-p1 <- DimPlot(alldata, reduction = "umap", group.by = "orig.ident") + ggplot2::ggtitle(label = "UMAP_on_PCA")
-p2 <- DimPlot(alldata, reduction = "UMAP_on_ScaleData", group.by = "orig.ident") + ggplot2::ggtitle(label = "UMAP_on_ScaleData")
-p3 <- DimPlot(alldata, reduction = "UMAP_on_Graph", group.by = "orig.ident") + ggplot2::ggtitle(label = "UMAP_on_Graph")
-wrap_plots(p1, p2, p3, ncol = 3) + plot_layout(guides = "collect")
-```
+    We can now plot the UMAP comparing both on PCA vs ScaledSata vs Graph.
+
+
+    ```{r, eval=FALSE}
+    #| fig-height: 4
+    #| fig-width: 12
+
+    p1 <- DimPlot(alldata, reduction = "umap", group.by = "orig.ident") + ggplot2::ggtitle(label = "UMAP_on_PCA")
+    p2 <- DimPlot(alldata, reduction = "UMAP_on_ScaleData", group.by = "orig.ident") + ggplot2::ggtitle(label = "UMAP_on_ScaleData")
+    p3 <- DimPlot(alldata, reduction = "UMAP_on_Graph", group.by = "orig.ident") + ggplot2::ggtitle(label = "UMAP_on_Graph")
+    wrap_plots(p1, p2, p3, ncol = 3) + plot_layout(guides = "collect")
 
 ## Genes of interest
 
@@ -379,8 +371,7 @@ FeaturePlot(alldata, reduction = "umap", dims = 1:2, features = myfeatures, ncol
 
 </div>
 
-
-```{r}
+``` {r}
 #| fig-height: 9
 #| fig-width: 12
 
@@ -388,7 +379,6 @@ myfeatures <- c("nCount_RNA","nFeature_RNA", "percent_mito","percent_ribo","perc
 FeaturePlot(alldata, reduction = "umap", dims = 1:2, features = myfeatures, ncol = 3, order = T) +
     NoLegend() + NoAxes() + NoGrid()
 ```
-
 
 ## Save data
 
