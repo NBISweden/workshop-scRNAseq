@@ -207,7 +207,7 @@ background-size: cover;
       <div>
       <div class="quarto-title-meta-heading">Published</div>
       <div class="quarto-title-meta-contents">
-        <p class="date">18-Sep-2024</p>
+        <p class="date">10-Jan-2025</p>
       </div>
     </div>
     
@@ -264,7 +264,7 @@ Note
 </div>
 </div>
 <p>Celltype prediction can either be performed on indiviudal cells where each cell gets a predicted celltype label, or on the level of clusters. All methods are based on similarity to other datasets, single cell or sorted bulk RNAseq, or uses known marker genes for each cell type.<br>
-We will select one sample from the Covid data, <code>ctrl_13</code> and predict celltype by cell on that sample.<br>
+Ideally celltype predictions should be run on each sample separately and not using the integrated data. In this case we will select one sample from the Covid data, <code>ctrl_13</code> and predict celltype by cell on that sample.<br>
 Some methods will predict a celltype to each cell based on what it is most similar to, even if that celltype is not included in the reference. Other methods include an uncertainty so that cells with low similarity scores will be unclassified.<br>
 There are multiple different methods to predict celltypes, here we will just cover a few of those.</p>
 <p>We will use a reference PBMC dataset from the <code>scPred</code> package which is provided as a Seurat object with counts. Unfortunately scPred has not been updated to run with Seurat v5, so we will not use it here. We will test classification based on Seurat <code>labelTransfer</code>, the <code>SingleR</code> method <code>scPred</code> and using <code>Azimuth</code>. Finally we will use gene set enrichment predict celltype based on the DEGs of each cluster.</p>
@@ -291,11 +291,14 @@ There are multiple different methods to predict celltypes, here we will just cov
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>fetch_data <span class="ot">&lt;-</span> <span class="cn">TRUE</span></span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co"># url for source and intermediate data</span></span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>path_data <span class="ot">&lt;-</span> <span class="st">"https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"</span></span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>path_file <span class="ot">&lt;-</span> <span class="st">"data/covid/results/seurat_covid_qc_dr_int_cl.rds"</span></span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">dir.exists</span>(<span class="fu">dirname</span>(path_file))) <span class="fu">dir.create</span>(<span class="fu">dirname</span>(path_file), <span class="at">recursive =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (fetch_data <span class="sc">&amp;&amp;</span> <span class="sc">!</span><span class="fu">file.exists</span>(path_file)) <span class="fu">download.file</span>(<span class="at">url =</span> <span class="fu">file.path</span>(path_data, <span class="st">"covid/results/seurat_covid_qc_dr_int_cl.rds"</span>), <span class="at">destfile =</span> path_file)</span>
-<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>alldata <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(path_file)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>path_data <span class="ot">&lt;-</span> <span class="st">"https://nextcloud.dc.scilifelab.se/public.php/webdav"</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>curl_upass <span class="ot">&lt;-</span> <span class="st">"-u zbC5fr2LbEZ9rSE:scRNAseq2025"</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>path_file <span class="ot">&lt;-</span> <span class="st">"data/covid/results/seurat_covid_qc_dr_int_cl.rds"</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">dir.exists</span>(<span class="fu">dirname</span>(path_file))) <span class="fu">dir.create</span>(<span class="fu">dirname</span>(path_file), <span class="at">recursive =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (fetch_data <span class="sc">&amp;&amp;</span> <span class="sc">!</span><span class="fu">file.exists</span>(path_file)) <span class="fu">download.file</span>(<span class="at">url =</span> <span class="fu">file.path</span>(path_data, <span class="st">"covid/results_seurat/seurat_covid_qc_dr_int_cl.rds"</span>), <span class="at">destfile =</span> path_file, <span class="at">method =</span> <span class="st">"curl"</span>, <span class="at">extra =</span> curl_upass)</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>alldata <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(path_file)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Subset one patient.</p>
 <div class="cell">
@@ -562,7 +565,7 @@ ctrl_13_AATAGAGAGTTCGGTT-13  0.0377684    CD4 T cell</code></pre>
 <div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="fu">wrap_plots</span>(</span>
 <span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">DimPlot</span>(ctrl, <span class="at">label =</span> T, <span class="at">group.by =</span> <span class="st">"predicted.id"</span>) <span class="sc">+</span> <span class="fu">NoAxes</span>() <span class="sc">+</span> <span class="fu">ggtitle</span>(<span class="st">"LabelTransfer"</span>),</span>
 <span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">DimPlot</span>(ctrl, <span class="at">label =</span> T, <span class="at">group.by =</span> <span class="st">"singler.hpca"</span>) <span class="sc">+</span> <span class="fu">NoAxes</span>() <span class="sc">+</span> <span class="fu">ggtitle</span>(<span class="st">"SingleR HPCA"</span>),</span>
-<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">DimPlot</span>(ctrl, <span class="at">label =</span> T, <span class="at">group.by =</span> <span class="st">"singler.ref"</span>) <span class="sc">+</span> <span class="fu">NoAxes</span>() <span class="sc">+</span> <span class="fu">ggtitle</span>(<span class="st">"SingleR HPCA"</span>),</span>
+<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">DimPlot</span>(ctrl, <span class="at">label =</span> T, <span class="at">group.by =</span> <span class="st">"singler.ref"</span>) <span class="sc">+</span> <span class="fu">NoAxes</span>() <span class="sc">+</span> <span class="fu">ggtitle</span>(<span class="st">"SingleR Ref"</span>),</span>
 <span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">DimPlot</span>(ctrl, <span class="at">label =</span> T, <span class="at">group.by =</span> <span class="st">"predicted.celltype.l1"</span>) <span class="sc">+</span> <span class="fu">NoAxes</span>() <span class="sc">+</span> <span class="fu">ggtitle</span>(<span class="st">"Azimuth l1"</span>),</span>
 <span id="cb26-6"><a href="#cb26-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">ncol =</span> <span class="dv">2</span></span>
 <span id="cb26-7"><a href="#cb26-7" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -831,7 +834,7 @@ $`9`
 <p>We have downloaded the celltype gene lists from http://bio-bigdata.hrbmu.edu.cn/CellMarker/CellMarker_download.html and converted the excel file to a csv for you. Read in the gene lists and do some filtering.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb35"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>path_file <span class="ot">&lt;-</span> <span class="fu">file.path</span>(<span class="st">"data/cell_marker_human.csv"</span>)</span>
-<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">file.exists</span>(path_file)) <span class="fu">download.file</span>(<span class="fu">file.path</span>(path_data, <span class="st">"cell_marker_human.csv"</span>), <span class="at">destfile =</span> path_file)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">file.exists</span>(path_file)) <span class="fu">download.file</span>(<span class="fu">file.path</span>(path_data, <span class="st">"misc/cell_marker_human.csv"</span>), <span class="at">destfile =</span> path_file, <span class="at">method =</span> <span class="st">"curl"</span>, <span class="at">extra =</span> curl_upass)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb36"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Load the human marker table</span></span>
@@ -1594,7 +1597,7 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
 </div> <!-- /content -->
 <footer class="footer">
   <div class="nav-footer">
-    <div class="nav-footer-left">2024 <a href="https://nbis.se">NBIS</a> | <a href="https://choosealicense.com/licenses/gpl-3.0/">GPL-3 License</a></div>   
+    <div class="nav-footer-left">2025 <a href="https://nbis.se">NBIS</a> | <a href="https://choosealicense.com/licenses/gpl-3.0/">GPL-3 License</a></div>   
     <div class="nav-footer-center">
       &nbsp;
     </div>
@@ -1602,7 +1605,7 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
 </div>
   </div>
 </footer>
-<script>var lightboxQuarto = GLightbox({"selector":".lightbox","loop":true,"descPosition":"bottom","openEffect":"zoom","closeEffect":"zoom"});</script>
+<script>var lightboxQuarto = GLightbox({"openEffect":"zoom","loop":true,"descPosition":"bottom","selector":".lightbox","closeEffect":"zoom"});</script>
 
 
 
