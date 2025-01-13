@@ -238,7 +238,7 @@ window.Quarto = {
       <div>
       <div class="quarto-title-meta-heading">Published</div>
       <div class="quarto-title-meta-contents">
-        <p class="date">24-Sep-2024</p>
+        <p class="date">13-Jan-2025</p>
       </div>
     </div>
     
@@ -289,14 +289,14 @@ Note
 </div>
 <p>In this tutorial we will continue the analysis of the integrated dataset. We will use the scanpy enbedding to perform the clustering using graph community detection algorithms.</p>
 <p>Let’s first load all necessary libraries and also the integrated dataset from the previous step.</p>
-<div id="8013e0d4" class="cell" data-execution_count="1">
+<div id="cb1c0ea3" class="cell" data-execution_count="1">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> scanpy <span class="im">as</span> sc</span>
 <span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
 <span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> warnings</span>
 <span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> urllib.request</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> subprocess</span>
 <span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>warnings.simplefilter(action<span class="op">=</span><span class="st">"ignore"</span>, category<span class="op">=</span><span class="pp">Warning</span>)</span>
 <span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
@@ -304,24 +304,25 @@ Note
 <span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>sc.settings.verbosity <span class="op">=</span> <span class="dv">3</span></span>
 <span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>sc.settings.set_figure_params(dpi<span class="op">=</span><span class="dv">80</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<div id="1eea8c60" class="cell" data-execution_count="2">
+<div id="6a4bf4a4" class="cell" data-execution_count="2">
 <div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># download pre-computed data if missing or long compute</span></span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>fetch_data <span class="op">=</span> <span class="va">True</span></span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co"># url for source and intermediate data</span></span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>path_data <span class="op">=</span> <span class="st">"https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"</span></span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>path_results <span class="op">=</span> <span class="st">"data/covid/results"</span></span>
-<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(path_results):</span>
-<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    os.makedirs(path_results, exist_ok<span class="op">=</span><span class="va">True</span>)</span>
-<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>path_file <span class="op">=</span> <span class="st">"data/covid/results/scanpy_covid_qc_dr_scanorama.h5ad"</span></span>
-<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> fetch_data <span class="kw">and</span> <span class="kw">not</span> os.path.exists(path_file):</span>
-<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>    urllib.request.urlretrieve(os.path.join(</span>
-<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>        path_data, <span class="st">'covid/results/scanpy_covid_qc_dr_scanorama.h5ad'</span>), path_file)</span>
-<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>adata <span class="op">=</span> sc.read_h5ad(path_file)</span>
-<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>adata</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>path_data <span class="op">=</span> <span class="st">"https://nextcloud.dc.scilifelab.se/public.php/webdav"</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>curl_upass <span class="op">=</span> <span class="st">"zbC5fr2LbEZ9rSE:scRNAseq2025"</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>path_results <span class="op">=</span> <span class="st">"data/covid/results"</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(path_results):</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    os.makedirs(path_results, exist_ok<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>path_file <span class="op">=</span> <span class="st">"data/covid/results/scanpy_covid_qc_dr_int.h5ad"</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> fetch_data <span class="kw">and</span> <span class="kw">not</span> os.path.exists(path_file):</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>    file_url <span class="op">=</span> os.path.join(path_data, <span class="st">"covid/results_scanpy/scanpy_covid_qc_dr_int.h5ad"</span>)</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>    subprocess.call([<span class="st">"curl"</span>, <span class="st">"-u"</span>, curl_upass, <span class="st">"-o"</span>, path_file, file_url ])</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>adata <span class="op">=</span> sc.read_h5ad(path_file)</span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>adata</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="2">
 <pre><code>AnnData object with n_obs × n_vars = 7222 × 19468
     obs: 'type', 'sample', 'batch', 'n_genes_by_counts', 'total_counts', 'total_counts_mt', 'pct_counts_mt', 'total_counts_ribo', 'pct_counts_ribo', 'total_counts_hb', 'pct_counts_hb', 'percent_mt2', 'n_counts', 'n_genes', 'percent_chrY', 'XIST-counts', 'S_score', 'G2M_score', 'phase', 'doublet_scores', 'predicted_doublets', 'doublet_info', 'leiden'
@@ -344,7 +345,7 @@ Note
 <li><strong>n_neighbors</strong> - the number of neighbors per cell to include in the KNN graph.</li>
 </ul>
 <p>In this case, we will use the integrated data using Harmony. If you recall, we stored the harmony reduction in <code>X_pca_harmony</code> in the previous lab.</p>
-<div id="346e4df8" class="cell" data-execution_count="3">
+<div id="285e7587" class="cell" data-execution_count="3">
 <div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>sc.pp.neighbors(adata, n_neighbors<span class="op">=</span><span class="dv">20</span>, n_pcs<span class="op">=</span><span class="dv">30</span>, use_rep<span class="op">=</span><span class="st">'X_pca_harmony'</span>)</span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="co"># We will also set the default umap to the one created with harmony</span></span>
@@ -354,13 +355,13 @@ Note
 <pre><code>computing neighbors
     finished: added to `.uns['neighbors']`
     `.obsp['distances']`, distances for each pair of neighbors
-    `.obsp['connectivities']`, weighted adjacency matrix (0:00:06)</code></pre>
+    `.obsp['connectivities']`, weighted adjacency matrix (0:00:04)</code></pre>
 </div>
 </div>
 <p>The modularity optimization algoritm in Scanpy is <em>Leiden</em>. Previously ther was also <em>Louvain</em>, but since the Louvain algorithm is no longer maintained, using Leiden is recommended by the Scanpy community.</p>
 <section id="leiden" class="level3" data-number="1.1">
 <h3 data-number="1.1" class="anchored" data-anchor-id="leiden"><span class="header-section-number">1.1</span> Leiden</h3>
-<div id="766f5b87" class="cell" data-execution_count="4">
+<div id="856cf0f5" class="cell" data-execution_count="4">
 <div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># default resolution is 1.0, but we will try a few different values.</span></span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>sc.tl.leiden(adata, resolution <span class="op">=</span> <span class="fl">0.4</span>, key_added <span class="op">=</span> <span class="st">"leiden_0.4"</span>)</span>
 <span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>sc.tl.leiden(adata, resolution <span class="op">=</span> <span class="fl">0.6</span>, key_added <span class="op">=</span> <span class="st">"leiden_0.6"</span>)</span>
@@ -382,7 +383,7 @@ running Leiden clustering
 </div>
 </div>
 <p>Plot the clusters, as you can see, with increased resolution, we get higher granularity in the clustering.</p>
-<div id="a21188f6" class="cell" data-execution_count="5">
+<div id="a4a60c5b" class="cell" data-execution_count="5">
 <div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, color<span class="op">=</span>[<span class="st">'leiden_0.4'</span>, <span class="st">'leiden_0.6'</span>, <span class="st">'leiden_1.0'</span>,<span class="st">'leiden_1.4'</span>], legend_fontsize<span class="op">=</span><span class="dv">8</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 <div>
@@ -393,7 +394,7 @@ running Leiden clustering
 </div>
 </div>
 <p>Once we have done clustering, the relationships between clusters can be calculated as correlation in PCA space and we also visualize some of the marker genes that we used in the Dim Reduction lab onto the clusters. If we set <code>dendrogram=True</code> the clusters are ordered by the dendrogram in the dotplot.</p>
-<div id="b4f18857" class="cell" data-execution_count="6">
+<div id="d9f0db03" class="cell" data-execution_count="6">
 <div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>sc.tl.dendrogram(adata, groupby <span class="op">=</span> <span class="st">"leiden_0.6"</span>)</span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>sc.pl.dendrogram(adata, groupby <span class="op">=</span> <span class="st">"leiden_0.6"</span>)</span>
 <span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -423,7 +424,7 @@ Storing dendrogram info using `.uns['dendrogram_leiden_0.6']`</code></pre>
 <section id="section-1" class="level2" data-number="2">
 <h2 data-number="2" class="anchored" data-anchor-id="section-1"><span class="header-section-number">2</span> K-means clustering</h2>
 <p>K-means is a generic clustering algorithm that has been used in many application areas. In R, it can be applied via the <code>kmeans()</code> function. Typically, it is applied to a reduced dimension representation of the expression data (most often PCA, because of the interpretability of the low-dimensional distances). We need to define the number of clusters in advance. Since the results depend on the initialization of the cluster centers, it is typically recommended to run K-means with multiple starting configurations (via the <code>nstart</code> argument).</p>
-<div id="4af1a968" class="cell" data-execution_count="7">
+<div id="24f9fb8b" class="cell" data-execution_count="7">
 <div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.cluster <span class="im">import</span> KMeans</span>
 <span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.metrics <span class="im">import</span> adjusted_rand_score</span>
 <span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -470,7 +471,7 @@ As you already know, correlation range from -1 to 1, where 1 indicates that two 
 <span class="math display">\[adj = \frac{1- cor}{2}\]</span><br>
 Once we transformed the correlations to a 0-1 scale, we can simply convert it to a distance object using <code>as.dist()</code> function. The transformation does not need to have a maximum of 1, but it is more intuitive to have it at 1, rather than at any other number.</p>
 <p>The function <code>AgglomerativeClustering</code> has the option of running with disntance metrics “euclidean”, “l1”, “l2”, “manhattan”, “cosine”, or “precomputed”. However, with ward linkage only euklidean distances works. Here we will try out euclidean distance and ward linkage calculated in PCA space.</p>
-<div id="ab261a1d" class="cell" data-execution_count="8">
+<div id="cfd2e8b2" class="cell" data-execution_count="8">
 <div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.cluster <span class="im">import</span> AgglomerativeClustering</span>
 <span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>cluster <span class="op">=</span> AgglomerativeClustering(n_clusters<span class="op">=</span><span class="dv">5</span>, linkage<span class="op">=</span><span class="st">'ward'</span>)</span>
@@ -492,8 +493,8 @@ Once we transformed the correlations to a 0-1 scale, we can simply convert it to
 </div>
 </div>
 <p>Finally, lets save the clustered data for further analysis.</p>
-<div id="3772d822" class="cell" data-execution_count="9">
-<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>adata.write_h5ad(<span class="st">'./data/covid/results/scanpy_covid_qc_dr_scanorama_cl.h5ad'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="a8df1ffc" class="cell" data-execution_count="9">
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>adata.write_h5ad(<span class="st">'./data/covid/results/scanpy_covid_qc_dr_int_cl.h5ad'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 <section id="section-3" class="level2" data-number="4">
@@ -501,7 +502,7 @@ Once we transformed the correlations to a 0-1 scale, we can simply convert it to
 <p>Now, we can select one of our clustering methods and compare the proportion of samples across the clusters.</p>
 <p>Select the “leiden_0.6” and plot proportion of samples per cluster and also proportion covid vs ctrl.</p>
 <p>Plot proportion of cells from each condition per cluster.</p>
-<div id="202c3cec" class="cell" data-execution_count="10">
+<div id="e6274871" class="cell" data-execution_count="10">
 <div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>tmp <span class="op">=</span> pd.crosstab(adata.obs[<span class="st">'leiden_0.6'</span>],adata.obs[<span class="st">'type'</span>], normalize<span class="op">=</span><span class="st">'index'</span>)</span>
 <span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>tmp.plot.bar(stacked<span class="op">=</span><span class="va">True</span>).legend(bbox_to_anchor<span class="op">=</span>(<span class="fl">1.4</span>, <span class="dv">1</span>), loc<span class="op">=</span><span class="st">'upper right'</span>)</span>
 <span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -524,7 +525,7 @@ Once we transformed the correlations to a 0-1 scale, we can simply convert it to
 </div>
 <p>In this case we have quite good representation of each sample in each cluster. But there are clearly some biases with more cells from one sample in some clusters and also more covid cells in some of the clusters.</p>
 <p>We can also plot it in the other direction, the proportion of each cluster per sample.</p>
-<div id="34d27620" class="cell" data-execution_count="11">
+<div id="5e4a2ae1" class="cell" data-execution_count="11">
 <div class="sourceCode cell-code" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>tmp <span class="op">=</span> pd.crosstab(adata.obs[<span class="st">'sample'</span>],adata.obs[<span class="st">'leiden_0.6'</span>], normalize<span class="op">=</span><span class="st">'index'</span>)</span>
 <span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>tmp.plot.bar(stacked<span class="op">=</span><span class="va">True</span>).legend(bbox_to_anchor<span class="op">=</span>(<span class="fl">1.4</span>, <span class="dv">1</span>), loc<span class="op">=</span><span class="st">'upper right'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
@@ -548,7 +549,7 @@ Discuss
 <p>By now you should know how to plot different features onto your data. Take the QC metrics that were calculated in the first exercise, that should be stored in your data object, and plot it as violin plots per cluster using the clustering method of your choice. For example, plot number of UMIS, detected genes, percent mitochondrial reads. Then, check carefully if there is any bias in how your data is separated by quality metrics. Could it be explained biologically, or could there be a technical bias there?</p>
 </div>
 </div>
-<div id="986eb8c4" class="cell" data-execution_count="12">
+<div id="763182eb" class="cell" data-execution_count="12">
 <div class="sourceCode cell-code" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>sc.pl.violin(adata, [<span class="st">'n_genes_by_counts'</span>, <span class="st">'total_counts'</span>, <span class="st">'pct_counts_mt'</span>], jitter<span class="op">=</span><span class="fl">0.4</span>, groupby <span class="op">=</span> <span class="st">'leiden_0.6'</span>, rotation<span class="op">=</span> <span class="dv">45</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 <div>
@@ -564,7 +565,7 @@ Discuss
 <h2 data-number="5" class="anchored" data-anchor-id="section-4"><span class="header-section-number">5</span> Subclustering of T and NK-cells</h2>
 <p>It is common that the subtypes of cells within a cluster is not so well separated when you have a heterogeneous dataset. In such a case it could be a good idea to run subclustering of individual celltypes. The main reason for subclustering is that the variable genes and the first principal components in the full analysis are mainly driven by differences between celltypes, while with subclustering we may detect smaller differences between subtypes within celltypes.</p>
 <p>So first, lets find out where our T-cell and NK-cell clusters are. We know that T-cells express CD3E, and the main subtypes are CD4 and CD8, while NK-cells express GNLY.</p>
-<div id="56cf2ffe" class="cell" data-execution_count="13">
+<div id="f5454083" class="cell" data-execution_count="13">
 <div class="sourceCode cell-code" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="co"># check with the lowest resolution</span></span>
 <span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>fig, axs <span class="op">=</span> plt.subplots(<span class="dv">2</span>, <span class="dv">3</span>, figsize<span class="op">=</span>(<span class="dv">10</span>,<span class="dv">8</span>),constrained_layout<span class="op">=</span><span class="va">True</span>)</span>
 <span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, color<span class="op">=</span><span class="st">"leiden_0.4"</span>, ax<span class="op">=</span>axs[<span class="dv">0</span>,<span class="dv">0</span>], show<span class="op">=</span><span class="va">False</span>, legend_loc <span class="op">=</span> <span class="st">"on data"</span>)</span>
@@ -581,23 +582,23 @@ Discuss
 </div>
 </div>
 <p>We can clearly see what clusters are T-cell clusters, so lets subset the data for those cells</p>
-<div id="96cdb774" class="cell" data-execution_count="14">
+<div id="71d602ce" class="cell" data-execution_count="14">
 <div class="sourceCode cell-code" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>tcells <span class="op">=</span> adata[adata.obs[<span class="st">"leiden_0.4"</span>].isin([<span class="st">'1'</span>,<span class="st">'2'</span>,<span class="st">'4'</span>]),:]</span>
 <span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>tcells.obs[<span class="st">"sample"</span>].value_counts()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="14">
-<pre><code>ctrl_5      684
-ctrl_13     605
-ctrl_19     548
-ctrl_14     497
-covid_17    278
-covid_1     258
-covid_15    243
-covid_16    124
+<pre><code>ctrl_13     597
+ctrl_19     585
+ctrl_5      547
+ctrl_14     443
+covid_17    392
+covid_1     349
+covid_15    211
+covid_16    154
 Name: sample, dtype: int64</code></pre>
 </div>
 </div>
 <p>Ideally we should rerun all steps of integration with that subset of cells instead of just taking the joint embedding. If you have too few cells per sample in the celltype that you want to cluster it may not be possible. We will start with selecting a new set of genes that better reflecs the variability within this celltype</p>
-<div id="eecb158d" class="cell" data-execution_count="15">
+<div id="22c21373" class="cell" data-execution_count="15">
 <div class="sourceCode cell-code" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>sc.pp.highly_variable_genes(tcells, min_mean<span class="op">=</span><span class="fl">0.0125</span>, max_mean<span class="op">=</span><span class="dv">3</span>, min_disp<span class="op">=</span><span class="fl">0.5</span>)</span>
 <span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -613,13 +614,13 @@ Name: sample, dtype: int64</code></pre>
     'dispersions', float vector (adata.var)
     'dispersions_norm', float vector (adata.var)
 Full data: 2388
-Tcells: 2893
-Intersection: 1167</code></pre>
+Tcells: 3176
+Intersection: 1314</code></pre>
 </div>
 </div>
 <p>We clearly have a very different geneset now, so hopefully it should better capture the variability within T-cells.</p>
 <p>Now we have to run the full pipeline with scaling, pca, integration and clustering on this subset of cells, using the new set of variable genes</p>
-<div id="6e417727" class="cell" data-execution_count="16">
+<div id="936823ad" class="cell" data-execution_count="16">
 <div class="sourceCode cell-code" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> scanpy.external <span class="im">as</span> sce </span>
 <span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> harmonypy <span class="im">as</span> hm </span>
 <span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -635,7 +636,7 @@ Intersection: 1167</code></pre>
 <div class="cell-output cell-output-stdout">
 <pre><code>regressing out ['total_counts', 'pct_counts_mt']
     sparse input is densified and may lead to high memory use
-    finished (0:00:20)
+    finished (0:00:19)
 computing PCA
     with n_comps=50
     finished (0:00:01)</code></pre>
@@ -646,7 +647,7 @@ computing PCA
     `.obsp['distances']`, distances for each pair of neighbors
     `.obsp['connectivities']`, weighted adjacency matrix (0:00:00)
 running Leiden clustering
-    finished: found 12 clusters and added
+    finished: found 8 clusters and added
     'tcells_0.6', the cluster labels (adata.obs, categorical) (0:00:00)
 computing UMAP
     finished: added
@@ -654,7 +655,7 @@ computing UMAP
     'umap', UMAP parameters (adata.uns) (0:00:04)</code></pre>
 </div>
 </div>
-<div id="98f50293" class="cell" data-execution_count="17">
+<div id="e5def91a" class="cell" data-execution_count="17">
 <div class="sourceCode cell-code" id="cb26"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>fig, axs <span class="op">=</span> plt.subplots(<span class="dv">2</span>, <span class="dv">3</span>, figsize<span class="op">=</span>(<span class="dv">10</span>,<span class="dv">8</span>),constrained_layout<span class="op">=</span><span class="va">True</span>)</span>
 <span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(tcells, color<span class="op">=</span><span class="st">"sample"</span>, title<span class="op">=</span><span class="st">"Tcell umap"</span>, ax<span class="op">=</span>axs[<span class="dv">0</span>,<span class="dv">0</span>], show<span class="op">=</span><span class="va">False</span>)</span>
 <span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a>sc.pl.embedding(tcells, <span class="st">'X_umap_harmony'</span>, color<span class="op">=</span><span class="st">"sample"</span>, title<span class="op">=</span><span class="st">"Full umap"</span>, ax<span class="op">=</span>axs[<span class="dv">1</span>,<span class="dv">0</span>], show<span class="op">=</span><span class="va">False</span>)</span>
@@ -672,7 +673,7 @@ computing UMAP
 </div>
 <p>As you can see, we do have some new clusters that did not stand out before. But in general the separation looks very similar.</p>
 <p>We can plot the subtype genes again. If you try plotting the genes with <code>use_raw=False</code> you will notice that some of the genes are not in the <code>adata.X</code> matrix. Since they are no longer included in the variable genes. So now we have to plot with <code>use_raw=True</code>.</p>
-<div id="aa8c7fc3" class="cell" data-execution_count="18">
+<div id="915fe8a1" class="cell" data-execution_count="18">
 <div class="sourceCode cell-code" id="cb27"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>fig, axs <span class="op">=</span> plt.subplots(<span class="dv">2</span>, <span class="dv">2</span>, figsize<span class="op">=</span>(<span class="dv">10</span>,<span class="dv">8</span>),constrained_layout<span class="op">=</span><span class="va">True</span>)</span>
 <span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(tcells, color<span class="op">=</span><span class="st">"CD3E"</span>, ax<span class="op">=</span>axs[<span class="dv">0</span>,<span class="dv">0</span>], show<span class="op">=</span><span class="va">False</span>, use_raw<span class="op">=</span><span class="va">True</span>)</span>
 <span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(tcells, color<span class="op">=</span><span class="st">"CD4"</span>, ax<span class="op">=</span>axs[<span class="dv">0</span>,<span class="dv">1</span>], show<span class="op">=</span><span class="va">False</span>, use_raw<span class="op">=</span><span class="va">True</span>)</span>
@@ -693,7 +694,7 @@ computing UMAP
 <summary>
 Click here
 </summary>
-<div id="192d88ee" class="cell" data-execution_count="19">
+<div id="c5bc8775" class="cell" data-execution_count="19">
 <div class="sourceCode cell-code" id="cb28"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>sc.logging.print_versions()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>-----
@@ -796,7 +797,7 @@ seaborn                     0.13.2
 send2trash                  NA
 session_info                1.0.0
 six                         1.16.0
-sklearn                     1.5.2
+sklearn                     1.1.3
 sniffio                     1.3.1
 socks                       1.7.1
 sparse                      0.15.4
@@ -833,9 +834,9 @@ jupyterlab          4.2.5
 notebook            7.2.2
 -----
 Python 3.10.10 | packaged by conda-forge | (main, Mar 24 2023, 20:17:34) [Clang 14.0.6 ]
-macOS-14.6.1-x86_64-i386-64bit
+macOS-15.1.1-x86_64-i386-64bit
 -----
-Session information updated at 2024-09-24 09:01</code></pre>
+Session information updated at 2025-01-13 08:44</code></pre>
 </div>
 </div>
 </details>
@@ -1268,7 +1269,7 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
 <footer class="footer">
   <div class="nav-footer">
     <div class="nav-footer-left">
-<p>2024 <a href="https://nbis.se">NBIS</a> | <a href="https://choosealicense.com/licenses/gpl-3.0/">GPL-3 License</a></p>
+<p>2025 <a href="https://nbis.se">NBIS</a> | <a href="https://choosealicense.com/licenses/gpl-3.0/">GPL-3 License</a></p>
 </div>   
     <div class="nav-footer-center">
       &nbsp;
@@ -1279,7 +1280,7 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
 </div>
   </div>
 </footer>
-<script>var lightboxQuarto = GLightbox({"descPosition":"bottom","openEffect":"zoom","closeEffect":"zoom","loop":false,"selector":".lightbox"});
+<script>var lightboxQuarto = GLightbox({"closeEffect":"zoom","selector":".lightbox","descPosition":"bottom","loop":false,"openEffect":"zoom"});
 (function() {
   let previousOnload = window.onload;
   window.onload = () => {

@@ -238,7 +238,7 @@ window.Quarto = {
       <div>
       <div class="quarto-title-meta-heading">Published</div>
       <div class="quarto-title-meta-contents">
-        <p class="date">20-Sep-2024</p>
+        <p class="date">13-Jan-2025</p>
       </div>
     </div>
     
@@ -291,14 +291,14 @@ Note
 <section id="section" class="level2" data-number="1">
 <h2 data-number="1" class="anchored" data-anchor-id="section"><span class="header-section-number">1</span> Data preparation</h2>
 <p>First, let’s load all necessary libraries and the QC-filtered dataset from the previous step.</p>
-<div id="65e9a590" class="cell" data-execution_count="1">
+<div id="c2f25c76" class="cell" data-execution_count="1">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> scanpy <span class="im">as</span> sc</span>
 <span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
 <span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> warnings</span>
 <span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> urllib.request</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> subprocess</span>
 <span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>warnings.simplefilter(action<span class="op">=</span><span class="st">"ignore"</span>, category<span class="op">=</span><span class="pp">Warning</span>)</span>
 <span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
@@ -308,27 +308,29 @@ Note
 <span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>sc.settings.set_figure_params(dpi<span class="op">=</span><span class="dv">80</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<div id="e0f844a9" class="cell" data-execution_count="2">
+<div id="c9758455" class="cell" data-execution_count="2">
 <div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># download pre-computed data if missing or long compute</span></span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>fetch_data <span class="op">=</span> <span class="va">True</span></span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co"># url for source and intermediate data</span></span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>path_data <span class="op">=</span> <span class="st">"https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"</span></span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>path_results <span class="op">=</span> <span class="st">"data/covid/results"</span></span>
-<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(path_results):</span>
-<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    os.makedirs(path_results, exist_ok<span class="op">=</span><span class="va">True</span>)</span>
-<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>path_file <span class="op">=</span> <span class="st">"data/covid/results/scanpy_covid_qc.h5ad"</span></span>
-<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="co"># if fetch_data is false and path_file doesn't exist</span></span>
-<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> fetch_data <span class="kw">and</span> <span class="kw">not</span> os.path.exists(path_file):</span>
-<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>    urllib.request.urlretrieve(os.path.join(</span>
-<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>        path_data, <span class="st">'covid/results/scanpy_covid_qc.h5ad'</span>), path_file)</span>
-<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>adata <span class="op">=</span> sc.read_h5ad(path_file)</span>
-<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>adata</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="2">
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>path_data <span class="op">=</span> <span class="st">"https://nextcloud.dc.scilifelab.se/public.php/webdav"</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>curl_upass <span class="op">=</span> <span class="st">"zbC5fr2LbEZ9rSE:scRNAseq2025"</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>path_results <span class="op">=</span> <span class="st">"data/covid/results"</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(path_results):</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    os.makedirs(path_results, exist_ok<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>path_file <span class="op">=</span> <span class="st">"data/covid/results/scanpy_covid_qc.h5ad"</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="co"># if fetch_data is false and path_file doesn't exist</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> fetch_data <span class="kw">and</span> <span class="kw">not</span> os.path.exists(path_file):</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>    file_url <span class="op">=</span> os.path.join(path_data, <span class="st">"covid/results_scanpy/scanpy_covid_qc.h5ad"</span>)</span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>    subprocess.call([<span class="st">"curl"</span>, <span class="st">"-u"</span>, curl_upass, <span class="st">"-o"</span>, path_file, file_url ])</span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>adata <span class="op">=</span> sc.read_h5ad(path_file)</span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>adata</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="4">
 <pre><code>AnnData object with n_obs × n_vars = 7222 × 19468
     obs: 'type', 'sample', 'batch', 'n_genes_by_counts', 'total_counts', 'total_counts_mt', 'pct_counts_mt', 'total_counts_ribo', 'pct_counts_ribo', 'total_counts_hb', 'pct_counts_hb', 'percent_mt2', 'n_counts', 'n_genes', 'percent_chrY', 'XIST-counts', 'S_score', 'G2M_score', 'phase', 'doublet_scores', 'predicted_doublets', 'doublet_info'
     var: 'gene_ids', 'feature_types', 'genome', 'mt', 'ribo', 'hb', 'n_cells_by_counts', 'mean_counts', 'pct_dropout_by_counts', 'total_counts', 'n_cells'
@@ -338,7 +340,7 @@ Note
 </div>
 </div>
 <p>Before variable gene selection we need to normalize and log transform the data. Then store the full matrix in the <code>raw</code> slot before doing variable gene selection.</p>
-<div id="96bc38aa" class="cell" data-execution_count="3">
+<div id="68e4f5ce" class="cell" data-execution_count="3">
 <div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># normalize to depth 10 000</span></span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>sc.pp.normalize_per_cell(adata, counts_per_cell_after<span class="op">=</span><span class="fl">1e4</span>)</span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -356,7 +358,7 @@ Note
     'n_counts', counts per cell before normalization (adata.obs)
 WARNING: adata.X seems to be already log-transformed.</code></pre>
 </div>
-<div class="cell-output cell-output-display" data-execution_count="3">
+<div class="cell-output cell-output-display" data-execution_count="5">
 <pre><code>AnnData object with n_obs × n_vars = 7222 × 19468
     obs: 'type', 'sample', 'batch', 'n_genes_by_counts', 'total_counts', 'total_counts_mt', 'pct_counts_mt', 'total_counts_ribo', 'pct_counts_ribo', 'total_counts_hb', 'pct_counts_hb', 'percent_mt2', 'n_counts', 'n_genes', 'percent_chrY', 'XIST-counts', 'S_score', 'G2M_score', 'phase', 'doublet_scores', 'predicted_doublets', 'doublet_info'
     var: 'gene_ids', 'feature_types', 'genome', 'mt', 'ribo', 'hb', 'n_cells_by_counts', 'mean_counts', 'pct_dropout_by_counts', 'total_counts', 'n_cells'
@@ -369,7 +371,7 @@ WARNING: adata.X seems to be already log-transformed.</code></pre>
 <section id="section-1" class="level2" data-number="2">
 <h2 data-number="2" class="anchored" data-anchor-id="section-1"><span class="header-section-number">2</span> Feature selection</h2>
 <p>We first need to define which features/genes are important in our dataset to distinguish cell types. For this purpose, we need to find genes that are highly variable across cells, which in turn will also provide a good separation of the cell clusters.</p>
-<div id="5a430bea" class="cell" data-execution_count="4">
+<div id="71900352" class="cell" data-execution_count="4">
 <div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># compute variable genes</span></span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>sc.pp.highly_variable_genes(adata, min_mean<span class="op">=</span><span class="fl">0.0125</span>, max_mean<span class="op">=</span><span class="dv">3</span>, min_disp<span class="op">=</span><span class="fl">0.5</span>)</span>
 <span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"Highly variable genes: </span><span class="sc">%d</span><span class="st">"</span><span class="op">%</span><span class="bu">sum</span>(adata.var.highly_variable))</span>
@@ -401,7 +403,7 @@ Highly variable genes: 2626</code></pre>
 <section id="section-2" class="level2" data-number="3">
 <h2 data-number="3" class="anchored" data-anchor-id="section-2"><span class="header-section-number">3</span> Z-score transformation</h2>
 <p>Now that the genes have been selected, we now proceed with PCA. Since each gene has a different expression level, it means that genes with higher expression values will naturally have higher variation that will be captured by PCA. This means that we need to somehow give each gene a similar weight when performing PCA (see below). The common practice is to center and scale each gene before performing PCA. This exact scaling called Z-score normalization is very useful for PCA, clustering and plotting heatmaps. Additionally, we can use regression to remove any unwanted sources of variation from the dataset, such as <code>cell cycle</code>, <code>sequencing depth</code>, <code>percent mitochondria</code> etc. This is achieved by doing a generalized linear regression using these parameters as co-variates in the model. Then the residuals of the model are taken as the <em>regressed data</em>. Although perhaps not in the best way, batch effect regression can also be done here. By default, variables are scaled in the PCA step and is not done separately. But it could be achieved by running the commands below:</p>
-<div id="3e5f9515" class="cell" data-execution_count="5">
+<div id="7860e0e8" class="cell" data-execution_count="5">
 <div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co">#run this line if you get the "AttributeError: swapaxes not found" </span></span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="co"># adata = adata.copy()</span></span>
 <span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -413,7 +415,7 @@ Highly variable genes: 2626</code></pre>
 <div class="cell-output cell-output-stdout">
 <pre><code>regressing out ['total_counts', 'pct_counts_mt']
     sparse input is densified and may lead to high memory use
-    finished (0:00:39)</code></pre>
+    finished (0:00:36)</code></pre>
 </div>
 </div>
 </section>
@@ -421,7 +423,7 @@ Highly variable genes: 2626</code></pre>
 <h2 data-number="4" class="anchored" data-anchor-id="section-3"><span class="header-section-number">4</span> PCA</h2>
 <p>Performing PCA has many useful applications and interpretations, which much depends on the data used. In the case of single-cell data, we want to segregate samples based on gene expression patterns in the data.</p>
 <p>To run PCA, you can use the function <code>pca()</code>.</p>
-<div id="287480d4" class="cell" data-execution_count="6">
+<div id="b37e0338" class="cell" data-execution_count="6">
 <div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>sc.tl.pca(adata, svd_solver<span class="op">=</span><span class="st">'arpack'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>computing PCA
@@ -430,7 +432,7 @@ Highly variable genes: 2626</code></pre>
 </div>
 </div>
 <p>We then plot the first principal components.</p>
-<div id="940242ee" class="cell" data-execution_count="7">
+<div id="6b42638e" class="cell" data-execution_count="7">
 <div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co"># plot more PCS</span></span>
 <span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>sc.pl.pca(adata, color<span class="op">=</span><span class="st">'sample'</span>, components <span class="op">=</span> [<span class="st">'1,2'</span>,<span class="st">'3,4'</span>,<span class="st">'5,6'</span>,<span class="st">'7,8'</span>], ncols<span class="op">=</span><span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
@@ -442,7 +444,7 @@ Highly variable genes: 2626</code></pre>
 </div>
 </div>
 <p>To identify genes that contribute most to each PC, one can retrieve the loading matrix information.</p>
-<div id="e3eff124" class="cell" data-execution_count="8">
+<div id="bcd2033b" class="cell" data-execution_count="8">
 <div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Plot loadings</span></span>
 <span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>sc.pl.pca_loadings(adata, components<span class="op">=</span>[<span class="dv">1</span>,<span class="dv">2</span>,<span class="dv">3</span>,<span class="dv">4</span>,<span class="dv">5</span>,<span class="dv">6</span>,<span class="dv">7</span>,<span class="dv">8</span>])</span>
 <span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -456,7 +458,7 @@ Highly variable genes: 2626</code></pre>
 </div>
 </div>
 <p>The function to plot loading genes only plots genes on the positive axes. Instead plot as a heatmaps, with genes on both positive and negative side, one per pc, and plot their expression amongst cells ordered by their position along the pc.</p>
-<div id="1cad95af" class="cell" data-execution_count="9">
+<div id="9fcdd52d" class="cell" data-execution_count="9">
 <div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="co"># adata.obsm["X_pca"] is the embeddings</span></span>
 <span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="co"># adata.uns["pca"] is pc variance</span></span>
 <span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a><span class="co"># adata.varm['PCs'] is the loadings</span></span>
@@ -501,7 +503,7 @@ Highly variable genes: 2626</code></pre>
 </div>
 </div>
 <p>We can also plot the amount of variance explained by each PC.</p>
-<div id="1ee33806" class="cell" data-execution_count="10">
+<div id="fbbd7e97" class="cell" data-execution_count="10">
 <div class="sourceCode cell-code" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>sc.pl.pca_variance_ratio(adata, log<span class="op">=</span><span class="va">True</span>, n_pcs <span class="op">=</span> <span class="dv">50</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 <div>
@@ -516,7 +518,7 @@ Highly variable genes: 2626</code></pre>
 <section id="section-4" class="level2" data-number="5">
 <h2 data-number="5" class="anchored" data-anchor-id="section-4"><span class="header-section-number">5</span> tSNE</h2>
 <p>We will now run <a href="https://arxiv.org/abs/1301.3342">BH-tSNE</a>.</p>
-<div id="1949b6fb" class="cell" data-execution_count="11">
+<div id="baa9b72a" class="cell" data-execution_count="11">
 <div class="sourceCode cell-code" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>sc.tl.tsne(adata, n_pcs <span class="op">=</span> <span class="dv">30</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>computing tSNE
@@ -524,11 +526,11 @@ Highly variable genes: 2626</code></pre>
     using sklearn.manifold.TSNE
     finished: added
     'X_tsne', tSNE coordinates (adata.obsm)
-    'tsne', tSNE parameters (adata.uns) (0:00:14)</code></pre>
+    'tsne', tSNE parameters (adata.uns) (0:00:15)</code></pre>
 </div>
 </div>
 <p>We plot the tSNE scatterplot colored by dataset. We can clearly see the effect of batches present in the dataset.</p>
-<div id="bd409a47" class="cell" data-execution_count="12">
+<div id="38593ffe" class="cell" data-execution_count="12">
 <div class="sourceCode cell-code" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>sc.pl.tsne(adata, color<span class="op">=</span><span class="st">'sample'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 <div>
@@ -542,25 +544,25 @@ Highly variable genes: 2626</code></pre>
 <section id="section-5" class="level2" data-number="6">
 <h2 data-number="6" class="anchored" data-anchor-id="section-5"><span class="header-section-number">6</span> UMAP</h2>
 <p>The UMAP implementation in SCANPY uses a neighborhood graph as the distance matrix, so we need to first calculate the graph.</p>
-<div id="8ae06994" class="cell" data-execution_count="13">
+<div id="c3d1c261" class="cell" data-execution_count="13">
 <div class="sourceCode cell-code" id="cb20"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>sc.pp.neighbors(adata, n_pcs <span class="op">=</span> <span class="dv">30</span>, n_neighbors <span class="op">=</span> <span class="dv">20</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>computing neighbors
     using 'X_pca' with n_pcs = 30
     finished: added to `.uns['neighbors']`
     `.obsp['distances']`, distances for each pair of neighbors
-    `.obsp['connectivities']`, weighted adjacency matrix (0:00:04)</code></pre>
+    `.obsp['connectivities']`, weighted adjacency matrix (0:00:05)</code></pre>
 </div>
 </div>
 <p>We can now run <a href="https://arxiv.org/abs/1802.03426">UMAP</a> for cell embeddings.</p>
-<div id="b3f2e134" class="cell" data-execution_count="14">
+<div id="5c9750a7" class="cell" data-execution_count="14">
 <div class="sourceCode cell-code" id="cb22"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>sc.tl.umap(adata)</span>
 <span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, color<span class="op">=</span><span class="st">'sample'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>computing UMAP
     finished: added
     'X_umap', UMAP coordinates (adata.obsm)
-    'umap', UMAP parameters (adata.uns) (0:00:11)</code></pre>
+    'umap', UMAP parameters (adata.uns) (0:00:12)</code></pre>
 </div>
 <div class="cell-output cell-output-display">
 <div>
@@ -571,7 +573,7 @@ Highly variable genes: 2626</code></pre>
 </div>
 </div>
 <p>UMAP is plotted colored per dataset. Although less distinct as in the tSNE, we still see quite an effect of the different batches in the data.</p>
-<div id="30d34756" class="cell" data-execution_count="15">
+<div id="a6c3ac27" class="cell" data-execution_count="15">
 <div class="sourceCode cell-code" id="cb24"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="co"># run with 10 components, save to a new object so that the umap with 2D is not overwritten.</span></span>
 <span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>umap10 <span class="op">=</span> sc.tl.umap(adata, n_components<span class="op">=</span><span class="dv">10</span>, copy<span class="op">=</span><span class="va">True</span>)</span>
 <span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>fig, axs <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">3</span>, figsize<span class="op">=</span>(<span class="dv">10</span>, <span class="dv">4</span>), constrained_layout<span class="op">=</span><span class="va">True</span>)</span>
@@ -607,7 +609,7 @@ Highly variable genes: 2626</code></pre>
 </div>
 </div>
 <p>We can now plot PCA, UMAP and tSNE side by side for comparison. Have a look at the UMAP and tSNE. What similarities/differences do you see? Can you explain the differences based on what you learned during the lecture? Also, we can conclude from the dimensionality reductions that our dataset contains a batch effect that needs to be corrected before proceeding to clustering and differential gene expression analysis.</p>
-<div id="1387435d" class="cell" data-execution_count="16">
+<div id="9e4a5973" class="cell" data-execution_count="16">
 <div class="sourceCode cell-code" id="cb26"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>fig, axs <span class="op">=</span> plt.subplots(<span class="dv">2</span>, <span class="dv">2</span>, figsize<span class="op">=</span>(<span class="dv">10</span>, <span class="dv">8</span>), constrained_layout<span class="op">=</span><span class="va">True</span>)</span>
 <span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>sc.pl.pca(adata, color<span class="op">=</span><span class="st">'sample'</span>, components<span class="op">=</span>[<span class="st">'1,2'</span>], ax<span class="op">=</span>axs[<span class="dv">0</span>, <span class="dv">0</span>], show<span class="op">=</span><span class="va">False</span>)</span>
 <span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a>sc.pl.tsne(adata, color<span class="op">=</span><span class="st">'sample'</span>, components<span class="op">=</span>[<span class="st">'1,2'</span>], ax<span class="op">=</span>axs[<span class="dv">0</span>, <span class="dv">1</span>], show<span class="op">=</span><span class="va">False</span>)</span>
@@ -680,7 +682,7 @@ Discuss
 </tr>
 </tbody>
 </table>
-<div id="b042e7d9" class="cell" data-execution_count="17">
+<div id="bcb84d9b" class="cell" data-execution_count="17">
 <div class="sourceCode cell-code" id="cb27"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, color<span class="op">=</span>[<span class="st">"CD3E"</span>, <span class="st">"CD4"</span>, <span class="st">"CD8A"</span>, <span class="st">"GNLY"</span>,<span class="st">"NKG7"</span>, <span class="st">"MS4A1"</span>,<span class="st">"CD14"</span>,<span class="st">"LYZ"</span>,<span class="st">"CST3"</span>,<span class="st">"MS4A7"</span>,<span class="st">"FCGR3A"</span>])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 <div>
@@ -691,7 +693,7 @@ Discuss
 </div>
 </div>
 <p>The default is to plot gene expression in the normalized and log-transformed data. You can also plot it on the scaled and corrected data by using <code>use_raw=False</code>. However, not all of these genes are included in the variable gene set, and hence are not included in the scaled <code>adata.X</code>, so we first need to filter them.</p>
-<div id="8e802aad" class="cell" data-execution_count="18">
+<div id="b9615980" class="cell" data-execution_count="18">
 <div class="sourceCode cell-code" id="cb28"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>genes  <span class="op">=</span> [<span class="st">"CD3E"</span>, <span class="st">"CD4"</span>, <span class="st">"CD8A"</span>, <span class="st">"GNLY"</span>,<span class="st">"NKG7"</span>, <span class="st">"MS4A1"</span>,<span class="st">"CD14"</span>,<span class="st">"LYZ"</span>,<span class="st">"CST3"</span>,<span class="st">"MS4A7"</span>,<span class="st">"FCGR3A"</span>]</span>
 <span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>var_genes <span class="op">=</span> adata.var.highly_variable</span>
 <span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a>var_genes.index[var_genes]</span>
@@ -718,7 +720,7 @@ Discuss
 <p>Select some of your dimensionality reductions and plot some of the QC stats that were calculated in the previous lab. Can you see if some of the separation in your data is driven by quality of the cells?</p>
 </div>
 </div>
-<div id="86bf8a63" class="cell" data-execution_count="19">
+<div id="ffbcbc33" class="cell" data-execution_count="19">
 <div class="sourceCode cell-code" id="cb29"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, color<span class="op">=</span>[<span class="st">'n_genes_by_counts'</span>, <span class="st">'total_counts'</span>, <span class="st">'pct_counts_mt'</span>,<span class="st">'pct_counts_ribo'</span>, <span class="st">'pct_counts_hb'</span>], ncols<span class="op">=</span><span class="dv">3</span>,use_raw<span class="op">=</span><span class="va">False</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 <div>
@@ -732,7 +734,7 @@ Discuss
 <section id="section-7" class="level2" data-number="8">
 <h2 data-number="8" class="anchored" data-anchor-id="section-7"><span class="header-section-number">8</span> Save data</h2>
 <p>We can finally save the object for use in future steps.</p>
-<div id="8b6cae3b" class="cell" data-execution_count="20">
+<div id="d44cfa44" class="cell" data-execution_count="20">
 <div class="sourceCode cell-code" id="cb30"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>adata.write_h5ad(<span class="st">'data/covid/results/scanpy_covid_qc_dr.h5ad'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
@@ -740,7 +742,7 @@ Discuss
 <h2 data-number="9" class="anchored" data-anchor-id="note"><span class="header-section-number">9</span> Note</h2>
 <p>Just as a reminder, you need to keep in mind what you have in the X matrix. After these operations you have an X matrix with only variable genes, that are normalized, logtransformed and scaled.</p>
 <p>We stored the expression of all genes in <code>raw.X</code> after doing lognormalization so that matrix is a sparse matrix with logtransformed values.</p>
-<div id="419bea0b" class="cell" data-execution_count="21">
+<div id="86112981" class="cell" data-execution_count="21">
 <div class="sourceCode cell-code" id="cb31"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(adata.X.shape)</span>
 <span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(adata.raw.X.shape)</span>
 <span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -766,7 +768,7 @@ Discuss
 <summary>
 Click here
 </summary>
-<div id="f6502161" class="cell" data-execution_count="22">
+<div id="1a4d313e" class="cell" data-execution_count="22">
 <div class="sourceCode cell-code" id="cb33"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>sc.logging.print_versions()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>-----
@@ -868,7 +870,7 @@ scipy                       1.14.1
 send2trash                  NA
 session_info                1.0.0
 six                         1.16.0
-sklearn                     1.5.2
+sklearn                     1.1.3
 sniffio                     1.3.1
 socks                       1.7.1
 sparse                      0.15.4
@@ -905,9 +907,9 @@ jupyterlab          4.2.5
 notebook            7.2.2
 -----
 Python 3.10.10 | packaged by conda-forge | (main, Mar 24 2023, 20:17:34) [Clang 14.0.6 ]
-macOS-14.6.1-x86_64-i386-64bit
+macOS-15.1.1-x86_64-i386-64bit
 -----
-Session information updated at 2024-10-04 11:37</code></pre>
+Session information updated at 2025-01-13 08:40</code></pre>
 </div>
 </div>
 </details>
@@ -1340,7 +1342,7 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
 <footer class="footer">
   <div class="nav-footer">
     <div class="nav-footer-left">
-<p>2024 <a href="https://nbis.se">NBIS</a> | <a href="https://choosealicense.com/licenses/gpl-3.0/">GPL-3 License</a></p>
+<p>2025 <a href="https://nbis.se">NBIS</a> | <a href="https://choosealicense.com/licenses/gpl-3.0/">GPL-3 License</a></p>
 </div>   
     <div class="nav-footer-center">
       &nbsp;
@@ -1351,7 +1353,7 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
 </div>
   </div>
 </footer>
-<script>var lightboxQuarto = GLightbox({"selector":".lightbox","openEffect":"zoom","descPosition":"bottom","loop":false,"closeEffect":"zoom"});
+<script>var lightboxQuarto = GLightbox({"descPosition":"bottom","closeEffect":"zoom","openEffect":"zoom","selector":".lightbox","loop":false});
 (function() {
   let previousOnload = window.onload;
   window.onload = () => {

@@ -20,9 +20,10 @@ import os
 # download pre-computed annotation
 fetch_annotation = False
 
-path_data = "https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"
+path_data = "https://nextcloud.dc.scilifelab.se/public.php/webdav"
+curl_upass = "zbC5fr2LbEZ9rSE:scRNAseq2025"
 
-path_covid = "./data/covid"
+path_covid = "./data/covid/raw"
 if not os.path.exists(path_covid):
     os.makedirs(path_covid, exist_ok=True)
 
@@ -31,8 +32,9 @@ if not os.path.exists(path_results):
     os.makedirs(path_results, exist_ok=True)
 ```
 
+
 ```{python}
-import urllib.request
+import subprocess
 
 file_list = [
     "normal_pbmc_13.h5", "normal_pbmc_14.h5", "normal_pbmc_19.h5", "normal_pbmc_5.h5",
@@ -42,8 +44,8 @@ file_list = [
 for i in file_list:
     path_file = os.path.join(path_covid, i)
     if not os.path.exists(path_file):
-        file_url = os.path.join(path_data, "covid", i)
-        urllib.request.urlretrieve(file_url, path_file)
+        file_url = os.path.join(path_data, "covid/raw", i)
+        subprocess.call(["curl", "-u", curl_upass, "-o", path_file, file_url ])
 ```
 
 {{< meta qc_data_2 >}}
@@ -278,7 +280,7 @@ as it has the exact same annotation version/gene naming. However, it may not alw
 # requires pybiomart
 if not fetch_annotation:
     annot = sc.queries.biomart_annotations("hsapiens", ["ensembl_gene_id", "external_gene_name", "start_position", "end_position", "chromosome_name"], ).set_index("external_gene_name")
-    # adata.var[annot.columns] = annot
+   
 ```
 
 {{< meta qc_sex_3 >}}
@@ -333,7 +335,9 @@ First read the file with cell cycle genes, from Regev lab and split into S and G
 ```{python}
 path_file = os.path.join(path_results, 'regev_lab_cell_cycle_genes.txt')
 if not os.path.exists(path_file):
-    urllib.request.urlretrieve(os.path.join(path_data, 'regev_lab_cell_cycle_genes.txt'), path_file)
+    file_url = os.path.join(path_data, "misc/regev_lab_cell_cycle_genes.txt")
+    subprocess.call(["curl", "-u", curl_upass, "-o", path_file, file_url ])
+
 ```
 
 ```{python}
