@@ -241,7 +241,7 @@ window.Quarto = {
       <div>
       <div class="quarto-title-meta-heading">Published</div>
       <div class="quarto-title-meta-contents">
-        <p class="date">10-Jan-2025</p>
+        <p class="date">28-Jan-2025</p>
       </div>
     </div>
     
@@ -300,7 +300,7 @@ Note
 <section id="section" class="level2" data-number="1">
 <h2 data-number="1" class="anchored" data-anchor-id="section"><span class="header-section-number">1</span> Get data</h2>
 <p>In this tutorial, we will run all tutorials with a set of 8 PBMC 10x datasets from 4 covid-19 patients and 4 healthy controls, the samples have been subsampled to 1500 cells per sample. We can start by defining our paths.</p>
-<div id="b2aec775" class="cell" data-execution_count="1">
+<div id="paths" class="cell" data-execution_count="1">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co"># download pre-computed annotation</span></span>
@@ -317,7 +317,7 @@ Note
 <span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(path_results):</span>
 <span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    os.makedirs(path_results, exist_ok<span class="op">=</span><span class="va">True</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<div id="08b70e13" class="cell" data-execution_count="2">
+<div id="fetch-data" class="cell" data-execution_count="2">
 <div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> subprocess</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>file_list <span class="op">=</span> [</span>
@@ -332,7 +332,7 @@ Note
 <span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>        subprocess.call([<span class="st">"curl"</span>, <span class="st">"-u"</span>, curl_upass, <span class="st">"-o"</span>, path_file, file_url ])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>With data in place, now we can start loading libraries we will use in this tutorial.</p>
-<div id="149d84d6" class="cell" data-execution_count="3">
+<div id="libraries" class="cell" data-execution_count="3">
 <div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> scanpy <span class="im">as</span> sc</span>
@@ -346,7 +346,7 @@ Note
 </div>
 <p>We can first load the data individually by reading directly from HDF5 file format (.h5).</p>
 <p>In Scanpy we read them into an Anndata object with the the function <code>read_10x_h5</code></p>
-<div id="b8815abb" class="cell" data-execution_count="4">
+<div id="read-data" class="cell" data-execution_count="4">
 <div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>data_cov1 <span class="op">=</span> sc.read_10x_h5(os.path.join(path_covid,<span class="st">'ncov_pbmc_1.h5'</span>))</span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>data_cov1.var_names_make_unique()</span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>data_cov15 <span class="op">=</span> sc.read_10x_h5(os.path.join(path_covid,<span class="st">'ncov_pbmc_15.h5'</span>))</span>
@@ -386,7 +386,7 @@ reading ./data/covid/raw/normal_pbmc_19.h5
 <section id="section-1" class="level2" data-number="2">
 <h2 data-number="2" class="anchored" data-anchor-id="section-1"><span class="header-section-number">2</span> Collate</h2>
 <p>We can now merge them objects into a single object. Each analysis workflow (Seurat, Scater, Scanpy, etc) has its own way of storing data. We will add dataset labels as <strong>cell.ids</strong> just in case you have overlapping barcodes between the datasets. After that we add a column <strong>type</strong> in the metadata to define covid and ctrl samples.</p>
-<div id="e00035b0" class="cell" data-execution_count="5">
+<div id="metadata" class="cell" data-execution_count="5">
 <div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># add some metadata</span></span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>data_cov1.obs[<span class="st">'type'</span>]<span class="op">=</span><span class="st">"Covid"</span></span>
 <span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>data_cov1.obs[<span class="st">'sample'</span>]<span class="op">=</span><span class="st">"covid_1"</span></span>
@@ -413,7 +413,7 @@ reading ./data/covid/raw/normal_pbmc_19.h5
 <span id="cb6-24"><a href="#cb6-24" aria-hidden="true" tabindex="-1"></a><span class="kw">del</span>(data_ctrl5, data_ctrl13, data_ctrl14, data_ctrl19)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>You can print a summary of the datasets in the Scanpy object, or a summary of the whole object.</p>
-<div id="4b59c6a1" class="cell" data-execution_count="6">
+<div id="cell-show-object" class="cell" data-execution_count="6">
 <div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(adata.obs[<span class="st">'sample'</span>].value_counts())</span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>adata</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
@@ -427,7 +427,7 @@ ctrl_14     1500
 ctrl_19     1500
 Name: sample, dtype: int64</code></pre>
 </div>
-<div class="cell-output cell-output-display" data-execution_count="6">
+<div id="show-object" class="cell-output cell-output-display" data-execution_count="6">
 <pre><code>AnnData object with n_obs × n_vars = 12000 × 33538
     obs: 'type', 'sample', 'batch'
     var: 'gene_ids', 'feature_types', 'genome'</code></pre>
@@ -439,7 +439,7 @@ Name: sample, dtype: int64</code></pre>
 <p>Having the data in a suitable format, we can start calculating some quality metrics. We can for example calculate the percentage of mitochondrial and ribosomal genes per cell and add to the metadata. The proportion of hemoglobin genes can give an indication of red blood cell contamination, but in some tissues it can also be the case that some celltypes have higher content of hemoglobin. This will be helpful to visualize them across different metadata parameters (i.e.&nbsp;datasetID and chemistry version). There are several ways of doing this. The QC metrics are finally added to the metadata table.</p>
 <p>Citing from Simple Single Cell workflows (Lun, McCarthy &amp; Marioni, 2017): High proportions are indicative of poor-quality cells (Islam et al.&nbsp;2014; Ilicic et al.&nbsp;2016), possibly because of loss of cytoplasmic RNA from perforated cells. The reasoning is that mitochondria are larger than individual transcript molecules and less likely to escape through tears in the cell membrane.</p>
 <p>First, let Scanpy calculate some general qc-stats for genes and cells with the function <code>sc.pp.calculate_qc_metrics</code>, similar to <code>calculateQCmetrics()</code> in Scater. It can also calculate proportion of counts for specific gene populations, so first we need to define which genes are mitochondrial, ribosomal and hemoglobin.</p>
-<div id="98879ed7" class="cell" data-execution_count="7">
+<div id="cell-qc-genes" class="cell" data-execution_count="7">
 <div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># mitochondrial genes</span></span>
 <span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>adata.var[<span class="st">'mt'</span>] <span class="op">=</span> adata.var_names.<span class="bu">str</span>.startswith(<span class="st">'MT-'</span>) </span>
 <span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="co"># ribosomal genes</span></span>
@@ -448,7 +448,7 @@ Name: sample, dtype: int64</code></pre>
 <span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>adata.var[<span class="st">'hb'</span>] <span class="op">=</span> adata.var_names.<span class="bu">str</span>.contains((<span class="st">"^HB[^(P|E|S)]"</span>))</span>
 <span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>adata.var</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="7">
+<div id="qc-genes" class="cell-output cell-output-display" data-execution_count="7">
 <div>
 
 
@@ -571,12 +571,12 @@ Name: sample, dtype: int64</code></pre>
 </div>
 </div>
 </div>
-<div id="967f942d" class="cell" data-execution_count="8">
+<div id="qc-calc" class="cell" data-execution_count="8">
 <div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>sc.pp.calculate_qc_metrics(adata, qc_vars<span class="op">=</span>[<span class="st">'mt'</span>,<span class="st">'ribo'</span>,<span class="st">'hb'</span>], percent_top<span class="op">=</span><span class="va">None</span>, log1p<span class="op">=</span><span class="va">False</span>, inplace<span class="op">=</span><span class="va">True</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Now you can see that we have additional data in the metadata slot.</p>
 <p>Another opition to using the <code>calculate_qc_metrics</code> function is to calculate the values on your own and add to a metadata slot. An example for mito genes can be found below:</p>
-<div id="befc9770" class="cell" data-execution_count="9">
+<div id="cell-qc-calc-custom" class="cell" data-execution_count="9">
 <div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>mito_genes <span class="op">=</span> adata.var_names.<span class="bu">str</span>.startswith(<span class="st">'MT-'</span>)</span>
 <span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="co"># for each cell compute fraction of counts in mito genes vs. all genes</span></span>
 <span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a><span class="co"># the `.A1` is only necessary as X is sparse (to transform to a dense array after summing)</span></span>
@@ -586,7 +586,7 @@ Name: sample, dtype: int64</code></pre>
 <span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>adata.obs[<span class="st">'n_counts'</span>] <span class="op">=</span> adata.X.<span class="bu">sum</span>(axis<span class="op">=</span><span class="dv">1</span>).A1</span>
 <span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>adata</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="9">
+<div id="qc-calc-custom" class="cell-output cell-output-display" data-execution_count="9">
 <pre><code>AnnData object with n_obs × n_vars = 12000 × 33538
     obs: 'type', 'sample', 'batch', 'n_genes_by_counts', 'total_counts', 'total_counts_mt', 'pct_counts_mt', 'total_counts_ribo', 'pct_counts_ribo', 'total_counts_hb', 'pct_counts_hb', 'percent_mt2', 'n_counts'
     var: 'gene_ids', 'feature_types', 'genome', 'mt', 'ribo', 'hb', 'n_cells_by_counts', 'mean_counts', 'pct_dropout_by_counts', 'total_counts'</code></pre>
@@ -596,23 +596,23 @@ Name: sample, dtype: int64</code></pre>
 <section id="section-3" class="level2" data-number="4">
 <h2 data-number="4" class="anchored" data-anchor-id="section-3"><span class="header-section-number">4</span> Plot QC</h2>
 <p>Now we can plot some of the QC variables as violin plots.</p>
-<div id="a886a2a9" class="cell" data-execution_count="10">
+<div id="cell-qc-vln" class="cell" data-execution_count="10">
 <div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>sc.pl.violin(adata, [<span class="st">'n_genes_by_counts'</span>, <span class="st">'total_counts'</span>, <span class="st">'pct_counts_mt'</span>, <span class="st">'pct_counts_ribo'</span>, <span class="st">'pct_counts_hb'</span>], jitter<span class="op">=</span><span class="fl">0.4</span>, groupby <span class="op">=</span> <span class="st">'sample'</span>, rotation<span class="op">=</span> <span class="dv">45</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><a href="scanpy_01_qc_files/figure-html/cell-11-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-2"><img src="scanpy_01_qc_files/figure-html/cell-11-output-1.png" width="1478" height="322" class="figure-img"></a></p>
+<p><a href="scanpy_01_qc_files/figure-html/qc-vln-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-2"><img src="scanpy_01_qc_files/figure-html/qc-vln-output-1.png" id="qc-vln" width="1478" height="322" class="figure-img"></a></p>
 </figure>
 </div>
 </div>
 </div>
 <p>As you can see, there is quite some difference in quality for these samples, with for instance the covid_15 and covid_16 samples having cells with fewer detected genes and more mitochondrial content. As the ribosomal proteins are highly expressed they will make up a larger proportion of the transcriptional landscape when fewer of the lowly expressed genes are detected. We can also plot the different QC-measures as scatter plots.</p>
-<div id="577d3156" class="cell" data-fig-height="5" data-fig-width="5" data-execution_count="11">
+<div id="cell-qc-scatter" class="cell" data-fig-height="5" data-fig-width="5" data-execution_count="11">
 <div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>sc.pl.scatter(adata, x<span class="op">=</span><span class="st">'total_counts'</span>, y<span class="op">=</span><span class="st">'pct_counts_mt'</span>, color<span class="op">=</span><span class="st">"sample"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><a href="scanpy_01_qc_files/figure-html/cell-12-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-3"><img src="scanpy_01_qc_files/figure-html/cell-12-output-1.png" width="382" height="318" class="figure-img"></a></p>
+<p><a href="scanpy_01_qc_files/figure-html/qc-scatter-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-3"><img src="scanpy_01_qc_files/figure-html/qc-scatter-output-1.png" id="qc-scatter" width="382" height="318" class="figure-img"></a></p>
 </figure>
 </div>
 </div>
@@ -636,7 +636,7 @@ Discuss
 <section id="section-5" class="level3" data-number="5.1">
 <h3 data-number="5.1" class="anchored" data-anchor-id="section-5"><span class="header-section-number">5.1</span> Detection-based filtering</h3>
 <p>A standard approach is to filter cells with low number of reads as well as genes that are present in at least a given number of cells. Here we will only consider cells with at least 200 detected genes and genes need to be expressed in at least 3 cells. Please note that those values are highly dependent on the library preparation method used.</p>
-<div id="3df02001" class="cell" data-execution_count="12">
+<div id="filter1" class="cell" data-execution_count="12">
 <div class="sourceCode cell-code" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>sc.pp.filter_cells(adata, min_genes<span class="op">=</span><span class="dv">200</span>)</span>
 <span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>sc.pp.filter_genes(adata, min_cells<span class="op">=</span><span class="dv">3</span>)</span>
 <span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -648,7 +648,7 @@ filtered out 14047 genes that are detected in less than 3 cells
 </div>
 </div>
 <p>Extremely high number of detected genes could indicate doublets. However, depending on the cell type composition in your sample, you may have cells with higher number of genes (and also higher counts) from one cell type. In this case, we will run doublet prediction further down, so we will skip this step now, but the code below is an example of how it can be run:</p>
-<div id="8c9049fc" class="cell" data-execution_count="13">
+<div id="filter-detection" class="cell" data-execution_count="13">
 <div class="sourceCode cell-code" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="co"># skip for now as we are doing doublet prediction</span></span>
 <span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a><span class="co">#keep_v2 = (adata.obs['n_genes_by_counts'] &lt; 2000) &amp; (adata.obs['n_genes_by_counts'] &gt; 500) &amp; (adata.obs['lib_prep'] == 'v2')</span></span>
 <span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a><span class="co">#print(sum(keep_v2))</span></span>
@@ -665,7 +665,7 @@ filtered out 14047 genes that are detected in less than 3 cells
 <span id="cb18-14"><a href="#cb18-14" aria-hidden="true" tabindex="-1"></a><span class="co">#print("Remaining cells %d"%adata.n_obs)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Additionally, we can also see which genes contribute the most to such reads. We can for instance plot the percentage of counts per gene.</p>
-<div id="97802b3f" class="cell" data-fig-height="6" data-fig-width="6" data-execution_count="14">
+<div id="cell-top-genes" class="cell" data-fig-height="6" data-fig-width="6" data-execution_count="14">
 <div class="sourceCode cell-code" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>sc.pl.highest_expr_genes(adata, n_top<span class="op">=</span><span class="dv">20</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>normalizing counts per cell
@@ -674,7 +674,7 @@ filtered out 14047 genes that are detected in less than 3 cells
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><a href="scanpy_01_qc_files/figure-html/cell-15-output-2.png" class="lightbox" data-gallery="quarto-lightbox-gallery-4"><img src="scanpy_01_qc_files/figure-html/cell-15-output-2.png" width="400" height="391" class="figure-img"></a></p>
+<p><a href="scanpy_01_qc_files/figure-html/top-genes-output-2.png" class="lightbox" data-gallery="quarto-lightbox-gallery-4"><img src="scanpy_01_qc_files/figure-html/top-genes-output-2.png" id="top-genes" width="400" height="391" class="figure-img"></a></p>
 </figure>
 </div>
 </div>
@@ -684,7 +684,7 @@ filtered out 14047 genes that are detected in less than 3 cells
 <section id="section-6" class="level3" data-number="5.2">
 <h3 data-number="5.2" class="anchored" data-anchor-id="section-6"><span class="header-section-number">5.2</span> Mito/Ribo filtering</h3>
 <p>We also have quite a lot of cells with high proportion of mitochondrial and low proportion of ribosomal reads. It would be wise to remove those cells, if we have enough cells left after filtering. Another option would be to either remove all mitochondrial reads from the dataset and hope that the remaining genes still have enough biological signal. A third option would be to just regress out the <code>percent_mito</code> variable during scaling. In this case we had as much as 99.7% mitochondrial reads in some of the cells, so it is quite unlikely that there is much cell type signature left in those. Looking at the plots, make reasonable decisions on where to draw the cutoff. In this case, the bulk of the cells are below 20% mitochondrial reads and that will be used as a cutoff. We will also remove cells with less than 5% ribosomal reads.</p>
-<div id="b9a7d75a" class="cell" data-execution_count="15">
+<div id="filter2" class="cell" data-execution_count="15">
 <div class="sourceCode cell-code" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="co"># filter for percent mito</span></span>
 <span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>adata <span class="op">=</span> adata[adata.obs[<span class="st">'pct_counts_mt'</span>] <span class="op">&lt;</span> <span class="dv">20</span>, :]</span>
 <span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -701,12 +701,12 @@ filtered out 14047 genes that are detected in less than 3 cells
 <section id="section-7" class="level3" data-number="5.3">
 <h3 data-number="5.3" class="anchored" data-anchor-id="section-7"><span class="header-section-number">5.3</span> Plot filtered QC</h3>
 <p>Lets plot the same QC-stats once more.</p>
-<div id="14d24811" class="cell" data-execution_count="16">
+<div id="cell-qc-vln2" class="cell" data-execution_count="16">
 <div class="sourceCode cell-code" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>sc.pl.violin(adata, [<span class="st">'n_genes_by_counts'</span>, <span class="st">'total_counts'</span>, <span class="st">'pct_counts_mt'</span>,<span class="st">'pct_counts_ribo'</span>, <span class="st">'pct_counts_hb'</span>], jitter<span class="op">=</span><span class="fl">0.4</span>, groupby <span class="op">=</span> <span class="st">'sample'</span>, rotation <span class="op">=</span> <span class="dv">45</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><a href="scanpy_01_qc_files/figure-html/cell-17-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-5"><img src="scanpy_01_qc_files/figure-html/cell-17-output-1.png" width="1478" height="321" class="figure-img"></a></p>
+<p><a href="scanpy_01_qc_files/figure-html/qc-vln2-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-5"><img src="scanpy_01_qc_files/figure-html/qc-vln2-output-1.png" id="qc-vln2" width="1478" height="321" class="figure-img"></a></p>
 </figure>
 </div>
 </div>
@@ -715,7 +715,7 @@ filtered out 14047 genes that are detected in less than 3 cells
 <section id="section-8" class="level3" data-number="5.4">
 <h3 data-number="5.4" class="anchored" data-anchor-id="section-8"><span class="header-section-number">5.4</span> Filter genes</h3>
 <p>As the level of expression of mitochondrial and MALAT1 genes are judged as mainly technical, it can be wise to remove them from the dataset before any further analysis. In this case we will also remove the HB genes.</p>
-<div id="b047e15b" class="cell" data-execution_count="17">
+<div id="filter-genes" class="cell" data-execution_count="17">
 <div class="sourceCode cell-code" id="cb24"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>malat1 <span class="op">=</span> adata.var_names.<span class="bu">str</span>.startswith(<span class="st">'MALAT1'</span>)</span>
 <span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a><span class="co"># we need to redefine the mito_genes since they were first </span></span>
 <span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a><span class="co"># calculated on the full object before removing low expressed genes.</span></span>
@@ -739,13 +739,13 @@ filtered out 14047 genes that are detected in less than 3 cells
 <h2 data-number="6" class="anchored" data-anchor-id="section-9"><span class="header-section-number">6</span> Sample sex</h2>
 <p>When working with human or animal samples, you should ideally constrain your experiments to a single sex to avoid including sex bias in the conclusions. However this may not always be possible. By looking at reads from chromosomeY (males) and XIST (X-inactive specific transcript) expression (mainly female) it is quite easy to determine per sample which sex it is. It can also be a good way to detect if there has been any mislabelling in which case, the sample metadata sex does not agree with the computational predictions.</p>
 <p>To get choromosome information for all genes, you should ideally parse the information from the gtf file that you used in the mapping pipeline as it has the exact same annotation version/gene naming. However, it may not always be available, as in this case where we have downloaded public data. Hence, we will use biomart to fetch chromosome information.</p>
-<div id="bb18ceac" class="cell" data-execution_count="18">
+<div id="fetch-annot" class="cell" data-execution_count="18">
 <div class="sourceCode cell-code" id="cb26"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="co"># requires pybiomart</span></span>
 <span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> fetch_annotation:</span>
 <span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a>    annot <span class="op">=</span> sc.queries.biomart_annotations(<span class="st">"hsapiens"</span>, [<span class="st">"ensembl_gene_id"</span>, <span class="st">"external_gene_name"</span>, <span class="st">"start_position"</span>, <span class="st">"end_position"</span>, <span class="st">"chromosome_name"</span>], ).set_index(<span class="st">"external_gene_name"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Now that we have the chromosome information, we can calculate the proportion of reads that comes from chromosome Y per cell.But first we have to remove all genes in the pseudoautosmal regions of chrY that are: * chromosome:GRCh38:Y:10001 - 2781479 is shared with X: 10001 - 2781479 (PAR1) * chromosome:GRCh38:Y:56887903 - 57217415 is shared with X: 155701383 - 156030895 (PAR2)</p>
-<div id="0c5094e3" class="cell" data-execution_count="19">
+<div id="par" class="cell" data-execution_count="19">
 <div class="sourceCode cell-code" id="cb27"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>chrY_genes <span class="op">=</span> adata.var_names.intersection(annot.index[annot.chromosome_name <span class="op">==</span> <span class="st">"Y"</span>])</span>
 <span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>chrY_genes</span>
 <span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -763,7 +763,7 @@ filtered out 14047 genes that are detected in less than 3 cells
 <span id="cb27-15"><a href="#cb27-15" aria-hidden="true" tabindex="-1"></a>    adata[:, chrY_genes].X, axis<span class="op">=</span><span class="dv">1</span>).A1 <span class="op">/</span> np.<span class="bu">sum</span>(adata.X, axis<span class="op">=</span><span class="dv">1</span>).A1 <span class="op">*</span> <span class="dv">100</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Then plot XIST expression vs chrY proportion. As you can see, the samples are clearly on either side, even if some cells do not have detection of either.</p>
-<div id="7ef4767f" class="cell" data-fig-height="5" data-fig-width="5" data-execution_count="20">
+<div id="cell-sex-scatter" class="cell" data-fig-height="5" data-fig-width="5" data-execution_count="20">
 <div class="sourceCode cell-code" id="cb28"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="co"># color inputs must be from either .obs or .var, so add in XIST expression to obs.</span></span>
 <span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>adata.obs[<span class="st">"XIST-counts"</span>] <span class="op">=</span> adata.X[:,adata.var_names.<span class="bu">str</span>.match(<span class="st">'XIST'</span>)].toarray()</span>
 <span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -771,18 +771,18 @@ filtered out 14047 genes that are detected in less than 3 cells
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><a href="scanpy_01_qc_files/figure-html/cell-21-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-6"><img src="scanpy_01_qc_files/figure-html/cell-21-output-1.png" width="386" height="318" class="figure-img"></a></p>
+<p><a href="scanpy_01_qc_files/figure-html/sex-scatter-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-6"><img src="scanpy_01_qc_files/figure-html/sex-scatter-output-1.png" id="sex-scatter" width="386" height="318" class="figure-img"></a></p>
 </figure>
 </div>
 </div>
 </div>
 <p>Plot as violins.</p>
-<div id="f80f1a7f" class="cell" data-fig-height="5" data-fig-width="10" data-execution_count="21">
+<div id="cell-sex-vln" class="cell" data-fig-height="5" data-fig-width="10" data-execution_count="21">
 <div class="sourceCode cell-code" id="cb29"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>sc.pl.violin(adata, [<span class="st">"XIST-counts"</span>, <span class="st">"percent_chrY"</span>], jitter<span class="op">=</span><span class="fl">0.4</span>, groupby <span class="op">=</span> <span class="st">'sample'</span>, rotation<span class="op">=</span> <span class="dv">45</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><a href="scanpy_01_qc_files/figure-html/cell-22-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-7"><img src="scanpy_01_qc_files/figure-html/cell-22-output-1.png" width="584" height="321" class="figure-img"></a></p>
+<p><a href="scanpy_01_qc_files/figure-html/sex-vln-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-7"><img src="scanpy_01_qc_files/figure-html/sex-vln-output-1.png" id="sex-vln" width="584" height="321" class="figure-img"></a></p>
 </figure>
 </div>
 </div>
@@ -793,12 +793,13 @@ filtered out 14047 genes that are detected in less than 3 cells
 <h2 data-number="7" class="anchored" data-anchor-id="section-10"><span class="header-section-number">7</span> Cell cycle state</h2>
 <p>We here perform cell cycle scoring. To score a gene list, the algorithm calculates the difference of mean expression of the given list and the mean expression of reference genes. To build the reference, the function randomly chooses a bunch of genes matching the distribution of the expression of the given list. Cell cycle scoring adds three slots in the metadata, a score for S phase, a score for G2M phase and the predicted cell cycle phase.</p>
 <p>First read the file with cell cycle genes, from Regev lab and split into S and G2M phase genes. We first download the file.</p>
-<div id="c2196abe" class="cell" data-execution_count="22">
+<div id="fetch-ccgenes" class="cell" data-execution_count="22">
 <div class="sourceCode cell-code" id="cb30"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>path_file <span class="op">=</span> os.path.join(path_results, <span class="st">'regev_lab_cell_cycle_genes.txt'</span>)</span>
 <span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(path_file):</span>
-<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a>    urllib.request.urlretrieve(os.path.join(path_data, <span class="st">'regev_lab_cell_cycle_genes.txt'</span>), path_file)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a>    file_url <span class="op">=</span> os.path.join(path_data, <span class="st">"misc/regev_lab_cell_cycle_genes.txt"</span>)</span>
+<span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a>    subprocess.call([<span class="st">"curl"</span>, <span class="st">"-u"</span>, curl_upass, <span class="st">"-o"</span>, path_file, file_url ])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<div id="2d1a322e" class="cell" data-execution_count="23">
+<div id="prep-ccgenes" class="cell" data-execution_count="23">
 <div class="sourceCode cell-code" id="cb31"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>cell_cycle_genes <span class="op">=</span> [x.strip() <span class="cf">for</span> x <span class="kw">in</span> <span class="bu">open</span>(<span class="st">'./data/covid/results/regev_lab_cell_cycle_genes.txt'</span>)]</span>
 <span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="bu">len</span>(cell_cycle_genes))</span>
 <span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -814,7 +815,7 @@ filtered out 14047 genes that are detected in less than 3 cells
 </div>
 </div>
 <p>Before running cell cycle we have to normalize the data. In the scanpy object, the data slot will be overwritten with the normalized data. So first, save the raw data into the slot <code>raw</code>. Then run normalization, log transformation and scale the data.</p>
-<div id="11d7954c" class="cell" data-execution_count="24">
+<div id="normalize" class="cell" data-execution_count="24">
 <div class="sourceCode cell-code" id="cb33"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a><span class="co"># save raw counts in raw slot.</span></span>
 <span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>adata.raw <span class="op">=</span> adata</span>
 <span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -834,7 +835,7 @@ filtered out 14047 genes that are detected in less than 3 cells
 </div>
 </div>
 <p>We here perform cell cycle scoring. The function is actually a wrapper to sc.tl.score_gene_list, which is launched twice, to score separately S and G2M phases. Both sc.tl.score_gene_list and sc.tl.score_cell_cycle_genes are a port from Seurat and are supposed to work in a very similar way. To score a gene list, the algorithm calculates the difference of mean expression of the given list and the mean expression of reference genes. To build the reference, the function randomly chooses a bunch of genes matching the distribution of the expression of the given list. Cell cycle scoring adds three slots in data, a score for S phase, a score for G2M phase and the predicted cell cycle phase.</p>
-<div id="8a5c42ed" class="cell" data-execution_count="25">
+<div id="cc" class="cell" data-execution_count="25">
 <div class="sourceCode cell-code" id="cb35"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>sc.tl.score_genes_cell_cycle(adata, s_genes<span class="op">=</span>s_genes, g2m_genes<span class="op">=</span>g2m_genes)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>calculating cell cycle phase
@@ -852,24 +853,24 @@ WARNING: genes are not in var_names and ignored: Index(['FAM64A', 'HN1'], dtype=
 </div>
 </div>
 <p>We can now create a violin plot for the cell cycle scores as well.</p>
-<div id="b52e3424" class="cell" data-fig-height="5" data-fig-width="10" data-execution_count="26">
+<div id="cell-cc-vln" class="cell" data-fig-height="5" data-fig-width="10" data-execution_count="26">
 <div class="sourceCode cell-code" id="cb37"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a>sc.pl.violin(adata, [<span class="st">'S_score'</span>, <span class="st">'G2M_score'</span>], jitter<span class="op">=</span><span class="fl">0.4</span>, groupby <span class="op">=</span> <span class="st">'sample'</span>, rotation<span class="op">=</span><span class="dv">45</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><a href="scanpy_01_qc_files/figure-html/cell-27-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-8"><img src="scanpy_01_qc_files/figure-html/cell-27-output-1.png" width="575" height="322" class="figure-img"></a></p>
+<p><a href="scanpy_01_qc_files/figure-html/cc-vln-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-8"><img src="scanpy_01_qc_files/figure-html/cc-vln-output-1.png" id="cc-vln" width="575" height="322" class="figure-img"></a></p>
 </figure>
 </div>
 </div>
 </div>
 <p>In this case it looks like we only have a few cycling cells in these datasets.</p>
 <p>Scanpy does an automatic prediction of cell cycle phase with a default cutoff of the scores at zero. As you can see this does not fit this data very well, so be cautios with using these predictions. Instead we suggest that you look at the scores.</p>
-<div id="afb8a541" class="cell" data-fig-height="8" data-fig-width="10" data-execution_count="27">
+<div id="cell-cc-scatter" class="cell" data-fig-height="8" data-fig-width="10" data-execution_count="27">
 <div class="sourceCode cell-code" id="cb38"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a>sc.pl.scatter(adata, x<span class="op">=</span><span class="st">'S_score'</span>, y<span class="op">=</span><span class="st">'G2M_score'</span>, color<span class="op">=</span><span class="st">"phase"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><a href="scanpy_01_qc_files/figure-html/cell-28-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-9"><img src="scanpy_01_qc_files/figure-html/cell-28-output-1.png" width="347" height="318" class="figure-img"></a></p>
+<p><a href="scanpy_01_qc_files/figure-html/cc-scatter-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-9"><img src="scanpy_01_qc_files/figure-html/cc-scatter-output-1.png" id="cc-scatter" width="347" height="318" class="figure-img"></a></p>
 </figure>
 </div>
 </div>
@@ -882,7 +883,7 @@ WARNING: genes are not in var_names and ignored: Index(['FAM64A', 'HN1'], dtype=
 Most doublet detectors simulates doublets by merging cell counts and predicts doublets as cells that have similar embeddings as the simulated doublets. Most such packages need an assumption about the number/proportion of expected doublets in the dataset. The data you are using is subsampled, but the original datasets contained about 5 000 cells per sample, hence we can assume that they loaded about 9 000 cells and should have a doublet rate at about 4%.</p>
 <p>For doublet detection, we will use the package <code>Scrublet</code>, so first we need to get the raw counts from <code>adata.raw.X</code> and run scrublet with that matrix. Then we add in the doublet prediction info into our anndata object.</p>
 <p>Doublet prediction should be run for each dataset separately, so first we need to split the adata object into 6 separate objects, one per sample and then run scrublet on each of them.</p>
-<div id="705efac0" class="cell" data-execution_count="28">
+<div id="doublet" class="cell" data-execution_count="28">
 <div class="sourceCode cell-code" id="cb39"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> scrublet <span class="im">as</span> scr</span>
 <span id="cb39-2"><a href="#cb39-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb39-3"><a href="#cb39-3" aria-hidden="true" tabindex="-1"></a><span class="co"># split per batch into new objects.</span></span>
@@ -914,7 +915,7 @@ ctrl_19 : 1170  cells
 37  predicted_doublets</code></pre>
 </div>
 </div>
-<div id="866eff57" class="cell" data-execution_count="29">
+<div id="52794b08" class="cell" data-execution_count="29">
 <div class="sourceCode cell-code" id="cb41"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a><span class="co"># add predictions to the adata object.</span></span>
 <span id="cb41-2"><a href="#cb41-2" aria-hidden="true" tabindex="-1"></a>scrub_pred <span class="op">=</span> pd.concat(alldata.values())</span>
 <span id="cb41-3"><a href="#cb41-3" aria-hidden="true" tabindex="-1"></a>adata.obs[<span class="st">'doublet_scores'</span>] <span class="op">=</span> scrub_pred[<span class="st">'doublet_score'</span>] </span>
@@ -926,7 +927,7 @@ ctrl_19 : 1170  cells
 </div>
 </div>
 <p>We should expect that two cells have more detected genes than a single cell, lets check if our predicted doublets also have more detected genes in general.</p>
-<div id="338a2645" class="cell" data-fig-height="5" data-fig-width="5" data-execution_count="30">
+<div id="cell-plot-doublet" class="cell" data-fig-height="5" data-fig-width="5" data-execution_count="30">
 <div class="sourceCode cell-code" id="cb43"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a><span class="co"># add in column with singlet/doublet instead of True/Fals</span></span>
 <span id="cb43-2"><a href="#cb43-2" aria-hidden="true" tabindex="-1"></a><span class="op">%</span>matplotlib inline</span>
 <span id="cb43-3"><a href="#cb43-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -935,13 +936,13 @@ ctrl_19 : 1170  cells
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><a href="scanpy_01_qc_files/figure-html/cell-31-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-10"><img src="scanpy_01_qc_files/figure-html/cell-31-output-1.png" width="302" height="304" class="figure-img"></a></p>
+<p><a href="scanpy_01_qc_files/figure-html/plot-doublet-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-10"><img src="scanpy_01_qc_files/figure-html/plot-doublet-output-1.png" id="plot-doublet" width="302" height="304" class="figure-img"></a></p>
 </figure>
 </div>
 </div>
 </div>
 <p>Now, lets run PCA and UMAP and plot doublet scores onto UMAP to check the doublet predictions. We will go through these steps in more detail in the later exercises.</p>
-<div id="458f0079" class="cell" data-fig-height="4" data-fig-width="12" data-execution_count="31">
+<div id="cell-doublet-umap" class="cell" data-fig-height="4" data-fig-width="12" data-execution_count="31">
 <div class="sourceCode cell-code" id="cb44"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a>sc.pp.highly_variable_genes(adata, min_mean<span class="op">=</span><span class="fl">0.0125</span>, max_mean<span class="op">=</span><span class="dv">3</span>, min_disp<span class="op">=</span><span class="fl">0.5</span>)</span>
 <span id="cb44-2"><a href="#cb44-2" aria-hidden="true" tabindex="-1"></a>adata <span class="op">=</span> adata[:, adata.var.highly_variable]</span>
 <span id="cb44-3"><a href="#cb44-3" aria-hidden="true" tabindex="-1"></a>sc.pp.regress_out(adata, [<span class="st">'total_counts'</span>, <span class="st">'pct_counts_mt'</span>])</span>
@@ -959,7 +960,7 @@ ctrl_19 : 1170  cells
     'dispersions', float vector (adata.var)
     'dispersions_norm', float vector (adata.var)
 regressing out ['total_counts', 'pct_counts_mt']
-    finished (0:00:35)
+    finished (0:00:34)
 computing PCA
     with n_comps=50
     finished (0:00:01)
@@ -976,13 +977,13 @@ computing UMAP
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><a href="scanpy_01_qc_files/figure-html/cell-32-output-2.png" class="lightbox" data-gallery="quarto-lightbox-gallery-11"><img src="scanpy_01_qc_files/figure-html/cell-32-output-2.png" width="1022" height="299" class="figure-img"></a></p>
+<p><a href="scanpy_01_qc_files/figure-html/doublet-umap-output-2.png" class="lightbox" data-gallery="quarto-lightbox-gallery-11"><img src="scanpy_01_qc_files/figure-html/doublet-umap-output-2.png" id="doublet-umap" width="1022" height="299" class="figure-img"></a></p>
 </figure>
 </div>
 </div>
 </div>
 <p>Now, lets remove all predicted doublets from our data.</p>
-<div id="d18474a7" class="cell" data-execution_count="32">
+<div id="doublet-filt" class="cell" data-execution_count="32">
 <div class="sourceCode cell-code" id="cb46"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a><span class="co"># also revert back to the raw counts as the main matrix in adata</span></span>
 <span id="cb46-2"><a href="#cb46-2" aria-hidden="true" tabindex="-1"></a>adata <span class="op">=</span> adata.raw.to_adata() </span>
 <span id="cb46-3"><a href="#cb46-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -993,12 +994,13 @@ computing UMAP
 </div>
 </div>
 <p>To summarize, lets check how many cells we have removed per sample, we started with 1500 cells per sample. Looking back at the intitial QC plots does it make sense that some samples have much fewer cells now?</p>
-<pre class="{r}"><code>adata.obs["sample"].value_counts()</code></pre>
+<pre class="{r}"><code>#| label: view-data
+adata.obs["sample"].value_counts()</code></pre>
 </section>
 <section id="section-12" class="level2" data-number="9">
 <h2 data-number="9" class="anchored" data-anchor-id="section-12"><span class="header-section-number">9</span> Save data</h2>
 <p>Finally, lets save the QC-filtered data for further analysis. Create output directory <code>data/covid/results</code> and save data to that folder. This will be used in downstream labs.</p>
-<div id="fa3e06e4" class="cell" data-execution_count="33">
+<div id="save" class="cell" data-execution_count="33">
 <div class="sourceCode cell-code" id="cb49"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb49-1"><a href="#cb49-1" aria-hidden="true" tabindex="-1"></a>adata.write_h5ad(<span class="st">'data/covid/results/scanpy_covid_qc.h5ad'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
@@ -1008,7 +1010,7 @@ computing UMAP
 <summary>
 Click here
 </summary>
-<div id="406f38d4" class="cell" data-execution_count="34">
+<div id="session" class="cell" data-execution_count="34">
 <div class="sourceCode cell-code" id="cb50"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb50-1"><a href="#cb50-1" aria-hidden="true" tabindex="-1"></a>sc.logging.print_versions()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>-----
@@ -1158,7 +1160,7 @@ notebook            7.2.2
 Python 3.10.10 | packaged by conda-forge | (main, Mar 24 2023, 20:17:34) [Clang 14.0.6 ]
 macOS-15.1.1-x86_64-i386-64bit
 -----
-Session information updated at 2025-01-10 15:43</code></pre>
+Session information updated at 2025-01-28 15:51</code></pre>
 </div>
 </div>
 </details>
@@ -1602,7 +1604,7 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
 </div>
   </div>
 </footer>
-<script>var lightboxQuarto = GLightbox({"descPosition":"bottom","loop":false,"selector":".lightbox","openEffect":"zoom","closeEffect":"zoom"});
+<script>var lightboxQuarto = GLightbox({"closeEffect":"zoom","selector":".lightbox","openEffect":"zoom","loop":false,"descPosition":"bottom"});
 (function() {
   let previousOnload = window.onload;
   window.onload = () => {

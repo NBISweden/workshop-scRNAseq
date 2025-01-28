@@ -15,6 +15,8 @@ Code chunks run Python commands unless it starts with `%%bash`, in which case, t
 {{< meta qc_data_1 >}}
 
 ```{python}
+#| label: paths
+
 import os
 
 # download pre-computed annotation
@@ -34,6 +36,7 @@ if not os.path.exists(path_results):
 
 
 ```{python}
+#| label: fetch-data
 import subprocess
 
 file_list = [
@@ -51,6 +54,7 @@ for i in file_list:
 {{< meta qc_data_2 >}}
 
 ```{python}
+#| label: libraries
 import numpy as np
 import pandas as pd
 import scanpy as sc
@@ -68,6 +72,8 @@ sc.settings.set_figure_params(dpi=80)
 In Scanpy we read them into an Anndata object with the the function `read_10x_h5`
 
 ```{python}
+#| label: read-data
+
 data_cov1 = sc.read_10x_h5(os.path.join(path_covid,'ncov_pbmc_1.h5'))
 data_cov1.var_names_make_unique()
 data_cov15 = sc.read_10x_h5(os.path.join(path_covid,'ncov_pbmc_15.h5'))
@@ -91,6 +97,8 @@ data_ctrl19.var_names_make_unique()
 {{< meta qc_collate_1 >}}
 
 ```{python}
+#| label: metadata
+
 # add some metadata
 data_cov1.obs['type']="Covid"
 data_cov1.obs['sample']="covid_1"
@@ -120,6 +128,8 @@ del(data_ctrl5, data_ctrl13, data_ctrl14, data_ctrl19)
 You can print a summary of the datasets in the Scanpy object, or a summary of the whole object.
 
 ```{python}
+#| label: show-object
+
 print(adata.obs['sample'].value_counts())
 adata
 ```
@@ -133,6 +143,7 @@ adata
 First, let Scanpy calculate some general qc-stats for genes and cells with the function `sc.pp.calculate_qc_metrics`, similar to `calculateQCmetrics()` in Scater. It can also calculate proportion of counts for specific gene populations, so first we need to define which genes are mitochondrial, ribosomal and hemoglobin.
 
 ```{python}
+#| label: qc-genes
 # mitochondrial genes
 adata.var['mt'] = adata.var_names.str.startswith('MT-') 
 # ribosomal genes
@@ -144,6 +155,7 @@ adata.var
 ```
 
 ```{python}
+#| label: qc-calc
 sc.pp.calculate_qc_metrics(adata, qc_vars=['mt','ribo','hb'], percent_top=None, log1p=False, inplace=True)
 ```
 
@@ -152,6 +164,8 @@ sc.pp.calculate_qc_metrics(adata, qc_vars=['mt','ribo','hb'], percent_top=None, 
 Another opition to using the `calculate_qc_metrics` function is to calculate the values on your own and add to a metadata slot. An example for mito genes can be found below:
 
 ```{python}
+#| label: qc-calc-custom
+
 mito_genes = adata.var_names.str.startswith('MT-')
 # for each cell compute fraction of counts in mito genes vs. all genes
 # the `.A1` is only necessary as X is sparse (to transform to a dense array after summing)
@@ -168,12 +182,15 @@ adata
 {{< meta qc_plotqc_1 >}}
 
 ```{python}
+#| label: qc-vln
+
 sc.pl.violin(adata, ['n_genes_by_counts', 'total_counts', 'pct_counts_mt', 'pct_counts_ribo', 'pct_counts_hb'], jitter=0.4, groupby = 'sample', rotation= 45)
 ```
 
 {{< meta qc_plotqc_2 >}}
 
 ```{python}
+#| label: qc-scatter
 #| fig-height: 5
 #| fig-width: 5
 sc.pl.scatter(adata, x='total_counts', y='pct_counts_mt', color="sample")
@@ -190,6 +207,8 @@ sc.pl.scatter(adata, x='total_counts', y='pct_counts_mt', color="sample")
 {{< meta qc_filter_detect_1 >}}
 
 ```{python}
+#| label: filter1
+
 sc.pp.filter_cells(adata, min_genes=200)
 sc.pp.filter_genes(adata, min_cells=3)
 
@@ -199,6 +218,8 @@ print(adata.n_obs, adata.n_vars)
 {{< meta qc_filter_detect_3 >}}
 
 ```{python}
+#| label: filter-detection
+
 # skip for now as we are doing doublet prediction
 #keep_v2 = (adata.obs['n_genes_by_counts'] < 2000) & (adata.obs['n_genes_by_counts'] > 500) & (adata.obs['lib_prep'] == 'v2')
 #print(sum(keep_v2))
@@ -218,6 +239,7 @@ print(adata.n_obs, adata.n_vars)
 {{< meta qc_filter_detect_4 >}}
 
 ```{python}
+#| label: top-genes
 #| fig-height: 6
 #| fig-width: 6
 sc.pl.highest_expr_genes(adata, n_top=20)
@@ -230,6 +252,7 @@ sc.pl.highest_expr_genes(adata, n_top=20)
 {{< meta qc_filter_mr_1 >}}
 
 ```{python}
+#| label: filter2
 # filter for percent mito
 adata = adata[adata.obs['pct_counts_mt'] < 20, :]
 
@@ -246,6 +269,7 @@ print("Remaining cells %d"%adata.n_obs)
 {{< meta qc_filter_plot_1 >}}
 
 ```{python}
+#| label: qc-vln2
 sc.pl.violin(adata, ['n_genes_by_counts', 'total_counts', 'pct_counts_mt','pct_counts_ribo', 'pct_counts_hb'], jitter=0.4, groupby = 'sample', rotation = 45)
 ```
 
@@ -254,6 +278,7 @@ sc.pl.violin(adata, ['n_genes_by_counts', 'total_counts', 'pct_counts_mt','pct_c
 {{< meta qc_filter_genes_1 >}}
 
 ```{python}
+#| label: filter-genes
 malat1 = adata.var_names.str.startswith('MALAT1')
 # we need to redefine the mito_genes since they were first 
 # calculated on the full object before removing low expressed genes.
@@ -277,6 +302,7 @@ To get choromosome information for all genes, you should ideally parse the infor
 as it has the exact same annotation version/gene naming. However, it may not always be available, as in this case where we have downloaded public data. Hence, we will use biomart to fetch chromosome information.
 
 ```{python}
+#| label: fetch-annot
 # requires pybiomart
 if not fetch_annotation:
     annot = sc.queries.biomart_annotations("hsapiens", ["ensembl_gene_id", "external_gene_name", "start_position", "end_position", "chromosome_name"], ).set_index("external_gene_name")
@@ -286,6 +312,7 @@ if not fetch_annotation:
 {{< meta qc_sex_3 >}}
 
 ```{python}
+#| label: par
 chrY_genes = adata.var_names.intersection(annot.index[annot.chromosome_name == "Y"])
 chrY_genes
 
@@ -306,6 +333,7 @@ adata.obs['percent_chrY'] = np.sum(
 {{< meta qc_sex_4 >}}
 
 ```{python}
+#| label: sex-scatter
 #| fig-height: 5
 #| fig-width: 5
 
@@ -318,6 +346,7 @@ sc.pl.scatter(adata, x='XIST-counts', y='percent_chrY', color="sample")
 {{< meta qc_sex_5 >}}
 
 ```{python}
+#| label: sex-vln
 #| fig-height: 5
 #| fig-width: 10
 
@@ -333,6 +362,7 @@ sc.pl.violin(adata, ["XIST-counts", "percent_chrY"], jitter=0.4, groupby = 'samp
 First read the file with cell cycle genes, from Regev lab and split into S and G2M phase genes. We first download the file.
 
 ```{python}
+#| label: fetch-ccgenes
 path_file = os.path.join(path_results, 'regev_lab_cell_cycle_genes.txt')
 if not os.path.exists(path_file):
     file_url = os.path.join(path_data, "misc/regev_lab_cell_cycle_genes.txt")
@@ -341,6 +371,7 @@ if not os.path.exists(path_file):
 ```
 
 ```{python}
+#| label: prep-ccgenes
 cell_cycle_genes = [x.strip() for x in open('./data/covid/results/regev_lab_cell_cycle_genes.txt')]
 print(len(cell_cycle_genes))
 
@@ -355,6 +386,7 @@ print(len(cell_cycle_genes))
 Before running cell cycle we have to normalize the data. In the scanpy object, the data slot will be overwritten with the normalized data. So first, save the raw data into the slot `raw`. Then run normalization, log transformation and scale the data.
 
 ```{python}
+#| label: normalize
 # save raw counts in raw slot.
 adata.raw = adata
 
@@ -371,12 +403,14 @@ sc.pp.scale(adata)
 We here perform cell cycle scoring. The function is actually a wrapper to sc.tl.score_gene_list, which is launched twice, to score separately S and G2M phases. Both sc.tl.score_gene_list and sc.tl.score_cell_cycle_genes are a port from Seurat and are supposed to work in a very similar way. To score a gene list, the algorithm calculates the difference of mean expression of the given list and the mean expression of reference genes. To build the reference, the function randomly chooses a bunch of genes matching the distribution of the expression of the given list. Cell cycle scoring adds three slots in data, a score for S phase, a score for G2M phase and the predicted cell cycle phase.
 
 ```{python}
+#| label: cc
 sc.tl.score_genes_cell_cycle(adata, s_genes=s_genes, g2m_genes=g2m_genes)
 ```
 
 {{< meta qc_cellcycle_2 >}}
 
 ```{python}
+#| label: cc-vln
 #| fig-height: 5
 #| fig-width: 10
 
@@ -389,6 +423,7 @@ Scanpy does an automatic prediction of cell cycle phase with a default cutoff of
 
 
 ```{python}
+#| label: cc-scatter
 #| fig-height: 8
 #| fig-width: 10
 
@@ -405,6 +440,7 @@ For doublet detection, we will use the package `Scrublet`, so first we need to g
 Doublet prediction should be run for each dataset separately, so first we need to split the adata object into 6 separate objects, one per sample and then run scrublet on each of them.
 
 ```{python}
+#| label: doublet
 import scrublet as scr
 
 # split per batch into new objects.
@@ -431,6 +467,7 @@ sum(adata.obs['predicted_doublets'])
 {{< meta qc_doublet_3 >}}
 
 ```{python}
+#| label: plot-doublet
 #| fig-height: 5
 #| fig-width: 5
 
@@ -444,6 +481,7 @@ sc.pl.violin(adata, 'n_genes_by_counts', jitter=0.4, groupby = 'doublet_info', r
 Now, lets run PCA and UMAP and plot doublet scores onto UMAP to check the doublet predictions. We will go through these steps in more detail in the later exercises.
 
 ```{python}
+#| label: doublet-umap
 #| fig-height: 4
 #| fig-width: 12
 
@@ -460,6 +498,7 @@ sc.pl.umap(adata, color=['doublet_scores','doublet_info','sample'])
 {{< meta qc_doublet_4 >}}
 
 ```{python}
+#| label: doublet-filt
 # also revert back to the raw counts as the main matrix in adata
 adata = adata.raw.to_adata() 
 
@@ -470,6 +509,7 @@ print(adata.shape)
 {{< meta qc_doublet_5 >}}
 
 ```{r}
+#| label: view-data
 adata.obs["sample"].value_counts()
 ```
 
@@ -480,6 +520,7 @@ adata.obs["sample"].value_counts()
 
 
 ```{python}
+#| label: save
 adata.write_h5ad('data/covid/results/scanpy_covid_qc.h5ad')
 ```
 
@@ -489,6 +530,7 @@ adata.write_h5ad('data/covid/results/scanpy_covid_qc.h5ad')
   <summary>Click here</summary>
 
 ```{python}
+#| label: session
 sc.logging.print_versions()
 ```
 

@@ -88,6 +88,14 @@ adata = adata_anterior.concatenate(
 adata
 ```
 
+Remove the individual files and clean memory with `gc`.
+
+```{python}
+del adata_anterior
+del adata_posterior
+gc.collect()
+```
+
 As you can see, we now have the slot spatial in obsm, which contains the spatial information from the Visium platform.
 
 ## {{< meta st_qc >}}
@@ -276,6 +284,13 @@ print(all_s.shape)
 adata.obsm["Scanorama"] = all_s
 
 adata
+```
+Delete objects:
+
+```{python}
+del scanorama_int
+del adatas
+gc.collect()
 ```
 
 {{< meta st_analysis_int_2 >}}
@@ -480,6 +495,11 @@ adata_cortex.obs.subclass.value_counts()
 ```
 
 ```{python}
+del adatas2
+gc.collect()
+```
+
+```{python}
 sc.pl.umap(
     adata_cortex, color=["class", "subclass", "genotype", "brain_region"], palette=sc.pl.palettes.default_28
 )
@@ -517,6 +537,13 @@ sc.pl.spatial(
     color=['clusters'],
     size=1.5
 )
+```
+
+```{python}
+# now we can remove all other spatial data
+del counts_adata
+del adata
+gc.collect()
 ```
 
 ## {{< meta st_deconv >}}
@@ -560,8 +587,7 @@ In the single cell data we have the raw counts in the `raw.X` matrix so that one
 
 
 ```{python}
-sc_adata = adata_cortex.copy()
-sc_adata.X = adata_cortex.raw.X.copy()
+adata_cortex = adata_cortex.raw.to_adata()
 ```
 
 Setup the anndata, the implementation requires the counts matrix to be in the "counts" layer as a copy.
@@ -573,13 +599,13 @@ import scvi
 from scvi.external import RNAStereoscope, SpatialStereoscope
 
 # add counts layer
-sc_adata.layers["counts"] = sc_adata.X.copy()
+adata_cortex.layers["counts"] = adata_cortex.X.copy()
 
 # subset for the selected genes
-sc_adata = sc_adata[:, deg].copy()
+adata_cortex = adata_cortex[:, deg].copy()
 
 # create stereoscope object
-RNAStereoscope.setup_anndata(sc_adata, layer="counts", labels_key="subclass")
+RNAStereoscope.setup_anndata(adata_cortex, layer="counts", labels_key="subclass")
 ```
 
 ```{python}
@@ -588,12 +614,12 @@ RNAStereoscope.setup_anndata(sc_adata, layer="counts", labels_key="subclass")
 
 train = True
 if train:
-    sc_model = RNAStereoscope(sc_adata)
+    sc_model = RNAStereoscope(adata_cortex)
     sc_model.train(max_epochs=300)
     sc_model.history["elbo_train"][10:].plot()
     sc_model.save("./data/spatial/visium/scanpy_scmodel", overwrite=True)
 else:
-    sc_model = RNAStereoscope.load("./data/spatial/visium/scanpy_scmodel", sc_adata)
+    sc_model = RNAStereoscope.load("./data/spatial/visium/scanpy_scmodel", adata_cortex)
     print("Loaded RNA model from file!")
 ```
 
@@ -605,22 +631,22 @@ First create a new st object with the correct genes and counts as a layer.
 
 st_adata = adata_anterior_subset.copy()
 
-st_adata.layers["counts"] = st_adata.X.copy()
-st_adata = st_adata[:, deg].copy()
+adata_anterior_subset.layers["counts"] = adata_anterior_subset.X.copy()
+adata_anterior_subset = adata_anterior_subset[:, deg].copy()
 
-SpatialStereoscope.setup_anndata(st_adata, layer="counts")
+SpatialStereoscope.setup_anndata(adata_anterior_subset, layer="counts")
 ```
 
 ```{python}
 
 train = True
 if train:
-    spatial_model = SpatialStereoscope.from_rna_model(st_adata, sc_model)
+    spatial_model = SpatialStereoscope.from_rna_model(adata_anterior_subset, sc_model)
     spatial_model.train(max_epochs = 3000)
     spatial_model.history["elbo_train"][10:].plot()
     spatial_model.save("./data/spatial/visium/scanpy_stmodel", overwrite = True)
 else:
-    spatial_model = SpatialStereoscope.load("./data/spatial/visium/scanpy_stmodel", st_adata)
+    spatial_model = SpatialStereoscope.load("./data/spatial/visium/scanpy_stmodel", adata_anterior_subset)
     print("Loaded Spatial model from file!")
 ```
 
@@ -628,11 +654,11 @@ Get the results from the model, also put them in the .obs slot.
 
 ```{python}
 
-st_adata.obsm["deconvolution"] = spatial_model.get_proportions()
+adata_anterior_subset.obsm["deconvolution"] = spatial_model.get_proportions()
 
 # also copy to the obsm data frame
-for ct in st_adata.obsm["deconvolution"].columns:
-    st_adata.obs[ct] = st_adata.obsm["deconvolution"][ct]
+for ct in adata_anterior_subset.obsm["deconvolution"].columns:
+    adata_anterior_subset.obs[ct] = adata_anterior_subset.obsm["deconvolution"][ct]
 ```
 
 We are then able to explore how cell types in the scRNA-seq dataset are predicted onto the visium dataset. Let's first visualize the neurons cortical layers.
@@ -640,7 +666,7 @@ We are then able to explore how cell types in the scRNA-seq dataset are predicte
 ```{python}
 
 sc.pl.spatial(
-    st_adata,
+    adata_anterior_subset,
     img_key="hires",
     color=["L2/3 IT", "L4", "L5 PT", "L6 CT"],
     library_id=lib_a,
@@ -654,7 +680,7 @@ We can go ahead an visualize astrocytes and oligodendrocytes as well.
 ```{python}
 
 sc.pl.spatial(
-    st_adata, img_key="hires", color=["Oligo", "Astro"], size=1.5, library_id=lib_a
+    adata_anterior_subset, img_key="hires", color=["Oligo", "Astro"], size=1.5, library_id=lib_a
 )
 ```
 
@@ -662,7 +688,7 @@ sc.pl.spatial(
 
 ```{python}
 
-sc.pl.violin(st_adata, ["L2/3 IT", "L6 CT","Oligo","Astro"],
+sc.pl.violin(adata_anterior_subset, ["L2/3 IT", "L6 CT","Oligo","Astro"],
             jitter=0.4, groupby = 'clusters', rotation= 45)
 ```
 

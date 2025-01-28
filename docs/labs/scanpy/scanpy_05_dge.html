@@ -241,7 +241,7 @@ window.Quarto = {
       <div>
       <div class="quarto-title-meta-heading">Published</div>
       <div class="quarto-title-meta-contents">
-        <p class="date">13-Jan-2025</p>
+        <p class="date">28-Jan-2025</p>
       </div>
     </div>
     
@@ -305,7 +305,7 @@ Note
 <p>By default, the .raw attribute of AnnData is used in case it has been initialized, it can be changed by setting use_raw=False.</p>
 <p>The clustering with resolution 0.6 seems to give a reasonable number of clusters, so we will use that clustering for all DE tests.</p>
 <p>First, let’s import libraries and fetch the clustered data from the previous lab.</p>
-<div id="7c0e9e2d" class="cell" data-execution_count="1">
+<div id="libraries" class="cell" data-execution_count="1">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> scanpy <span class="im">as</span> sc</span>
@@ -323,7 +323,7 @@ Note
 <span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>sc.settings.set_figure_params(dpi<span class="op">=</span><span class="dv">80</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Read in the clustered data object.</p>
-<div id="0ecd4905" class="cell" data-execution_count="2">
+<div id="cell-fetch-data" class="cell" data-execution_count="2">
 <div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># download pre-computed data if missing or long compute</span></span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>fetch_data <span class="op">=</span> <span class="va">True</span></span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -343,7 +343,7 @@ Note
 <span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>adata <span class="op">=</span> sc.read_h5ad(path_file)</span>
 <span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>adata</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="2">
+<div id="fetch-data" class="cell-output cell-output-display" data-execution_count="2">
 <pre><code>AnnData object with n_obs × n_vars = 7222 × 19468
     obs: 'type', 'sample', 'batch', 'n_genes_by_counts', 'total_counts', 'total_counts_mt', 'pct_counts_mt', 'total_counts_ribo', 'pct_counts_ribo', 'total_counts_hb', 'pct_counts_hb', 'percent_mt2', 'n_counts', 'n_genes', 'percent_chrY', 'XIST-counts', 'S_score', 'G2M_score', 'phase', 'doublet_scores', 'predicted_doublets', 'doublet_info', 'leiden', 'leiden_0.4', 'leiden_0.6', 'leiden_1.0', 'leiden_1.4', 'kmeans5', 'kmeans10', 'kmeans15', 'hclust_5', 'hclust_10', 'hclust_15'
     var: 'gene_ids', 'feature_types', 'genome', 'mt', 'ribo', 'hb', 'n_cells_by_counts', 'mean_counts', 'pct_dropout_by_counts', 'total_counts', 'n_cells', 'highly_variable', 'means', 'dispersions', 'dispersions_norm', 'highly_variable_nbatches', 'highly_variable_intersection'
@@ -353,7 +353,7 @@ Note
 </div>
 </div>
 <p>Check what you have in the different matrices.</p>
-<div id="25dffa55" class="cell" data-execution_count="3">
+<div id="check-data" class="cell" data-execution_count="3">
 <div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(adata.X.shape)</span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="bu">type</span>(adata.raw))</span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(adata.X[:<span class="dv">10</span>,:<span class="dv">10</span>])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -370,19 +370,19 @@ Note
 <p>As you can see, the X matrix contains all genes and the data looks logtransformed.</p>
 <p>For DGE analysis we would like to run with all genes, on normalized values, so if you did subset the <code>adata.X</code> for variable genes you would have to revert back to the raw matrix with <code>adata = adata.raw.to_adata()</code>. In case you have raw counts in the matrix you also have to renormalize and logtransform.</p>
 <p>Now lets look at the clustering of the object we loaded in the umap. We will use leiden_0.6 clustering in this exercise. If you recall from the previous exercise, we set the default umap to the umap created with Harmony.</p>
-<div id="2ffdc30d" class="cell" data-execution_count="4">
+<div id="cell-plot-umap" class="cell" data-execution_count="4">
 <div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, color<span class="op">=</span><span class="st">'leiden_0.6'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><a href="scanpy_05_dge_files/figure-html/cell-5-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-2"><img src="scanpy_05_dge_files/figure-html/cell-5-output-1.png" width="331" height="296" class="figure-img"></a></p>
+<p><a href="scanpy_05_dge_files/figure-html/plot-umap-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-2"><img src="scanpy_05_dge_files/figure-html/plot-umap-output-1.png" id="plot-umap" width="331" height="296" class="figure-img"></a></p>
 </figure>
 </div>
 </div>
 </div>
 <section id="t-test" class="level2" data-number="1">
 <h2 data-number="1" class="anchored" data-anchor-id="t-test"><span class="header-section-number">1</span> T-test</h2>
-<div id="ae256e43" class="cell" data-execution_count="5">
+<div id="ttest" class="cell" data-execution_count="5">
 <div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>sc.tl.rank_genes_groups(adata, <span class="st">'leiden_0.6'</span>, method<span class="op">=</span><span class="st">'t-test'</span>, key_added <span class="op">=</span> <span class="st">"t-test"</span>)</span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>sc.pl.rank_genes_groups(adata, n_genes<span class="op">=</span><span class="dv">25</span>, sharey<span class="op">=</span><span class="va">False</span>, key <span class="op">=</span> <span class="st">"t-test"</span>)</span>
 <span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -395,18 +395,18 @@ Note
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><a href="scanpy_05_dge_files/figure-html/cell-6-output-2.png" class="lightbox" data-gallery="quarto-lightbox-gallery-3"><img src="scanpy_05_dge_files/figure-html/cell-6-output-2.png" width="1066" height="804" class="figure-img"></a></p>
+<p><a href="scanpy_05_dge_files/figure-html/ttest-output-2.png" class="lightbox" data-gallery="quarto-lightbox-gallery-3"><img src="scanpy_05_dge_files/figure-html/ttest-output-2.png" id="ttest-1" width="1066" height="804" class="figure-img"></a></p>
 </figure>
 </div>
 </div>
-<div class="cell-output cell-output-display" data-execution_count="5">
+<div id="ttest-2" class="cell-output cell-output-display" data-execution_count="5">
 <pre><code>dict_keys(['dendrogram_leiden_0.6', 'doublet_info_colors', 'hclust_10_colors', 'hclust_15_colors', 'hclust_5_colors', 'hvg', 'kmeans10_colors', 'kmeans15_colors', 'kmeans5_colors', 'leiden', 'leiden_0.4', 'leiden_0.4_colors', 'leiden_0.6', 'leiden_0.6_colors', 'leiden_1.0', 'leiden_1.0_colors', 'leiden_1.4', 'leiden_1.4_colors', 'log1p', 'neighbors', 'pca', 'phase_colors', 'sample_colors', 'tsne', 'umap', 't-test'])</code></pre>
 </div>
 </div>
 </section>
 <section id="t-test-overestimated_variance" class="level2" data-number="2">
 <h2 data-number="2" class="anchored" data-anchor-id="t-test-overestimated_variance"><span class="header-section-number">2</span> T-test overestimated_variance</h2>
-<div id="cae28fcc" class="cell" data-execution_count="6">
+<div id="cell-ttest-o" class="cell" data-execution_count="6">
 <div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>sc.tl.rank_genes_groups(adata, <span class="st">'leiden_0.6'</span>, method<span class="op">=</span><span class="st">'t-test_overestim_var'</span>, key_added <span class="op">=</span> <span class="st">"t-test_ov"</span>)</span>
 <span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>sc.pl.rank_genes_groups(adata, n_genes<span class="op">=</span><span class="dv">25</span>, sharey<span class="op">=</span><span class="va">False</span>, key <span class="op">=</span> <span class="st">"t-test_ov"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
@@ -416,7 +416,7 @@ Note
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><a href="scanpy_05_dge_files/figure-html/cell-7-output-2.png" class="lightbox" data-gallery="quarto-lightbox-gallery-4"><img src="scanpy_05_dge_files/figure-html/cell-7-output-2.png" width="1066" height="804" class="figure-img"></a></p>
+<p><a href="scanpy_05_dge_files/figure-html/ttest-o-output-2.png" class="lightbox" data-gallery="quarto-lightbox-gallery-4"><img src="scanpy_05_dge_files/figure-html/ttest-o-output-2.png" id="ttest-o" width="1066" height="804" class="figure-img"></a></p>
 </figure>
 </div>
 </div>
@@ -425,7 +425,7 @@ Note
 <section id="wilcoxon-rank-sum" class="level2" data-number="3">
 <h2 data-number="3" class="anchored" data-anchor-id="wilcoxon-rank-sum"><span class="header-section-number">3</span> Wilcoxon rank-sum</h2>
 <p>The result of a Wilcoxon rank-sum (Mann-Whitney-U) test is very similar. We recommend using the latter in publications, see e.g., Sonison &amp; Robinson (2018). You might also consider much more powerful differential testing packages like MAST, limma, DESeq2 and, for python, the recent diffxpy.</p>
-<div id="7b9b8b42" class="cell" data-execution_count="7">
+<div id="cell-wilcoxon" class="cell" data-execution_count="7">
 <div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>sc.tl.rank_genes_groups(adata, <span class="st">'leiden_0.6'</span>, method<span class="op">=</span><span class="st">'wilcoxon'</span>, key_added <span class="op">=</span> <span class="st">"wilcoxon"</span>)</span>
 <span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>sc.pl.rank_genes_groups(adata, n_genes<span class="op">=</span><span class="dv">25</span>, sharey<span class="op">=</span><span class="va">False</span>, key<span class="op">=</span><span class="st">"wilcoxon"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
@@ -435,7 +435,7 @@ Note
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><a href="scanpy_05_dge_files/figure-html/cell-8-output-2.png" class="lightbox" data-gallery="quarto-lightbox-gallery-5"><img src="scanpy_05_dge_files/figure-html/cell-8-output-2.png" width="1071" height="804" class="figure-img"></a></p>
+<p><a href="scanpy_05_dge_files/figure-html/wilcoxon-output-2.png" class="lightbox" data-gallery="quarto-lightbox-gallery-5"><img src="scanpy_05_dge_files/figure-html/wilcoxon-output-2.png" id="wilcoxon" width="1071" height="804" class="figure-img"></a></p>
 </figure>
 </div>
 </div>
@@ -444,17 +444,17 @@ Note
 <section id="logistic-regression-test" class="level2" data-number="4">
 <h2 data-number="4" class="anchored" data-anchor-id="logistic-regression-test"><span class="header-section-number">4</span> Logistic regression test</h2>
 <p>As an alternative, let us rank genes using logistic regression. For instance, this has been suggested by Natranos et al.&nbsp;(2018). The essential difference is that here, we use a multi-variate appraoch whereas conventional differential tests are uni-variate. Clark et al.&nbsp;(2014) has more details.</p>
-<div id="658155bc" class="cell" data-execution_count="8">
+<div id="cell-logreg" class="cell" data-execution_count="8">
 <div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>sc.tl.rank_genes_groups(adata, <span class="st">'leiden_0.6'</span>, method<span class="op">=</span><span class="st">'logreg'</span>,key_added <span class="op">=</span> <span class="st">"logreg"</span>)</span>
 <span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>sc.pl.rank_genes_groups(adata, n_genes<span class="op">=</span><span class="dv">25</span>, sharey<span class="op">=</span><span class="va">False</span>, key <span class="op">=</span> <span class="st">"logreg"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>ranking genes
-    finished (0:00:20)</code></pre>
+    finished (0:00:21)</code></pre>
 </div>
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><a href="scanpy_05_dge_files/figure-html/cell-9-output-2.png" class="lightbox" data-gallery="quarto-lightbox-gallery-6"><img src="scanpy_05_dge_files/figure-html/cell-9-output-2.png" width="1071" height="804" class="figure-img"></a></p>
+<p><a href="scanpy_05_dge_files/figure-html/logreg-output-2.png" class="lightbox" data-gallery="quarto-lightbox-gallery-6"><img src="scanpy_05_dge_files/figure-html/logreg-output-2.png" id="logreg" width="1071" height="804" class="figure-img"></a></p>
 </figure>
 </div>
 </div>
@@ -463,7 +463,7 @@ Note
 <section id="compare-genes" class="level2" data-number="5">
 <h2 data-number="5" class="anchored" data-anchor-id="compare-genes"><span class="header-section-number">5</span> Compare genes</h2>
 <p>Take all significant DE genes for cluster0 with each test and compare the overlap.</p>
-<div id="7ca8ac8a" class="cell" data-execution_count="9">
+<div id="cell-compare" class="cell" data-execution_count="9">
 <div class="sourceCode cell-code" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="co">#compare cluster1 genes, only stores top 100 by default</span></span>
 <span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>wc <span class="op">=</span> sc.get.rank_genes_groups_df(adata, group<span class="op">=</span><span class="st">'0'</span>, key<span class="op">=</span><span class="st">'wilcoxon'</span>, pval_cutoff<span class="op">=</span><span class="fl">0.01</span>, log2fc_min<span class="op">=</span><span class="dv">0</span>)[<span class="st">'names'</span>]</span>
@@ -477,7 +477,7 @@ Note
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><a href="scanpy_05_dge_files/figure-html/cell-10-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-7"><img src="scanpy_05_dge_files/figure-html/cell-10-output-1.png" width="265" height="257" class="figure-img"></a></p>
+<p><a href="scanpy_05_dge_files/figure-html/compare-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-7"><img src="scanpy_05_dge_files/figure-html/compare-output-1.png" id="compare" width="265" height="257" class="figure-img"></a></p>
 </figure>
 </div>
 </div>
@@ -487,7 +487,7 @@ Note
 <section id="visualization" class="level2" data-number="6">
 <h2 data-number="6" class="anchored" data-anchor-id="visualization"><span class="header-section-number">6</span> Visualization</h2>
 <p>There are several ways to visualize the expression of top DE genes. Here we will plot top 5 genes per cluster from Wilcoxon test as heatmap, dotplot, violin plots or a matrix with average expression.</p>
-<div id="d07ed8bb" class="cell" data-execution_count="10">
+<div id="visualize" class="cell" data-execution_count="10">
 <div class="sourceCode cell-code" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>sc.pl.rank_genes_groups_heatmap(adata, n_genes<span class="op">=</span><span class="dv">5</span>, key<span class="op">=</span><span class="st">"wilcoxon"</span>, groupby<span class="op">=</span><span class="st">"leiden_0.6"</span>, show_gene_labels<span class="op">=</span><span class="va">True</span>)</span>
 <span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>sc.pl.rank_genes_groups_dotplot(adata, n_genes<span class="op">=</span><span class="dv">5</span>, key<span class="op">=</span><span class="st">"wilcoxon"</span>, groupby<span class="op">=</span><span class="st">"leiden_0.6"</span>)</span>
 <span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>sc.pl.rank_genes_groups_stacked_violin(adata, n_genes<span class="op">=</span><span class="dv">5</span>, key<span class="op">=</span><span class="st">"wilcoxon"</span>, groupby<span class="op">=</span><span class="st">"leiden_0.6"</span>)</span>
@@ -495,28 +495,28 @@ Note
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><a href="scanpy_05_dge_files/figure-html/cell-11-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-8"><img src="scanpy_05_dge_files/figure-html/cell-11-output-1.png" width="1177" height="478" class="figure-img"></a></p>
+<p><a href="scanpy_05_dge_files/figure-html/visualize-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-8"><img src="scanpy_05_dge_files/figure-html/visualize-output-1.png" id="visualize-1" width="1177" height="478" class="figure-img"></a></p>
 </figure>
 </div>
 </div>
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><a href="scanpy_05_dge_files/figure-html/cell-11-output-2.png" class="lightbox" data-gallery="quarto-lightbox-gallery-9"><img src="scanpy_05_dge_files/figure-html/cell-11-output-2.png" width="1456" height="393" class="figure-img"></a></p>
+<p><a href="scanpy_05_dge_files/figure-html/visualize-output-2.png" class="lightbox" data-gallery="quarto-lightbox-gallery-9"><img src="scanpy_05_dge_files/figure-html/visualize-output-2.png" id="visualize-2" width="1456" height="393" class="figure-img"></a></p>
 </figure>
 </div>
 </div>
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><a href="scanpy_05_dge_files/figure-html/cell-11-output-3.png" class="lightbox" data-gallery="quarto-lightbox-gallery-10"><img src="scanpy_05_dge_files/figure-html/cell-11-output-3.png" width="1461" height="393" class="figure-img"></a></p>
+<p><a href="scanpy_05_dge_files/figure-html/visualize-output-3.png" class="lightbox" data-gallery="quarto-lightbox-gallery-10"><img src="scanpy_05_dge_files/figure-html/visualize-output-3.png" id="visualize-3" width="1461" height="393" class="figure-img"></a></p>
 </figure>
 </div>
 </div>
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><a href="scanpy_05_dge_files/figure-html/cell-11-output-4.png" class="lightbox" data-gallery="quarto-lightbox-gallery-11"><img src="scanpy_05_dge_files/figure-html/cell-11-output-4.png" width="1456" height="393" class="figure-img"></a></p>
+<p><a href="scanpy_05_dge_files/figure-html/visualize-output-4.png" class="lightbox" data-gallery="quarto-lightbox-gallery-11"><img src="scanpy_05_dge_files/figure-html/visualize-output-4.png" id="visualize-4" width="1456" height="393" class="figure-img"></a></p>
 </figure>
 </div>
 </div>
@@ -525,7 +525,7 @@ Note
 <section id="compare-specific-clusters" class="level2" data-number="7">
 <h2 data-number="7" class="anchored" data-anchor-id="compare-specific-clusters"><span class="header-section-number">7</span> Compare specific clusters</h2>
 <p>We can also do pairwise comparisons of individual clusters on one vs many clusters. For instance, clusters 1 &amp; 2 have very similar expression profiles.</p>
-<div id="49c930a9" class="cell" data-execution_count="11">
+<div id="cell-subset" class="cell" data-execution_count="11">
 <div class="sourceCode cell-code" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>sc.tl.rank_genes_groups(adata, <span class="st">'leiden_0.6'</span>, groups<span class="op">=</span>[<span class="st">'1'</span>], reference<span class="op">=</span><span class="st">'2'</span>, method<span class="op">=</span><span class="st">'wilcoxon'</span>)</span>
 <span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>sc.pl.rank_genes_groups(adata, groups<span class="op">=</span>[<span class="st">'1'</span>], n_genes<span class="op">=</span><span class="dv">20</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
@@ -535,13 +535,13 @@ Note
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><a href="scanpy_05_dge_files/figure-html/cell-12-output-2.png" class="lightbox" data-gallery="quarto-lightbox-gallery-12"><img src="scanpy_05_dge_files/figure-html/cell-12-output-2.png" width="309" height="318" class="figure-img"></a></p>
+<p><a href="scanpy_05_dge_files/figure-html/subset-output-2.png" class="lightbox" data-gallery="quarto-lightbox-gallery-12"><img src="scanpy_05_dge_files/figure-html/subset-output-2.png" id="subset" width="309" height="318" class="figure-img"></a></p>
 </figure>
 </div>
 </div>
 </div>
 <p>Plot as violins for those two groups, or across all the clusters.</p>
-<div id="59b2e755" class="cell" data-execution_count="12">
+<div id="plot-subset" class="cell" data-execution_count="12">
 <div class="sourceCode cell-code" id="cb20"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>sc.pl.rank_genes_groups_violin(adata, groups<span class="op">=</span><span class="st">'1'</span>, n_genes<span class="op">=</span><span class="dv">10</span>)</span>
 <span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a><span class="co"># plot the same genes as violins across all the datasets.</span></span>
@@ -552,14 +552,14 @@ Note
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><a href="scanpy_05_dge_files/figure-html/cell-13-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-13"><img src="scanpy_05_dge_files/figure-html/cell-13-output-1.png" width="300" height="367" class="figure-img"></a></p>
+<p><a href="scanpy_05_dge_files/figure-html/plot-subset-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-13"><img src="scanpy_05_dge_files/figure-html/plot-subset-output-1.png" id="plot-subset-1" width="300" height="367" class="figure-img"></a></p>
 </figure>
 </div>
 </div>
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><a href="scanpy_05_dge_files/figure-html/cell-13-output-2.png" class="lightbox" data-gallery="quarto-lightbox-gallery-14"><img src="scanpy_05_dge_files/figure-html/cell-13-output-2.png" width="373" height="371" class="figure-img"></a></p>
+<p><a href="scanpy_05_dge_files/figure-html/plot-subset-output-2.png" class="lightbox" data-gallery="quarto-lightbox-gallery-14"><img src="scanpy_05_dge_files/figure-html/plot-subset-output-2.png" id="plot-subset-2" width="373" height="371" class="figure-img"></a></p>
 </figure>
 </div>
 </div>
@@ -568,7 +568,7 @@ Note
 <section id="section" class="level2" data-number="8">
 <h2 data-number="8" class="anchored" data-anchor-id="section"><span class="header-section-number">8</span> DGE across conditions</h2>
 <p>The second way of computing differential expression is to answer which genes are differentially expressed within a cluster. For example, in our case we have libraries comming from patients and controls and we would like to know which genes are influenced the most in a particular cell type. For this end, we will first subset our data for the desired cell cluster, then change the cell identities to the variable of comparison (which now in our case is the <strong>type</strong>, e.g.&nbsp;Covid/Ctrl).</p>
-<div id="18a572b4" class="cell" data-execution_count="13">
+<div id="cell-condition" class="cell" data-execution_count="13">
 <div class="sourceCode cell-code" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>cl1 <span class="op">=</span> adata[adata.obs[<span class="st">'leiden_0.6'</span>] <span class="op">==</span> <span class="st">'4'</span>,:]</span>
 <span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>cl1.obs[<span class="st">'type'</span>].value_counts()</span>
 <span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -581,30 +581,30 @@ Note
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><a href="scanpy_05_dge_files/figure-html/cell-14-output-2.png" class="lightbox" data-gallery="quarto-lightbox-gallery-15"><img src="scanpy_05_dge_files/figure-html/cell-14-output-2.png" width="559" height="318" class="figure-img"></a></p>
+<p><a href="scanpy_05_dge_files/figure-html/condition-output-2.png" class="lightbox" data-gallery="quarto-lightbox-gallery-15"><img src="scanpy_05_dge_files/figure-html/condition-output-2.png" id="condition" width="559" height="318" class="figure-img"></a></p>
 </figure>
 </div>
 </div>
 </div>
-<div id="c7b16171" class="cell" data-execution_count="14">
+<div id="condition-vln" class="cell" data-execution_count="14">
 <div class="sourceCode cell-code" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>sc.pl.rank_genes_groups_violin(cl1, n_genes<span class="op">=</span><span class="dv">10</span>, key<span class="op">=</span><span class="st">"wilcoxon"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><a href="scanpy_05_dge_files/figure-html/cell-15-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-16"><img src="scanpy_05_dge_files/figure-html/cell-15-output-1.png" width="300" height="363" class="figure-img"></a></p>
+<p><a href="scanpy_05_dge_files/figure-html/condition-vln-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-16"><img src="scanpy_05_dge_files/figure-html/condition-vln-output-1.png" id="condition-vln-1" width="300" height="363" class="figure-img"></a></p>
 </figure>
 </div>
 </div>
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><a href="scanpy_05_dge_files/figure-html/cell-15-output-2.png" class="lightbox" data-gallery="quarto-lightbox-gallery-17"><img src="scanpy_05_dge_files/figure-html/cell-15-output-2.png" width="300" height="363" class="figure-img"></a></p>
+<p><a href="scanpy_05_dge_files/figure-html/condition-vln-output-2.png" class="lightbox" data-gallery="quarto-lightbox-gallery-17"><img src="scanpy_05_dge_files/figure-html/condition-vln-output-2.png" id="condition-vln-2" width="300" height="363" class="figure-img"></a></p>
 </figure>
 </div>
 </div>
 </div>
 <p>We can also plot these genes across all clusters, but split by “type”, to check if the genes are also up/downregulated in other celltypes.</p>
-<div id="c71ebcaf" class="cell" data-execution_count="15">
+<div id="cell-condition-vln-all" class="cell" data-execution_count="15">
 <div class="sourceCode cell-code" id="cb24"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> seaborn <span class="im">as</span> sns</span>
 <span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>genes1 <span class="op">=</span> sc.get.rank_genes_groups_df(cl1, group<span class="op">=</span><span class="st">'Covid'</span>, key<span class="op">=</span><span class="st">'wilcoxon'</span>)[<span class="st">'names'</span>][:<span class="dv">5</span>]</span>
@@ -617,7 +617,7 @@ Note
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><a href="scanpy_05_dge_files/figure-html/cell-16-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-18"><img src="scanpy_05_dge_files/figure-html/cell-16-output-1.png" width="1651" height="1183" class="figure-img"></a></p>
+<p><a href="scanpy_05_dge_files/figure-html/condition-vln-all-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-18"><img src="scanpy_05_dge_files/figure-html/condition-vln-all-output-1.png" id="condition-vln-all" width="1651" height="1183" class="figure-img"></a></p>
 </figure>
 </div>
 </div>
@@ -626,7 +626,7 @@ Note
 <section id="remove-sex-chromosome-genes" class="level3" data-number="8.1">
 <h3 data-number="8.1" class="anchored" data-anchor-id="remove-sex-chromosome-genes"><span class="header-section-number">8.1</span> Remove sex chromosome genes</h3>
 <p>To remove some of the bias due to inbalanced sex in the subjects we can remove the sex chromosome related genes.</p>
-<div id="236c68ec" class="cell" data-execution_count="16">
+<div id="sex-genes" class="cell" data-execution_count="16">
 <div class="sourceCode cell-code" id="cb25"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>annot <span class="op">=</span> sc.queries.biomart_annotations(</span>
 <span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>        <span class="st">"hsapiens"</span>,</span>
 <span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>        [<span class="st">"ensembl_gene_id"</span>, <span class="st">"external_gene_name"</span>, <span class="st">"start_position"</span>, <span class="st">"end_position"</span>, <span class="st">"chromosome_name"</span>],</span>
@@ -651,7 +651,7 @@ Note
 </div>
 </div>
 <p>Rerun differential expression.</p>
-<div id="4d5a0bc3" class="cell" data-execution_count="17">
+<div id="cell-markers-nosex" class="cell" data-execution_count="17">
 <div class="sourceCode cell-code" id="cb27"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>sc.tl.rank_genes_groups(cl1, <span class="st">'type'</span>, method<span class="op">=</span><span class="st">'wilcoxon'</span>, key_added <span class="op">=</span> <span class="st">"wilcoxon"</span>)</span>
 <span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>sc.pl.rank_genes_groups(cl1, n_genes<span class="op">=</span><span class="dv">25</span>, sharey<span class="op">=</span><span class="va">False</span>, key<span class="op">=</span><span class="st">"wilcoxon"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
@@ -661,7 +661,7 @@ Note
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><a href="scanpy_05_dge_files/figure-html/cell-18-output-2.png" class="lightbox" data-gallery="quarto-lightbox-gallery-19"><img src="scanpy_05_dge_files/figure-html/cell-18-output-2.png" width="559" height="318" class="figure-img"></a></p>
+<p><a href="scanpy_05_dge_files/figure-html/markers-nosex-output-2.png" class="lightbox" data-gallery="quarto-lightbox-gallery-19"><img src="scanpy_05_dge_files/figure-html/markers-nosex-output-2.png" id="markers-nosex" width="559" height="318" class="figure-img"></a></p>
 </figure>
 </div>
 </div>
@@ -671,7 +671,7 @@ Note
 <section id="patient-batch-effects" class="level3" data-number="8.2">
 <h3 data-number="8.2" class="anchored" data-anchor-id="patient-batch-effects"><span class="header-section-number">8.2</span> Patient batch effects</h3>
 <p>When we are testing for Covid vs Control we are running a DGE test for 4 vs 4 individuals. That will be very sensitive to sample differences unless we find a way to control for it. So first, lets check how the top DGEs are expressed in that cluster, across the individuals:</p>
-<div id="02ecec75" class="cell" data-execution_count="18">
+<div id="vln-batch" class="cell" data-execution_count="18">
 <div class="sourceCode cell-code" id="cb29"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>genes1 <span class="op">=</span> sc.get.rank_genes_groups_df(cl1, group<span class="op">=</span><span class="st">'Covid'</span>, key<span class="op">=</span><span class="st">'wilcoxon'</span>)[<span class="st">'names'</span>][:<span class="dv">5</span>]</span>
 <span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>genes2 <span class="op">=</span> sc.get.rank_genes_groups_df(cl1, group<span class="op">=</span><span class="st">'Ctrl'</span>, key<span class="op">=</span><span class="st">'wilcoxon'</span>)[<span class="st">'names'</span>][:<span class="dv">5</span>]</span>
 <span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a>genes <span class="op">=</span> genes1.tolist() <span class="op">+</span>  genes2.tolist() </span>
@@ -681,21 +681,21 @@ Note
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><a href="scanpy_05_dge_files/figure-html/cell-19-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-20"><img src="scanpy_05_dge_files/figure-html/cell-19-output-1.png" width="1452" height="325" class="figure-img"></a></p>
+<p><a href="scanpy_05_dge_files/figure-html/vln-batch-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-20"><img src="scanpy_05_dge_files/figure-html/vln-batch-output-1.png" id="vln-batch-1" width="1452" height="325" class="figure-img"></a></p>
 </figure>
 </div>
 </div>
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><a href="scanpy_05_dge_files/figure-html/cell-19-output-2.png" class="lightbox" data-gallery="quarto-lightbox-gallery-21"><img src="scanpy_05_dge_files/figure-html/cell-19-output-2.png" width="1465" height="324" class="figure-img"></a></p>
+<p><a href="scanpy_05_dge_files/figure-html/vln-batch-output-2.png" class="lightbox" data-gallery="quarto-lightbox-gallery-21"><img src="scanpy_05_dge_files/figure-html/vln-batch-output-2.png" id="vln-batch-2" width="1465" height="324" class="figure-img"></a></p>
 </figure>
 </div>
 </div>
 </div>
 <p>As you can see, many of the genes detected as DGE in Covid are unique to one or 2 patients.</p>
 <p>We can also plot the top Covid and top Ctrl genes as a dotplot:</p>
-<div id="dd864ce4" class="cell" data-execution_count="19">
+<div id="cell-dotplot-batch" class="cell" data-execution_count="19">
 <div class="sourceCode cell-code" id="cb30"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>genes1 <span class="op">=</span> sc.get.rank_genes_groups_df(cl1, group<span class="op">=</span><span class="st">'Covid'</span>, key<span class="op">=</span><span class="st">'wilcoxon'</span>)[<span class="st">'names'</span>][:<span class="dv">20</span>]</span>
 <span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a>genes2 <span class="op">=</span> sc.get.rank_genes_groups_df(cl1, group<span class="op">=</span><span class="st">'Ctrl'</span>, key<span class="op">=</span><span class="st">'wilcoxon'</span>)[<span class="st">'names'</span>][:<span class="dv">20</span>]</span>
 <span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a>genes <span class="op">=</span> genes1.tolist() <span class="op">+</span>  genes2.tolist() </span>
@@ -704,16 +704,16 @@ Note
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><a href="scanpy_05_dge_files/figure-html/cell-20-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-22"><img src="scanpy_05_dge_files/figure-html/cell-20-output-1.png" width="1096" height="330" class="figure-img"></a></p>
+<p><a href="scanpy_05_dge_files/figure-html/dotplot-batch-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-22"><img src="scanpy_05_dge_files/figure-html/dotplot-batch-output-1.png" id="dotplot-batch" width="1096" height="330" class="figure-img"></a></p>
 </figure>
 </div>
 </div>
 </div>
 <p>Clearly many of the top Covid genes are only high in the covid_17 sample, and not a general feature of covid patients.</p>
 <p>This is also the patient with the highest number of cells in this cluster:</p>
-<div id="4e088be4" class="cell" data-execution_count="20">
+<div id="cell-count-cells" class="cell" data-execution_count="20">
 <div class="sourceCode cell-code" id="cb31"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>cl1.obs[<span class="st">'sample'</span>].value_counts()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="20">
+<div id="count-cells" class="cell-output cell-output-display" data-execution_count="20">
 <pre><code>covid_17    178
 ctrl_5      150
 covid_1      92
@@ -730,7 +730,7 @@ Name: sample, dtype: int64</code></pre>
 <h3 data-number="8.3" class="anchored" data-anchor-id="subsample"><span class="header-section-number">8.3</span> Subsample</h3>
 <p>So one obvious thing to consider is an equal amount of cells per individual so that the DGE results are not dominated by a single sample.</p>
 <p>So we will downsample to an equal number of cells per sample, in this case 34 cells per sample as it is the lowest number among all samples</p>
-<div id="9f063f7a" class="cell" data-execution_count="21">
+<div id="cell-subsample-clusters" class="cell" data-execution_count="21">
 <div class="sourceCode cell-code" id="cb33"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>target_cells <span class="op">=</span> <span class="dv">37</span></span>
 <span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a>tmp <span class="op">=</span> [cl1[cl1.obs[<span class="st">'sample'</span>] <span class="op">==</span> s] <span class="cf">for</span> s <span class="kw">in</span> cl1.obs[<span class="st">'sample'</span>].cat.categories]</span>
@@ -742,7 +742,7 @@ Name: sample, dtype: int64</code></pre>
 <span id="cb33-9"><a href="#cb33-9" aria-hidden="true" tabindex="-1"></a>cl1_sub <span class="op">=</span> tmp[<span class="dv">0</span>].concatenate(<span class="op">*</span>tmp[<span class="dv">1</span>:])</span>
 <span id="cb33-10"><a href="#cb33-10" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb33-11"><a href="#cb33-11" aria-hidden="true" tabindex="-1"></a>cl1_sub.obs[<span class="st">'sample'</span>].value_counts()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="21">
+<div id="subsample-clusters" class="cell-output cell-output-display" data-execution_count="21">
 <pre><code>covid_1     37
 covid_16    37
 covid_17    37
@@ -754,7 +754,7 @@ covid_15    32
 Name: sample, dtype: int64</code></pre>
 </div>
 </div>
-<div id="24c7d06c" class="cell" data-execution_count="22">
+<div id="cell-markers-sub" class="cell" data-execution_count="22">
 <div class="sourceCode cell-code" id="cb35"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>sc.tl.rank_genes_groups(cl1_sub, <span class="st">'type'</span>, method<span class="op">=</span><span class="st">'wilcoxon'</span>, key_added <span class="op">=</span> <span class="st">"wilcoxon"</span>)</span>
 <span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a>sc.pl.rank_genes_groups(cl1_sub, n_genes<span class="op">=</span><span class="dv">25</span>, sharey<span class="op">=</span><span class="va">False</span>, key<span class="op">=</span><span class="st">"wilcoxon"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
@@ -764,12 +764,12 @@ Name: sample, dtype: int64</code></pre>
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><a href="scanpy_05_dge_files/figure-html/cell-23-output-2.png" class="lightbox" data-gallery="quarto-lightbox-gallery-23"><img src="scanpy_05_dge_files/figure-html/cell-23-output-2.png" width="563" height="318" class="figure-img"></a></p>
+<p><a href="scanpy_05_dge_files/figure-html/markers-sub-output-2.png" class="lightbox" data-gallery="quarto-lightbox-gallery-23"><img src="scanpy_05_dge_files/figure-html/markers-sub-output-2.png" id="markers-sub" width="563" height="318" class="figure-img"></a></p>
 </figure>
 </div>
 </div>
 </div>
-<div id="d5a5bcc5" class="cell" data-execution_count="23">
+<div id="cell-dotplot-sub" class="cell" data-execution_count="23">
 <div class="sourceCode cell-code" id="cb37"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a>genes1 <span class="op">=</span> sc.get.rank_genes_groups_df(cl1_sub, group<span class="op">=</span><span class="st">'Covid'</span>, key<span class="op">=</span><span class="st">'wilcoxon'</span>)[<span class="st">'names'</span>][:<span class="dv">20</span>]</span>
 <span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a>genes2 <span class="op">=</span> sc.get.rank_genes_groups_df(cl1_sub, group<span class="op">=</span><span class="st">'Ctrl'</span>, key<span class="op">=</span><span class="st">'wilcoxon'</span>)[<span class="st">'names'</span>][:<span class="dv">20</span>]</span>
 <span id="cb37-3"><a href="#cb37-3" aria-hidden="true" tabindex="-1"></a>genes <span class="op">=</span> genes1.tolist() <span class="op">+</span>  genes2.tolist() </span>
@@ -778,7 +778,7 @@ Name: sample, dtype: int64</code></pre>
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><a href="scanpy_05_dge_files/figure-html/cell-24-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-24"><img src="scanpy_05_dge_files/figure-html/cell-24-output-1.png" width="1097" height="330" class="figure-img"></a></p>
+<p><a href="scanpy_05_dge_files/figure-html/dotplot-sub-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-24"><img src="scanpy_05_dge_files/figure-html/dotplot-sub-output-1.png" id="dotplot-sub" width="1097" height="330" class="figure-img"></a></p>
 </figure>
 </div>
 </div>
@@ -793,7 +793,7 @@ Name: sample, dtype: int64</code></pre>
 <section id="section-2" class="level3" data-number="9.1">
 <h3 data-number="9.1" class="anchored" data-anchor-id="section-2"><span class="header-section-number">9.1</span> Hypergeometric enrichment test</h3>
 <p>Having a defined list of differentially expressed genes, you can now look for their combined function using hypergeometric test.</p>
-<div id="5c8e76a0" class="cell" data-execution_count="24">
+<div id="gsea-genesets" class="cell" data-execution_count="24">
 <div class="sourceCode cell-code" id="cb38"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Available databases : ‘Human’, ‘Mouse’, ‘Yeast’, ‘Fly’, ‘Fish’, ‘Worm’ </span></span>
 <span id="cb38-2"><a href="#cb38-2" aria-hidden="true" tabindex="-1"></a>gene_set_names <span class="op">=</span> gseapy.get_library_name(organism<span class="op">=</span><span class="st">'Human'</span>)</span>
 <span id="cb38-3"><a href="#cb38-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(gene_set_names)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -802,7 +802,7 @@ Name: sample, dtype: int64</code></pre>
 </div>
 </div>
 <p>Get the significant DEGs for the Covid patients.</p>
-<div id="34519a05" class="cell" data-execution_count="25">
+<div id="get-dges" class="cell" data-execution_count="25">
 <div class="sourceCode cell-code" id="cb40"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a><span class="co">#?gseapy.enrichr</span></span>
 <span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a>glist <span class="op">=</span> sc.get.rank_genes_groups_df(cl1_sub, group<span class="op">=</span><span class="st">'Covid'</span>, key<span class="op">=</span><span class="st">'wilcoxon'</span>, log2fc_min<span class="op">=</span><span class="fl">0.25</span>, pval_cutoff<span class="op">=</span><span class="fl">0.05</span>)[<span class="st">'names'</span>].squeeze().<span class="bu">str</span>.strip().tolist()</span>
 <span id="cb40-3"><a href="#cb40-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="bu">len</span>(glist))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -810,10 +810,10 @@ Name: sample, dtype: int64</code></pre>
 <pre><code>18</code></pre>
 </div>
 </div>
-<div id="98ed23a9" class="cell" data-execution_count="26">
+<div id="cell-gsea" class="cell" data-execution_count="26">
 <div class="sourceCode cell-code" id="cb42"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a>enr_res <span class="op">=</span> gseapy.enrichr(gene_list<span class="op">=</span>glist, organism<span class="op">=</span><span class="st">'Human'</span>, gene_sets<span class="op">=</span><span class="st">'GO_Biological_Process_2018'</span>, cutoff <span class="op">=</span> <span class="fl">0.5</span>)</span>
 <span id="cb42-2"><a href="#cb42-2" aria-hidden="true" tabindex="-1"></a>enr_res.results.head()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="26">
+<div id="gsea" class="cell-output cell-output-display" data-execution_count="26">
 <div>
 
 
@@ -908,12 +908,12 @@ Name: sample, dtype: int64</code></pre>
 <p>Some databases of interest:<br>
 <code>GO_Biological_Process_2017b</code><code>KEGG_2019_Human</code><code>KEGG_2019_Mouse</code><code>WikiPathways_2019_Human</code><code>WikiPathways_2019_Mouse</code><br>
 You visualize your results using a simple barplot, for example:</p>
-<div id="8f905dbf" class="cell" data-execution_count="27">
+<div id="cell-plot-gsea" class="cell" data-execution_count="27">
 <div class="sourceCode cell-code" id="cb43"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a>gseapy.barplot(enr_res.res2d,title<span class="op">=</span><span class="st">'GO_Biological_Process_2018'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><a href="scanpy_05_dge_files/figure-html/cell-28-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-25"><img src="scanpy_05_dge_files/figure-html/cell-28-output-1.png" width="1024" height="454" class="figure-img"></a></p>
+<p><a href="scanpy_05_dge_files/figure-html/plot-gsea-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-25"><img src="scanpy_05_dge_files/figure-html/plot-gsea-output-1.png" id="plot-gsea" width="1024" height="454" class="figure-img"></a></p>
 </figure>
 </div>
 </div>
@@ -924,7 +924,7 @@ You visualize your results using a simple barplot, for example:</p>
 <h2 data-number="10" class="anchored" data-anchor-id="section-3"><span class="header-section-number">10</span> Gene Set Enrichment Analysis (GSEA)</h2>
 <p>Besides the enrichment using hypergeometric test, we can also perform gene set enrichment analysis (GSEA), which scores ranked genes list (usually based on fold changes) and computes permutation test to check if a particular gene set is more present in the Up-regulated genes, among the DOWN_regulated genes or not differentially regulated.</p>
 <p>We need a table with all DEGs and their log foldchanges. However, many lowly expressed genes will have high foldchanges and just contribue noise, so also filter for expression in enough cells.</p>
-<div id="4fb551fc" class="cell" data-execution_count="28">
+<div id="cell-gene-rank" class="cell" data-execution_count="28">
 <div class="sourceCode cell-code" id="cb44"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a>gene_rank <span class="op">=</span> sc.get.rank_genes_groups_df(cl1_sub, group<span class="op">=</span><span class="st">'Covid'</span>, key<span class="op">=</span><span class="st">'wilcoxon'</span>)[[<span class="st">'names'</span>,<span class="st">'logfoldchanges'</span>]]</span>
 <span id="cb44-2"><a href="#cb44-2" aria-hidden="true" tabindex="-1"></a>gene_rank.sort_values(by<span class="op">=</span>[<span class="st">'logfoldchanges'</span>], inplace<span class="op">=</span><span class="va">True</span>, ascending<span class="op">=</span><span class="va">False</span>)</span>
 <span id="cb44-3"><a href="#cb44-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -935,7 +935,7 @@ You visualize your results using a simple barplot, for example:</p>
 <span id="cb44-8"><a href="#cb44-8" aria-hidden="true" tabindex="-1"></a>gene_rank <span class="op">=</span> gene_rank[gene_rank[<span class="st">'names'</span>].isin(cl1.var_names[cl1.var.n_cells_by_counts<span class="op">&gt;</span><span class="dv">30</span>])]</span>
 <span id="cb44-9"><a href="#cb44-9" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb44-10"><a href="#cb44-10" aria-hidden="true" tabindex="-1"></a>gene_rank</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="28">
+<div id="gene-rank" class="cell-output cell-output-display" data-execution_count="28">
 <div>
 
 
@@ -1011,7 +1011,7 @@ You visualize your results using a simple barplot, for example:</p>
 </div>
 </div>
 <p>Once our list of genes are sorted, we can proceed with the enrichment itself. We can use the package to get gene set from the Molecular Signature Database (MSigDB) and select KEGG pathways as an example.</p>
-<div id="b15c21e2" class="cell" data-execution_count="29">
+<div id="gsea-genesets2" class="cell" data-execution_count="29">
 <div class="sourceCode cell-code" id="cb45"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Available databases : ‘Human’, ‘Mouse’, ‘Yeast’, ‘Fly’, ‘Fish’, ‘Worm’ </span></span>
 <span id="cb45-2"><a href="#cb45-2" aria-hidden="true" tabindex="-1"></a>gene_set_names <span class="op">=</span> gseapy.get_library_name(organism<span class="op">=</span><span class="st">'Human'</span>)</span>
 <span id="cb45-3"><a href="#cb45-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(gene_set_names)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -1020,12 +1020,12 @@ You visualize your results using a simple barplot, for example:</p>
 </div>
 </div>
 <p>Next, we will run GSEA. This will result in a table containing information for several pathways. We can then sort and filter those pathways to visualize only the top ones. You can select/filter them by either <code>p-value</code> or normalized enrichment score (<code>NES</code>).</p>
-<div id="cdca7387" class="cell" data-execution_count="30">
+<div id="cell-gsea-rank" class="cell" data-execution_count="30">
 <div class="sourceCode cell-code" id="cb47"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb47-1"><a href="#cb47-1" aria-hidden="true" tabindex="-1"></a>res <span class="op">=</span> gseapy.prerank(rnk<span class="op">=</span>gene_rank, gene_sets<span class="op">=</span><span class="st">'KEGG_2021_Human'</span>)</span>
 <span id="cb47-2"><a href="#cb47-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb47-3"><a href="#cb47-3" aria-hidden="true" tabindex="-1"></a>terms <span class="op">=</span> res.res2d.Term</span>
 <span id="cb47-4"><a href="#cb47-4" aria-hidden="true" tabindex="-1"></a>terms[:<span class="dv">10</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="30">
+<div id="gsea-rank" class="cell-output cell-output-display" data-execution_count="30">
 <pre><code>0               Cytokine-cytokine receptor interaction
 1                                 Rheumatoid arthritis
 2    Viral protein interaction with cytokine and cy...
@@ -1039,9 +1039,9 @@ You visualize your results using a simple barplot, for example:</p>
 Name: Term, dtype: object</code></pre>
 </div>
 </div>
-<div id="14f7f3ca" class="cell" data-execution_count="31">
+<div id="plot-gsea-rank" class="cell" data-execution_count="31">
 <div class="sourceCode cell-code" id="cb49"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb49-1"><a href="#cb49-1" aria-hidden="true" tabindex="-1"></a>gseapy.gseaplot(rank_metric<span class="op">=</span>res.ranking, term<span class="op">=</span>terms[<span class="dv">0</span>], <span class="op">**</span>res.results[terms[<span class="dv">0</span>]])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="31">
+<div id="plot-gsea-rank-1" class="cell-output cell-output-display" data-execution_count="31">
 <pre><code>[&lt;Axes: xlabel='Gene Rank', ylabel='Ranked metric'&gt;,
  &lt;Axes: &gt;,
  &lt;Axes: &gt;,
@@ -1050,7 +1050,7 @@ Name: Term, dtype: object</code></pre>
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><a href="scanpy_05_dge_files/figure-html/cell-32-output-2.png" class="lightbox" data-gallery="quarto-lightbox-gallery-26"><img src="scanpy_05_dge_files/figure-html/cell-32-output-2.png" width="464" height="446" class="figure-img"></a></p>
+<p><a href="scanpy_05_dge_files/figure-html/plot-gsea-rank-output-2.png" class="lightbox" data-gallery="quarto-lightbox-gallery-26"><img src="scanpy_05_dge_files/figure-html/plot-gsea-rank-output-2.png" id="plot-gsea-rank-2" width="464" height="446" class="figure-img"></a></p>
 </figure>
 </div>
 </div>
@@ -1069,7 +1069,7 @@ Discuss
 </div>
 </div>
 <p>Finally, let’s save the integrated data for further analysis.</p>
-<div id="34ec7f00" class="cell" data-execution_count="32">
+<div id="save" class="cell" data-execution_count="32">
 <div class="sourceCode cell-code" id="cb51"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb51-1"><a href="#cb51-1" aria-hidden="true" tabindex="-1"></a>adata.write_h5ad(<span class="st">'./data/covid/results/scanpy_covid_qc_dr_scanorama_cl_dge.h5ad'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
@@ -1079,7 +1079,7 @@ Discuss
 <summary>
 Click here
 </summary>
-<div id="6843674a" class="cell" data-execution_count="33">
+<div id="session" class="cell" data-execution_count="33">
 <div class="sourceCode cell-code" id="cb52"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb52-1"><a href="#cb52-1" aria-hidden="true" tabindex="-1"></a>sc.logging.print_versions()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>-----
@@ -1223,7 +1223,7 @@ notebook            7.2.2
 Python 3.10.10 | packaged by conda-forge | (main, Mar 24 2023, 20:17:34) [Clang 14.0.6 ]
 macOS-15.1.1-x86_64-i386-64bit
 -----
-Session information updated at 2025-01-13 08:48</code></pre>
+Session information updated at 2025-01-28 16:18</code></pre>
 </div>
 </div>
 </details>
@@ -1667,7 +1667,7 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
 </div>
   </div>
 </footer>
-<script>var lightboxQuarto = GLightbox({"selector":".lightbox","openEffect":"zoom","descPosition":"bottom","closeEffect":"zoom","loop":false});
+<script>var lightboxQuarto = GLightbox({"loop":false,"openEffect":"zoom","closeEffect":"zoom","selector":".lightbox","descPosition":"bottom"});
 (function() {
   let previousOnload = window.onload;
   window.onload = () => {

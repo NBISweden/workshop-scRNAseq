@@ -15,6 +15,7 @@ Code chunks run Python commands unless it starts with `%%bash`, in which case, t
 {{< meta dimred_prep_1 >}}
 
 ```{python}
+#| label: libraries
 import numpy as np
 import pandas as pd
 import scanpy as sc
@@ -33,6 +34,7 @@ sc.settings.set_figure_params(dpi=80)
 ```
 
 ```{python}
+#| label: fetch-data
 # download pre-computed data if missing or long compute
 fetch_data = True
 
@@ -59,6 +61,7 @@ adata
 Before variable gene selection we need to normalize and log transform the data. Then  store the full matrix in the `raw` slot before doing variable gene selection.
 
 ```{python}
+#| label: normalize
 # normalize to depth 10 000
 sc.pp.normalize_per_cell(adata, counts_per_cell_after=1e4)
 
@@ -77,6 +80,7 @@ adata
 {{< meta dimred_fs_2 >}}
 
 ```{python}
+#| label: hvg
 # compute variable genes
 sc.pp.highly_variable_genes(adata, min_mean=0.0125, max_mean=3, min_disp=0.5)
 print("Highly variable genes: %d"%sum(adata.var.highly_variable))
@@ -93,6 +97,7 @@ adata = adata[:, adata.var['highly_variable']]
 {{< meta dimred_zs_1 >}}
 
 ```{python}
+#| label: scale
 #run this line if you get the "AttributeError: swapaxes not found" 
 # adata = adata.copy()
 
@@ -110,12 +115,14 @@ sc.pp.scale(adata, max_value=10)
 To run PCA, you can use the function `pca()`.
 
 ```{python}
+#| label: pca
 sc.tl.pca(adata, svd_solver='arpack')
 ```
 
 {{< meta dimred_pca_2 >}}
 
 ```{python}
+#| label: pca-plot
 # plot more PCS
 sc.pl.pca(adata, color='sample', components = ['1,2','3,4','5,6','7,8'], ncols=2)
 ```
@@ -123,6 +130,7 @@ sc.pl.pca(adata, color='sample', components = ['1,2','3,4','5,6','7,8'], ncols=2
 To identify genes that contribute most to each PC, one can retrieve the loading matrix information.
 
 ```{python}
+#| label: pca-loadings
 #Plot loadings
 sc.pl.pca_loadings(adata, components=[1,2,3,4,5,6,7,8])
 
@@ -132,6 +140,7 @@ sc.pl.pca_loadings(adata, components=[1,2,3,4,5,6,7,8])
 The function to plot loading genes only plots genes on the positive axes. Instead plot as a heatmaps, with genes on both positive and negative side, one per pc, and plot their expression amongst cells ordered by their position along the pc.
 
 ```{python}
+#| label: pca-loadings-heatmap
 # adata.obsm["X_pca"] is the embeddings
 # adata.uns["pca"] is pc variance
 # adata.varm['PCs'] is the loadings
@@ -151,6 +160,7 @@ for pc in [1,2,3,4]:
 {{< meta dimred_pca_4 >}}
 
 ```{python}
+#| label: pca-elbow
 sc.pl.pca_variance_ratio(adata, log=True, n_pcs = 50)
 ```
 
@@ -161,12 +171,14 @@ sc.pl.pca_variance_ratio(adata, log=True, n_pcs = 50)
 {{< meta dimred_tsne_1 >}}
 
 ```{python}
+#| label: tsne
 sc.tl.tsne(adata, n_pcs = 30)
 ```
 
 {{< meta dimred_tsne_2 >}}
 
 ```{python}
+#| label: tsne-plot
 sc.pl.tsne(adata, color='sample')
 ```
 
@@ -175,12 +187,14 @@ sc.pl.tsne(adata, color='sample')
 The UMAP implementation in SCANPY uses a neighborhood graph as the distance matrix, so we need to first calculate the graph.
 
 ```{python}
+#| label: neighbors
 sc.pp.neighbors(adata, n_pcs = 30, n_neighbors = 20)
 ```
 
 {{< meta dimred_umap_1 >}}
 
 ```{python}
+#| label: umap
 sc.tl.umap(adata)
 sc.pl.umap(adata, color='sample')
 ```
@@ -188,6 +202,7 @@ sc.pl.umap(adata, color='sample')
 {{< meta dimred_umap_2 >}}
 
 ```{python}
+#| label: umap10
 # run with 10 components, save to a new object so that the umap with 2D is not overwritten.
 umap10 = sc.tl.umap(adata, n_components=10, copy=True)
 fig, axs = plt.subplots(1, 3, figsize=(10, 4), constrained_layout=True)
@@ -206,6 +221,7 @@ sc.pl.umap(adata, color='sample', title="UMAP", edges=True)
 {{< meta dimred_umap_3 >}}
 
 ```{python}
+#| label: plot-all
 fig, axs = plt.subplots(2, 2, figsize=(10, 8), constrained_layout=True)
 sc.pl.pca(adata, color='sample', components=['1,2'], ax=axs[0, 0], show=False)
 sc.pl.tsne(adata, color='sample', components=['1,2'], ax=axs[0, 1], show=False)
@@ -234,12 +250,14 @@ Finally, we can compare the PCA, tSNE and UMAP.
 |FCER1A, CST3|DCs|
 
 ```{python}
+#| label: plot-markers
 sc.pl.umap(adata, color=["CD3E", "CD4", "CD8A", "GNLY","NKG7", "MS4A1","CD14","LYZ","CST3","MS4A7","FCGR3A"])
 ```
 
 The default is to plot gene expression in the normalized and log-transformed data. You can also plot it on the scaled and corrected data by using `use_raw=False`. However, not all of these genes are included in the variable gene set, and hence are not included in the scaled `adata.X`, so we first need to filter them.
 
 ```{python}
+#| label: plot-markers2
 genes  = ["CD3E", "CD4", "CD8A", "GNLY","NKG7", "MS4A1","CD14","LYZ","CST3","MS4A7","FCGR3A"]
 var_genes = adata.var.highly_variable
 var_genes.index[var_genes]
@@ -252,6 +270,7 @@ sc.pl.umap(adata, color=varg, use_raw=False)
 :::
 
 ```{python}
+#| label: plot-qc
 sc.pl.umap(adata, color=['n_genes_by_counts', 'total_counts', 'pct_counts_mt','pct_counts_ribo', 'pct_counts_hb'], ncols=3,use_raw=False)
 ```
 
@@ -260,6 +279,7 @@ sc.pl.umap(adata, color=['n_genes_by_counts', 'total_counts', 'pct_counts_mt','p
 {{< meta dimred_save_1 >}}
 
 ```{python}
+#| label: save
 adata.write_h5ad('data/covid/results/scanpy_covid_qc_dr.h5ad')
 ```
 
@@ -270,6 +290,7 @@ Just as a reminder, you need to keep in mind what you have in the X matrix. Afte
 We stored the expression of all genes in `raw.X` after doing lognormalization so that matrix is a sparse matrix with logtransformed values.
 
 ```{python}
+#| label: check-data
 print(adata.X.shape)
 print(adata.raw.X.shape)
 
@@ -285,6 +306,7 @@ print(adata.raw.X[:10,:10])
   <summary>Click here</summary>
 
 ```{python}
+#| label: session
 sc.logging.print_versions()
 ```
 
