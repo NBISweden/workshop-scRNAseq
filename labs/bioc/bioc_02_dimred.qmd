@@ -14,6 +14,7 @@ Code chunks run R commands unless otherwise specified.
 {{< meta dimred_prep_1 >}}
 
 ```{r}
+#| label: libraries
 suppressPackageStartupMessages({
     library(scater)
     library(scran)
@@ -24,6 +25,8 @@ suppressPackageStartupMessages({
 ```
 
 ```{r}
+#| label: fetch-data
+
 # download pre-computed data if missing or long compute
 fetch_data <- TRUE
 
@@ -46,7 +49,7 @@ sce <- readRDS(path_file)
 With `modelGeneVar` we can specify a blocking parameter, so the trend fitting and variance decomposition is done separately for each batch.
 
 ```{r}
-
+#| label: hvg
 
 sce <- computeSumFactors(sce, sizes = c(20, 40, 60, 80))
 sce <- logNormCounts(sce)
@@ -58,6 +61,7 @@ hvgs <- getTopHVGs(var.out, n = 2000)
 We can plot the *total* variance and the *biological* variance vs mean expressioni for one of the samples. 
 
 ```{r}
+#| label: plot-hvg
 #| fig-height: 4
 #| fig-width: 8
 
@@ -95,6 +99,7 @@ fit.var <- metadata(var.out$per.block[[1]])
 We can plot the same for all the samples, also showing the technical variance.
 
 ```{r}
+#| label: plot-hvg-sample
 #| fig-height: 4
 #| fig-width: 8
 
@@ -128,6 +133,7 @@ par(mfrow = c(1, 3))
 However, unlike the Seurat, this step is implemented inside the PCA function below. Here we will show you how to add the scaledData back to the object.
 
 ```{r}
+#| label: scale
 # sce@assays$data@listData$scaled.data <- apply(exprs(sce)[rownames(hvg.out),,drop=FALSE],2,function(x) scale(x,T,T))
 # rownames(sce@assays$data@listData$scaled.data) <- rownames(hvg.out)
 ```
@@ -140,6 +146,7 @@ However, unlike the Seurat, this step is implemented inside the PCA function bel
 We use the `logcounts` and then set `scale_features` to TRUE in order to scale each gene.
 
 ```{r}
+#| label: pca
 # runPCA and specify the variable genes to use for dim reduction with subset_row
 sce <- runPCA(sce, exprs_values = "logcounts", ncomponents = 50, subset_row = hvgs, scale = TRUE)
 ```
@@ -147,6 +154,7 @@ sce <- runPCA(sce, exprs_values = "logcounts", ncomponents = 50, subset_row = hv
 {{< meta dimred_pca_2 >}}
 
 ```{r}
+#| label: pca-plot
 #| fig-height: 3.5
 #| fig-width: 10
 
@@ -163,6 +171,7 @@ wrap_plots(
 Here, we can check how the different metadata variables contributes to each PC. This can be important to look at to understand different biases you may have in your data.
 
 ```{r}
+#| label: pca-explanatory
 #| fig-height: 3.5
 #| fig-width: 10
 
@@ -173,6 +182,7 @@ Clearly, the sample id contributes to many of the PCs and PC7 but you can also s
 {{< meta dimred_pca_4 >}}
 
 ```{r}
+#| label: pca-elbow
 #| fig-height: 4
 #| fig-width: 4
 
@@ -187,6 +197,7 @@ points(attr(reducedDim(sce, "PCA"), "percentVar")[1:50] * 100, pch = 21, bg = "g
 {{< meta dimred_tsne_1 >}}
 
 ```{r}
+#| label: run-tsne
 set.seed(42)
 sce <- runTSNE(sce, dimred = "PCA", n_dimred = 30, perplexity = 30, name = "tSNE_on_PCA")
 ```
@@ -194,6 +205,7 @@ sce <- runTSNE(sce, dimred = "PCA", n_dimred = 30, perplexity = 30, name = "tSNE
 {{< meta dimred_tsne_2 >}}
 
 ```{r}
+#| label: plot-tsne
 #| fig-height: 5
 #| fig-width: 7
 
@@ -205,6 +217,8 @@ plotReducedDim(sce, dimred = "tSNE_on_PCA", colour_by = "sample")
 {{< meta dimred_umap_1 >}}
 
 ```{r}
+#| label: run-umap
+
 sce <- runUMAP(sce, dimred = "PCA", n_dimred = 30, ncomponents = 2, name = "UMAP_on_PCA")
 # see ?umap and ?runUMAP for more info
 ```
@@ -212,6 +226,7 @@ sce <- runUMAP(sce, dimred = "PCA", n_dimred = 30, ncomponents = 2, name = "UMAP
 {{< meta dimred_umap_2 >}}
 
 ```{r}
+#| label: run-umap2
 sce <- runUMAP(sce, dimred = "PCA", n_dimred = 30, ncomponents = 10, name = "UMAP10_on_PCA")
 # see ?umap and ?runUMAP for more info
 ```
@@ -219,6 +234,7 @@ sce <- runUMAP(sce, dimred = "PCA", n_dimred = 30, ncomponents = 10, name = "UMA
 {{< meta dimred_umap_3 >}}
 
 ```{r}
+#| label: plot-umap
 #| fig-height: 3.5
 #| fig-width: 10
 
@@ -246,6 +262,7 @@ wrap_plots(
 {{< meta dimred_zsg_zs_1 >}}
 
 ```{r}
+#| label: run-umap-sd
 sce <- runUMAP(sce, exprs_values = "logcounts", name = "UMAP_on_ScaleData")
 ```
 
@@ -254,6 +271,7 @@ sce <- runUMAP(sce, exprs_values = "logcounts", name = "UMAP_on_ScaleData")
 {{< meta dimred_zsg_g_1 >}}
 
 ```{r}
+#| label: run-umap-graph
 # Build Graph
 nn <- RANN::nn2(reducedDim(sce, "PCA"), k = 30)
 names(nn) <- c("idx", "dist")
@@ -269,6 +287,7 @@ reducedDim(sce, "UMAP_on_Graph") <- uwot::umap(X = NULL, n_components = 2, nn_me
 {{< meta dimred_zsg_g_2 >}}
 
 ```{r}
+#| label: plot-umap-all
 #| fig-height: 3.5
 #| fig-width: 10
 
@@ -299,6 +318,7 @@ wrap_plots(
 |FCER1A, CST3|DCs|
 
 ```{r}
+#| label: plot-markers
 #| fig-height: 14
 #| fig-width: 11
 
@@ -317,6 +337,7 @@ wrap_plots(plotlist, ncol = 3)
 
 
 ```{r}
+#| label: plot-qc
 #| fig-height: 8
 #| fig-width: 11
 
@@ -337,6 +358,7 @@ wrap_plots(plotlist, ncol = 3)
 {{< meta dimred_save_1 >}}
 
 ```{r}
+#| label: save
 saveRDS(sce, "data/covid/results/bioc_covid_qc_dr.rds")
 ```
 
@@ -346,6 +368,7 @@ saveRDS(sce, "data/covid/results/bioc_covid_qc_dr.rds")
   <summary>Click here</summary>
 
 ```{r}
+#| label: session
 sessionInfo()
 ```
 

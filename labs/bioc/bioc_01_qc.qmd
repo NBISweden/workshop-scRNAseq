@@ -15,6 +15,7 @@ Code chunks run R commands unless otherwise specified.
 
 
 ```{r}
+#| label: paths
 # download pre-computed annotation
 fetch_annotation <- TRUE
 
@@ -31,6 +32,7 @@ if (!dir.exists(path_results)) dir.create(path_results, recursive = T)
 ```
 
 ```{r}
+#| label: fetch-data
 file_list <- c(
     "normal_pbmc_13.h5", "normal_pbmc_14.h5", "normal_pbmc_19.h5", "normal_pbmc_5.h5",
     "ncov_pbmc_15.h5", "ncov_pbmc_16.h5", "ncov_pbmc_17.h5", "ncov_pbmc_1.h5"
@@ -48,6 +50,8 @@ for (i in file_list) {
 {{< meta qc_data_2 >}}
 
 ```{r}
+#| label: libraries
+
 suppressPackageStartupMessages({
     library(scater)
     library(scran)
@@ -60,6 +64,7 @@ suppressPackageStartupMessages({
 {{< meta qc_data_3 >}}
 
 ```{r}
+#| label: read-data
 cov.15 <- Seurat::Read10X_h5(
     filename = file.path(path_covid, "ncov_pbmc_15.h5"),
     use.names = T
@@ -100,6 +105,8 @@ ctrl.19 <- Seurat::Read10X_h5(
 {{< meta qc_collate_1 >}}
 
 ```{r}
+#| label: create-sce
+
 sce <- SingleCellExperiment(assays = list(counts = cbind(cov.1, cov.15, cov.16, cov.17, ctrl.5, ctrl.13, ctrl.14,ctrl.19)))
 dim(sce)
 # Adding metadata
@@ -110,6 +117,8 @@ sce@colData$type <- ifelse(grepl("cov", sce@colData$sample), "Covid", "Control")
 {{< meta qc_collate_2 >}}
 
 ```{r}
+#| label: gc
+
 # remove all objects that will not be used.
 rm(cov.15, cov.1, cov.17, cov.16, ctrl.5, ctrl.13, ctrl.14, ctrl.19)
 # run garbage collect to free up memory
@@ -119,6 +128,8 @@ gc()
 {{< meta qc_collate_3 >}}
 
 ```{r }
+#| label: show-object
+
 head(counts(sce)[, 1:10])
 head(sce@colData, 10)
 ```
@@ -130,6 +141,8 @@ head(sce@colData, 10)
 {{< meta qc_calqc_2 >}}
 
 ```{r}
+#| label: qc-genes
+
 # Mitochondrial genes
 mito_genes <- rownames(sce)[grep("^MT-", rownames(sce))]
 # Ribosomal genes
@@ -141,6 +154,7 @@ hb_genes <- rownames(sce)[grep("^HB[^(P|E|S)]", rownames(sce))]
 First, let Scran calculate some general qc-stats for genes and cells with the function `perCellQCMetrics`. It can also calculate proportion of counts for specific gene subsets, so first we need to define which genes are mitochondrial, ribosomal and hemoglobin.
 
 ```{r}
+#| label: qc-calc
 sce <- addPerCellQC(sce, flatten = T, subsets = list(mt = mito_genes, hb = hb_genes, ribo = ribo_genes))
 
 # Way2: Doing it manually
@@ -150,6 +164,8 @@ sce@colData$percent_mito <- Matrix::colSums(counts(sce)[mito_genes, ]) / sce@col
 {{< meta qc_calqc_3 >}}
 
 ```{r}
+#| label: coldata
+
 head(colData(sce))
 ```
 
@@ -158,6 +174,7 @@ head(colData(sce))
 {{< meta qc_plotqc_1 >}}
 
 ```{r}
+#| label: qc-vln
 #| fig-height: 6
 #| fig-width: 10
 
@@ -178,6 +195,7 @@ wrap_plots(
 {{< meta qc_plotqc_2 >}}
 
 ```{r}
+#| label: qc-scatter
 #| fig-height: 5
 #| fig-width: 6
 plotColData(sce, x = "total", y = "detected", colour_by = "sample")
@@ -196,6 +214,7 @@ plotColData(sce, x = "total", y = "detected", colour_by = "sample")
 In Scran, we can use the function `quickPerCellQC` to filter out outliers from distributions of qc stats, such as detected genes, gene subsets etc. But in this case, we will take one setting at a time and run through the steps of filtering cells.
 
 ```{r}
+#| label: filter
 dim(sce)
 
 selected_c <- colnames(sce)[sce$detected > 200]
@@ -225,6 +244,7 @@ dim(sce.filt)
 In Scater, you can also use the function `plotHighestExprs()` to plot the gene contribution, but the function is quite slow, so we will do it on our own instead..
 
 ```{r}
+#| label: top-genes
 #| fig-height: 7
 #| fig-width: 7
 # Compute the relative expression of each gene per cell
@@ -246,6 +266,7 @@ rm(C)
 {{< meta qc_filter_mr_1 >}}
 
 ```{r}
+#| label: filter2
 selected_mito <- sce.filt$subsets_mt_percent < 20
 selected_ribo <- sce.filt$subsets_ribo_percent > 5
 
@@ -261,6 +282,7 @@ dim(sce.filt)
 {{< meta qc_filter_plot_1 >}}
 
 ```{r}
+#| label: qc-vln-filt
 #| fig-height: 6
 #| fig-width: 10
 
@@ -279,6 +301,8 @@ wrap_plots(
 {{< meta qc_filter_genes_1 >}}
 
 ```{r}
+#| label: filt-genes
+
 dim(sce.filt)
 
 # Filter MALAT1
@@ -308,6 +332,7 @@ dim(sce.filt)
 Here is the code to download annotation data from Ensembl using biomaRt. We will not run this now and instead use a pre-computed file in the step below.
 
 ```{r}
+#| label: annot
 # fetch_annotation is defined at the top of this document
 if (!fetch_annotation) {
   suppressMessages(library(biomaRt))
@@ -330,6 +355,8 @@ if (!fetch_annotation) {
 Download precomputed data.
 
 ```{r}
+#| label: fetch-annot
+
 # fetch_annotation is defined at the top of this document
 if (fetch_annotation) {
   genes_file <- file.path(path_results, "genes_table.csv")
@@ -340,6 +367,8 @@ if (fetch_annotation) {
 ```
 
 ```{r}
+#| label: read-annot
+
 genes.table <- read.csv(genes_file)
 genes.table <- genes.table[genes.table$external_gene_name %in% rownames(sce.filt), ]
 ```
@@ -347,6 +376,8 @@ genes.table <- genes.table[genes.table$external_gene_name %in% rownames(sce.filt
 {{< meta qc_sex_3 >}}
 
 ```{r}
+#| label: par
+
 par1 = c(10001, 2781479)
 par2 = c(56887903, 57217415)
 p1.gene = genes.table$external_gene_name[genes.table$start_position > par1[1] & genes.table$start_position < par1[2] & genes.table$chromosome_name == "Y"]
@@ -361,6 +392,7 @@ sce.filt@colData$pct_chrY <- Matrix::colSums(counts(sce.filt)[chrY.gene, ]) / co
 {{< meta qc_sex_4 >}}
 
 ```{r}
+#| label: sex-scatter
 #| fig-height: 5
 #| fig-width: 5
 
@@ -372,6 +404,7 @@ plotColData(sce.filt, "XIST", "pct_chrY")
 {{< meta qc_sex_5 >}}
 
 ```{r}
+#| label: sex-vln
 #| fig-height: 4
 #| fig-width: 8
 
@@ -395,6 +428,8 @@ wrap_plots(
 {{< meta qc_cellcycle_1 >}}
 
 ```{r}
+#| label: cc
+
 hs.pairs <- readRDS(system.file("exdata", "human_cycle_markers.rds", package = "scran"))
 anno <- select(org.Hs.eg.db, keys = rownames(sce.filt), keytype = "SYMBOL", column = "ENSEMBL")
 ensembl <- anno$ENSEMBL[match(rownames(sce.filt), anno$SYMBOL)]
@@ -422,6 +457,7 @@ table(sce.filt$phase)
 {{< meta qc_cellcycle_2 >}}
 
 ```{r}
+#| label: cc-plot
 #| fig-height: 4
 #| fig-width: 14
 
@@ -449,6 +485,8 @@ Cyclone does an automatic prediction of cell cycle phase with a default cutoff o
 There is a method to predict if a cluster consists of mainly doublets `findDoubletClusters()`, but we can also predict individual cells based on simulations using the function `computeDoubletDensity()` which we will do here. Doublet detection will be performed using PCA, so we need to first normalize the data and run variable gene detection, as well as UMAP for visualization. These steps will be explored in more detail in coming exercises.
 
 ```{r}
+#| label: doublet-norm
+
 sce.filt <- logNormCounts(sce.filt)
 dec <- modelGeneVar(sce.filt, block = sce.filt$sample)
 hvgs <- getTopHVGs(dec, n = 2000)
@@ -459,11 +497,13 @@ sce.filt <- runUMAP(sce.filt, pca = 10)
 ```
 
 ```{r}
+#| label: doublet
 # run computeDoubletDensity with 10 principal components.
 sce.filt <- scDblFinder(sce.filt, dims = 10)
 ```
 
 ```{r}
+#| label: doublet-plot
 #| fig-height: 5
 #| fig-width: 14
 wrap_plots(
@@ -477,6 +517,7 @@ wrap_plots(
 {{< meta qc_doublet_3 >}}
 
 ```{r}
+#| label: doublet-vln
 plotColData(sce.filt, y = "detected", x = "scDblFinder.class")
 
 ```
@@ -486,6 +527,7 @@ plotColData(sce.filt, y = "detected", x = "scDblFinder.class")
 {{< meta qc_doublet_4 >}}
 
 ```{r}
+#| label: doublet-filt
 sce.filt <- sce.filt[, sce.filt$scDblFinder.class == "singlet"]
 dim(sce.filt)
 ```
@@ -494,6 +536,7 @@ dim(sce.filt)
 {{< meta qc_doublet_5 >}}
 
 ```{r}
+#| label: view-data
 table(sce$sample)
 table(sce.filt$sample)
 ```
@@ -504,6 +547,7 @@ table(sce.filt$sample)
 {{< meta qc_save_1 >}}
 
 ```{r}
+#| label: save
 saveRDS(sce.filt, file.path(path_results, "bioc_covid_qc.rds"))
 ```
 
@@ -513,6 +557,7 @@ saveRDS(sce.filt, file.path(path_results, "bioc_covid_qc.rds"))
   <summary>Click here</summary>
 
 ```{r}
+#| label: session
 sessionInfo()
 ```
 

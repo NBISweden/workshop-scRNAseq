@@ -14,6 +14,8 @@ Code chunks run R commands unless otherwise specified.
 {{< meta clust_2 >}}
 
 ```{r}
+#| label: libraries
+
 suppressPackageStartupMessages({
     library(scater)
     library(scran)
@@ -27,6 +29,8 @@ suppressPackageStartupMessages({
 ```
 
 ```{r}
+#| label: fetch-data
+
 # download pre-computed data if missing or long compute
 fetch_data <- TRUE
 
@@ -51,6 +55,8 @@ print(reducedDims(sce))
 {{< meta clust_graphclust_knn_1 >}}
 
 ```{r}
+#| label: neighbors
+
 # These 2 lines are for demonstration purposes only
 g <- buildKNNGraph(sce, k = 30, use.dimred = "harmony")
 reducedDim(sce, "KNN") <- igraph::as_adjacency_matrix(g)
@@ -63,6 +69,7 @@ reducedDim(sce, "SNN") <- as_adjacency_matrix(g, attr = "weight")
 {{< meta clust_graphclust_knn_2 >}}
 
 ```{r}
+#| label: plot-graph
 #| fig-height: 6
 #| fig-width: 6
 
@@ -111,6 +118,7 @@ OBS! There is no method to select fewer than the total 50 components in the embe
 
 
 ```{r}
+#| label: cluster
 #| fig-height: 8
 #| fig-width: 10
 
@@ -146,6 +154,7 @@ wrap_plots(
 {{< meta clust_graphclust_graph_2 >}}
 
 ```{r}
+#| label: clustree
 #| fig-height: 8
 #| fig-width: 8
 
@@ -158,6 +167,8 @@ clustree(sce, prefix = "louvain_k")
 {{< meta clust_kmean_1 >}}
 
 ```{r}
+#| label: kmeans
+
 #| fig-height: 8
 #| fig-width: 10
 
@@ -181,6 +192,7 @@ wrap_plots(
 ```
 
 ```{r}
+#| label: clustree-kmeans
 #| fig-height: 8
 #| fig-width: 8
 
@@ -196,12 +208,14 @@ There is the optioni to run hierarchical clustering in the `clusterCells` functi
 {{< meta clust_hier_dist_1 >}}
 
 ```{r}
+#| label: hc-dist
 d <- dist(reducedDim(sce, "harmony2"), method = "euclidean")
 ```
 
 {{< meta clust_hier_dist_2 >}}
 
 ```{r}
+#| label: hc-dist2
 # Compute sample correlations
 sample_cor <- cor(Matrix::t(reducedDim(sce, "harmony2")))
 
@@ -218,6 +232,7 @@ d2 <- as.dist(sample_cor)
 
 
 ```{r}
+#| label: hc
 # euclidean
 h_euclidean <- hclust(d, method = "ward.D2")
 
@@ -229,6 +244,7 @@ h_correlation <- hclust(d2, method = "ward.D2")
 {{< meta clust_hier_clust_2 >}}
 
 ```{r}
+#| label: plot-hc
 #| fig-height: 8
 #| fig-width: 13
 
@@ -262,6 +278,7 @@ wrap_plots(
 {{< meta clust_save >}}
 
 ```{r}
+#| label: save
 saveRDS(sce, "data/covid/results/bioc_covid_qc_dr_int_cl.rds")
 ```
 
@@ -270,6 +287,7 @@ saveRDS(sce, "data/covid/results/bioc_covid_qc_dr_int_cl.rds")
 {{< meta clust_distribution_1 >}}
 
 ```{r}
+#| label: clust-distribution
 #| fig-height: 4
 #| fig-width: 9
 
@@ -286,6 +304,7 @@ p1 + p2
 {{< meta clust_distribution_3 >}}
 
 ```{r}
+#| label: clust-distribution2
 ggplot(as.data.frame(colData(sce)), aes(x = sample, fill = leiden_k20)) +
     geom_bar(position = "fill")
 ```
@@ -296,6 +315,7 @@ ggplot(as.data.frame(colData(sce)), aes(x = sample, fill = leiden_k20)) +
 
 
 ```{r}
+#| label: plot-qc
 #| fig-height: 8
 #| fig-width: 10
 
@@ -319,6 +339,7 @@ wrap_plots(
 {{< meta clust_sub_2 >}}
 
 ```{r}
+#| label: plot-tcells
 #| fig-height: 8
 #| fig-width: 10
 
@@ -335,6 +356,7 @@ wrap_plots(
 We can clearly see what clusters are T-cell clusters, so lets subset the data for those cells
 
 ```{r}
+#| label: select-tcells
 tcells = sce[,sce$leiden_k30 %in% c(3,4)]
 
 table(tcells$sample)
@@ -343,6 +365,8 @@ table(tcells$sample)
 {{< meta clust_sub_3 >}}
 
 ```{r}
+#| label: hvg-tcells
+
 var.out <- modelGeneVar(tcells, block = tcells$sample)
 hvgs.tcell <- getTopHVGs(var.out, n = 2000)
 
@@ -354,6 +378,7 @@ length(intersect(metadata(sce)$hvgs, hvgs.tcell))
 {{< meta clust_sub_5 >}}
 
 ```{r}
+#| label: subcluster
 tcells = runPCA(tcells, exprs_values = "logcounts", ncomponents = 30, subset_row = hvgs.tcell, scale = TRUE)
 
 
@@ -372,6 +397,7 @@ tcells$leiden_tcell_k20 <- clusterCells(tcells, use.dimred = "harmony", BLUSPARA
 ```
 
 ```{r}
+#| label: plot-subcluster
 #| fig-height: 6
 #| fig-width: 10
 
@@ -392,7 +418,7 @@ As you can see, we do have some new clusters that did not stand out before. But 
 Lets also have a look at the same genes in the new umap:
 
 ```{r}
-
+#| label: subcluster-gene-plot
 wrap_plots(
     plotReducedDim(tcells, dimred = "UMAP_tcell", colour_by = "CD3E"),
     plotReducedDim(tcells, dimred = "UMAP_tcell", colour_by = "CD4"),
@@ -410,6 +436,7 @@ wrap_plots(
   <summary>Click here</summary>
 
 ```{r}
+#| label: session
 sessionInfo()
 ```
 

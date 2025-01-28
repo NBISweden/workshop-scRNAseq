@@ -24,6 +24,7 @@ Code chunks run R commands unless otherwise specified.
 
 
 ```{r}
+#| label: libraries
 
 suppressPackageStartupMessages({
     library(scater)
@@ -41,6 +42,7 @@ condapath =  "/Users/asabjor/miniconda3/envs/scanpy_2024_nopip"
 ```
 
 ```{r}
+#| label: fetch-data
 # download pre-computed data if missing or long compute
 fetch_data <- TRUE
 
@@ -61,6 +63,7 @@ print(reducedDims(sce))
 If you recall from the dimensionality reduction exercise, we can run variable genes detection with a blocking parameter to avoid including batch effect genes. Here we will explore the genesets we get with and without the blocking parameter and also the variable genes per dataset.
 
 ```{r}
+#| label: hvg
 
 var.out <- modelGeneVar(sce, block = sce$sample)
 hvgs <- getTopHVGs(var.out, n = 2000)
@@ -85,6 +88,7 @@ overlap <- sapply(hvgs_per_dataset, function(x) {
 ```
 
 ```{r}
+#| label: hvg-overlap
 #| fig-height: 4
 #| fig-width: 8
 
@@ -101,6 +105,8 @@ For all downstream integration we will use this set of genes so that it is compa
 We also store the variable gene information in the object for use furhter down the line. 
 
 ```{r}
+#| label: hvg2
+
 metadata(sce)$hvgs = hvgs
 ```
 
@@ -110,6 +116,7 @@ metadata(sce)$hvgs = hvgs
 The mutual nearest neighbors (MNN) approach within the scran package utilizes a novel approach to adjust for batch effects. The `fastMNN()` function returns a representation of the data with reduced dimensionality, which can be used in a similar fashion to other lower-dimensional representations such as PCA. In particular, this representation can be used for downstream methods such as clustering. The BNPARAM can be used to specify the specific nearest neighbors method to use from the BiocNeighbors package. Here we make use of the [Annoy library](https://github.com/spotify/annoy) via the `BiocNeighbors::AnnoyParam()` argument. We save the reduced-dimension MNN representation into the reducedDims slot of our sce object.
 
 ```{r}
+#| label: mnn
 mnn_out <- batchelor::fastMNN(sce, subset.row = hvgs, batch = factor(sce$sample), k = 20, d = 50)
 ```
 
@@ -120,6 +127,7 @@ mnn_out <- batchelor::fastMNN(sce, subset.row = hvgs, batch = factor(sce$sample)
 We will take the reduced dimension in the new `mnn_out` object and add it into the original `sce` object. 
 
 ```{r}
+#| label: dimred-mnn
 mnn_dim <- reducedDim(mnn_out, "corrected")
 reducedDim(sce, "MNN") <- mnn_dim
 ```
@@ -127,12 +135,14 @@ reducedDim(sce, "MNN") <- mnn_dim
 We can observe that a new assay slot is now created under the name `MNN`.
 
 ```{r}
+#| label: dimred-list
 reducedDims(sce)
 ```
 
 Thus, the result from `fastMNN()` should solely be treated as a reduced dimensionality representation, suitable for direct plotting, TSNE/UMAP, clustering, and trajectory analysis that relies on such results.
 
 ```{r}
+#| label: proc-mnn
 set.seed(42)
 sce <- runTSNE(sce, dimred = "MNN", n_dimred = 50, perplexity = 30, name = "tSNE_on_MNN")
 sce <- runUMAP(sce, dimred = "MNN", n_dimred = 50, ncomponents = 2, name = "UMAP_on_MNN")
@@ -141,6 +151,7 @@ sce <- runUMAP(sce, dimred = "MNN", n_dimred = 50, ncomponents = 2, name = "UMAP
 {{< meta int_plot >}}
 
 ```{r}
+#| label: plot-mnn
 #| fig-height: 6
 #| fig-width: 12
 
@@ -169,6 +180,7 @@ wrap_plots(
 |FCER1A, CST3|DCs|
 
 ```{r}
+#| label: plot-markers
 #| fig-height: 16
 #| fig-width: 13
 
@@ -186,6 +198,7 @@ wrap_plots(plotlist = plotlist, ncol = 3)
 
 
 ```{r}
+#| label: harmony
 #| fig-height: 5
 #| fig-width: 14
 
@@ -214,6 +227,7 @@ plotReducedDim(sce, dimred = "UMAP_on_Harmony", colour_by = "sample", point_size
 {{< meta dimred_scanorama_2 >}}
 
 ```{r}
+#| label: prep-scanorama
 #| fig-height: 5
 #| fig-width: 15
 
@@ -230,6 +244,7 @@ Scanorama is implemented in python, but through reticulate we can load python pa
 At the top of this script, we set the variable `condapath` to point to the conda environment where scanorama is included.
 
 ```{r}
+#| label: scanorama
 #| fig-height: 5
 #| fig-width: 15
 
@@ -264,6 +279,7 @@ Now we will plot UMAPS with all three integration methods side by side.
 
 
 ```{r}
+#| label: plot-all
 #| fig-height: 8
 #| fig-width: 10
 
@@ -284,6 +300,8 @@ wrap_plots(p1, p2, p3, p4, nrow = 2) +
 {{< meta int_save >}}
 
 ```{r}
+#| label: save
+
 saveRDS(sce, "data/covid/results/bioc_covid_qc_dr_int.rds")
 ```
 
@@ -293,6 +311,8 @@ saveRDS(sce, "data/covid/results/bioc_covid_qc_dr_int.rds")
   <summary>Click here</summary>
 
 ```{r}
+#| label: session
+
 sessionInfo()
 ```
 
