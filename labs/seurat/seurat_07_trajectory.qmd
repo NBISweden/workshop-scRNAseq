@@ -12,6 +12,8 @@ Code chunks run R commands unless otherwise specified.
 ## Loading libraries
 
 ```{r}
+#| label: libraries
+
 suppressPackageStartupMessages({
   library(Seurat)
   library(plotly)
@@ -32,6 +34,8 @@ pal <- rep(sample(pal, length(pal)), 200)
 Nice function to easily draw a graph:
 
 ```{r}
+#| label: graph-func
+
 # Add graph to the base R graphics plot
 draw_graph <- function(layout, graph, lwd = 0.2, col = "grey") {
   res <- rep(x = 1:(length(graph@p) - 1), times = (graph@p[-1] - graph@p[-length(graph@p)]))
@@ -59,6 +63,8 @@ The bone marrow is the source of adult immune cells, and contains virtually all 
 You can download the data:
 
 ```{r}
+#| label: fetch-data
+
 # download pre-computed data if missing or long compute
 fetch_data <- TRUE
 
@@ -80,7 +86,9 @@ In addition there was some manual filtering done to remove clusters that are dis
 
 ## Reading data
 
-```{r }
+```{r}
+#| label: read-data
+
 obj <- readRDS("data/trajectory/trajectory_seurat_filtered.rds")
 
 # Calculate cluster centroids (for plotting the labels later)
@@ -92,6 +100,7 @@ centroids2d <- as.matrix(t(t(obj@reductions$umap@cell.embeddings) %*% mm) / Matr
 Let's visualize which clusters we have in our dataset:
 
 ```{r}
+#| label: plot-data
 #| fig-height: 8
 #| fig-width: 8
 
@@ -107,6 +116,8 @@ wrap_plots(pl)
 You can check, for example, the number of cells in each cluster:
 
 ```{r}
+#| label: table-clust
+
 table(obj$clusters)
 ```
 
@@ -128,6 +139,7 @@ It is crucial that you have some understanding of the dataset being analyzed. Wh
 | Pf4     | Megakaryocyte cell lineage |
 
 ```{r}
+#| label: plot-markers
 #| fig-height: 9
 #| fig-width: 12
 
@@ -147,9 +159,11 @@ Another way to better explore your data is to look in higher dimensions, to real
 The UMAP needs to be computed to results in exactly 3 dimensions
 :::
 
-Since the steps below are identical to both `Seurat` and `Scran` pipelines, we will extract the matrices from both, so it is clear what is being used where and to remove long lines of code used to get those matrices. We will use them all. Plot in 3D with `Plotly`:
+Since the steps below are identical to both `Seurat` and `Bioconductor` toolkits, we will extract the matrices from both, so it is clear what is being used where and to remove long lines of code used to get those matrices. We will use them all. Plot in 3D with `Plotly`:
 
 ```{r}
+#| label: seurat-extract
+
 df <- data.frame(obj@reductions$umap3d@cell.embeddings, variable = factor(obj$clusters_use))
 colnames(df)[1:3] <- c("UMAP_1", "UMAP_2", "UMAP_3")
 p_State <- plot_ly(df, x = ~UMAP_1, y = ~UMAP_2, z = ~UMAP_3, color = ~variable, colors = pal, size = .5)  %>% add_markers()
@@ -157,6 +171,7 @@ p_State
 ```
 
 ```{r}
+#| label: bioc-extract
 #| eval: false
 # to save interactive plot and open in a new tab
 try(htmlwidgets::saveWidget(p_State, selfcontained = T, "data/trajectory/umap_3d_clustering_plotly.html"), silent = T)
@@ -166,6 +181,7 @@ utils::browseURL("data/trajectory/umap_3d_clustering_plotly.html")
 We can now compute the lineages on these dataset.
 
 ```{r}
+#| label: plot-lineages
 #| fig-height: 6
 #| fig-width: 6
 
@@ -211,6 +227,7 @@ Once the clusters are connected, Slingshot allows you to transform them to a smo
 Since the function `getCurves()` takes some time to run, we can speed up the convergence of the curve fitting process by reducing the amount of cells to use in each lineage. Ideally you could all cells, but here we had set `approx_points` to 300 to speed up. Feel free to adjust that for your dataset.
 
 ```{r}
+#| label: principal-curves
 #| fig-height: 6
 #| fig-width: 6
 
@@ -236,6 +253,7 @@ curves
 With those results in hands, we can now compute the differentiation **pseudotime**.
 
 ```{r}
+#| label: pseudotime
 #| fig-height: 6
 #| fig-width: 6
 
@@ -273,6 +291,8 @@ The main way to interpret a trajectory is to find genes that change along the tr
 `tradeSeq` is a recently proposed algorithm to find trajectory differentially expressed genes. It works by smoothing the gene expression along the trajectory by fitting a smoother using generalized additive models (GAMs), and testing whether certain coefficients are statistically different between points in the trajectory.
 
 ```{r}
+#| label: multicore
+
 BiocParallel::register(BiocParallel::MulticoreParam())
 ```
 
@@ -283,6 +303,8 @@ In an ideal experiment, you would use all the genes, or at least those defined a
 :::
 
 ```{r}
+#| label: subset-genes
+
 sel_cells <- split(colnames(obj@assays$RNA@data), obj$clusters_use)
 sel_cells <- unlist(lapply(sel_cells, function(x) {
   set.seed(1)
@@ -303,6 +325,8 @@ This is a slow compute intensive step, we will not run this now and instead use 
 :::
 
 ```{r}
+#| label: fit-gam
+
 path_file <- "data/trajectory/seurat_scegam.rds"
 
 # fetch_data is defined at the top of this document
@@ -321,6 +345,8 @@ if (!fetch_data) {
 Download the precomputed file.
 
 ```{r}
+#| label: fetch-gam
+
 path_file <- "data/trajectory/seurat_scegam.rds"
 
 # fetch_data is defined at the top of this document
@@ -330,11 +356,13 @@ if (fetch_data) {
 ```
 
 ```{r}
+#| label: load-gam
 # read data
 sceGAM <- readRDS(path_file)
 ```
 
 ```{r}
+#| label: plot-gam
 #| fig-height: 5
 #| fig-width: 7
 
@@ -343,6 +371,7 @@ lineages
 ```
 
 ```{r}
+#| label: plot-gam-lineages
 #| fig-height: 6
 #| fig-width: 6
 
@@ -364,6 +393,7 @@ names(lc) <- gsub("Lineage", "L", names(lc))
 We can first look at general trends of gene expression across pseudotime.
 
 ```{r}
+#| label: dge
 set.seed(8)
 res <- na.omit(associationTest(sceGAM, contrastType = "consecutive"))
 res <- res[res$pvalue < 1e-3, ]
@@ -375,6 +405,7 @@ res[1:10, ]
 We can plot their expression:
 
 ```{r}
+#| label: plot-dge
 #| fig-height: 12
 #| fig-width: 12
 
@@ -405,6 +436,8 @@ for (i in vars) {
 We can define custom pseudotime values of interest if we’re interested in genes that change between particular point in pseudotime. By default, we can look at differences between start and end:
 
 ```{r}
+#| label: dge-pt
+
 res <- na.omit(startVsEndTest(sceGAM, pseudotimeValues = c(0, 1)))
 res <- res[res$pvalue < 1e-3, ]
 res <- res[res$waldStat > mean(res$waldStat), ]
@@ -415,6 +448,7 @@ res[1:10, 1:6]
 You can see now that there are several more columns, one for each lineage. This table represents the differential expression within each lineage, to identify which genes go up or down. Let's check lineage 1:
 
 ```{r}
+#| label: plot-dge-pt
 #| fig-height: 12
 #| fig-width: 12
 
@@ -454,6 +488,8 @@ More interesting are genes that are different between two branches. We may have 
 Note that the last function requires that the pseudotimes between two lineages are aligned.
 
 ```{r}
+#| label: dge-lin
+
 res <- na.omit(diffEndTest(sceGAM))
 res <- res[res$pvalue < 1e-3, ]
 res <- res[res$waldStat > mean(res$waldStat), ]
@@ -464,6 +500,7 @@ res[1:10, ]
 You can see now that there are even more columns, one for the pairwise comparison between each lineage. Let's check lineage 1 vs lineage 2:
 
 ```{r}
+#| label: plot-dge-lin
 #| fig-height: 12
 #| fig-width: 12
 
@@ -512,6 +549,8 @@ Saelens, Wouter, Robrecht Cannoodt, Helena Todorov, and Yvan Saeys. 2019. “A C
   <summary>Click here</summary>
 
 ```{r}
+#| label: session
+
 sessionInfo()
 ```
 

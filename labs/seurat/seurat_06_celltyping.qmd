@@ -18,6 +18,8 @@ Code chunks run R commands unless otherwise specified.
 {{< meta ct_read_1 >}}
 
 ```{r}
+#| label: libraries
+
 suppressPackageStartupMessages({
     library(Seurat)
     library(dplyr)
@@ -35,6 +37,8 @@ suppressPackageStartupMessages({
 {{< meta ct_read_2 >}}
 
 ```{r}
+#| label: fetch-data
+
 # download pre-computed data if missing or long compute
 fetch_data <- TRUE
 
@@ -52,6 +56,8 @@ alldata <- readRDS(path_file)
 {{< meta ct_read_3 >}}
 
 ```{r}
+#| label: subset
+
 ctrl <- alldata[, alldata$orig.ident == "ctrl_13"]
 ```
 
@@ -60,6 +66,8 @@ ctrl <- alldata[, alldata$orig.ident == "ctrl_13"]
 {{< meta ct_ref_1 >}}
 
 ```{r}
+#| label: fetch-ref
+
 reference <- scPred::pbmc_1
 reference
 ```
@@ -69,6 +77,8 @@ reference
 Here, we will run all the steps that we did in previous labs in one go using the `magittr` package with the pipe-operator `%>%`.
 
 ```{r}
+#| label: process-ref
+
 reference <- reference %>%
     NormalizeData() %>%
     FindVariableFeatures() %>%
@@ -78,6 +88,7 @@ reference <- reference %>%
 ```
 
 ```{r}
+#| label: plot-ref
 #| fig-height: 5
 #| fig-width: 6
 
@@ -88,6 +99,7 @@ DimPlot(reference, group.by = "cell_type", label = TRUE, repel = TRUE) + NoAxes(
 {{< meta ct_ref_3 >}}
 
 ```{r}
+#| label: process-data
 # Set the identity as louvain with resolution 0.5
 ctrl <- SetIdent(ctrl, value = "RNA_snn_res.0.5")
 
@@ -100,6 +112,7 @@ ctrl <- ctrl %>%
 ```
 
 ```{r}
+#| label: plot-data
 #| fig-height: 5
 #| fig-width: 6
 
@@ -111,6 +124,7 @@ DimPlot(ctrl, label = TRUE, repel = TRUE) + NoAxes()
 First we will run label transfer using a similar method as in the integration exercise. But, instead of CCA, which is the default for the `FindTransferAnchors()` function, we will use `pcaproject`, ie; the query dataset is projected onto the PCA of the reference dataset. Then, the labels of the reference data are predicted.
 
 ```{r}
+#| label: transfer
 transfer.anchors <- FindTransferAnchors(
     reference = reference, query = ctrl,
     dims = 1:30
@@ -123,6 +137,7 @@ ctrl <- AddMetaData(object = ctrl, metadata = predictions)
 ```
 
 ```{r}
+#| label: plot-transfer
 #| fig-height: 5
 #| fig-width: 6
 
@@ -132,6 +147,7 @@ DimPlot(ctrl, group.by = "predicted.id", label = T, repel = T) + NoAxes()
 Now plot how many cells of each celltypes can be found in each cluster.
 
 ```{r}
+#| label: plot-proportions
 #| fig-height: 5
 #| fig-width: 6
 
@@ -148,6 +164,7 @@ ggplot(ctrl@meta.data, aes(x = RNA_snn_res.0.5, fill = predicted.id)) +
 We first have to convert the Seurat object to a SingleCellExperiment object.
 
 ```{r}
+#| label: sce
 sce = as.SingleCellExperiment(ctrl)
 ```
 
@@ -156,6 +173,8 @@ sce = as.SingleCellExperiment(ctrl)
 ### Immune cell reference
 
 ```{r}
+#| label: singler-immune
+
 immune = celldex::DatabaseImmuneCellExpressionData()
 singler.immune <- SingleR(test = sce, ref = immune, assay.type.test=1,
     labels = immune$label.main)
@@ -166,6 +185,7 @@ head(singler.immune)
 ### HPCA reference
 
 ```{r}
+#| label: singler-hpca
 
 hpca <- HumanPrimaryCellAtlasData()
 singler.hpca <- SingleR(test = sce, ref = hpca, assay.type.test=1,
@@ -177,6 +197,8 @@ head(singler.hpca)
 ### With own reference data
 
 ```{r}
+#| label: singler-ref
+
 sce.ref = as.SingleCellExperiment(reference)
 singler.ref <- SingleR(test=sce, ref=sce.ref, labels=sce.ref$cell_type, de.method="wilcox")
 head(singler.ref)
@@ -185,6 +207,7 @@ head(singler.ref)
 Compare results:
 
 ```{r}
+#| label: plot-singler
 #| fig-height: 7
 #| fig-width: 8
 
@@ -204,6 +227,7 @@ DimPlot(ctrl, group.by = c("singler.hpca", "singler.immune", "singler.ref"), nco
 {{< meta ct_azimuth_2 >}}
 
 ```{r}
+#| label: azimuth
 options(future.globals.maxSize = 1e9)
 
 # will install the pbmcref dataset first time you run it.
@@ -213,6 +237,7 @@ ctrl <- RunAzimuth(ctrl, reference = "pbmcref")
 This dataset has predictions at 3 different levels of annotation wiht `l1` being the more broad celltypes and `l3` more detailed annotation.
 
 ```{r}
+#| label: plot-azimuth
 DimPlot(ctrl, group.by = "predicted.celltype.l1", label = T, repel = T) + NoAxes()
 DimPlot(ctrl, group.by = "predicted.celltype.l2", label = T, repel = T) + NoAxes()
 DimPlot(ctrl, group.by = "predicted.celltype.l3", label = T, repel = T) + NoAxes()
@@ -223,12 +248,15 @@ DimPlot(ctrl, group.by = "predicted.celltype.l3", label = T, repel = T) + NoAxes
 {{< meta ct_compare_1 >}}
 
 ```{r}
+#| label: crosstab
+
 crossTab(ctrl, "predicted.id", "singler.hpca")
 ```
 
 {{< meta ct_compare_2 >}}
 
 ```{r}
+#| label: plot-all
 #| fig-height: 10
 #| fig-width: 16
 
@@ -251,6 +279,7 @@ wrap_plots(
 {{< meta ct_gsea_deg_1 >}}
 
 ```{r}
+#| label: dge
 # run differential expression in our dataset, using clustering at resolution 0.5
 # first we need to join the layers
 alldata@active.assay = "RNA"
@@ -277,6 +306,7 @@ unlist(lapply(DGE_list, nrow))
 ```
 
 ```{r}
+#| label: dge-ref
 # Compute differential gene expression in reference dataset (that has cell annotation)
 reference <- SetIdent(reference, value = "cell_type")
 reference_markers <- FindAllMarkers(
@@ -305,6 +335,7 @@ unlist(lapply(ref_list, length))
 {{< meta ct_gsea_deg_2 >}}
 
 ```{r}
+#| label: gsea
 suppressPackageStartupMessages(library(fgsea))
 
 # run fgsea for each of the clusters in the list
@@ -331,6 +362,7 @@ res
 {{< meta ct_gsea_deg_3 >}}
 
 ```{r}
+#| label: plot-gsea
 #| fig-height: 5
 #| fig-width: 11
 
@@ -352,6 +384,7 @@ wrap_plots(
 {{< meta ct_gsea_deg_4 >}}
 
 ```{r}
+#| label: plot-gsea-sub
 #| fig-height: 5
 #| fig-width: 16
 
@@ -369,11 +402,13 @@ wrap_plots(
 {{< meta ct_gsea_annot_1 >}}
 
 ```{r}
+#| label: fetch-markers
 path_file <- file.path("data/cell_marker_human.csv")
 if (!file.exists(path_file)) download.file(file.path(path_data, "misc/cell_marker_human.csv"), destfile = path_file, method = "curl", extra = curl_upass)
 ```
 
 ```{r}
+#| label: prep-markers
 # Load the human marker table
 markers <- read.delim("data/cell_marker_human.csv", sep = ";")
 markers <- markers[markers$species == "Human", ]
@@ -403,6 +438,7 @@ celltype_list <- celltype_list[unlist(lapply(celltype_list, length)) > 5]
 ```
 
 ```{r}
+#| label: gsea-marker
 # run fgsea for each of the clusters in the list
 res <- lapply(DGE_list, function(x) {
     gene_rank <- setNames(x$avg_log2FC, x$gene)
@@ -429,6 +465,7 @@ lapply(res, head, 3)
 Let's plot the results.
 
 ```{r}
+#| label: plot-gsea-marker
 #| fig-height: 5
 #| fig-width: 11
 
@@ -456,6 +493,8 @@ wrap_plots(
 {{< meta ct_save >}}
 
 ```{r}
+#| label: save
+
 saveRDS(ctrl, "data/covid/results/seurat_covid_qc_dr_int_cl_ct-ctrl13.rds")
 ```
 
@@ -465,6 +504,8 @@ saveRDS(ctrl, "data/covid/results/seurat_covid_qc_dr_int_cl_ct-ctrl13.rds")
   <summary>Click here</summary>
 
 ```{r}
+#| label: session
+
 sessionInfo()
 ```
 

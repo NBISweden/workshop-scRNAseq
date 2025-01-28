@@ -14,6 +14,8 @@ Code chunks run R commands unless otherwise specified.
 {{< meta qc_data_1 >}}
 
 ```{r}
+#| label: paths
+
 # download pre-computed annotation
 fetch_annotation <- TRUE
 
@@ -29,6 +31,8 @@ if (!dir.exists(path_results)) dir.create(path_results, recursive = T)
 ```
 
 ```{r}
+#| label: fetch-data
+
 file_list <- c(
     "normal_pbmc_13.h5", "normal_pbmc_14.h5", "normal_pbmc_19.h5", "normal_pbmc_5.h5",
     "ncov_pbmc_15.h5", "ncov_pbmc_16.h5", "ncov_pbmc_17.h5", "ncov_pbmc_1.h5"
@@ -46,6 +50,9 @@ for (i in file_list) {
 {{< meta qc_data_2 >}}
 
 ```{r}
+#| label: libraries
+
+
 suppressPackageStartupMessages({
     library(Seurat)
     library(Matrix)
@@ -59,6 +66,8 @@ suppressPackageStartupMessages({
 {{< meta qc_data_3 >}}
 
 ```{r}
+#| label: read
+
 cov.15 <- Seurat::Read10X_h5(
     filename = file.path(path_covid, "ncov_pbmc_15.h5"),
     use.names = T
@@ -101,6 +110,8 @@ ctrl.19 <- Seurat::Read10X_h5(
 But first, we need to create Seurat objects using each of the expression matrices we loaded. We define each sample in the `project` slot, so in each object, the sample id can be found in the metadata slot `orig.ident`.
 
 ```{r}
+#| label: create-seurat
+
 sdata.cov1 <- CreateSeuratObject(cov.1, project = "covid_1")
 sdata.cov15 <- CreateSeuratObject(cov.15, project = "covid_15")
 sdata.cov17 <- CreateSeuratObject(cov.17, project = "covid_17")
@@ -128,6 +139,8 @@ alldata <- merge(sdata.cov1, c(sdata.cov15, sdata.cov16, sdata.cov17, sdata.ctrl
 In Seurat v5, merging creates a single object, but keeps the expression information split into different layers for integration. If not proceeding with integration, rejoin the layers after merging.
 
 ``` {r}
+#| label: join-layers
+
 alldata <- JoinLayers(alldata)
 alldata
 ```
@@ -135,6 +148,8 @@ alldata
 {{< meta qc_collate_2 >}}
 
 ```{r}
+#| label: gc
+
 # remove all objects that will not be used.
 rm(cov.1, cov.15, cov.16, cov.17, ctrl.5, ctrl.13, ctrl.14, ctrl.19, sdata.cov1, sdata.cov15, sdata.cov16, sdata.cov17, sdata.ctrl5, sdata.ctrl13, sdata.ctrl14, sdata.ctrl19)
 # run garbage collect to free up memory
@@ -144,6 +159,8 @@ gc()
 {{< meta qc_collate_3 >}}
 
 ```{r}
+#| label: show-object
+
 alldata[["RNA"]]$counts[1:10, 1:4] 
 head(alldata@meta.data, 10)
 ```
@@ -155,15 +172,17 @@ head(alldata@meta.data, 10)
 {{< meta qc_calqc_2 >}}
 
 ```{r}
-# method 1: doing it using Seurat function
-alldata <- PercentageFeatureSet(alldata, "^MT-", col.name = "percent_mito")
-```
+#| label: qc-calc
 
-```{r}
+# Mitochondrial
+alldata <- PercentageFeatureSet(alldata, "^MT-", col.name = "percent_mito")
+
 # Ribosomal
 alldata <- PercentageFeatureSet(alldata, "^RP[SL]", col.name = "percent_ribo")
+
 # Percentage hemoglobin genes - includes all genes starting with HB except HBP.
 alldata <- PercentageFeatureSet(alldata, "^HB[^(P|E|S)]", col.name = "percent_hb")
+
 # Percentage for some platelet markers
 alldata <- PercentageFeatureSet(alldata, "PECAM1|PF4", col.name = "percent_plat")
 ```
@@ -185,6 +204,7 @@ alldata$percent_mito2 <- colSums(alldata@assays$RNA@counts[mito_genes, ]) / tota
 {{< meta qc_calqc_3 >}}
 
 ```{r}
+#| label: meta
 head(alldata@meta.data)
 ```
 
@@ -193,6 +213,7 @@ head(alldata@meta.data)
 {{< meta qc_plotqc_1 >}}
 
 ```{r}
+#| label: qc-vln
 #| fig-height: 8
 #| fig-width: 15
 
@@ -203,6 +224,7 @@ VlnPlot(alldata, group.by = "orig.ident", split.by = "type", features = feats, p
 {{< meta qc_plotqc_2 >}}
 
 ```{r}
+#| label: qc-scatter
 #| fig-height: 8
 #| fig-width: 15
 
@@ -220,6 +242,7 @@ FeatureScatter(alldata, "nCount_RNA", "nFeature_RNA", group.by = "orig.ident", p
 {{< meta qc_filter_detect_1 >}}
 
 ```{r}
+#| label: filt1
 selected_c <- WhichCells(alldata, expression = nFeature_RNA > 200)
 selected_f <- rownames(alldata)[Matrix::rowSums(alldata[["RNA"]]$counts) > 3]
 
@@ -231,6 +254,7 @@ table(data.filt$orig.ident)
 {{< meta qc_filter_detect_3 >}}
 
 ```{r}
+#| label: filt2
 # skip and run DoubletFinder instead
 # data.filt <- subset(data.filt, cells=WhichCells(data.filt, expression = nFeature_RNA < 4100))
 
@@ -239,6 +263,7 @@ table(data.filt$orig.ident)
 {{< meta qc_filter_detect_4 >}}
 
 ```{r}
+#| label: top-genes
 #| fig-height: 8
 #| fig-width: 15
 
@@ -261,8 +286,7 @@ boxplot(as.matrix(t(C[most_expressed, ])),
 {{< meta qc_filter_mr_1 >}}
 
 ```{r}
-#| fig-height: 5
-#| fig-width: 15
+#| label: filt3
 
 data.filt <- subset(data.filt, percent_mito < 20 & percent_ribo > 5)
 dim(data.filt)
@@ -276,6 +300,7 @@ table(data.filt$orig.ident)
 {{< meta qc_filter_plot_1 >}}
 
 ```{r}
+#| label: qc-vln2
 #| fig-height: 8
 #| fig-width: 15
 
@@ -288,6 +313,7 @@ VlnPlot(data.filt, group.by = "orig.ident", features = feats, pt.size = 0.1, nco
 {{< meta qc_filter_genes_1 >}}
 
 ```{r}
+#| label: filt-genes
 dim(data.filt)
 
 # Filter MALAT1
@@ -316,6 +342,8 @@ dim(data.filt)
 Here is the code to download annotation data from Ensembl using biomaRt. We will not run this now and instead use a pre-computed file in the step below.
 
 ```{r}
+#| label: annot
+
 # fetch_annotation is defined at the top of this document
 if (!fetch_annotation) {
   suppressMessages(library(biomaRt))
@@ -338,6 +366,7 @@ if (!fetch_annotation) {
 Download precomputed data.
 
 ```{r}
+#| label: fetch-annot
 # fetch_annotation is defined at the top of this document
 if (fetch_annotation) {
   genes_file <- file.path(path_results, "genes_table.csv")
@@ -347,6 +376,7 @@ if (fetch_annotation) {
 ```
 
 ```{r}
+#| label: read-annot
 genes.table <- read.csv(genes_file)
 genes.table <- genes.table[genes.table$external_gene_name %in% rownames(data.filt), ]
 ```
@@ -354,6 +384,7 @@ genes.table <- genes.table[genes.table$external_gene_name %in% rownames(data.fil
 {{< meta qc_sex_3 >}}
 
 ```{r}
+#| label: par
 par1 = c(10001, 2781479)
 par2 = c(56887903, 57217415)
 p1.gene = genes.table$external_gene_name[genes.table$start_position > par1[1] & genes.table$start_position < par1[2] & genes.table$chromosome_name == "Y"]
@@ -368,12 +399,14 @@ data.filt <- PercentageFeatureSet(data.filt, features = chrY.gene, col.name = "p
 {{< meta qc_sex_4 >}}
 
 ```{r}
+#| label: sex-scatter
 FeatureScatter(data.filt, feature1 = "XIST", feature2 = "pct_chrY", slot = "counts")
 ```
 
 {{< meta qc_sex_5 >}}
 
 ```{r}
+#| label: sex-vln
 VlnPlot(data.filt, features = c("XIST", "pct_chrY"))
 ```
 
@@ -390,6 +423,8 @@ VlnPlot(data.filt, features = c("XIST", "pct_chrY"))
 {{< meta qc_cellcycle_1 >}}
 
 ```{r}
+#| label: cc
+
 # Before running CellCycleScoring the data need to be normalized and logtransformed.
 data.filt <- NormalizeData(data.filt)
 data.filt <- CellCycleScoring(
@@ -402,6 +437,7 @@ data.filt <- CellCycleScoring(
 {{< meta qc_cellcycle_2 >}}
 
 ```{r}
+#| label: cc-vln
 #| fig-height: 5
 #| fig-width: 15
 
@@ -413,6 +449,7 @@ VlnPlot(data.filt, features = c("S.Score", "G2M.Score"), group.by = "orig.ident"
 Seurat does an automatic prediction of cell cycle phase with a default cutoff of the scores at zero. As you can see this does not fit this data very well, so be cautious with using these predictions. Instead we suggest that you look at the scores.
 
 ```{r}
+#| label: cc-scatter
 #| fig-height: 7
 #| fig-width: 7
 
@@ -430,6 +467,7 @@ FeatureScatter(data.filt, "S.Score", "G2M.Score", group.by = "Phase")
 Here, we will use `DoubletFinder` to predict doublet cells. But before doing doublet detection we need to run scaling, variable gene selection and PCA, as well as UMAP for visualization. These steps will be explored in more detail in coming exercises.
 
 ```{r}
+#| label: doublet-norm
 data.filt <- FindVariableFeatures(data.filt, verbose = F)
 data.filt <- ScaleData(data.filt, vars.to.regress = c("nFeature_RNA", "percent_mito"), verbose = F)
 data.filt <- RunPCA(data.filt, verbose = F, npcs = 20)
@@ -439,6 +477,8 @@ data.filt <- RunUMAP(data.filt, dims = 1:10, verbose = F)
 Then we run doubletFinder, selecting first 10 PCs and a `pK` value of 0.9. To optimize the parameters, you can run the `paramSweep` function in the package.
 
 ```{r}
+#| label: doubletfinder
+
 suppressMessages(library(DoubletFinder))
 # Can run parameter optimization with paramSweep
 
@@ -453,6 +493,7 @@ data.filt <- doubletFinder(data.filt, pN = 0.25, pK = 0.09, nExp = nExp, PCs = 1
 ```
 
 ```{r}
+#| label: doublet-plot
 #| fig-height: 4
 #| fig-width: 10
 
@@ -469,12 +510,16 @@ wrap_plots(
 {{< meta qc_doublet_3 >}}
 
 ```{r}
+#| label: doublet-vln
+
 VlnPlot(data.filt, features = "nFeature_RNA", group.by = DF.name, pt.size = .1)
 ```
 
 {{< meta qc_doublet_4 >}}
 
 ```{r}
+#| label: doublet-filt
+
 data.filt <- data.filt[, data.filt@meta.data[, DF.name] == "Singlet"]
 dim(data.filt)
 ```
@@ -482,6 +527,7 @@ dim(data.filt)
 {{< meta qc_doublet_5 >}}
 
 ```{r}
+#| label: view-data
 table(alldata$orig.ident)
 table(data.filt$orig.ident)
 ```
@@ -492,6 +538,8 @@ table(data.filt$orig.ident)
 {{< meta qc_save_1 >}}
 
 ```{r}
+#| label: save
+
 saveRDS(data.filt, file.path(path_results, "seurat_covid_qc.rds"))
 ```
 
@@ -501,6 +549,8 @@ saveRDS(data.filt, file.path(path_results, "seurat_covid_qc.rds"))
   <summary>Click here</summary>
 
 ```{r}
+#| label: session
+
 sessionInfo()
 ```
 
