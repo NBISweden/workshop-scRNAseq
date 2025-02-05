@@ -5,10 +5,11 @@ description: "Overview of all three pipeline results."
 format: html
 ---
 
+Go through all the main steps of the pipelines and plot the results side by side.
 
-{{< meta qc_data_2 >}}
 
 ```{r}
+#| label: libraries
 suppressPackageStartupMessages({
     library(Seurat)
     library(zellkonverter)
@@ -23,12 +24,10 @@ suppressPackageStartupMessages({
 
 ## Load data
 
-
-
 OBS! Zellkonverter installs conda env with basilisk! Takes a while to run first time!!
 
-
 ```{r}
+#| label: load
 path_results <- "data/covid/results"
 if (!dir.exists(path_results)) dir.create(path_results, recursive = T)
 
@@ -54,6 +53,7 @@ scanpy = as.Seurat(scanpy.sce, counts = NULL, data = "X") # only have the var.ge
 ## Umaps
 
 ```{r}
+#| label: umaps
 #| fig-height: 4
 #| fig-width: 10
 
@@ -65,7 +65,7 @@ wrap_plots(
 )
 ```
 
-Settings for umap differs:
+Settings for umap differs, especially on number of neighbors:
 
 * Seurat 
 
@@ -96,11 +96,12 @@ Settings for umap differs:
 
 In all 3 pipelines we run the filtering of cells in the exact same way, but doublet detection is different.
 
-* In Seurat - `DoubletFinder` with predefined 4% doublets.
+* In Seurat - `DoubletFinder` with predefined 4% doublets, all samples together.
 * In Scanpy - `Scrublet`, done per batch. No predefined cutoff. 
 * In Bioc - `scDblFinder` - default cutoffs, no batch separation. 
 
 ```{r}
+#| label: doublet1
 cat("Seurat: ", dim(sobj),"\n")
 cat("Bioc: ", dim(bioc),"\n")
 cat("Scanpy: ", dim(scanpy),"\n")
@@ -117,6 +118,7 @@ Cell names are different in all 3, have to make a conversion to match them.
 * Bioc has just cell name.
 
 ```{r}
+#| label: doublet2
 meta.seurat = sobj@meta.data
 meta.scanpy = scanpy@meta.data
 meta.bioc = bioc@meta.data
@@ -133,6 +135,7 @@ meta.seurat$cell = unlist(lapply(strsplit(rownames(meta.seurat),"_"), function(x
 Visualize overlap of cells using an UpSet plot in the `ComplexHeatmap` package.
 
 ```{r}
+#| label: doublet-upset
 l = list(seurat = meta.seurat$cell, bioc = meta.bioc$cell, scanpy = meta.scanpy$cell)
 
 cmat = make_comb_mat(l)
@@ -146,6 +149,7 @@ UpSet(cmat)
 Create one dataset with the cells that are present in all samples. Also add in umap from all 3 pipelines.
 
 ```{r}
+#| label: doublet-scores
 in.all = intersect(intersect(meta.scanpy$cell, meta.seurat$cell), meta.bioc$cell)
 
 tmp1 = meta.bioc[match(in.all, meta.bioc$cell),]
@@ -172,6 +176,7 @@ Reductions(all)
 
 
 ```{r}
+#| label: doublet-scores2
 #| fig-height: 4
 #| fig-width: 10
 
@@ -186,6 +191,7 @@ wrap_plots(
 Highest correlation for the doublet scores in Scrublet and scDblFinder, but still only 0.27 in correlation.
 
 ```{r}
+#| label: doublet-scores3
 #| fig-height: 10
 #| fig-width: 10
 
@@ -212,6 +218,7 @@ Cell cycle predictions are done in a similar way for Seurat and Scanpy using mod
 Visualize the phase predictions onto the Seurat umap.
 
 ```{r}
+#| label: cc
 #| fig-height: 4
 #| fig-width: 10
 
@@ -233,6 +240,7 @@ With scanpy also more in B/T-cells, but much more G1 prediction.
 Plot the scores. 
 
 ```{r}
+#| label: cc-scores
 #| fig-height: 10
 #| fig-width: 12
 
@@ -275,6 +283,7 @@ In Seurat, `FindVariableFeatures` is not batch aware unless the data is split in
 
 
 ```{r}
+#| label: hvg
 hvgs = list()
 hvgs$seurat = VariableFeatures(sobj)
 hvgs$bioc = sce@metadata$hvgs
@@ -299,6 +308,7 @@ Explore more in the `comparison_hvg.qmd` script.
 ## Integrations
 
 ```{r}
+#| label: add-integration
 reductions = c("umap","umap_cca", "umap_harmony",  "umap_scanorama",    "umap_scanoramaC", "umap_bioc",  "umap_bioc_mnn", "umap_bioc_harmony", "umap_bioc_scanorama", "umap_scpy","umap_scpy_bbknn", "umap_scpy_scanorama", "umap_scpy_harmony"   )
 
 tmp = bioc@reductions$UMAP_on_MNN@cell.embeddings[match(in.all, meta.bioc$cell),]
@@ -329,6 +339,7 @@ all[["umap_scpy_harmony"]] = CreateDimReducObject(tmp, key = "umapscpyharmony_",
 
 
 ```{r}
+#| label: integrations
 #| fig-height: 10
 #| fig-width: 12
 plotlist = lapply(reductions, function(x) DimPlot(all, reduction = x, group.by = "orig.ident") + NoAxes() + ggtitle(x))
@@ -339,9 +350,6 @@ wrap_plots(
 ) + plot_layout(guides = "collect")
 ```
 
-```{r}
-# remotes::install_github("carmonalab/scIntegrationMetrics", dependencies = FALSE), fails with compiler errors on mac. 
-```
 
 ### Clustering on integrations
 
@@ -351,6 +359,7 @@ For BBKNN the full integration matrix is not in the reductions, skip for now.
 
 
 ```{r}
+#| label: integration-clusters
 # all seurat integrations.
 
 integrations = list(
@@ -417,6 +426,7 @@ Calculate adjusted Rand index, with mclust package.
 
 
 ```{r}
+#| label: clust-ari
 #| fig-height: 10
 #| fig-width: 12
 
@@ -443,81 +453,17 @@ All the scanorama ones are similar, except for the one with counts. Harmony on t
 Number of clusters per method:
 
 ```{r}
+#| label: nclust
 nclust = apply(meta.clust, 2, function(x) length(unique(x)))
 par(mar = c(3,10,3,3))
 barplot(nclust, horiz=T, las=2, cex.names=0.6)
 ```
 
-## Clustering consistency
-
-Compare all these different clusterings by calculating how often each cell pair is in the same cluster.
-
-```{r}
-calculateCLProb = function(nC,nS){
-    P = (nS/nC-1) / (nS-1)
-    return(P)
-}
-
-clusterOverlapN <- function(meta.df){
-  # meta.df is a data frame with clustering results in each column 
-  dmats = list()
-  probs = mat.or.vec(1,ncol(meta.df))
-  for (i in 1:ncol(meta.df)){
-    tmp = as(outer(meta.df[,i],meta.df[,i], FUN = "==")+0, "dgCMatrix")
-    diag(tmp) = 0 #score to self to zero.
-    # normalize the counts by probability given number of clusters and cells.
-    prob = calculateCLProb(length(unique(meta.df[,i])),length(meta.df[,i]))
-    probs[i] = prob
-    tmp = tmp /prob
-    dmats[[i]] = tmp
-  }
-  names(dmats) = colnames(meta.df)
-  
-  # add all matrices together, divide by number of matrices.
-  sum.dist = Reduce("+",dmats)/ncol(meta.df)
-  
-  # scores each clustering by adding together the individual consensus scores for the cell pairs that we have. 
-  # Divide by number of cells. 
-  scores = lapply(dmats, function(x) sum(x*sum.dist)/nrow(meta.df)^2)
-  scores = unlist(scores)
-  names(scores) = colnames(meta.df)
-  return(list(overlapMatrices = dmats, sumMatrix = sum.dist, scores = scores, probabilities = probs))
-}
-```
 
 
-```{r}
-stats = clusterOverlapN(meta.clust)
+## Clustering in the exercises
 
-cs = colSums(stats$sumMatrix)
-names(cs) = colnames(all)
-
-all = AddMetaData(all, cs, col.name = "overlapN")
-all = AddMetaData(all, log10(cs), col.name = "overlapN.log")
-
-
-FeaturePlot(all, reduction = "umap_harmony", features = c("overlapN", "overlapN.log"))
-```
-
-For each cell, we have stats on how often it is in the same cluster as another cell. Ranging from 0 to nclust. 
-
-
-Now we have a score for each pair of cells of how frequently they cluster together. So we can just multiply the matrices to see if high scoring cells are grouped in that clustering. 
-But we need to adjust for cluster sizes, larger clusters have bigger chance of having a high score. So the scores are normalized by the number of clusters with `calculateCLProb`
-
-
-
-```{r}
-annot$Score = stats$scores
-annot$Name = rownames(annot)
-ggplot(annot, aes(x=Name, y=Score, color=Pipe, fill=Integration)) + geom_bar(stat = "identity") + RotatedAxis()
-```
-
-Generally high scores for harmony with Scanpy or Seurat, CCA clearly differs. But the scores are biased and only show what is closest to consensus.
-
-## Clustering in the pipelines
-
-Above, we did the clustering with the same method on the different integrated spaces. Now we will instead explore the integrated clustering from the different pipelines. We still only use the cells that are in common from all 3 pipelines. 
+Above, we did the clustering with the same method on the different integrated spaces. Now we will instead explore the integrated clustering from the different pipelines. We still only use the cells that are in common from all 3 toolkits. 
 
 The graph clustering is implemented quite differently in the different pipelines.
 
@@ -527,6 +473,7 @@ The graph clustering is implemented quite differently in the different pipelines
 
 
 ```{r}
+#| label: pipe-clust
 seu.columns = c("RNA_snn_res","kmeans_","hc_")
 bioc.columns = c("louvain_","leiden_","hc_","kmeans_")
 scpy.columns = c("leiden_","hclust_","kmeans_")
@@ -553,6 +500,7 @@ meta.clust2 = cbind(meta.clust2, tmp2)
 Group based on adjusted Rand index. 
 
 ```{r}
+#| label: ari-clust2
 #| fig-height: 10
 #| fig-width: 12
 
@@ -576,47 +524,10 @@ rownames(annot) = colnames(meta.clust2)
 pheatmap::pheatmap(ari, annotation_row = annot)
 ```
 
-Clustering consistency per cell
-
-```{r}
-
-stats2 = clusterOverlapN(meta.clust2)
-
-cs = colSums(stats2$sumMatrix)
-names(cs) = colnames(all)
-
-
-all = AddMetaData(all, cs, col.name = "overlapN.all")
-all = AddMetaData(all, log10(cs), col.name = "overlapN.all.log")
-
-
-FeaturePlot(all, reduction = "umap_harmony", features = c("overlapN.all", "overlapN.all.log"))
-```
-
-Score each method based on how often they place high scoring cells in different clusters. 
 
 
 ```{r}
-nclust2 = apply(meta.clust2,2, function(x) length(unique(x)))
-
-par(mfrow = c(2,2))
-plot(nclust2, stats2$scores)
-plot(nclust2, stats2$scores/nclust2)
-plot(nclust2, stats2$probabilities)
-
-```
-
-```{r}
-annot$score = stats2$scores
-annot$Name = rownames(annot)
-
-ggplot(annot, aes(x=Name, y = score, fill=Pipe)) + geom_bar(stat = "identity") + RotatedAxis()
-
-ggplot(annot, aes(x=nC, y = score, color=Pipe)) + geom_point()
-```
-
-
-```{r}
+#| label: save
 saveRDS(all, "data/covid/results/merged_all.rds")
 ```
 
@@ -626,7 +537,7 @@ saveRDS(all, "data/covid/results/merged_all.rds")
 Done only for sample `ctrl13`, load all the results.
 
 ```{r}
-
+#| label: celltypes
 sobj = readRDS(file.path(path_seurat, "seurat_covid_qc_dr_int_cl_ct-ctrl13.rds"))
 
 sce = readRDS(file.path(path_bioc, "bioc_covid_qc_dr_int_cl_ct-ctrl13.rds"))
@@ -639,6 +550,8 @@ scanpy = as.Seurat(scanpy.sce, counts = NULL, data = "X")
 Merge into one object.
 
 ```{r}
+#| label: celltypes2
+
 meta.seurat = sobj@meta.data
 meta.scanpy = scanpy@meta.data
 meta.bioc = bioc@meta.data
@@ -691,6 +604,7 @@ Celltype predictions:
   
 
 ```{r}
+#| label: celltype-plot
 #| fig-height: 10
 #| fig-width: 12
 
@@ -706,6 +620,7 @@ wrap_plots(plots[10:18], ncol = 3)
 Subset for ones that are using same ref:
 
 ```{r}
+#| label: celltype-plot2
 #| fig-height: 10
 #| fig-width: 12
 
@@ -739,9 +654,12 @@ plots2 = sapply(paste0(ref.pred,"2"), function(x) DimPlot(all, reduction = "umap
 
 wrap_plots(plots2, ncol = 3) + plot_layout(guides = "collect")
 ```
+The largest differences in predictions is for CD8T vs NK where the methods make quite different prediction for the cells in between the two celltypes.
+
 
 
 ```{r}
+#| label: celltype-barplot
 ref.pred2 = paste0(ref.pred,"2")
 
 tmp = all@meta.data[,ref.pred2]
@@ -753,6 +671,31 @@ counts = reshape2::melt(counts)
 ggplot(counts, aes(x=Var2, y=value, fill=Var1)) + geom_bar(stat = "identity") + RotatedAxis() 
 ```
 
+Only singleR and scMap has unassigned cells.
+
+
+Prediction overlaps, based on ARI.
+
+
+```{r}
+#| label: celltype-ari
+
+ari = mat.or.vec(ncol(tmp), ncol(tmp))
+
+for (i in 1:ncol(tmp)){
+  for (j in 1:ncol(tmp)){
+  ari[i,j] = mclust::adjustedRandIndex(tmp[,i], tmp[,j])
+  }
+}
+rownames(ari) = colnames(tmp)
+colnames(ari) = colnames(tmp)
+
+pheatmap::pheatmap(ari)
+
+```
+
+
+Celltypist and singleR are quite similar.
 
 
 ## {{< meta session >}}
@@ -761,6 +704,7 @@ ggplot(counts, aes(x=Var2, y=value, fill=Var1)) + geom_bar(stat = "identity") + 
   <summary>Click here</summary>
 
 ```{r}
+#| label: session
 sessionInfo()
 ```
 

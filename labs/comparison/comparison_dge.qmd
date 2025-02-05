@@ -7,6 +7,7 @@ format: html
 
 
 ```{r}
+#| label: settings
 force_rerun = FALSE
 if (force_rerun){
   reticulate::use_condaenv("/Users/asabjor/miniconda3/envs/scanpy_2024_nopip/")
@@ -19,6 +20,7 @@ if (force_rerun){
 Load libraries
 
 ```{r}
+#| label: libraries
 suppressPackageStartupMessages({
     library(Seurat)
     library(Matrix)
@@ -41,14 +43,13 @@ devtools::source_url("https://raw.githubusercontent.com/asabjorklund/single_cell
 Load data
 
 ```{r}
-
-
-
+#| label: load
 path_results <- "data/covid/results"
 all = readRDS(file.path(path_results,"merged_all.rds"))
 ```
 
 ```{r}
+#| label: umaps
 #| fig-height: 4
 #| fig-width: 10
 
@@ -63,6 +64,7 @@ wrap_plots(
 Select one clustering and use that for DGE detection in all the different methods. Use clustering with Seurat and `louvain_0.5`. 
 
 ```{r}
+#| label: clusters
 sel.clust = "RNA_snn_res.0.5"
 
 wrap_plots(
@@ -87,6 +89,8 @@ Rename clusters by celltypes to easier follow annotations.
 * 9 - unclear
 
 ```{r}
+#| label: celltypes
+
 trans = c("M-0","NK-1","CD8-2","B-3","CD4-4","M-5","B-6","CD4-7","U-8","U-9")
 names(trans) = as.character(0:9)
 
@@ -109,6 +113,7 @@ wrap_plots(
 
 
 ```{r}
+#| label: join-layers
 # Also merge the layers
 all <- JoinLayers(object = all, layers = c("data","counts"))
 ```
@@ -119,6 +124,7 @@ all <- JoinLayers(object = all, layers = c("data","counts"))
 Subsample to 200 cells per cluster.
 
 ```{r}
+#| label: subsample
 table(all@active.ident)
 all.sub = all[, WhichCells(all, downsample = 200)]
 table(all.sub@active.ident)
@@ -132,6 +138,7 @@ table(all.sub@active.ident)
 Run seurat `FindAllMarkers` with Wilcoxon, both the new implementation (`wilcox`) and similar to seurat v4 (`wilcox_limma`), `MAST` and `T-test`. 
 
 ```{r, eval=TRUE}
+#| label: seurat
 
 outfile = file.path(path_results, "seurat_dge.rds")
 if (file.exists(outfile) & !force_rerun ){ 
@@ -167,10 +174,12 @@ Still use the subsampled object for comparable numbers of cells.
 Run with Wilcoxon, T-test and Binomial test.
 
 ```{r}
+#| label: sce
 sce = as.SingleCellExperiment(all.sub)
 ```
 
 ```{r, eval=TRUE}
+#| label: bioc
 outfile = file.path(path_results, "bioc_dge.rds")
 if (file.exists(outfile) & !force_rerun ){ 
   markersB = readRDS(outfile)
@@ -195,6 +204,7 @@ if (file.exists(outfile) & !force_rerun ){
 
 
 ```{r, eval=TRUE}
+#| label: bioc-some
 outfile = file.path(path_results, "bioc_dge_some.rds")
 if (file.exists(outfile) & !force_rerun ){ 
   markersBsome = readRDS(outfile)
@@ -228,6 +238,7 @@ Here, the strategy is to perform pairwise comparisons between each pair of group
 
 
 ```{r, eval=TRUE}
+#| label: bioc-score
 outfile = file.path(path_results, "bioc_dge_score.rds")
 if (file.exists(outfile) & !force_rerun ){ 
   markersBS = readRDS(outfile)
@@ -253,7 +264,8 @@ Finally, the logFC.detected columns contain the log-fold change in the proportio
 
 
 ```{r}
-
+#| label: bioc-summary
+ 
 Sstats = c("mean.AUC", "mean.logFC.cohen", "mean.logFC.detected")
 names(Sstats) = c("bioc_AUC", "bioc_Cohen", "bioc_det")
 
@@ -302,6 +314,8 @@ scanpy$tl$rank_genes_groups(adata, 'cluster', method='logreg', key_added = "logr
 ```
 
 ```{r}
+#| label: scanpy
+
 outfile = file.path(path_results, "scanpy_dge.rds")
 if (file.exists(outfile) & !force_rerun ){ 
   dge.scanpy = readRDS(outfile)
@@ -345,6 +359,7 @@ saveRDS(dge.scanpy, file = outfile)
 Parse all scanpy results into dataframes
 
 ```{r}
+#| label: parse-scanpy
 scanpy.tests = names(dge.scanpy)[-1:-2]
 clusters = sort(unique(all$cluster))
 
@@ -380,6 +395,7 @@ Set cutoff for significant at 0.01.
 
 
 ```{r}
+#| label: significant1
 pval.cut = 0.01
 
 sign.scanpy = lapply(markers_scanpy, function(x) { 
@@ -394,6 +410,7 @@ names(sign.dge) = paste0("scpy_", names(sign.dge))
 ```
 
 ```{r}
+#| label: significant2
 
 sign.bioc = lapply(markersB, function(x) { 
   lapply(x, function(y) y[y$FDR <= pval.cut,])
@@ -411,7 +428,7 @@ sign.biocS = unlist(sign.biocS, recursive = F)
 ```
 
 ```{r}
-
+#| label: significant3
 sign.seu = lapply(markersS, function(x){
   x = x[x$p_val_adj <= pval.cut,]
   x = split(x, x$cluster)
@@ -429,6 +446,7 @@ sign.seu = unlist(sign.seu, recursive = F)
 
 
 ```{r}
+#| label: significant4
 sign.dge = c(sign.dge, sign.seu, sign.bioc, sign.biocS)
 
 saveRDS(sign.dge, file = file.path(path_results, "all_sign_dge.Rds"))
@@ -437,6 +455,7 @@ saveRDS(sign.dge, file = file.path(path_results, "all_sign_dge.Rds"))
 Number of dge genes
 
 ```{r}
+#| label: significant-ng
 #| fig-height: 5
 #| fig-width: 12
 
@@ -450,25 +469,19 @@ barplot(nG, las = 2, col = factor(pipeline), main = "Number of significant genes
 Turns out that the two different wilcoxon runs in Seurat have identical results, so remove one. 
 sign.dge
 
-
 Overlap of DGE genes is calculated with a phyper test using all expressed genes as the background. The heatmaps display the `-log10(p-value)` from the phyper test.
 
 ```{r}
+#| label: significant-heatmap
 #| fig-height: 10
 #| fig-width: 12
 
 sign.dge = sign.dge[!grepl("wilcL",names(sign.dge))]
 
 tmp = lapply(sign.dge, rownames)
-o = overlap_phyper2(tmp, tmp, nsize = 5, bg = nrow(all), remove.diag = T)
-```
+o = overlap_phyper2(tmp, tmp, nsize = 5, bg = nrow(all), remove.diag = T, silent = T)
 
-Cluster and plot with annotation.
-
-
-```{r}
-#| fig-height: 10
-#| fig-width: 12
+# Cluster and plot with annotation.
 
 n = names(sign.dge)
 
@@ -478,10 +491,11 @@ colnames(annot.tests) = c("Pipe","Test","Cluster")
 rownames(annot.tests) = names(sign.dge)
 annot.tests$TestName = paste(s[,1],s[,2], sep= "_")
 
-pheatmap(-log10(o$P[1:100,1:100]+1e-230),annotation_col = annot.tests)
+pheatmap(-log10(o$P[1:100,1:100]+1e-230),annotation_col = annot.tests, fontsize = 6)
 ```
 
-Very different number of genes, so unfair comparison. 
+
+Mainly grouping by test. Very different number of genes, so unfair comparison for the scanpy tests. 
 
 
 ## Compare top genes
@@ -489,6 +503,8 @@ Very different number of genes, so unfair comparison.
 Create a list object with all the dge genes as ranked lists to compare top X genes.
 
 ```{r}
+#| label: top
+
 ranked.scanpy = lapply(markers_scanpy, function(x) { 
   tmp = lapply(x, rownames)
   names(tmp) = clusters
@@ -537,6 +553,7 @@ saveRDS(all.rank, file = file.path(path_results, "all_ranked_dge.Rds"))
 ### Top 50
 
 ```{r}
+#| label: top50
 #| fig-height: 10
 #| fig-width: 12
 
@@ -550,12 +567,14 @@ annot.tests$TestName = paste(s[,1],s[,2], sep= "_")
 
 topG = lapply(all.rank, function(x) x[1:50])
 
-o = overlap_phyper2(topG,topG, nsize = 5, bg = nrow(all), remove.diag = T)
+o = overlap_phyper2(topG,topG, nsize = 5, bg = nrow(all), remove.diag = T, silent = T)
 pvals = o$P[1:(ncol(o$P)-1), 1:(ncol(o$P)-1)]
 
-pheatmap(-log10(pvals+1e-320),annotation_col = annot.tests)
+pheatmap(-log10(pvals+1e-320),annotation_col = annot.tests, fontsize = 6)
 ```
 
+
+Mainly grouping by cluster now, the bioC methods stand out quite a bit.
 
 Clearly more unique genes per cluster with the bioC methods. 
 
@@ -566,6 +585,7 @@ Merge all top genes from all clusters.
 OBS! Skip using background, all overlaps are significant, so we will get a false scale of the p-values, but is more visual.
 
 ```{r}
+#| label: top-all
 #| fig-height: 10
 #| fig-width: 12
 
@@ -573,20 +593,23 @@ tmp = split(topG, annot.tests$TestName)
 tmp = lapply(tmp, unlist)
 tmp = lapply(tmp, unique)
 
-o = overlap_phyper2(tmp,tmp, remove.diag = T)
+o = overlap_phyper2(tmp,tmp, remove.diag = T, silent = T)
 
 # with grouping.
 pheatmap(-log10(o$P + 1e-320)[1:length(tmp), 1:length(tmp)], display_numbers = o$M[1:length(tmp), 1:length(tmp)])
 ```
 
 
-Binomial test stands out, but some similarty to the other bioC tests. Also, all unique genes per cluster. 
+All bioc ScoreMarker test with unique genes stands out. But with "SOME" it overlaps more.
+
+Surprisingly low overlap for scanpy and seurat wilcoxon test.
 
 ### Top 200
 
 Same but with top200 genes.
 
 ```{r}
+#| label: top200
 #| fig-height: 10
 #| fig-width: 12
 
@@ -595,7 +618,7 @@ tmp = split(topG, annot.tests$TestName)
 tmp = lapply(tmp, unlist)
 tmp = lapply(tmp, unique)
 
-o = overlap_phyper2(tmp,tmp, remove.diag = T)
+o = overlap_phyper2(tmp,tmp, remove.diag = T, silent = T)
 
 # with grouping.
 pheatmap(-log10(o$P + 1e-320)[1:length(tmp), 1:length(tmp)], display_numbers = o$M[1:length(tmp), 1:length(tmp)])
@@ -609,7 +632,7 @@ BioC stands out from the rest. Wilcoxon in Seurat and Scanpy are different.
 Expression distribution of the top 200 genes, both as number of cells expressed or as mean lognorm expression. 
 
 ```{r}
-
+#| label: exprs
 
 stats.df = data.frame(row.names = rownames(all.sub))
 stats.df$nC = rowSums(all.sub@assays$RNA@layers$counts>0)
@@ -627,6 +650,7 @@ for (n in names(tmp)){
 Number of cells detected.
 
 ```{r}
+#| label: exprs-nc
 #| fig-height: 10
 #| fig-width: 12
 
@@ -642,6 +666,7 @@ wrap_plots(plots, ncol=4)
 Mean expression
 
 ```{r}
+#| label: exprs-means
 #| fig-height: 10
 #| fig-width: 12
 
@@ -654,46 +679,15 @@ for (n in names(tmp)){
 wrap_plots(plots, ncol=4)
 ```
 
-### Separation of clusters
-
-For each geneset with top 200 genes per cluster, test running dim reduction and clustering and see how well it overlaps. 
-
-```{r}
-all.sub = FindVariableFeatures(all.sub, verbose = F)
-all.sub = all.sub %>% ScaleData(verbose = F) %>% RunPCA(verbose = F) %>% RunUMAP(verbose = F, dims = 1:30) %>% FindNeighbors(verbose = F, dims = 1:30) %>% FindClusters(verbose = F)
-all.sub@reductions$umap_hgv = all.sub@reductions$umap
-
-for (n in names(top200)){
-  VariableFeatures(all.sub) = top200[[n]]
-  all.sub = all.sub %>% ScaleData(verbose = F) %>% RunPCA(verbose = F) %>% RunUMAP(verbose = F, dims = 1:30) %>% FindNeighbors(verbose = F, dims = 1:30) %>% FindClusters(verbose = F)
-  all.sub[[paste0("clusters_",n)]] = all.sub@active.ident
-  all.sub@reductions[[paste0("umap_",n)]] = all.sub@reductions$umap
-}
-```
-
-
-```{r}
-#| fig-height: 10
-#| fig-width: 12
-
-plots = list()
-plots$hgv = DimPlot(all.sub, group.by = "cluster", reduction = "umap_hgv", label = T) + NoAxes() + NoLegend() + ggtitle("HGV")
-
-for (n in names(top200)){
-  plots[[n]] = DimPlot(all.sub, group.by = "cluster", reduction = paste0("umap_",n), label = T) + NoAxes() + NoLegend() + ggtitle(n)
-}
-
-wrap_plots(plots, ncol = 4)
-
-```
-
-
 
 ## For one cluster
 
-Select one cluster and compare the DGEs for that cluster across all methods. 
+Select one cluster and compare the DGEs for that cluster across all methods.  Use one of the CD4 clusters.
+
+#### CD4-7
 
 ```{r}
+#| label: sel-clust
 clust = "CD4-7"
 sel = which(annot.tests$Cluster == clust)
 ranked.sel = all.rank[sel]
@@ -703,6 +697,8 @@ ranked.sel = all.rank[sel]
 Top 50 genes:
 
 ```{r}
+#| label:  clust50
+ 
 topG = lapply(ranked.sel, function(x) x[1:50])
 
 o = overlap_phyper2(topG,topG, nsize = 5, bg = nrow(all), remove.diag = T)
@@ -712,122 +708,90 @@ head(sort(table(unlist(topG)),decreasing = T),10)
 
 Only 2 genes selected in all 16 tests.
 
-Top 10 genes:
+Instead take top 10 genes and plot expression levels and sidebar with presence/absence in top10 list:
+
+
 
 ```{r}
-topG = lapply(ranked.sel, function(x) x[1:10])
-
-o = overlap_phyper2(topG,topG, nsize = 5, bg = nrow(all), remove.diag = T)
-
-head(sort(table(unlist(topG)),decreasing = T),10)
-```
-
-```{r}
+#| label: gene-overlap
 #| fig-height: 10
 #| fig-width: 12
 
-genes = sort(unique(unlist(topG)))
+topG = lapply(ranked.sel, function(x) x[1:10])
 
-#D = all.sub@assays$RNA@layers$data[sort(unique(unlist(topG))),]
-tmp = all.sub[genes,]
-D = as.matrix(tmp@assays$RNA@layers$data)
-rownames(D) = genes 
-colnames(D) = colnames(all.sub)
-# reorder D
-D = D[,order(all.sub$cluster)]
+gene_overlap_heatmap = function(topG){ 
 
-coldef = c("red","blue")
-names(coldef) = c("FALSE","TRUE")
+  genes = sort(unique(unlist(topG)))
 
-annotG = data.frame(row.names = genes)
-annot.col = list()
-for (n in names(topG)){
-  annotG[[n]] = as.character(rownames(annotG) %in% topG[[n]])
-  annot.col[[n]] = coldef
-}  
+  tmp = all.sub[genes,]
+  D = as.matrix(tmp@assays$RNA@layers$data)
+  rownames(D) = genes 
+  colnames(D) = colnames(all.sub)
+  # reorder D
+  D = D[,order(all.sub$cluster)]
+  
+  coldef = c("red","blue")
+  names(coldef) = c("FALSE","TRUE")
+  
+  annotG = data.frame(row.names = genes)
+  annot.col = list()
+  for (n in names(topG)){
+    annotG[[n]] = as.character(rownames(annotG) %in% topG[[n]])
+    annot.col[[n]] = coldef
+  }  
+  
+  annotC = data.frame(cluster=all.sub$cluster)
+  rownames(annotC) = colnames(all.sub)
+  
+  coldef = c("blue","red")
+  names(coldef) = c("TRUE","FALSE")
+  cols2 <- RColorBrewer::brewer.pal(10, "Set3")
+  names(cols2) = clusters
+  coldef = c(coldef, cols2)
 
-annotC = data.frame(cluster=all.sub$cluster)
-rownames(annotC) = colnames(all.sub)
+  pheatmap(D, annotation_row = annotG, cluster_cols = F, cluster_rows = T, labels_col = F, annotation_colors = annot.col, annotation_col = annotC)
+}
 
-coldef = c("blue","red")
-names(coldef) = c("TRUE","FALSE")
-cols2 <- RColorBrewer::brewer.pal(10, "Set3")
-names(cols2) = clusters
-coldef = c(coldef, cols2)
-
-pheatmap(D, annotation_row = annotG, cluster_cols = F, cluster_rows = T, labels_col = F, annotation_colors = annot.col, annotation_col = annotC)
+gene_overlap_heatmap(topG)
 
 
 ```
 
+Not any clear signal for the CD4-7 cluster. 
 
-The ribosomal proteins are high in all B/T cells. 
+Quite a few ribosomal proteins among the DGEs. 
 
-Proportion ribosomal among the top200 across all clusters:
+
+The ribosomal proteins are high in all B/T cells and especially that cluster.
+
 
 ```{r}
-
-nR = data.frame(Reduce(rbind,lapply(top200, function(x) c(sum(grepl("^RP[SL]",x)), length(x)))))
-rownames(nR) = names(top200)
-colnames(nR) = c("nR","nTot")
-nR$perc = nR$nR / nR$nTot * 100
-
-nR
+#| label: ribo-vln
 
 VlnPlot(all.sub, "percent_ribo", group.by = "cluster")
 
 ```
 
-Around 6% of the genes for Ttest, wilcox and mast. Except for bioc wilcox. Also high for AUC/Cohen.
-
+#### B-3
 
 Same but for a B-cell cluster, take "B-3" 
 
 ```{r}
+#| label: B-3
+#| fig-height: 10
+#| fig-width: 12
+
 clust = "B-3"
 sel = which(annot.tests$Cluster == clust)
 topG = lapply(all.rank[sel], function(x) x[1:10])
 
-```
-
-
-```{r}
-#| fig-height: 10
-#| fig-width: 12
-
-genes = sort(unique(unlist(topG)))
-
-#D = all.sub@assays$RNA@layers$data[sort(unique(unlist(topG))),]
-tmp = all.sub[genes,]
-D = as.matrix(tmp@assays$RNA@layers$data)
-rownames(D) = genes 
-colnames(D) = colnames(all.sub)
-# reorder D
-D = D[,order(all.sub$cluster)]
-
-coldef = c("red","blue")
-names(coldef) = c("FALSE","TRUE")
-
-annotG = data.frame(row.names = genes)
-annot.col = list()
-for (n in names(topG)){
-  annotG[[n]] = as.character(rownames(annotG) %in% topG[[n]])
-  annot.col[[n]] = coldef
-}  
-
-annotC = data.frame(cluster=all.sub$cluster)
-rownames(annotC) = colnames(all.sub)
-
-coldef = c("blue","red")
-names(coldef) = c("TRUE","FALSE")
-cols2 <- RColorBrewer::brewer.pal(10, "Set3")
-names(cols2) = clusters
-coldef = c(coldef, cols2)
-
-pheatmap(D, annotation_row = annotG, cluster_cols = F, cluster_rows = T, labels_col = F, annotation_colors = annot.col, annotation_col = annotC)
-
+gene_overlap_heatmap(topG)
 
 ```
+
+
+A few more clear markers.
+
 
 ## {{< meta session >}}
 
@@ -835,6 +799,7 @@ pheatmap(D, annotation_row = annotG, cluster_cols = F, cluster_rows = T, labels_
   <summary>Click here</summary>
 
 ```{r}
+#| label: session
 sessionInfo()
 ```
 

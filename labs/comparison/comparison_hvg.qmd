@@ -9,6 +9,7 @@ format: html
 {{< meta qc_data_2 >}}
 
 ```{r}
+#| label: libraries
 suppressPackageStartupMessages({
     library(Seurat)
     library(zellkonverter)
@@ -32,6 +33,7 @@ OBS! Zellkonverter installs conda env with basilisk! Takes a while to run first 
 
 
 ```{r}
+#| label: load
 path_results <- "data/covid/results"
 if (!dir.exists(path_results)) dir.create(path_results, recursive = T)
 
@@ -63,6 +65,7 @@ scanpy = as.Seurat(scanpy.sce, counts = NULL, data = "X") # only have the var.ge
 ## Umaps
 
 ```{r}
+#| label: umaps
 #| fig-height: 4
 #| fig-width: 10
 
@@ -77,6 +80,7 @@ wrap_plots(
 Create one dataset with the cells that are present in all samples. Also add in umap from all 3 pipelines.
 
 ```{r}
+#| label: make-object
 meta.seurat = sobj@meta.data
 meta.scanpy = scanpy@meta.data
 meta.bioc = bioc@meta.data
@@ -88,6 +92,7 @@ meta.seurat$cell = unlist(lapply(strsplit(rownames(meta.seurat),"_"), function(x
 
 
 ```{r}
+#| label: make-objects2
 in.all = intersect(intersect(meta.scanpy$cell, meta.seurat$cell), meta.bioc$cell)
 
 tmp1 = meta.bioc[match(in.all, meta.bioc$cell),]
@@ -118,6 +123,7 @@ In Seurat, `FindVariableFeatures` is not batch aware unless the data is split in
 
 
 ```{r}
+#| label: hvg
 hvgs = list()
 hvgs$seurat = VariableFeatures(sobj)
 hvgs$bioc = sce@metadata$hvgs
@@ -142,6 +148,7 @@ Only Seurat have the dispersions for each individual dataset stored in the objec
 Recalculate for bioc.
 
 ```{r}
+#| label: bioc
 var.out <- modelGeneVar(sce, block = sce$sample)
 hvgs_bioc <- getTopHVGs(var.out, n = 2000)
 cutoff <- rownames(var.out) %in% hvgs_bioc
@@ -149,6 +156,7 @@ cutoff <- rownames(var.out) %in% hvgs_bioc
 
 
 ```{r}
+#| label: dispersions
 #| fig-height: 10
 #| fig-width: 12
 
@@ -182,9 +190,11 @@ points(log1p(all.hvg$mean)[match(hvgs$seurat, rownames(all.hvg))], all.hvg$varia
 
 Scanpy uses min_disp=0.5, min_mean=0.0125, max_mean=3, so the highly expressed ones are not included.
 
+Seurat uses `variance.standardized` to rank the genes. Bioc uses the `bio` slot with estimated biological variation.   
 
 
 ```{r}
+#| label: pairs-plot
 all.hvg$mean_log = log1p(all.hvg$mean)
 sel.means = c("mean","mean_log","means_scpy", "mean_bioc")
 pairs(all.hvg[,sel.means])
@@ -197,9 +207,8 @@ Difference in what cells were used, and also in how the dispersions across the s
 
 ## For one sample
 
-Compare for ctrl.13 sample, Seurat uses `variance.standardized` to rank the genes. Bioc uses the `bio` slot with estimated biological variation.   
 
-Use default settings in all the different methods.
+Run hvg selection for ctrl.13 sample, so that the handling of batches is not influencing results. Use default settings in all the different methods.
 
 ### Seurat
 
@@ -219,6 +228,7 @@ To learn the mean-variance relationship from the data, we computed the mean and 
 
 
 ```{r}
+#| label: seurat
 ctrl = all[,all$orig.ident == "ctrl_13"]
 ctrl@assays$RNA@meta.data[,1:ncol(ctrl@assays$RNA@meta.data)] = NULL
 
@@ -243,10 +253,11 @@ cmat = make_comb_mat(hvg_seu)
 cmat
 ```
 
-Very little overlap between the methods within Seurat. Mvp and disp are calculated on `data`, while vst is done on `counts`. 
+Very little overlap between the methods in Seurat. Mvp and disp are calculated on `data`, while vst is done on `counts`. 
 
 
 ```{r}
+#| label: plot-seurat
 vinfo.seu = ctrl@assays$RNA@meta.data
 rownames(vinfo.seu) = rownames(ctrl)
 
@@ -283,7 +294,11 @@ wrap_plots(p1S,p2S,p3S,   ncol=2)
 
 ### Bioc
 
+Run the bioconductor detection method with `modelGeneVar` and `getTopHVGs`. Plot both total variance and "bio" variance.
+
+
 ```{r}
+#| label: bioc2
 ctrl.sce = as.SingleCellExperiment(ctrl)
 var.out <- modelGeneVar(ctrl.sce)
 hvgs_bioc <- getTopHVGs(var.out, n = 2000)
@@ -307,14 +322,7 @@ pB2
 
 ### Scanpy
 
-Run with both `seurat` and `seurat_v3` 
-
-Cannot run seurat_v3 with normalized data: 
-```
-UserWarning: `flavor='seurat_v3'` expects raw count data, but non-integers were found.
-  warnings.warn(
-```
-
+Run with both `seurat` (on lognorm data) and `seurat_v3` (on counts, is same as vst)
 
 
 For the dispersion-based methods (flavor='seurat' Satija et al. [2015] and flavor='cell_ranger' Zheng et al. [2017]), the normalized dispersion is obtained by scaling with the mean and standard deviation of the dispersions for genes falling into a given bin for mean expression of genes. This means that for each bin of mean expression, highly variable genes are selected.
@@ -324,6 +332,7 @@ For flavor='seurat_v3'/'seurat_v3_paper' [Stuart et al., 2019], a normalized var
 
 
 ```{r}
+#| label: scanpy
 penv = "/Users/asabjor/miniconda3/envs/scanpy_2024_nopip"
 hvg.scanpy = basiliskRun(env=penv, fun=function(counts) {
     scanpy <- reticulate::import("scanpy")
@@ -346,6 +355,7 @@ hvg.scanpy = basiliskRun(env=penv, fun=function(counts) {
 
 
 ```{r}
+#| label: scanpy2
 rownames(hvg.scanpy$disp) = rownames(ctrl)
 rownames(hvg.scanpy$vst) = rownames(ctrl)
 
@@ -367,6 +377,7 @@ pS2
 ### All together
 
 ```{r}
+#| label: merge-all
 colnames(hvg.scanpy$disp) = paste0(colnames(hvg.scanpy$disp), "_scpyD")
 colnames(hvg.scanpy$vst) = paste0(colnames(hvg.scanpy$vst), "_scpyV")
 colnames(var.out) = paste0(colnames(var.out), "_bioc")
@@ -374,6 +385,7 @@ ctrl.hvg = cbind(vinfo.seu, var.out, hvg.scanpy$disp, hvg.scanpy$vst)
 ```
 
 ```{r}
+#| label: plot-all
 #| fig-height: 10
 #| fig-width: 12
 
@@ -384,12 +396,14 @@ wrap_plots(p1S + ggtitle("Seurat vst"),p2S + ggtitle("Seurat disp"),p3S + ggtitl
 
 
 ```{r}
+#| label: disps-all
 sel = c("vf_vst_counts.ctrl_13_variance.standardized","vf_disp_data.ctrl_13_mvp.dispersion.scaled","bio_bioc", "dispersions_norm_scpyD", "variances_norm_scpyV")
 
 pairs(ctrl.hvg[,sel])
 ```
 
 ```{r}
+#| label: means-all
 sel = c("vf_vst_counts.ctrl_13_mean_log","vf_disp_data.ctrl_13_mvp.mean", "mean_bioc", "means_scpyD", "means_scpyV_log")
 
 ctrl.hvg$vf_vst_counts.ctrl_13_mean_log = log1p(ctrl.hvg$vf_vst_counts.ctrl_13_mean)
@@ -398,10 +412,10 @@ ctrl.hvg$means_scpyV_log = log1p(ctrl.hvg$means_scpyV)
 pairs(ctrl.hvg[,sel])
 ```
 
-Mean Bioc stands out the most, mvp in seurat and scanpy is identical.
 
 
 ```{r}
+#| label: overlap
 
 hvgs = hvg_seu
 hvgs$scpyD = rownames(hvg.scanpy$disp)[hvg.scanpy$disp$highly_variable_scpyD]
@@ -411,52 +425,86 @@ hvgs$bioc = hvgs_bioc
 o = overlap_phyper2(hvgs,hvgs, remove.diag = T)
 ```
 
-Vst clearly stands out as more different, but is also based on counts instead of lognorm data. 
+Mean Bioc stands out the most. 
+
+Vst in seurat and scanpy is identical and very different from the other methods. But it is also based on counts instead of lognorm data. 
 
 The variance estimate for the same sample is quite different. Even the top variable genes are not the same and are very different gene groups.
 
 
 ### Top genes
 
-Explore top  genes with vst,  bioc and scanpy
+Explore top  genes with the different methods. 
+
+disp and mvp are identical, remove mvp.
+
+ScanpyV and vst are identical, remove scpyV.
 
 ```{r}
+#| label: top10
 topG = lapply(hvgs, head, 10)
 
-# same for mvp and dips, remove one.
+# same for mvp and disp, remove one of them.
 topG$mvp = NULL
+topG$scpyV = NULL
 
-# sort for scanpy.
+# sort the genes for scanpy.
 topG$scpyD = rownames(ctrl.hvg)[order(ctrl.hvg$dispersions_norm_scpyD, decreasing = T)][1:10]
-topG$scpyV = rownames(ctrl.hvg)[order(ctrl.hvg$variances_norm_scpyV, decreasing = T)][1:10]
 
 
-print(topG)
+# rank the genes
+allG = unique(unlist(topG))
 
-table(unlist(topG))
+
+ranks = Reduce(rbind, lapply(topG, function(x) {
+  r = 1:10
+  names(r) = x
+  r2 = r[allG]
+  return(r2)
+}))
+
+colnames(ranks) = allG
+rownames(ranks) = names(topG)
+
+pheatmap::pheatmap(ranks, display_numbers = ranks, main="Rank of top 10 gens", cluster_rows = F, cluster_cols = F)
+
+
 ```
 
-VST with seurat or scanpy are the same. Some difference in the dispersion ones.
-
-
+Plot onto umap for the unique ones.
 
 ```{r}
+#| label: top10-umap
 #| fig-height: 10
 #| fig-width: 12
 
-small.leg <- theme(legend.text = element_text(size=3), legend.key.size = unit(0.5,"point"))
+topG$disp = NULL
 
-FeaturePlot(ctrl, reduction = "umap_harmony", features = unique(unlist(topG)), order = T, ncol=5) + small.leg
+t = table(unlist(topG))
+selG = names(t)[t==1]
+selG = sapply(selG, function(y) names(which(unlist(lapply(topG, function(x) any(x==y))))))
+selG = sort(selG)
 
-VlnPlot(ctrl, features = unique(unlist(topG)), ncol = 5)
+#small.leg <- theme(legend.text = element_text(size=3), legend.key.size = unit(0.5,"point"))
+
+plots = list()
+for (g in names(selG)){
+  plots[[g]] = FeaturePlot(ctrl, reduction = "umap_harmony", features = g, order = T)  + ggtitle(paste(g,selG[g], collapse = " - ")) + NoAxes() #+ small.leg
+}
+
+wrap_plots(plots, ncol = 4)
+
 ```
 
-More clear celltype genes in the Bioc selection. More B-cell genes for Scanpy/Seurat.
+More clear celltype genes in the Bioc selection, but also higher expressed genes.. More B-cell genes for vst.
 
 
-Expression levels of the variable genes.
+### Expression levels
+
+Expression levels of the variable genes. As total counts or mean expression across all cells.
 
 ```{r}
+#| label: exprs
 #| fig-height: 8
 #| fig-width: 12
 
@@ -484,105 +532,52 @@ ncol =5
 
 BioC distibution shifted to more highly expressed genes. 
 
-Dispersion gives the extremely higly expressed genes. 
+Dispersion gives the very highly expressed genes, but also has a spread among all levels of expression.
 
 ## Discussion
 
-* Seurat v3 paper suggests vst on counts, but then uses the variable genes in lognorm space
+* Seurat v3 paper suggests vst on counts, but then uses the variable genes in lognorm space, how is this the best option_ 
 
 * From SC best practices, suggests scry for HVG selection. https://www.sc-best-practices.org/preprocessing_visualization/feature_selection.html
-
-log-transformation is not possible for exact zeros, analysts often add a small pseudo count, e.g., 1 (log1p), to all normalized counts before log transforming the data. Choosing the pseudo count, however, is arbitrary and can introduce biases to the transformed data. This arbitrariness has then also an effect on the feature selection as the observed variability depends on the chosen pseudo count. A small pseudo count value close to zero is increasing the variance of genes with zero counts [Townes et al., 2019].
-
-From Townes paper:
-
-Zero inflation is an artifact of log normalization
-
-
-Select a few of the top genes and compare. IGKC,IGLC2 is top gene with vst, CAVIN2, C1QA with dispersion, GNLY,NKG7  with bioc, S100A9 ranks high in all, but most in bioc.
-
-
-
-```{r}
-#| fig-height: 5
-#| fig-width: 12
-
-selG = c("IGKC","IGLC2","CAVIN2","C1QA","GNLY","NKG7", "S100A9" )
-
-# violin plots for each slot.
-VlnPlot(ctrl,selG, ncol = 7, layer = "counts", group.by = "orig.ident")
-VlnPlot(ctrl,selG, ncol = 7, layer = "data", group.by = "orig.ident")
-VlnPlot(ctrl,selG, ncol = 7, layer = "scale.data", group.by = "orig.ident")
-```
-
-Try normalizing and logtrans with different pseudocounts and scale factors.
-
-Default scale factor is 10K 
-
-```{r}
-#| fig-height: 5
-#| fig-width: 12
-
-selG = c("IGKC","IGLC2","CAVIN2","C1QA","GNLY","NKG7", "S100A9" )
-
-C = ctrl@assays$RNA@layers$counts.ctrl_13
-rownames(C) = rownames(ctrl)
-hist(colSums(C),100)
-
-C.norm = C/colSums(C)
-# do log1p or log(x+1e-6)
-# scale factor 15K or 4k
-
-LayerData(ctrl,"norm_15k_1p") = log1p(C.norm*15000)
-LayerData(ctrl,"norm_4k_1p") = log1p(C.norm*4000)
-LayerData(ctrl,"norm_15k_e6p") = log(C.norm*15000 + 1e-6)
-LayerData(ctrl,"norm_4k_e6p") = log(C.norm*4000 + 1e-6)
-
-# violin plots for each slot.
-VlnPlot(ctrl,selG, ncol = 7, layer = "norm_15k_1p", group.by = "orig.ident")
-VlnPlot(ctrl,selG, ncol = 7, layer = "norm_4k_1p", group.by = "orig.ident")
-VlnPlot(ctrl,selG, ncol = 7, layer = "norm_15k_e6p", group.by = "orig.ident")
-VlnPlot(ctrl,selG, ncol = 7, layer = "norm_4k_e6p", group.by = "orig.ident")
-
-```
-
 
 ### scry
 
 Run scry deviance function and select top 2k genes. 
 
 ```{r}
+#| label: scry
 ctrl.sce<-scry::devianceFeatureSelection(ctrl.sce, assay="counts", sorted=TRUE)
 plot(rowData(ctrl.sce)$binomial_deviance, type="l", xlab="ranked genes",
      ylab="binomial deviance", main="Feature Selection with Deviance")
 abline(v=2000, lty=2, col="red")
 
-head(rowData(ctrl.sce))
+head(rowData(ctrl.sce),10)
 ```
-```{r}
 
+Top genes are similar to the other methods.
+
+
+```{r}
+#| label: scry-plot
 ctrl.hvg$deviance = rowData(ctrl.sce)$binomial_deviance[match(rownames(ctrl.hvg), rownames(rowData(ctrl.sce)))]
 ctrl.hvg$devG = rownames(ctrl.hvg) %in% head(rownames(rowData(ctrl.sce)),2000)
 
 wrap_plots(
-ggplot(ctrl.hvg, aes(x=nC, y=deviance, color=devG)) + geom_point() + theme_classic() + ggtitle("nCell vs deviance"),
-ggplot(ctrl.hvg, aes(x=meanE, y=deviance, color=devG)) + geom_point() + theme_classic() + ggtitle("mean expression vs deviance"),
-ggplot(ctrl.hvg, aes(x=dispersions_norm_scpyD, y=deviance, color=devG)) + geom_point() + theme_classic() + ggtitle("Dispersion vs deviance"),
-ggplot(ctrl.hvg, aes(x=variances_norm_scpyV, y=deviance, color=devG)) + geom_point() + theme_classic() + ggtitle("VST vs deviance"),
-ggplot(ctrl.hvg, aes(x=bio_bioc, y=deviance, color=devG)) + geom_point() + theme_classic() + ggtitle("bioc bio vs deviance"),
+ggplot(ctrl.hvg, aes(x=nC, y=deviance, color=devG)) + geom_point() + theme_classic() + ggtitle("nCell vs deviance") + NoLegend(), 
+ggplot(ctrl.hvg, aes(x=meanE, y=deviance, color=devG)) + geom_point() + theme_classic() + ggtitle("mean expression vs deviance")+ NoLegend(), 
+ggplot(ctrl.hvg, aes(x=dispersions_norm_scpyD, y=deviance, color=devG)) + geom_point() + theme_classic() + ggtitle("Dispersion vs deviance")+ NoLegend(), 
+ggplot(ctrl.hvg, aes(x=variances_norm_scpyV, y=deviance, color=devG)) + geom_point() + theme_classic() + ggtitle("VST vs deviance")+ NoLegend(), 
+ggplot(ctrl.hvg, aes(x=bio_bioc, y=deviance, color=devG)) + geom_point() + theme_classic() + ggtitle("bioc bio vs deviance")+ NoLegend(), 
 
 
 ncol = 3
 )
-wrap_plots(
-ggplot(ctrl.hvg, aes(y=dispersions_norm_scpyD, x=means_scpyD, color=devG)) + geom_point() + theme_classic() + ggtitle("Mean vs Dispersion"),
-ggplot(ctrl.hvg, aes(y=variances_norm_scpyV, x=means_scpyV, color=devG)) + geom_point() + theme_classic() + ggtitle("Mean vs VST") + scale_x_log10(),
-ggplot(ctrl.hvg, aes(y=nC, x=meanE, color=devG)) + geom_point() + theme_classic() + ggtitle("Mean vs nCells"),
-ncol = 2
-)
+
 ```
+Selects all genes with high expression
 
 ```{r}
+#| label: scry-overlap
 hvgs$deviance = head(rownames(rowData(ctrl.sce)),2000)
 o = overlap_phyper2(hvgs,hvgs, remove.diag = T)
 ```
@@ -595,6 +590,7 @@ o = overlap_phyper2(hvgs,hvgs, remove.diag = T)
   <summary>Click here</summary>
 
 ```{r}
+#| label: session
 sessionInfo()
 ```
 
