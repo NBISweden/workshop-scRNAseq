@@ -731,6 +731,7 @@ ggplot(long, aes(x=value)) + geom_histogram(bins=100) +
 stats = apply(c, 2, summary)
 t(stats)
 ```
+
 # Clustering
 
 Run a quick umap/clustering with the different normalizations. All with same set of genes, pca with 20 PCs, 
@@ -864,6 +865,93 @@ Vs celltypes:
 #| label: pcs-celltype
 plot_pc_correl(emb, "celltype")
 ```
+
+
+
+# DGE
+
+Run DGE detection between 2 clusters, do NK vs T-cell, using the differently normalized data and compare results.
+
+One parametric test (MAST), one rank-based (wilcoxon). Select 150 cells of each celltype.
+
+Just for lognorm, deconvolution, sct data, tmm-log and logcounts.
+
+```{r}
+#| label: run-dge
+# select 150 cells from each celltype
+sobj = SetIdent(sobj, value = "celltype")
+selC = intersect(colnames(sobj)[which(sobj$celltype %in% c("NK","TC"))], WhichCells(sobj, downsample = 150))
+tmp = sobj[selG,selC]
+
+
+# then run per dataset
+markersM = list()
+sel.methods = c("lognorm10k","deconv","logcounts","sct_data","tmm_log")
+
+for (ds in sel.methods){
+  d = as(ndata[[ds]][rownames(tmp),selC], "matrix")
+  tmp@assays$RNA@layers$data = d
+  markersM[[paste0("M-",ds)]] = FindMarkers(tmp, ident.1 = "TC", ident.2 = "NK", test.use = "MAST")
+  markersM[[paste0("W-",ds)]] = FindMarkers(tmp, ident.1 = "TC", ident.2 = "NK", test.use = "wilcox")
+}
+
+
+```
+
+Select significant genes below 0.01. OBS! test only among 4.6K genes, so adjusted pvalue is lower than it should.
+
+
+```{r}
+#| label: alltests
+signM = lapply(markersM, function(x) {
+  up = rownames(x)[x$avg_log2FC>0 & x$p_val_adj < 0.01]
+  down = rownames(x)[x$avg_log2FC<0 & x$p_val_adj < 0.01] 
+  return(list(up=up, down=down))
+})
+
+nM = Reduce(cbind, lapply(signM, function(x)  c(length(x$up), length(x$down))))
+colnames(nM) = names(signM)
+rownames(nM) = c("TC","NK")
+
+df = reshape2::melt(nM)
+ggplot(df, aes(x=Var2, y=value, fill = Var1)) + geom_bar(stat = "identity") + theme_classic() + RotatedAxis() + ggtitle("Number of significant genes") 
+```
+
+
+Select all genes enriched in NK, top 100 genes
+
+
+```{r}
+#| label: dge-nk
+
+l1 = lapply(signM, function(x) x$down[1:100])
+
+
+o = overlap_phyper2(l1,l1, silent = T,  remove.diag = T)
+m = o$M[1:length(l1), 1:length(l1)]
+diag(m) = NA
+pheatmap(m, display_numbers = m, main="top 100 NK genes")
+
+```
+
+Same for Tcell degs, fewer significant genes, take top 65
+
+```{r}
+#| label: dge-tc
+
+l1 = lapply(signM, function(x) x$up[1:65])
+
+
+o = overlap_phyper2(l1,l1, silent = T,  remove.diag = T)
+m = o$M[1:length(l1), 1:length(l1)]
+diag(m) = NA
+pheatmap(m, display_numbers = m, main="top 65 TC genes")
+
+```
+For TC genes 55 - 64 genes overlap among top 65.
+For NK genes 90 - 99 of top 100 genes overlap. 
+
+Quite similar regardless of normalization. 
 
 
 

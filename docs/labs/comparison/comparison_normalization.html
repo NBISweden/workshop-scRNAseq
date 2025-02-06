@@ -207,7 +207,7 @@ background-size: cover;
       <div>
       <div class="quarto-title-meta-heading">Published</div>
       <div class="quarto-title-meta-contents">
-        <p class="date">05-Feb-2025</p>
+        <p class="date">06-Feb-2025</p>
       </div>
     </div>
     
@@ -254,7 +254,8 @@ background-size: cover;
   <li><a href="#pc-correlation-to-different-stats" id="toc-pc-correlation-to-different-stats" class="nav-link" data-scroll-target="#pc-correlation-to-different-stats"><span class="header-section-number">5.0.1.2</span> PC correlation to different stats</a></li>
   </ul></li>
   </ul></li>
-  <li><a href="#meta-session" id="toc-meta-session" class="nav-link" data-scroll-target="#meta-session"><span class="header-section-number">6</span> Session info</a></li>
+  <li><a href="#dge" id="toc-dge" class="nav-link" data-scroll-target="#dge"><span class="header-section-number">6</span> DGE</a></li>
+  <li><a href="#meta-session" id="toc-meta-session" class="nav-link" data-scroll-target="#meta-session"><span class="header-section-number">7</span> Session info</a></li>
   </ul>
 </nav>
     </div>
@@ -656,8 +657,8 @@ Active assay: RNA (18854 features, 2000 variable features)
 <span id="cb49-9"><a href="#cb49-9" aria-hidden="true" tabindex="-1"></a><span class="fu">gc</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>           used  (Mb) gc trigger   (Mb) limit (Mb)  max used   (Mb)
-Ncells  9499379 507.4   16614425  887.4         NA  16614425  887.4
-Vcells 81517207 622.0  586667556 4476.0      65536 733229785 5594.1</code></pre>
+Ncells  9499543 507.4   16614665  887.4         NA  16614665  887.4
+Vcells 81518697 622.0  586678216 4476.0      65536 733231275 5594.2</code></pre>
 </div>
 </div>
 </section>
@@ -1250,14 +1251,96 @@ tmm_log               0.44942367 0.8848754</code></pre>
 </section>
 </section>
 </section>
-<section id="meta-session" class="level1" data-number="6">
-<h1 data-number="6"><span class="header-section-number">6</span> Session info</h1>
+<section id="dge" class="level1" data-number="6">
+<h1 data-number="6"><span class="header-section-number">6</span> DGE</h1>
+<p>Run DGE detection between 2 clusters, do NK vs T-cell, using the differently normalized data and compare results.</p>
+<p>One parametric test (MAST), one rank-based (wilcoxon). Select 150 cells of each celltype.</p>
+<p>Just for lognorm, deconvolution, sct data, tmm-log and logcounts.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb88"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb88-1"><a href="#cb88-1" aria-hidden="true" tabindex="-1"></a><span class="co"># select 150 cells from each celltype</span></span>
+<span id="cb88-2"><a href="#cb88-2" aria-hidden="true" tabindex="-1"></a>sobj <span class="ot">=</span> <span class="fu">SetIdent</span>(sobj, <span class="at">value =</span> <span class="st">"celltype"</span>)</span>
+<span id="cb88-3"><a href="#cb88-3" aria-hidden="true" tabindex="-1"></a>selC <span class="ot">=</span> <span class="fu">intersect</span>(<span class="fu">colnames</span>(sobj)[<span class="fu">which</span>(sobj<span class="sc">$</span>celltype <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">"NK"</span>,<span class="st">"TC"</span>))], <span class="fu">WhichCells</span>(sobj, <span class="at">downsample =</span> <span class="dv">150</span>))</span>
+<span id="cb88-4"><a href="#cb88-4" aria-hidden="true" tabindex="-1"></a>tmp <span class="ot">=</span> sobj[selG,selC]</span>
+<span id="cb88-5"><a href="#cb88-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb88-6"><a href="#cb88-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb88-7"><a href="#cb88-7" aria-hidden="true" tabindex="-1"></a><span class="co"># then run per dataset</span></span>
+<span id="cb88-8"><a href="#cb88-8" aria-hidden="true" tabindex="-1"></a>markersM <span class="ot">=</span> <span class="fu">list</span>()</span>
+<span id="cb88-9"><a href="#cb88-9" aria-hidden="true" tabindex="-1"></a>sel.methods <span class="ot">=</span> <span class="fu">c</span>(<span class="st">"lognorm10k"</span>,<span class="st">"deconv"</span>,<span class="st">"logcounts"</span>,<span class="st">"sct_data"</span>,<span class="st">"tmm_log"</span>)</span>
+<span id="cb88-10"><a href="#cb88-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb88-11"><a href="#cb88-11" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (ds <span class="cf">in</span> sel.methods){</span>
+<span id="cb88-12"><a href="#cb88-12" aria-hidden="true" tabindex="-1"></a>  d <span class="ot">=</span> <span class="fu">as</span>(ndata[[ds]][<span class="fu">rownames</span>(tmp),selC], <span class="st">"matrix"</span>)</span>
+<span id="cb88-13"><a href="#cb88-13" aria-hidden="true" tabindex="-1"></a>  tmp<span class="sc">@</span>assays<span class="sc">$</span>RNA<span class="sc">@</span>layers<span class="sc">$</span>data <span class="ot">=</span> d</span>
+<span id="cb88-14"><a href="#cb88-14" aria-hidden="true" tabindex="-1"></a>  markersM[[<span class="fu">paste0</span>(<span class="st">"M-"</span>,ds)]] <span class="ot">=</span> <span class="fu">FindMarkers</span>(tmp, <span class="at">ident.1 =</span> <span class="st">"TC"</span>, <span class="at">ident.2 =</span> <span class="st">"NK"</span>, <span class="at">test.use =</span> <span class="st">"MAST"</span>)</span>
+<span id="cb88-15"><a href="#cb88-15" aria-hidden="true" tabindex="-1"></a>  markersM[[<span class="fu">paste0</span>(<span class="st">"W-"</span>,ds)]] <span class="ot">=</span> <span class="fu">FindMarkers</span>(tmp, <span class="at">ident.1 =</span> <span class="st">"TC"</span>, <span class="at">ident.2 =</span> <span class="st">"NK"</span>, <span class="at">test.use =</span> <span class="st">"wilcox"</span>)</span>
+<span id="cb88-16"><a href="#cb88-16" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Select significant genes below 0.01. OBS! test only among 4.6K genes, so adjusted pvalue is lower than it should.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb89"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb89-1"><a href="#cb89-1" aria-hidden="true" tabindex="-1"></a>signM <span class="ot">=</span> <span class="fu">lapply</span>(markersM, <span class="cf">function</span>(x) {</span>
+<span id="cb89-2"><a href="#cb89-2" aria-hidden="true" tabindex="-1"></a>  up <span class="ot">=</span> <span class="fu">rownames</span>(x)[x<span class="sc">$</span>avg_log2FC<span class="sc">&gt;</span><span class="dv">0</span> <span class="sc">&amp;</span> x<span class="sc">$</span>p_val_adj <span class="sc">&lt;</span> <span class="fl">0.01</span>]</span>
+<span id="cb89-3"><a href="#cb89-3" aria-hidden="true" tabindex="-1"></a>  down <span class="ot">=</span> <span class="fu">rownames</span>(x)[x<span class="sc">$</span>avg_log2FC<span class="sc">&lt;</span><span class="dv">0</span> <span class="sc">&amp;</span> x<span class="sc">$</span>p_val_adj <span class="sc">&lt;</span> <span class="fl">0.01</span>] </span>
+<span id="cb89-4"><a href="#cb89-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(<span class="fu">list</span>(<span class="at">up=</span>up, <span class="at">down=</span>down))</span>
+<span id="cb89-5"><a href="#cb89-5" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb89-6"><a href="#cb89-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb89-7"><a href="#cb89-7" aria-hidden="true" tabindex="-1"></a>nM <span class="ot">=</span> <span class="fu">Reduce</span>(cbind, <span class="fu">lapply</span>(signM, <span class="cf">function</span>(x)  <span class="fu">c</span>(<span class="fu">length</span>(x<span class="sc">$</span>up), <span class="fu">length</span>(x<span class="sc">$</span>down))))</span>
+<span id="cb89-8"><a href="#cb89-8" aria-hidden="true" tabindex="-1"></a><span class="fu">colnames</span>(nM) <span class="ot">=</span> <span class="fu">names</span>(signM)</span>
+<span id="cb89-9"><a href="#cb89-9" aria-hidden="true" tabindex="-1"></a><span class="fu">rownames</span>(nM) <span class="ot">=</span> <span class="fu">c</span>(<span class="st">"TC"</span>,<span class="st">"NK"</span>)</span>
+<span id="cb89-10"><a href="#cb89-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb89-11"><a href="#cb89-11" aria-hidden="true" tabindex="-1"></a>df <span class="ot">=</span> reshape2<span class="sc">::</span><span class="fu">melt</span>(nM)</span>
+<span id="cb89-12"><a href="#cb89-12" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(df, <span class="fu">aes</span>(<span class="at">x=</span>Var2, <span class="at">y=</span>value, <span class="at">fill =</span> Var1)) <span class="sc">+</span> <span class="fu">geom_bar</span>(<span class="at">stat =</span> <span class="st">"identity"</span>) <span class="sc">+</span> <span class="fu">theme_classic</span>() <span class="sc">+</span> <span class="fu">RotatedAxis</span>() <span class="sc">+</span> <span class="fu">ggtitle</span>(<span class="st">"Number of significant genes"</span>) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-left">
+<figure class="figure">
+<p><a href="comparison_normalization_files/figure-html/alltests-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-28"><img src="comparison_normalization_files/figure-html/alltests-1.png" class="img-fluid figure-img" width="672"></a></p>
+</figure>
+</div>
+</div>
+</div>
+<p>Select all genes enriched in NK, top 100 genes</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb90"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb90-1"><a href="#cb90-1" aria-hidden="true" tabindex="-1"></a>l1 <span class="ot">=</span> <span class="fu">lapply</span>(signM, <span class="cf">function</span>(x) x<span class="sc">$</span>down[<span class="dv">1</span><span class="sc">:</span><span class="dv">100</span>])</span>
+<span id="cb90-2"><a href="#cb90-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb90-3"><a href="#cb90-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb90-4"><a href="#cb90-4" aria-hidden="true" tabindex="-1"></a>o <span class="ot">=</span> <span class="fu">overlap_phyper2</span>(l1,l1, <span class="at">silent =</span> T,  <span class="at">remove.diag =</span> T)</span>
+<span id="cb90-5"><a href="#cb90-5" aria-hidden="true" tabindex="-1"></a>m <span class="ot">=</span> o<span class="sc">$</span>M[<span class="dv">1</span><span class="sc">:</span><span class="fu">length</span>(l1), <span class="dv">1</span><span class="sc">:</span><span class="fu">length</span>(l1)]</span>
+<span id="cb90-6"><a href="#cb90-6" aria-hidden="true" tabindex="-1"></a><span class="fu">diag</span>(m) <span class="ot">=</span> <span class="cn">NA</span></span>
+<span id="cb90-7"><a href="#cb90-7" aria-hidden="true" tabindex="-1"></a><span class="fu">pheatmap</span>(m, <span class="at">display_numbers =</span> m, <span class="at">main=</span><span class="st">"top 100 NK genes"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-left">
+<figure class="figure">
+<p><a href="comparison_normalization_files/figure-html/dge-nk-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-29"><img src="comparison_normalization_files/figure-html/dge-nk-1.png" class="img-fluid figure-img" width="672"></a></p>
+</figure>
+</div>
+</div>
+</div>
+<p>Same for Tcell degs, fewer significant genes, take top 65</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb91"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb91-1"><a href="#cb91-1" aria-hidden="true" tabindex="-1"></a>l1 <span class="ot">=</span> <span class="fu">lapply</span>(signM, <span class="cf">function</span>(x) x<span class="sc">$</span>up[<span class="dv">1</span><span class="sc">:</span><span class="dv">65</span>])</span>
+<span id="cb91-2"><a href="#cb91-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb91-3"><a href="#cb91-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb91-4"><a href="#cb91-4" aria-hidden="true" tabindex="-1"></a>o <span class="ot">=</span> <span class="fu">overlap_phyper2</span>(l1,l1, <span class="at">silent =</span> T,  <span class="at">remove.diag =</span> T)</span>
+<span id="cb91-5"><a href="#cb91-5" aria-hidden="true" tabindex="-1"></a>m <span class="ot">=</span> o<span class="sc">$</span>M[<span class="dv">1</span><span class="sc">:</span><span class="fu">length</span>(l1), <span class="dv">1</span><span class="sc">:</span><span class="fu">length</span>(l1)]</span>
+<span id="cb91-6"><a href="#cb91-6" aria-hidden="true" tabindex="-1"></a><span class="fu">diag</span>(m) <span class="ot">=</span> <span class="cn">NA</span></span>
+<span id="cb91-7"><a href="#cb91-7" aria-hidden="true" tabindex="-1"></a><span class="fu">pheatmap</span>(m, <span class="at">display_numbers =</span> m, <span class="at">main=</span><span class="st">"top 65 TC genes"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-left">
+<figure class="figure">
+<p><a href="comparison_normalization_files/figure-html/dge-tc-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-30"><img src="comparison_normalization_files/figure-html/dge-tc-1.png" class="img-fluid figure-img" width="672"></a></p>
+</figure>
+</div>
+</div>
+</div>
+<p>For TC genes 55 - 64 genes overlap among top 65. For NK genes 90 - 99 of top 100 genes overlap.</p>
+<p>Quite similar regardless of normalization.</p>
+</section>
+<section id="meta-session" class="level1" data-number="7">
+<h1 data-number="7"><span class="header-section-number">7</span> Session info</h1>
 <details>
 <summary>
 Click here
 </summary>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb88"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb88-1"><a href="#cb88-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb92"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb92-1"><a href="#cb92-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>R version 4.3.3 (2024-02-29)
 Platform: x86_64-apple-darwin13.4.0 (64-bit)
@@ -1297,74 +1380,77 @@ loaded via a namespace (and not attached):
   [9] fastDummies_1.7.4         lifecycle_1.0.4          
  [11] edgeR_4.0.16              globals_0.16.3           
  [13] lattice_0.22-6            MASS_7.3-60.0.1          
- [15] magrittr_2.0.3            limma_3.58.1             
- [17] plotly_4.10.4             rmarkdown_2.29           
- [19] remotes_2.5.0             yaml_2.3.10              
- [21] metapod_1.10.0            httpuv_1.6.15            
- [23] glmGamPoi_1.14.0          sctransform_0.4.1        
- [25] spam_2.11-0               sessioninfo_1.2.2        
- [27] pkgbuild_1.4.5            spatstat.sparse_3.1-0    
- [29] reticulate_1.40.0         cowplot_1.1.3            
- [31] pbapply_1.7-2             RColorBrewer_1.1-3       
- [33] pkgload_1.4.0             abind_1.4-5              
- [35] zlibbioc_1.48.0           Rtsne_0.17               
- [37] purrr_1.0.2               RCurl_1.98-1.16          
- [39] GenomeInfoDbData_1.2.11   ggrepel_0.9.6            
- [41] irlba_2.3.5.1             listenv_0.9.1            
- [43] spatstat.utils_3.1-2      goftest_1.2-3            
- [45] RSpectra_0.16-2           spatstat.random_3.3-2    
- [47] dqrng_0.3.2               fitdistrplus_1.2-2       
- [49] parallelly_1.41.0         DelayedMatrixStats_1.24.0
- [51] leiden_0.4.3.1            codetools_0.2-20         
- [53] DelayedArray_0.28.0       tidyselect_1.2.1         
- [55] farver_2.1.2              ScaledMatrix_1.10.0      
- [57] spatstat.explore_3.3-4    jsonlite_1.8.9           
- [59] BiocNeighbors_1.20.0      ellipsis_0.3.2           
- [61] progressr_0.15.1          ggridges_0.5.6           
- [63] survival_3.8-3            tools_4.3.3              
- [65] ica_1.0-3                 Rcpp_1.0.13-1            
- [67] glue_1.8.0                gridExtra_2.3            
- [69] SparseArray_1.2.2         xfun_0.50                
- [71] usethis_3.1.0             withr_3.0.2              
- [73] fastmap_1.2.0             bluster_1.12.0           
- [75] digest_0.6.37             rsvd_1.0.5               
- [77] R6_2.5.1                  mime_0.12                
- [79] colorspace_2.1-1          scattermore_1.2          
- [81] tensor_1.5                spatstat.data_3.1-4      
- [83] tidyr_1.3.1               generics_0.1.3           
- [85] data.table_1.15.4         httr_1.4.7               
- [87] htmlwidgets_1.6.4         S4Arrays_1.2.0           
- [89] uwot_0.1.16               pkgconfig_2.0.3          
- [91] gtable_0.3.6              lmtest_0.9-40            
- [93] XVector_0.42.0            htmltools_0.5.8.1        
- [95] profvis_0.4.0             dotCall64_1.2            
- [97] scales_1.3.0              png_0.1-8                
- [99] spatstat.univar_3.1-1     knitr_1.49               
-[101] reshape2_1.4.4            curl_6.0.1               
-[103] nlme_3.1-165              cachem_1.1.0             
-[105] zoo_1.8-12                stringr_1.5.1            
-[107] KernSmooth_2.23-26        vipor_0.4.7              
-[109] parallel_4.3.3            miniUI_0.1.1.1           
-[111] ggrastr_1.0.2             pillar_1.10.1            
-[113] grid_4.3.3                vctrs_0.6.5              
-[115] RANN_2.6.2                urlchecker_1.0.1         
-[117] promises_1.3.2            BiocSingular_1.18.0      
-[119] beachmat_2.18.0           xtable_1.8-4             
-[121] cluster_2.1.8             beeswarm_0.4.0           
-[123] evaluate_1.0.1            cli_3.6.3                
-[125] locfit_1.5-9.10           compiler_4.3.3           
-[127] rlang_1.1.4               crayon_1.5.3             
-[129] future.apply_1.11.2       labeling_0.4.3           
-[131] ggbeeswarm_0.7.2          fs_1.6.5                 
-[133] plyr_1.8.9                stringi_1.8.4            
-[135] viridisLite_0.4.2         deldir_2.0-4             
-[137] BiocParallel_1.36.0       munsell_0.5.1            
-[139] lazyeval_0.2.2            devtools_2.4.5           
-[141] spatstat.geom_3.3-4       dir.expiry_1.10.0        
-[143] RcppHNSW_0.6.0            sparseMatrixStats_1.14.0 
-[145] future_1.34.0             statmod_1.5.0            
-[147] shiny_1.10.0              ROCR_1.0-11              
-[149] memoise_2.0.1             igraph_2.0.3             </code></pre>
+ [15] MAST_1.28.0               magrittr_2.0.3           
+ [17] limma_3.58.1              plotly_4.10.4            
+ [19] rmarkdown_2.29            remotes_2.5.0            
+ [21] yaml_2.3.10               metapod_1.10.0           
+ [23] httpuv_1.6.15             glmGamPoi_1.14.0         
+ [25] sctransform_0.4.1         spam_2.11-0              
+ [27] sessioninfo_1.2.2         pkgbuild_1.4.5           
+ [29] spatstat.sparse_3.1-0     reticulate_1.40.0        
+ [31] cowplot_1.1.3             pbapply_1.7-2            
+ [33] RColorBrewer_1.1-3        pkgload_1.4.0            
+ [35] abind_1.4-5               zlibbioc_1.48.0          
+ [37] Rtsne_0.17                presto_1.0.0             
+ [39] purrr_1.0.2               RCurl_1.98-1.16          
+ [41] GenomeInfoDbData_1.2.11   ggrepel_0.9.6            
+ [43] irlba_2.3.5.1             listenv_0.9.1            
+ [45] spatstat.utils_3.1-2      goftest_1.2-3            
+ [47] RSpectra_0.16-2           spatstat.random_3.3-2    
+ [49] dqrng_0.3.2               fitdistrplus_1.2-2       
+ [51] parallelly_1.41.0         DelayedMatrixStats_1.24.0
+ [53] leiden_0.4.3.1            codetools_0.2-20         
+ [55] DelayedArray_0.28.0       tidyselect_1.2.1         
+ [57] farver_2.1.2              ScaledMatrix_1.10.0      
+ [59] spatstat.explore_3.3-4    jsonlite_1.8.9           
+ [61] BiocNeighbors_1.20.0      ellipsis_0.3.2           
+ [63] progressr_0.15.1          ggridges_0.5.6           
+ [65] survival_3.8-3            progress_1.2.3           
+ [67] tools_4.3.3               ica_1.0-3                
+ [69] Rcpp_1.0.13-1             glue_1.8.0               
+ [71] gridExtra_2.3             SparseArray_1.2.2        
+ [73] xfun_0.50                 usethis_3.1.0            
+ [75] withr_3.0.2               fastmap_1.2.0            
+ [77] bluster_1.12.0            digest_0.6.37            
+ [79] rsvd_1.0.5                R6_2.5.1                 
+ [81] mime_0.12                 colorspace_2.1-1         
+ [83] scattermore_1.2           tensor_1.5               
+ [85] spatstat.data_3.1-4       tidyr_1.3.1              
+ [87] generics_0.1.3            data.table_1.15.4        
+ [89] prettyunits_1.2.0         httr_1.4.7               
+ [91] htmlwidgets_1.6.4         S4Arrays_1.2.0           
+ [93] uwot_0.1.16               pkgconfig_2.0.3          
+ [95] gtable_0.3.6              lmtest_0.9-40            
+ [97] XVector_0.42.0            htmltools_0.5.8.1        
+ [99] profvis_0.4.0             dotCall64_1.2            
+[101] scales_1.3.0              png_0.1-8                
+[103] spatstat.univar_3.1-1     knitr_1.49               
+[105] reshape2_1.4.4            curl_6.0.1               
+[107] nlme_3.1-165              cachem_1.1.0             
+[109] zoo_1.8-12                stringr_1.5.1            
+[111] KernSmooth_2.23-26        vipor_0.4.7              
+[113] parallel_4.3.3            miniUI_0.1.1.1           
+[115] ggrastr_1.0.2             pillar_1.10.1            
+[117] grid_4.3.3                vctrs_0.6.5              
+[119] RANN_2.6.2                urlchecker_1.0.1         
+[121] promises_1.3.2            BiocSingular_1.18.0      
+[123] beachmat_2.18.0           xtable_1.8-4             
+[125] cluster_2.1.8             beeswarm_0.4.0           
+[127] evaluate_1.0.1            cli_3.6.3                
+[129] locfit_1.5-9.10           compiler_4.3.3           
+[131] rlang_1.1.4               crayon_1.5.3             
+[133] future.apply_1.11.2       labeling_0.4.3           
+[135] ggbeeswarm_0.7.2          fs_1.6.5                 
+[137] plyr_1.8.9                stringi_1.8.4            
+[139] viridisLite_0.4.2         deldir_2.0-4             
+[141] BiocParallel_1.36.0       munsell_0.5.1            
+[143] lazyeval_0.2.2            devtools_2.4.5           
+[145] spatstat.geom_3.3-4       dir.expiry_1.10.0        
+[147] RcppHNSW_0.6.0            hms_1.1.3                
+[149] sparseMatrixStats_1.14.0  future_1.34.0            
+[151] statmod_1.5.0             shiny_1.10.0             
+[153] ROCR_1.0-11               memoise_2.0.1            
+[155] igraph_2.0.3             </code></pre>
 </div>
 </div>
 </details>
@@ -1617,7 +1703,7 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
 </div>
   </div>
 </footer>
-<script>var lightboxQuarto = GLightbox({"loop":true,"openEffect":"zoom","selector":".lightbox","descPosition":"bottom","closeEffect":"zoom"});</script>
+<script>var lightboxQuarto = GLightbox({"loop":true,"openEffect":"zoom","closeEffect":"zoom","descPosition":"bottom","selector":".lightbox"});</script>
 
 
 
