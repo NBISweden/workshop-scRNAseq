@@ -26,6 +26,8 @@ using the `louvain` clustering to identifying differentially expressed
 genes.
 
 ``` {r}
+#| label: libraries
+
 suppressPackageStartupMessages({
     library(scater)
     library(scran)
@@ -39,6 +41,8 @@ suppressPackageStartupMessages({
 ```
 
 ``` {r}
+#| label: fetch-data
+
 # download pre-computed data if missing or long compute
 fetch_data <- TRUE
 
@@ -77,6 +81,8 @@ In the scran function `findMarkers` t-test, wilcoxon test and binomial
 test implemented.
 
 ``` {r}
+#| label: find-markers
+
 # Compute differentiall expression
 markers_genes <- scran::findMarkers(
     x = sce,
@@ -97,6 +103,8 @@ head(markers_genes[["1"]])
 We can now select the top 25 overexpressed genes for plotting.
 
 ``` {r}
+#| label: filter-markers
+
 # Colect the top 25 genes for each cluster and put the into a single table
 top25 <- lapply(names(markers_genes), function(x) {
     temp <- markers_genes[[x]][1:25, 1:2]
@@ -112,6 +120,7 @@ top25
 We can plot them as barplots per cluster.
 
 ``` {r}
+#| label: barplot-markers
 #| fig-height: 6
 #| fig-width: 7
 
@@ -127,6 +136,7 @@ for (i in unique(top25$cluster)) {
 We can visualize them as a heatmap. Here we are selecting the top 5.
 
 ``` {r}
+#| label: heatmap-markers
 #| fig-height: 6
 #| fig-width: 8
 
@@ -148,6 +158,7 @@ scater::plotHeatmap(sce[, order(sce$leiden_k20)],
 We can also plot a violin plot for each gene.
 
 ``` {r}
+#| label: vln-markers
 #| fig-height: 12
 #| fig-width: 13
 
@@ -158,6 +169,7 @@ Another way is by representing the overall group expression and
 detection rates in a dot-plot.
 
 ``` {r}
+#| label: dotplot-markers
 #| fig-height: 8
 #| fig-width: 10
 
@@ -176,9 +188,7 @@ cluster, then change the cell identities to the variable of comparison
 (which now in our case is the **type**, e.g. Covid/Ctrl).
 
 ``` {r}
-#| fig-height: 5
-#| fig-width: 5
-
+#| label: markers-subset
 # Filter cells from that cluster
 cell_selection <- sce[, sce$leiden_k20 == 2]
 
@@ -203,6 +213,7 @@ top5_cell_selection
 We can now plot the expression across the **type**.
 
 ``` {r}
+#| label: vln-markers-sub
 #| fig-height: 4
 #| fig-width: 6
 
@@ -213,6 +224,7 @@ Or we can plot them as dotplots to see the expression in each individual
 sample.
 
 ``` {r}
+#| label: dotplot-markers-sub
 #| fig-height: 8
 #| fig-width: 13
 
@@ -236,6 +248,8 @@ Having a defined list of differentially expressed genes, you can now
 look for their combined function using hypergeometric test.
 
 ``` {r}
+#| label: enrichr
+
 # Load additional packages
 library(enrichR)
 
@@ -256,6 +270,8 @@ Some databases of interest:\
 You visualize your results using a simple barplot, for example:
 
 ``` {r}
+#| label: plot-enrichr
+
 {
     par(mfrow = c(1, 1), mar = c(3, 25, 2, 1))
     barplot(
@@ -280,8 +296,7 @@ if a particular gene set is more present in the Up-regulated genes,
 among the DOWN_regulated genes or not differentially regulated.
 
 ``` {r}
-#| fig-height: 5
-#| fig-width: 5
+#| label: gsea-prep
 
 # Create a gene rank based on the gene expression fold change
 gene_rank <- setNames(DGE_cell_selection$Covid[, grep("logFC.C", colnames(DGE_cell_selection$Covid))], casefold(rownames(DGE_cell_selection$Covid), upper = T))
@@ -292,8 +307,7 @@ itself. We can use the package to get gene set from the Molecular
 Signature Database (MSigDB) and select KEGG pathways as an example.
 
 ``` {r}
-#| fig-height: 5
-#| fig-width: 5
+#| label: gsea-prep2
 
 library(msigdbr)
 
@@ -318,6 +332,7 @@ pathways to visualize only the top ones. You can select/filter them by
 either `p-value` or normalized enrichment score (`NES`).
 
 ``` {r}
+#| label: gsea
 #| fig-height: 5
 #| fig-width: 12
 
@@ -348,6 +363,7 @@ plotGseaTable(gmt[top10_UP], gene_rank, fgseaRes, gseaParam = 0.5)
 Finally, let's save the integrated data for further analysis.
 
 ``` {r}
+#| label: save
 saveRDS(sce, "data/covid/results/bioc_covid_qc_dr_int_cl_dge.rds")
 ```
 
@@ -364,6 +380,7 @@ Click here
 </summary>
 ```
 ``` {r}
+#| label: session
 sessionInfo()
 ```
 

@@ -38,6 +38,7 @@ enrichment predict celltype based on the DEGs of each cluster.
 First, lets load required libraries
 
 ``` {r}
+#| label: libraries
 suppressPackageStartupMessages({
     library(scater)
     library(scran)
@@ -54,6 +55,7 @@ suppressPackageStartupMessages({
 Let's read in the saved Covid-19 data object from the clustering step.
 
 ``` {r}
+#| label: fetch-data
 # download pre-computed data if missing or long compute
 fetch_data <- TRUE
 
@@ -71,6 +73,7 @@ alldata <- readRDS(path_file)
 Let's read in the saved Covid-19 data object from the clustering step.
 
 ``` {r}
+#| label: subset
 ctrl.sce <- alldata[, alldata$sample == "ctrl.13"]
 
 # remove all old dimensionality reductions as they will mess up the analysis further down
@@ -83,6 +86,7 @@ Load the reference dataset with annotated labels that is provided by the
 `scPred` package, it is a subsampled set of cells from human PBMCs.
 
 ``` {r}
+#| label: fetch-ref
 reference <- scPred::pbmc_1
 reference
 ```
@@ -90,6 +94,7 @@ reference
 Convert to a SCE object.
 
 ``` {r}
+#| label: ref-sce
 ref.sce <- Seurat::as.SingleCellExperiment(reference)
 ```
 
@@ -97,6 +102,7 @@ Rerun analysis pipeline. Run normalization, feature selection and
 dimensionality reduction
 
 ``` {r}
+#| label: process-ref
 # Normalize
 ref.sce <- computeSumFactors(ref.sce)
 ref.sce <- logNormCounts(ref.sce)
@@ -114,6 +120,7 @@ ref.sce <- runUMAP(ref.sce, dimred = "PCA")
 ```
 
 ``` {r}
+#| label: plot-ref
 #| fig-height: 5
 #| fig-width: 6
 
@@ -124,6 +131,7 @@ Run all steps of the analysis for the **ctrl** sample as well. Use the
 clustering from the integration lab with resolution 0.5.
 
 ``` {r}
+#| label: process-data
 # Normalize
 ctrl.sce <- computeSumFactors(ctrl.sce)
 ctrl.sce <- logNormCounts(ctrl.sce)
@@ -138,6 +146,7 @@ ctrl.sce <- runUMAP(ctrl.sce, dimred = "PCA")
 ```
 
 ``` {r}
+#| label: plot-data
 #| fig-height: 5
 #| fig-width: 6
 
@@ -159,6 +168,8 @@ slots.
 ### scMap cluster
 
 ``` {r}
+#| label: prep-scmap
+
 # add in slot cell_type1
 ref.sce$cell_type1 <- ref.sce$cell_type
 # create a rowData slot with feature_symbol
@@ -190,12 +201,14 @@ Then we need to index the reference dataset by cluster, default is the
 clusters in `cell_type1`.
 
 ``` {r}
+#| label: scmap-index
 ref.sce <- indexCluster(ref.sce)
 ```
 
 Now we project the Covid-19 dataset onto that index.
 
 ``` {r}
+#| label: scmap-cluster
 project_cluster <- scmapCluster(
     projection = ctrl.sce,
     index_list = list(
@@ -210,6 +223,7 @@ table(project_cluster$scmap_cluster_labs)
 Then add the predictions to metadata and plot UMAP.
 
 ``` {r}
+#| label: scmap-plot
 #| fig-height: 5
 #| fig-width: 6
 
@@ -225,12 +239,14 @@ We can instead index the refernce data based on each single cell and
 project our data onto the closest neighbor in that dataset.
 
 ``` {r}
+#| label: scmap-index-cell
 ref.sce <- indexCell(ref.sce)
 ```
 
 Again we need to index the reference dataset.
 
 ``` {r}
+#| label: cmap-cell
 project_cell <- scmapCell(
     projection = ctrl.sce,
     index_list = list(
@@ -244,6 +260,7 @@ reference dataset for each cell in our dataset. We will select the
 celltype of the closest neighbor and assign it to the data.
 
 ``` {r}
+#| label: scmap-cell-pred
 cell_type_pred <- colData(ref.sce)$cell_type1[project_cell$ref[[1]][1, ]]
 table(cell_type_pred)
 ```
@@ -251,6 +268,7 @@ table(cell_type_pred)
 Then add the predictions to metadata and plot umap.
 
 ``` {r}
+#| label: scmap-cell-plot
 #| fig-height: 5
 #| fig-width: 6
 
@@ -263,6 +281,7 @@ plotReducedDim(ctrl.sce, dimred = "UMAP", colour_by = "scmap_cell")
 Plot both:
 
 ``` {r}
+#| label: cmap-plot
 #| fig-height: 4
 #| fig-width: 10
 
@@ -289,6 +308,7 @@ dataset that we used for label transfer above but using SingleR instead.
 ### Immune cell reference
 
 ``` {r}
+#| label: singler-immune
 immune = celldex::DatabaseImmuneCellExpressionData()
 singler.immune <- SingleR(test = ctrl.sce, ref = immune, assay.type.test=1,
     labels = immune$label.main)
@@ -299,7 +319,7 @@ head(singler.immune)
 ### HPCA reference
 
 ``` {r}
-
+#| label: singler-hpca
 hpca <- HumanPrimaryCellAtlasData()
 singler.hpca <- SingleR(test = ctrl.sce, ref = hpca, assay.type.test=1,
     labels = hpca$label.main)
@@ -310,6 +330,7 @@ head(singler.hpca)
 ### With own reference data
 
 ``` {r}
+#| label: singler-ref
 singler.ref <- SingleR(test=ctrl.sce, ref=ref.sce, labels=ref.sce$cell_type, de.method="wilcox")
 head(singler.ref)
 ```
@@ -317,6 +338,7 @@ head(singler.ref)
 Compare results:
 
 ``` {r}
+#| label: plot-singler
 #| fig-height: 5
 #| fig-width: 10
 
@@ -339,12 +361,15 @@ function in scPred `crossTab()` that prints the overlap between two
 metadata slots.
 
 ``` {r}
+#| label: compare
+
 table(ctrl.sce$scmap_cell, ctrl.sce$singler.hpca)
 ```
 
 Or plot onto umap:
 
 ``` {r}
+#| label: plot-all
 wrap_plots(
     plotReducedDim(ctrl.sce, dimred = "UMAP", colour_by = "scmap_cluster"),
     plotReducedDim(ctrl.sce, dimred = "UMAP", colour_by = "scmap_cell"),
@@ -382,6 +407,7 @@ report as many genes as possible, hence we set the cutoffs quite
 lenient.
 
 ``` {r}
+#| label: dge
 # run differential expression in our dataset, using clustering at resolution 0.3
 DGE_list <- scran::findMarkers(
     x = alldata,
@@ -392,6 +418,8 @@ DGE_list <- scran::findMarkers(
 ```
 
 ``` {r}
+#| label: dge-ref
+
 # Compute differential gene expression in reference dataset (that has cell annotation)
 ref_DGE <- scran::findMarkers(
     x = ref.sce,
@@ -419,6 +447,7 @@ Now we can run GSEA for the DEGs from our dataset and check for
 enrichment of top DEGs in the reference dataset.
 
 ``` {r}
+#| label: gsea
 suppressPackageStartupMessages(library(fgsea))
 
 # run fgsea for each of the clusters in the list
@@ -454,6 +483,7 @@ instance the ncMono and cMono celltypes are equally good for some
 clusters.
 
 ``` {r}
+#| label: plot-gsea
 #| fig-height: 4
 #| fig-width: 10
 
@@ -474,6 +504,7 @@ Compare the results with the other celltype prediction methods in the
 **ctrl_13** sample.
 
 ``` {r}
+#| label: plot-gsea-sub
 #| fig-height: 3.5
 #| fig-width: 12
 
@@ -495,11 +526,15 @@ converted the excel file to a csv for you. Read in the gene lists and do
 some filtering.
 
 ``` {r}
+#| label: fetch-markers
+
 path_file <- file.path("data/human_cell_markers.txt")
 if (!file.exists(path_file)) download.file(file.path(path_data, "misc/cell_marker_human.csv"), destfile = path_file, method = "curl", extra = curl_upass)
 ```
 
 ``` {r}
+#| label: prep-markers
+
 markers <- read.delim("data/human_cell_markers.txt")
 markers <- markers[markers$speciesType == "Human", ]
 markers <- markers[markers$cancerType == "Normal", ]
@@ -527,6 +562,8 @@ celltype_list <- celltype_list[unlist(lapply(celltype_list, length)) > 5]
 ```
 
 ``` {r}
+#| label: gsea-marker
+
 # run fgsea for each of the clusters in the list
 res <- lapply(DGE_list, function(x) {
     x$logFC <- rowSums(as.matrix(x[, grep("logFC", colnames(x))]))
@@ -554,6 +591,7 @@ lapply(res, head, 3)
 #CT_GSEA8:
 
 ``` {r}
+#| label: plot-gsea-marker
 #| fig-height: 4
 #| fig-width: 10
 
@@ -587,6 +625,7 @@ results make sense.
 Finally, lets save the data with predictions.
 
 ``` {r}
+#| label: save
 saveRDS(ctrl.sce, "data/covid/results/bioc_covid_qc_dr_int_cl_ct-ctrl13.rds")
 ```
 
@@ -603,6 +642,7 @@ Click here
 </summary>
 ```
 ``` {r}
+#| label: session
 sessionInfo()
 ```
 

@@ -20,6 +20,7 @@ First, let's load all necessary libraries and the QC-filtered dataset
 from the previous step.
 
 ``` {r}
+#| label: libraries
 suppressPackageStartupMessages({
     library(scater)
     library(scran)
@@ -30,6 +31,8 @@ suppressPackageStartupMessages({
 ```
 
 ``` {r}
+#| label: fetch-data
+
 # download pre-computed data if missing or long compute
 fetch_data <- TRUE
 
@@ -55,7 +58,7 @@ With `modelGeneVar` we can specify a blocking parameter, so the trend
 fitting and variance decomposition is done separately for each batch.
 
 ``` {r}
-
+#| label: hvg
 
 sce <- computeSumFactors(sce, sizes = c(20, 40, 60, 80))
 sce <- logNormCounts(sce)
@@ -67,6 +70,7 @@ We can plot the *total* variance and the *biological* variance vs mean
 expressioni for one of the samples.
 
 ``` {r}
+#| label: plot-hvg
 #| fig-height: 4
 #| fig-width: 8
 
@@ -105,6 +109,7 @@ We can plot the same for all the samples, also showing the technical
 variance.
 
 ``` {r}
+#| label: plot-hvg-sample
 #| fig-height: 4
 #| fig-width: 8
 
@@ -154,6 +159,7 @@ function below. Here we will show you how to add the scaledData back to
 the object.
 
 ``` {r}
+#| label: scale
 # sce@assays$data@listData$scaled.data <- apply(exprs(sce)[rownames(hvg.out),,drop=FALSE],2,function(x) scale(x,T,T))
 # rownames(sce@assays$data@listData$scaled.data) <- rownames(hvg.out)
 ```
@@ -168,6 +174,7 @@ We use the `logcounts` and then set `scale_features` to TRUE in order to
 scale each gene.
 
 ``` {r}
+#| label: pca
 # runPCA and specify the variable genes to use for dim reduction with subset_row
 sce <- runPCA(sce, exprs_values = "logcounts", ncomponents = 50, subset_row = hvgs, scale = TRUE)
 ```
@@ -175,6 +182,7 @@ sce <- runPCA(sce, exprs_values = "logcounts", ncomponents = 50, subset_row = hv
 We then plot the first principal components.
 
 ``` {r}
+#| label: pca-plot
 #| fig-height: 3.5
 #| fig-width: 10
 
@@ -196,18 +204,27 @@ each PC. This can be important to look at to understand different biases
 you may have in your data.
 
 ``` {r}
+#| label: pca-explanatory
 #| fig-height: 3.5
 #| fig-width: 10
 
 plotExplanatoryPCs(sce,nvars_to_plot = 15)
 ```
 
-Clearly, the sample id contributes to many of the PCs and PC7 but you
-can also see that many PCs are effected by different QC parameters.
+<div>
+
+> **Discuss**
+>
+> Have a look at the plot from `plotExplanatoryPCs` and the gene
+> loadings plots. Do you think the top components are biologically
+> relevant or more driven by technical noise
+
+</div>
 
 We can also plot the amount of variance explained by each PC.
 
 ``` {r}
+#| label: pca-elbow
 #| fig-height: 4
 #| fig-width: 4
 
@@ -225,6 +242,7 @@ about rare cell types (such as platelets and DCs in this dataset)
 We will now run [BH-tSNE](https://arxiv.org/abs/1301.3342).
 
 ``` {r}
+#| label: run-tsne
 set.seed(42)
 sce <- runTSNE(sce, dimred = "PCA", n_dimred = 30, perplexity = 30, name = "tSNE_on_PCA")
 ```
@@ -233,6 +251,7 @@ We plot the tSNE scatterplot colored by dataset. We can clearly see the
 effect of batches present in the dataset.
 
 ``` {r}
+#| label: plot-tsne
 #| fig-height: 5
 #| fig-width: 7
 
@@ -245,6 +264,8 @@ We can now run [UMAP](https://arxiv.org/abs/1802.03426) for cell
 embeddings.
 
 ``` {r}
+#| label: run-umap
+
 sce <- runUMAP(sce, dimred = "PCA", n_dimred = 30, ncomponents = 2, name = "UMAP_on_PCA")
 # see ?umap and ?runUMAP for more info
 ```
@@ -253,6 +274,7 @@ UMAP is plotted colored per dataset. Although less distinct as in the
 tSNE, we still see quite an effect of the different batches in the data.
 
 ``` {r}
+#| label: run-umap2
 sce <- runUMAP(sce, dimred = "PCA", n_dimred = 30, ncomponents = 10, name = "UMAP10_on_PCA")
 # see ?umap and ?runUMAP for more info
 ```
@@ -265,6 +287,7 @@ our dataset contains a batch effect that needs to be corrected before
 proceeding to clustering and differential gene expression analysis.
 
 ``` {r}
+#| label: plot-umap
 #| fig-height: 3.5
 #| fig-width: 10
 
@@ -310,6 +333,7 @@ unfeasible. Therefore we will use the scaled data of the highly variable
 genes.
 
 ``` {r}
+#| label: run-umap-sd
 sce <- runUMAP(sce, exprs_values = "logcounts", name = "UMAP_on_ScaleData")
 ```
 
@@ -323,6 +347,7 @@ such, you can run either UMAP or tSNE using any other distance metric
 desired. Euclidean and Correlation are usually the most commonly used.
 
 ``` {r}
+#| label: run-umap-graph
 # Build Graph
 nn <- RANN::nn2(reducedDim(sce, "PCA"), k = 30)
 names(nn) <- c("idx", "dist")
@@ -338,6 +363,7 @@ reducedDim(sce, "UMAP_on_Graph") <- uwot::umap(X = NULL, n_components = 2, nn_me
 We can now plot the UMAP comparing both on PCA vs ScaledSata vs Graph.
 
 ``` {r}
+#| label: plot-umap-all
 #| fig-height: 3.5
 #| fig-width: 10
 
@@ -369,6 +395,7 @@ embedding.
   FCER1A, CST3               DCs
 
 ``` {r}
+#| label: plot-markers
 #| fig-height: 14
 #| fig-width: 11
 
@@ -392,6 +419,7 @@ wrap_plots(plotlist, ncol = 3)
 </div>
 
 ``` {r}
+#| label: plot-qc
 #| fig-height: 8
 #| fig-width: 11
 
@@ -411,6 +439,7 @@ wrap_plots(plotlist, ncol = 3)
 We can finally save the object for use in future steps.
 
 ``` {r}
+#| label: save
 saveRDS(sce, "data/covid/results/bioc_covid_qc_dr.rds")
 ```
 
@@ -427,6 +456,7 @@ Click here
 </summary>
 ```
 ``` {r}
+#| label: session
 sessionInfo()
 ```
 

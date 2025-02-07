@@ -20,6 +20,8 @@ First, let's load all necessary libraries and the QC-filtered dataset
 from the previous step.
 
 ``` {r}
+#| label: libraries
+
 # Activate conda environment to get the correct python path
 reticulate::use_condaenv("/Users/asabjor/miniconda3/envs/seurat5", required = TRUE)
 
@@ -32,6 +34,8 @@ suppressPackageStartupMessages({
 ```
 
 ``` {r}
+#| label: fetch-data
+
 # download pre-computed data if missing or long compute
 fetch_data <- TRUE
 
@@ -54,6 +58,8 @@ genes that are highly variable across cells, which in turn will also
 provide a good separation of the cell clusters.
 
 ``` {r}
+#| label: hvg
+
 suppressWarnings(suppressMessages(alldata <- FindVariableFeatures(alldata, selection.method = "vst", nfeatures = 2000, verbose = FALSE, assay = "RNA")))
 top20 <- head(VariableFeatures(alldata), 20)
 
@@ -80,6 +86,8 @@ the PCA step and is not done separately. But it could be achieved by
 running the commands below:
 
 ``` {r}
+#| label: scale
+
 alldata <- ScaleData(alldata, vars.to.regress = c("percent_mito", "nFeature_RNA"), assay = "RNA")
 ```
 
@@ -92,12 +100,15 @@ to segregate samples based on gene expression patterns in the data.
 To run PCA, you can use the function `RunPCA()`.
 
 ``` {r}
+#| label: pca
+
 alldata <- RunPCA(alldata, npcs = 50, verbose = F)
 ```
 
 We then plot the first principal components.
 
 ``` {r}
+#| label: pca-plot
 #| fig-height: 4
 #| fig-width: 12
 
@@ -115,6 +126,7 @@ information. Unfortunately, this is not implemented in Scater/Scran, so
 you will need to compute PCA using `logcounts`.
 
 ``` {r}
+#| label: pca-loadings
 #| fig-height: 6
 #| fig-width: 14
 
@@ -124,6 +136,7 @@ VizDimLoadings(alldata, dims = 1:5, reduction = "pca", ncol = 5, balanced = T)
 We can also plot the amount of variance explained by each PC.
 
 ``` {r}
+#| label: pca-elbow
 #| fig-height: 4
 #| fig-width: 5
 
@@ -140,21 +153,30 @@ contribute to each PCs. This can be important to look at to understand
 different biases you may have in your data.
 
 ``` {r}
+#| label: pca-explanatory
 #| fig-height: 4
 #| fig-width: 10
 
 scater::plotExplanatoryPCs(as.SingleCellExperiment(alldata), nvars_to_plot = 15, npcs_to_plot = 20)
 ```
 
-Clearly, `orig,ident` (and `ident` which is created by
-`SingleCellExperiment`) clearly contributes to many of the PCs and PC7
-is trongly influenced by cell cycle,
+<div>
+
+> **Discuss**
+>
+> Have a look at the plot from `plotExplanatoryPCs` and the gene
+> loadings plots. Do you think the top components are biologically
+> relevant or more driven by technical noise
+
+</div>
 
 ## tSNE
 
 We will now run [BH-tSNE](https://arxiv.org/abs/1301.3342).
 
 ``` {r}
+#| label: run-tsne
+
 alldata <- RunTSNE(
     alldata,
     reduction = "pca", dims = 1:30,
@@ -171,6 +193,7 @@ We plot the tSNE scatterplot colored by dataset. We can clearly see the
 effect of batches present in the dataset.
 
 ``` {r}
+#| label: plot-tsne
 #| fig-height: 5
 #| fig-width: 6
 
@@ -183,6 +206,8 @@ We can now run [UMAP](https://arxiv.org/abs/1802.03426) for cell
 embeddings.
 
 ``` {r}
+#| label: run-umap
+
 alldata <- RunUMAP(
     alldata,
     reduction = "pca",
@@ -208,6 +233,8 @@ we will specify an alternative name for the umap with the
 `reduction.name` parameter.
 
 ``` {r}
+#| label: run-umap2
+
 alldata <- RunUMAP(
     alldata,
     reduction.name = "UMAP10_on_PCA",
@@ -227,6 +254,7 @@ UMAP is plotted colored per dataset. Although less distinct as in the
 tSNE, we still see quite an effect of the different batches in the data.
 
 ``` {r}
+#| label: plot-umap
 #| fig-height: 4
 #| fig-width: 12
 
@@ -246,6 +274,7 @@ our dataset contains a batch effect that needs to be corrected before
 proceeding to clustering and differential gene expression analysis.
 
 ``` {r}
+#| label: plot-dimred
 #| fig-height: 4
 #| fig-width: 12
 
@@ -288,6 +317,8 @@ unfeasible. Therefore we will use the scaled data of the highly variable
 genes.
 
 ``` {r}
+#| label: run-umap-sd
+
 alldata <- RunUMAP(
     alldata,
     reduction.name = "UMAP_on_ScaleData",
@@ -311,31 +342,45 @@ a graph is just a matrix containing distances from cell to cell and as
 such, you can run either UMAP or tSNE using any other distance metric
 desired. Euclidean and Correlation are usually the most commonly used.
 
-\`\`\`{r, eval = FALSE} #OBS! Skip for now, known issue with later
-version of umap-learn in Seurat5 \# have 0.5.6 now, tested downgrading
-to 0.5.4 or 0.5.3 but still have same error.
+``` {r}
+#| label: umap-graph
+#| eval: false
+
+#OBS! Skip for now, known issue with later version of umap-learn in Seurat5
+# have 0.5.7 now, tested downgrading to 0.5.4 or 0.5.3 but still have same error.
+# Seurat 5.2.0 has a fix for this, but not the version we have now.
 
 # Build Graph
+alldata <- FindNeighbors(alldata,
+    reduction = "pca",
+    assay = "RNA",
+    k.param = 20,
+    features = VariableFeatures(alldata)
+)
 
-alldata \<- FindNeighbors(alldata, reduction = "pca", assay = "RNA",
-k.param = 20, features = VariableFeatures(alldata) )
+alldata <- RunUMAP(alldata,
+    reduction.name = "UMAP_on_Graph",
+    umap.method = "umap-learn",
+    graph = "RNA_snn",
+    n.epochs = 200,
+    assay = "RNA"
+)
+```
 
-alldata \<- RunUMAP(alldata, reduction.name = "UMAP_on_Graph",
-umap.method = "umap-learn", graph = "RNA_snn", n.epochs = 200, assay =
-"RNA" )
+We can now plot the UMAP comparing both on PCA vs ScaledSata vs Graph.
 
+``` {r}
+#| label: plot-umap-graph
+#| eval: true
+#| fig-height: 4
+#| fig-width: 12
 
-    We can now plot the UMAP comparing both on PCA vs ScaledSata vs Graph.
-
-
-    ```{r, eval=FALSE}
-    #| fig-height: 4
-    #| fig-width: 12
-
-    p1 <- DimPlot(alldata, reduction = "umap", group.by = "orig.ident") + ggplot2::ggtitle(label = "UMAP_on_PCA")
-    p2 <- DimPlot(alldata, reduction = "UMAP_on_ScaleData", group.by = "orig.ident") + ggplot2::ggtitle(label = "UMAP_on_ScaleData")
-    p3 <- DimPlot(alldata, reduction = "UMAP_on_Graph", group.by = "orig.ident") + ggplot2::ggtitle(label = "UMAP_on_Graph")
-    wrap_plots(p1, p2, p3, ncol = 3) + plot_layout(guides = "collect")
+p1 <- DimPlot(alldata, reduction = "umap", group.by = "orig.ident") + ggplot2::ggtitle(label = "UMAP_on_PCA")
+p2 <- DimPlot(alldata, reduction = "UMAP_on_ScaleData", group.by = "orig.ident") + ggplot2::ggtitle(label = "UMAP_on_ScaleData")
+#p3 <- DimPlot(alldata, reduction = "UMAP_on_Graph", group.by = "orig.ident") + ggplot2::ggtitle(label = "UMAP_on_Graph")
+#wrap_plots(p1, p2, p3, ncol = 3) + plot_layout(guides = "collect")
+wrap_plots(p1, p2, ncol = 2) + plot_layout(guides = "collect")
+```
 
 ## Genes of interest
 
@@ -354,12 +399,12 @@ embedding.
   FCER1A, CST3               DCs
 
 ``` {r}
+#| label: plot-markers
 #| fig-height: 9
 #| fig-width: 12
 
 myfeatures <- c("CD3E", "CD4", "CD8A", "NKG7", "GNLY", "MS4A1", "CD14", "LYZ", "MS4A7", "FCGR3A", "CST3", "FCER1A")
-FeaturePlot(alldata, reduction = "umap", dims = 1:2, features = myfeatures, ncol = 4, order = T) +
-    NoLegend() + NoAxes() + NoGrid()
+FeaturePlot(alldata, reduction = "umap", dims = 1:2, features = myfeatures, ncol = 4, order = T)
 ```
 
 <div>
@@ -373,12 +418,12 @@ FeaturePlot(alldata, reduction = "umap", dims = 1:2, features = myfeatures, ncol
 </div>
 
 ``` {r}
+#| label: plot-qc
 #| fig-height: 9
 #| fig-width: 12
 
 myfeatures <- c("nCount_RNA","nFeature_RNA", "percent_mito","percent_ribo","percent_hb","percent_plat")
-FeaturePlot(alldata, reduction = "umap", dims = 1:2, features = myfeatures, ncol = 3, order = T) +
-    NoLegend() + NoAxes() + NoGrid()
+FeaturePlot(alldata, reduction = "umap", dims = 1:2, features = myfeatures, ncol = 3, order = T) 
 ```
 
 ## Save data
@@ -386,6 +431,8 @@ FeaturePlot(alldata, reduction = "umap", dims = 1:2, features = myfeatures, ncol
 We can finally save the object for use in future steps.
 
 ``` {r}
+#| label: save
+
 saveRDS(alldata, "data/covid/results/seurat_covid_qc_dr.rds")
 ```
 
@@ -402,6 +449,8 @@ Click here
 </summary>
 ```
 ``` {r}
+#| label: session
+
 sessionInfo()
 ```
 

@@ -43,6 +43,7 @@ Let's first load necessary libraries and the data saved in the previous
 lab.
 
 ``` {r}
+#| label: libraries
 suppressPackageStartupMessages({
     library(Seurat)
     library(ggplot2)
@@ -54,6 +55,8 @@ condapath = "/Users/asabjor/miniconda3/envs/seurat5_u"
 ```
 
 ``` {r}
+#| label: fetch-data
+
 # download pre-computed data if missing or long compute
 fetch_data <- TRUE
 
@@ -76,6 +79,7 @@ samples separately, but also compute the overall variable features by
 combining their ranks.
 
 ``` {r}
+#| label: hvg
 #| fig-height: 6
 #| fig-width: 8
 
@@ -115,11 +119,23 @@ information on variable genes across the dataset. This is what we have
 in the `all` section where the ranks of the variable features in the
 different datasets is combined.
 
+<div>
+
+> **Discuss**
+>
+> Did you understand the difference between running variable gene
+> selection per dataset and combining them vs running it on all samples
+> together. Can you think of any situation where it would be best to run
+> it on all samples and a situation where it should be done by batch?
+
+</div>
+
 For all downstream integration we will use this set of genes so that it
 is comparable across the methods. Before doing anything else we need to
 rerun `ScaleData` and `PCA` with that set of genes.
 
 ``` {r}
+#| label: pca
 hvgs_all = hvgs_per_dataset$all
 
 alldata = ScaleData(alldata, features = hvgs_all, vars.to.regress = c("percent_mito", "nFeature_RNA"))
@@ -135,6 +151,7 @@ in a single command using the function `IntegrateLayers()`, we specify
 the name for the integration as `integrated_cca`.
 
 ``` {r}
+#| label: run-cca
 alldata <- IntegrateLayers(object = alldata, 
                            method = CCAIntegration, orig.reduction = "pca", 
                            new.reduction = "integrated_cca", verbose = FALSE)
@@ -144,6 +161,7 @@ We should now have a new dimensionality reduction slot
 (`integrated_cca`) in the object:
 
 ``` {r}
+#| label: reductions
 names(alldata@reductions)
 ```
 
@@ -152,6 +170,7 @@ and tSNE on that object, and we again specify the names of the new
 reductions so that the old UMAP and tSNE are not overwritten.
 
 ``` {r}
+#| label: proc-cca
 alldata <- RunUMAP(alldata, reduction = "integrated_cca", dims = 1:30, reduction.name = "umap_cca")
 alldata <- RunTSNE(alldata, reduction = "integrated_cca", dims = 1:30, reduction.name = "tsne_cca")
 
@@ -162,6 +181,7 @@ We can now plot the unintegrated and the integrated space reduced
 dimensions.
 
 ``` {r}
+#| label: plot-cca
 #| fig-height: 6
 #| fig-width: 10
 
@@ -194,6 +214,7 @@ embedding.
   FCER1A, CST3               DCs
 
 ``` {r}
+#| label: plot-markers
 #| fig-height: 8
 #| fig-width: 10
 
@@ -215,6 +236,7 @@ the method `HarmonyIntegration`. And as above, we run UMAP on the new
 reduction from Harmony.
 
 ``` {r}
+#| label: harmony
 #| fig-height: 10
 #| fig-width: 13
 
@@ -244,6 +266,7 @@ gene x cell matrix is transposed so that genes are rows and cells are
 columns.
 
 ``` {r}
+#| label: prep-scanorama
 # get data matrices from all samples, with only the variable genes.
 data.layers <- Layers(alldata)[grep("data.",Layers(alldata))]
 print(data.layers)
@@ -262,6 +285,8 @@ At the top of this script, we set the variable `condapath` to point to
 the conda environment where scanorama is included.
 
 ``` {r}
+#| label: prep-scanorama2
+
 # run scanorama via basilisk with assaylis and genelist as input.
 integrated.data = basiliskRun(env=condapath, fun=function(datas, genes) {
   scanorama <- reticulate::import("scanorama")
@@ -290,7 +315,7 @@ alldata[["scanorama"]] <- CreateDimReducObject(
 Try the same but using counts instead of data.
 
 ``` {r}
-
+#| label: run-scanorama
 # get count matrices from all samples, with only the variable genes.
 count.layers <- Layers(alldata)[grep("counts.",Layers(alldata))]
 print(count.layers)
@@ -322,6 +347,7 @@ alldata[["scanoramaC"]] <- CreateDimReducObject(
 ```
 
 ``` {r}
+#| label: plot-scanorama
 #| fig-height: 8
 #| fig-width: 14
 
@@ -341,6 +367,7 @@ wrap_plots(p1,p2)
 Now we will plot UMAPS with all three integration methods side by side.
 
 ``` {r}
+#| label: plot-all
 #| fig-height: 8
 #| fig-width: 9
 
@@ -366,15 +393,17 @@ wrap_plots(p1, p2, p3, p4, nrow = 2) + plot_layout(guides = "collect")
 Let's save the integrated data for further analysis.
 
 ``` {r}
+#| label: save
+
 saveRDS(alldata,"data/covid/results/seurat_covid_qc_dr_int.rds")
 ```
 
 ## Extra task
 
 You have now done the Seurat integration with CCA which is quite slow.
-There are other options in the `FindIntegrationAnchors()` function. Try
-rerunning the integration with `rpca` and/or `rlsi` and create a new
-UMAP. Compare the results.
+There are other options in the `IntegrateLayers()` function. Try
+rerunning the integration with `RPCAIntegration` and create a new UMAP.
+Compare the results.
 
 ## Session info
 
@@ -389,6 +418,8 @@ Click here
 </summary>
 ```
 ``` {r}
+#| label: session
+
 sessionInfo()
 ```
 

@@ -41,6 +41,7 @@ Let's first load necessary libraries and the data saved in the previous
 lab.
 
 ``` {r}
+#| label: libraries
 
 suppressPackageStartupMessages({
     library(scater)
@@ -57,6 +58,7 @@ condapath =  "/Users/asabjor/miniconda3/envs/scanpy_2024_nopip"
 ```
 
 ``` {r}
+#| label: fetch-data
 # download pre-computed data if missing or long compute
 fetch_data <- TRUE
 
@@ -83,6 +85,7 @@ batch effect genes. Here we will explore the genesets we get with and
 without the blocking parameter and also the variable genes per dataset.
 
 ``` {r}
+#| label: hvg
 
 var.out <- modelGeneVar(sce, block = sce$sample)
 hvgs <- getTopHVGs(var.out, n = 2000)
@@ -107,6 +110,7 @@ overlap <- sapply(hvgs_per_dataset, function(x) {
 ```
 
 ``` {r}
+#| label: hvg-overlap
 #| fig-height: 4
 #| fig-width: 8
 
@@ -124,6 +128,17 @@ information on variable genes across the dataset. This is what we have
 in the `all` section where the information on variable features in the
 different datasets is combined.
 
+<div>
+
+> **Discuss**
+>
+> Did you understand the difference between running variable gene
+> selection per dataset and combining them vs running it on all samples
+> together. Can you think of any situation where it would be best to run
+> it on all samples and a situation where it should be done by batch?
+
+</div>
+
 For all downstream integration we will use this set of genes so that it
 is comparable across the methods. We already used that set of genes in
 the dimensionality reduction exercise to run scaling and pca.
@@ -132,6 +147,8 @@ We also store the variable gene information in the object for use
 furhter down the line.
 
 ``` {r}
+#| label: hvg2
+
 metadata(sce)$hvgs = hvgs
 ```
 
@@ -150,6 +167,7 @@ library](https://github.com/spotify/annoy) via the
 MNN representation into the reducedDims slot of our sce object.
 
 ``` {r}
+#| label: mnn
 mnn_out <- batchelor::fastMNN(sce, subset.row = hvgs, batch = factor(sce$sample), k = 20, d = 50)
 ```
 
@@ -165,6 +183,7 @@ We will take the reduced dimension in the new `mnn_out` object and add
 it into the original `sce` object.
 
 ``` {r}
+#| label: dimred-mnn
 mnn_dim <- reducedDim(mnn_out, "corrected")
 reducedDim(sce, "MNN") <- mnn_dim
 ```
@@ -173,6 +192,7 @@ We can observe that a new assay slot is now created under the name
 `MNN`.
 
 ``` {r}
+#| label: dimred-list
 reducedDims(sce)
 ```
 
@@ -181,6 +201,7 @@ dimensionality representation, suitable for direct plotting, TSNE/UMAP,
 clustering, and trajectory analysis that relies on such results.
 
 ``` {r}
+#| label: proc-mnn
 set.seed(42)
 sce <- runTSNE(sce, dimred = "MNN", n_dimred = 50, perplexity = 30, name = "tSNE_on_MNN")
 sce <- runUMAP(sce, dimred = "MNN", n_dimred = 50, ncomponents = 2, name = "UMAP_on_MNN")
@@ -190,6 +211,7 @@ We can now plot the unintegrated and the integrated space reduced
 dimensions.
 
 ``` {r}
+#| label: plot-mnn
 #| fig-height: 6
 #| fig-width: 12
 
@@ -219,6 +241,7 @@ embedding.
   FCER1A, CST3               DCs
 
 ``` {r}
+#| label: plot-markers
 #| fig-height: 16
 #| fig-width: 13
 
@@ -241,6 +264,7 @@ the PCA. So first, we prefer to have scaling and PCA with the same set
 of genes that were used for the CCA integration, which we ran earlier.
 
 ``` {r}
+#| label: harmony
 #| fig-height: 5
 #| fig-width: 14
 
@@ -273,6 +297,7 @@ We will run it with the same set of variable genes, but first we have to
 create a list of all the objects per sample.
 
 ``` {r}
+#| label: prep-scanorama
 #| fig-height: 5
 #| fig-width: 15
 
@@ -292,6 +317,7 @@ At the top of this script, we set the variable `condapath` to point to
 the conda environment where scanorama is included.
 
 ``` {r}
+#| label: scanorama
 #| fig-height: 5
 #| fig-width: 15
 
@@ -325,6 +351,7 @@ plotReducedDim(sce, dimred = "UMAP_on_Scanorama", colour_by = "sample", point_si
 Now we will plot UMAPS with all three integration methods side by side.
 
 ``` {r}
+#| label: plot-all
 #| fig-height: 8
 #| fig-width: 10
 
@@ -351,6 +378,8 @@ wrap_plots(p1, p2, p3, p4, nrow = 2) +
 Let's save the integrated data for further analysis.
 
 ``` {r}
+#| label: save
+
 saveRDS(sce, "data/covid/results/bioc_covid_qc_dr_int.rds")
 ```
 
@@ -367,6 +396,8 @@ Click here
 </summary>
 ```
 ``` {r}
+#| label: session
+
 sessionInfo()
 ```
 

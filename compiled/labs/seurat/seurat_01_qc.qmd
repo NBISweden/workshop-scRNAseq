@@ -22,6 +22,8 @@ have been subsampled to 1500 cells per sample. We can start by defining
 our paths.
 
 ``` {r}
+#| label: paths
+
 # download pre-computed annotation
 fetch_annotation <- TRUE
 
@@ -37,6 +39,8 @@ if (!dir.exists(path_results)) dir.create(path_results, recursive = T)
 ```
 
 ``` {r}
+#| label: fetch-data
+
 file_list <- c(
     "normal_pbmc_13.h5", "normal_pbmc_14.h5", "normal_pbmc_19.h5", "normal_pbmc_5.h5",
     "ncov_pbmc_15.h5", "ncov_pbmc_16.h5", "ncov_pbmc_17.h5", "ncov_pbmc_1.h5"
@@ -55,6 +59,9 @@ With data in place, now we can start loading libraries we will use in
 this tutorial.
 
 ``` {r}
+#| label: libraries
+
+
 suppressPackageStartupMessages({
     library(Seurat)
     library(Matrix)
@@ -69,6 +76,8 @@ We can first load the data individually by reading directly from HDF5
 file format (.h5).
 
 ``` {r}
+#| label: read
+
 cov.15 <- Seurat::Read10X_h5(
     filename = file.path(path_covid, "ncov_pbmc_15.h5"),
     use.names = T
@@ -118,6 +127,8 @@ each object, the sample id can be found in the metadata slot
 `orig.ident`.
 
 ``` {r}
+#| label: create-seurat
+
 sdata.cov1 <- CreateSeuratObject(cov.1, project = "covid_1")
 sdata.cov15 <- CreateSeuratObject(cov.15, project = "covid_15")
 sdata.cov17 <- CreateSeuratObject(cov.17, project = "covid_17")
@@ -148,6 +159,8 @@ information split into different layers for integration. If not
 proceeding with integration, rejoin the layers after merging.
 
 ``` {r}
+#| label: join-layers
+
 alldata <- JoinLayers(alldata)
 alldata
 ```
@@ -157,6 +170,8 @@ individual count matrices and objects are not needed anymore. It is a
 good idea to remove them and run garbage collect to free up some memory.
 
 ``` {r}
+#| label: gc
+
 # remove all objects that will not be used.
 rm(cov.1, cov.15, cov.16, cov.17, ctrl.5, ctrl.13, ctrl.14, ctrl.19, sdata.cov1, sdata.cov15, sdata.cov16, sdata.cov17, sdata.ctrl5, sdata.ctrl13, sdata.ctrl14, sdata.ctrl19)
 # run garbage collect to free up memory
@@ -166,6 +181,8 @@ gc()
 Here is how the count matrix and the metadata look like for every cell.
 
 ``` {r}
+#| label: show-object
+
 alldata[["RNA"]]$counts[1:10, 1:4] 
 head(alldata@meta.data, 10)
 ```
@@ -190,15 +207,17 @@ than individual transcript molecules and less likely to escape through
 tears in the cell membrane.
 
 ``` {r}
-# method 1: doing it using Seurat function
-alldata <- PercentageFeatureSet(alldata, "^MT-", col.name = "percent_mito")
-```
+#| label: qc-calc
 
-``` {r}
+# Mitochondrial
+alldata <- PercentageFeatureSet(alldata, "^MT-", col.name = "percent_mito")
+
 # Ribosomal
 alldata <- PercentageFeatureSet(alldata, "^RP[SL]", col.name = "percent_ribo")
+
 # Percentage hemoglobin genes - includes all genes starting with HB except HBP.
 alldata <- PercentageFeatureSet(alldata, "^HB[^(P|E|S)]", col.name = "percent_hb")
+
 # Percentage for some platelet markers
 alldata <- PercentageFeatureSet(alldata, "PECAM1|PF4", col.name = "percent_plat")
 ```
@@ -223,6 +242,7 @@ alldata <- PercentageFeatureSet(alldata, "PECAM1|PF4", col.name = "percent_plat"
 Now you can see that we have additional data in the metadata slot.
 
 ``` {r}
+#| label: meta
 head(alldata@meta.data)
 ```
 
@@ -231,12 +251,22 @@ head(alldata@meta.data)
 Now we can plot some of the QC variables as violin plots.
 
 ``` {r}
+#| label: qc-vln
 #| fig-height: 8
 #| fig-width: 15
 
 feats <- c("nFeature_RNA", "nCount_RNA", "percent_mito", "percent_ribo", "percent_hb", "percent_plat")
 VlnPlot(alldata, group.by = "orig.ident", split.by = "type", features = feats, pt.size = 0.1, ncol = 3)
 ```
+
+<div>
+
+> **Discuss**
+>
+> Looking at the violin plots, what do you think are appropriate cutoffs
+> for filtering these samples
+
+</div>
 
 As you can see, there is quite some difference in quality for these
 samples, with for instance the covid_15 and covid_16 samples having
@@ -247,6 +277,7 @@ expressed genes are detected. We can also plot the different QC-measures
 as scatter plots.
 
 ``` {r}
+#| label: qc-scatter
 #| fig-height: 8
 #| fig-width: 15
 
@@ -273,6 +304,7 @@ to be expressed in at least 3 cells. Please note that those values are
 highly dependent on the library preparation method used.
 
 ``` {r}
+#| label: filt1
 selected_c <- WhichCells(alldata, expression = nFeature_RNA > 200)
 selected_f <- rownames(alldata)[Matrix::rowSums(alldata[["RNA"]]$counts) > 3]
 
@@ -289,6 +321,7 @@ we will skip this step now, but the code below is an example of how it
 can be run:
 
 ``` {r}
+#| label: filt2
 # skip and run DoubletFinder instead
 # data.filt <- subset(data.filt, cells=WhichCells(data.filt, expression = nFeature_RNA < 4100))
 ```
@@ -297,6 +330,7 @@ Additionally, we can also see which genes contribute the most to such
 reads. We can for instance plot the percentage of counts per gene.
 
 ``` {r}
+#| label: top-genes
 #| fig-height: 8
 #| fig-width: 15
 
@@ -335,8 +369,7 @@ cells are below 20% mitochondrial reads and that will be used as a
 cutoff. We will also remove cells with less than 5% ribosomal reads.
 
 ``` {r}
-#| fig-height: 5
-#| fig-width: 15
+#| label: filt3
 
 data.filt <- subset(data.filt, percent_mito < 20 & percent_ribo > 5)
 dim(data.filt)
@@ -355,6 +388,7 @@ content, according to their function.
 Lets plot the same QC-stats once more.
 
 ``` {r}
+#| label: qc-vln2
 #| fig-height: 8
 #| fig-width: 15
 
@@ -370,6 +404,7 @@ before any further analysis. In this case we will also remove the HB
 genes.
 
 ``` {r}
+#| label: filt-genes
 dim(data.filt)
 
 # Filter MALAT1
@@ -416,6 +451,8 @@ advance.
 > in the step below.
 >
 > ``` {r}
+> #| label: annot
+>
 > # fetch_annotation is defined at the top of this document
 > if (!fetch_annotation) {
 >   suppressMessages(library(biomaRt))
@@ -438,6 +475,7 @@ advance.
 Download precomputed data.
 
 ``` {r}
+#| label: fetch-annot
 # fetch_annotation is defined at the top of this document
 if (fetch_annotation) {
   genes_file <- file.path(path_results, "genes_table.csv")
@@ -447,6 +485,7 @@ if (fetch_annotation) {
 ```
 
 ``` {r}
+#| label: read-annot
 genes.table <- read.csv(genes_file)
 genes.table <- genes.table[genes.table$external_gene_name %in% rownames(data.filt), ]
 ```
@@ -459,6 +498,7 @@ have to remove all genes in the pseudoautosmal regions of chrY that are:
 155701383 - 156030895 (PAR2)
 
 ``` {r}
+#| label: par
 par1 = c(10001, 2781479)
 par2 = c(56887903, 57217415)
 p1.gene = genes.table$external_gene_name[genes.table$start_position > par1[1] & genes.table$start_position < par1[2] & genes.table$chromosome_name == "Y"]
@@ -475,12 +515,14 @@ samples are clearly on either side, even if some cells do not have
 detection of either.
 
 ``` {r}
+#| label: sex-scatter
 FeatureScatter(data.filt, feature1 = "XIST", feature2 = "pct_chrY", slot = "counts")
 ```
 
 Plot as violins.
 
 ``` {r}
+#| label: sex-vln
 VlnPlot(data.filt, features = c("XIST", "pct_chrY"))
 ```
 
@@ -506,6 +548,8 @@ metadata, a score for S phase, a score for G2M phase and the predicted
 cell cycle phase.
 
 ``` {r}
+#| label: cc
+
 # Before running CellCycleScoring the data need to be normalized and logtransformed.
 data.filt <- NormalizeData(data.filt)
 data.filt <- CellCycleScoring(
@@ -518,6 +562,7 @@ data.filt <- CellCycleScoring(
 We can now create a violin plot for the cell cycle scores as well.
 
 ``` {r}
+#| label: cc-vln
 #| fig-height: 5
 #| fig-width: 15
 
@@ -533,6 +578,7 @@ very well, so be cautious with using these predictions. Instead we
 suggest that you look at the scores.
 
 ``` {r}
+#| label: cc-scatter
 #| fig-height: 7
 #| fig-width: 7
 
@@ -574,6 +620,7 @@ and PCA, as well as UMAP for visualization. These steps will be explored
 in more detail in coming exercises.
 
 ``` {r}
+#| label: doublet-norm
 data.filt <- FindVariableFeatures(data.filt, verbose = F)
 data.filt <- ScaleData(data.filt, vars.to.regress = c("nFeature_RNA", "percent_mito"), verbose = F)
 data.filt <- RunPCA(data.filt, verbose = F, npcs = 20)
@@ -585,6 +632,8 @@ Then we run doubletFinder, selecting first 10 PCs and a `pK` value of
 in the package.
 
 ``` {r}
+#| label: doubletfinder
+
 suppressMessages(library(DoubletFinder))
 # Can run parameter optimization with paramSweep
 
@@ -599,6 +648,7 @@ data.filt <- doubletFinder(data.filt, pN = 0.25, pK = 0.09, nExp = nExp, PCs = 1
 ```
 
 ``` {r}
+#| label: doublet-plot
 #| fig-height: 4
 #| fig-width: 10
 
@@ -617,12 +667,16 @@ cell, lets check if our predicted doublets also have more detected genes
 in general.
 
 ``` {r}
+#| label: doublet-vln
+
 VlnPlot(data.filt, features = "nFeature_RNA", group.by = DF.name, pt.size = .1)
 ```
 
 Now, lets remove all predicted doublets from our data.
 
 ``` {r}
+#| label: doublet-filt
+
 data.filt <- data.filt[, data.filt@meta.data[, DF.name] == "Singlet"]
 dim(data.filt)
 ```
@@ -632,9 +686,21 @@ started with 1500 cells per sample. Looking back at the intitial QC
 plots does it make sense that some samples have much fewer cells now?
 
 ``` {r}
+#| label: view-data
 table(alldata$orig.ident)
 table(data.filt$orig.ident)
 ```
+
+<div>
+
+> **Discuss**
+>
+> "In this case we ran doublet detection with all samples together since
+> we have very small subsampled datasets. But in a real scenario it
+> should be run one sample at a time. Why is this important do you
+> think?"
+
+</div>
 
 ## Save data
 
@@ -643,6 +709,8 @@ output directory `data/covid/results` and save data to that folder. This
 will be used in downstream labs.
 
 ``` {r}
+#| label: save
+
 saveRDS(data.filt, file.path(path_results, "seurat_covid_qc.rds"))
 ```
 
@@ -659,6 +727,8 @@ Click here
 </summary>
 ```
 ``` {r}
+#| label: session
+
 sessionInfo()
 ```
 

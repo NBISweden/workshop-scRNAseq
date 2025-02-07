@@ -40,6 +40,8 @@ enrichment predict celltype based on the DEGs of each cluster.
 First, lets load required libraries
 
 ``` {r}
+#| label: libraries
+
 suppressPackageStartupMessages({
     library(Seurat)
     library(dplyr)
@@ -57,6 +59,8 @@ suppressPackageStartupMessages({
 Let's read in the saved Covid-19 data object from the clustering step.
 
 ``` {r}
+#| label: fetch-data
+
 # download pre-computed data if missing or long compute
 fetch_data <- TRUE
 
@@ -74,6 +78,8 @@ alldata <- readRDS(path_file)
 Subset one patient.
 
 ``` {r}
+#| label: subset
+
 ctrl <- alldata[, alldata$orig.ident == "ctrl_13"]
 ```
 
@@ -83,6 +89,8 @@ Load the reference dataset with annotated labels that is provided by the
 `scPred` package, it is a subsampled set of cells from human PBMCs.
 
 ``` {r}
+#| label: fetch-ref
+
 reference <- scPred::pbmc_1
 reference
 ```
@@ -94,6 +102,8 @@ Here, we will run all the steps that we did in previous labs in one go
 using the `magittr` package with the pipe-operator `%>%`.
 
 ``` {r}
+#| label: process-ref
+
 reference <- reference %>%
     NormalizeData() %>%
     FindVariableFeatures() %>%
@@ -103,6 +113,7 @@ reference <- reference %>%
 ```
 
 ``` {r}
+#| label: plot-ref
 #| fig-height: 5
 #| fig-width: 6
 
@@ -113,6 +124,7 @@ Run all steps of the analysis for the **ctrl** sample as well. Use the
 clustering from the integration lab with resolution 0.5.
 
 ``` {r}
+#| label: process-data
 # Set the identity as louvain with resolution 0.5
 ctrl <- SetIdent(ctrl, value = "RNA_snn_res.0.5")
 
@@ -125,6 +137,7 @@ ctrl <- ctrl %>%
 ```
 
 ``` {r}
+#| label: plot-data
 #| fig-height: 5
 #| fig-width: 6
 
@@ -140,6 +153,7 @@ query dataset is projected onto the PCA of the reference dataset. Then,
 the labels of the reference data are predicted.
 
 ``` {r}
+#| label: transfer
 transfer.anchors <- FindTransferAnchors(
     reference = reference, query = ctrl,
     dims = 1:30
@@ -152,6 +166,7 @@ ctrl <- AddMetaData(object = ctrl, metadata = predictions)
 ```
 
 ``` {r}
+#| label: plot-transfer
 #| fig-height: 5
 #| fig-width: 6
 
@@ -161,6 +176,7 @@ DimPlot(ctrl, group.by = "predicted.id", label = T, repel = T) + NoAxes()
 Now plot how many cells of each celltypes can be found in each cluster.
 
 ``` {r}
+#| label: plot-proportions
 #| fig-height: 5
 #| fig-width: 6
 
@@ -180,6 +196,7 @@ We first have to convert the Seurat object to a SingleCellExperiment
 object.
 
 ``` {r}
+#| label: sce
 sce = as.SingleCellExperiment(ctrl)
 ```
 
@@ -192,6 +209,8 @@ dataset that we used for label transfer above but using SingleR instead.
 ### Immune cell reference
 
 ``` {r}
+#| label: singler-immune
+
 immune = celldex::DatabaseImmuneCellExpressionData()
 singler.immune <- SingleR(test = sce, ref = immune, assay.type.test=1,
     labels = immune$label.main)
@@ -202,6 +221,7 @@ head(singler.immune)
 ### HPCA reference
 
 ``` {r}
+#| label: singler-hpca
 
 hpca <- HumanPrimaryCellAtlasData()
 singler.hpca <- SingleR(test = sce, ref = hpca, assay.type.test=1,
@@ -213,6 +233,8 @@ head(singler.hpca)
 ### With own reference data
 
 ``` {r}
+#| label: singler-ref
+
 sce.ref = as.SingleCellExperiment(reference)
 singler.ref <- SingleR(test=sce, ref=sce.ref, labels=sce.ref$cell_type, de.method="wilcox")
 head(singler.ref)
@@ -221,6 +243,7 @@ head(singler.ref)
 Compare results:
 
 ``` {r}
+#| label: plot-singler
 #| fig-height: 7
 #| fig-width: 8
 
@@ -244,6 +267,7 @@ reference. The first time you run the command, the `pbmcref` dataset
 will be downloaded to your local computer.
 
 ``` {r}
+#| label: azimuth
 options(future.globals.maxSize = 1e9)
 
 # will install the pbmcref dataset first time you run it.
@@ -254,6 +278,7 @@ This dataset has predictions at 3 different levels of annotation wiht
 `l1` being the more broad celltypes and `l3` more detailed annotation.
 
 ``` {r}
+#| label: plot-azimuth
 DimPlot(ctrl, group.by = "predicted.celltype.l1", label = T, repel = T) + NoAxes()
 DimPlot(ctrl, group.by = "predicted.celltype.l2", label = T, repel = T) + NoAxes()
 DimPlot(ctrl, group.by = "predicted.celltype.l3", label = T, repel = T) + NoAxes()
@@ -266,12 +291,15 @@ function in scPred `crossTab()` that prints the overlap between two
 metadata slots.
 
 ``` {r}
+#| label: crosstab
+
 crossTab(ctrl, "predicted.id", "singler.hpca")
 ```
 
 We can also plot all the different predictions side by side
 
 ``` {r}
+#| label: plot-all
 #| fig-height: 10
 #| fig-width: 16
 
@@ -305,6 +333,7 @@ report as many genes as possible, hence we set the cutoffs quite
 lenient.
 
 ``` {r}
+#| label: dge
 # run differential expression in our dataset, using clustering at resolution 0.5
 # first we need to join the layers
 alldata@active.assay = "RNA"
@@ -331,6 +360,7 @@ unlist(lapply(DGE_list, nrow))
 ```
 
 ``` {r}
+#| label: dge-ref
 # Compute differential gene expression in reference dataset (that has cell annotation)
 reference <- SetIdent(reference, value = "cell_type")
 reference_markers <- FindAllMarkers(
@@ -360,6 +390,7 @@ Now we can run GSEA for the DEGs from our dataset and check for
 enrichment of top DEGs in the reference dataset.
 
 ``` {r}
+#| label: gsea
 suppressPackageStartupMessages(library(fgsea))
 
 # run fgsea for each of the clusters in the list
@@ -394,6 +425,7 @@ instance the ncMono and cMono celltypes are equally good for some
 clusters.
 
 ``` {r}
+#| label: plot-gsea
 #| fig-height: 5
 #| fig-width: 11
 
@@ -416,6 +448,7 @@ Compare the results with the other celltype prediction methods in the
 **ctrl_13** sample.
 
 ``` {r}
+#| label: plot-gsea-sub
 #| fig-height: 5
 #| fig-width: 16
 
@@ -436,11 +469,13 @@ converted the excel file to a csv for you. Read in the gene lists and do
 some filtering.
 
 ``` {r}
+#| label: fetch-markers
 path_file <- file.path("data/cell_marker_human.csv")
 if (!file.exists(path_file)) download.file(file.path(path_data, "misc/cell_marker_human.csv"), destfile = path_file, method = "curl", extra = curl_upass)
 ```
 
 ``` {r}
+#| label: prep-markers
 # Load the human marker table
 markers <- read.delim("data/cell_marker_human.csv", sep = ";")
 markers <- markers[markers$species == "Human", ]
@@ -470,6 +505,7 @@ celltype_list <- celltype_list[unlist(lapply(celltype_list, length)) > 5]
 ```
 
 ``` {r}
+#| label: gsea-marker
 # run fgsea for each of the clusters in the list
 res <- lapply(DGE_list, function(x) {
     gene_rank <- setNames(x$avg_log2FC, x$gene)
@@ -496,6 +532,7 @@ lapply(res, head, 3)
 Let's plot the results.
 
 ``` {r}
+#| label: plot-gsea-marker
 #| fig-height: 5
 #| fig-width: 11
 
@@ -531,6 +568,8 @@ results make sense.
 Finally, lets save the data with predictions.
 
 ``` {r}
+#| label: save
+
 saveRDS(ctrl, "data/covid/results/seurat_covid_qc_dr_int_cl_ct-ctrl13.rds")
 ```
 
@@ -547,6 +586,8 @@ Click here
 </summary>
 ```
 ``` {r}
+#| label: session
+
 sessionInfo()
 ```
 

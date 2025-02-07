@@ -26,6 +26,8 @@ using the `louvain` clustering to identifying differentially expressed
 genes.
 
 ``` {r}
+#| label: libraries
+
 suppressPackageStartupMessages({
     library(Seurat)
     library(dplyr)
@@ -40,6 +42,8 @@ suppressPackageStartupMessages({
 ```
 
 ``` {r}
+#| label: fetch-data
+
 # download pre-computed data if missing or long compute
 fetch_data <- TRUE
 
@@ -55,8 +59,7 @@ alldata <- readRDS(path_file)
 ```
 
 ``` {r}
-#| fig-height: 5
-#| fig-width: 12
+#| label: select-cl
 
 # Set the identity as louvain with resolution 0.5
 sel.clust <- "RNA_snn_res.0.5"
@@ -66,6 +69,7 @@ table(alldata@active.ident)
 ```
 
 ``` {r}
+#| label: plot-data
 #| fig-height: 5
 #| fig-width: 12
 
@@ -93,6 +97,8 @@ with the data beforehand. So first, lets check what we have in our
 object:
 
 ``` {r}
+#| label: layers
+
 Layers(alldata@assays$RNA)
 ```
 
@@ -100,6 +106,8 @@ As you can see, we have the data split by each sample, so we need to
 merge them into one single matrix to run the differential expression.
 
 ``` {r}
+#| label: join-layers
+
 alldata@active.assay = "RNA"
 alldata <- JoinLayers(object = alldata, layers = c("data","counts"))
 
@@ -113,6 +121,8 @@ Here we only test for upregulated genes, so the `only.pos` parameter is
 set to `TRUE`.
 
 ``` {r}
+#| label: find-markers
+
 # Compute differentiall expression
 markers_genes <- FindAllMarkers(
     alldata,
@@ -129,6 +139,8 @@ markers_genes <- FindAllMarkers(
 We can now select the top 25 overexpressed genes for plotting.
 
 ``` {r}
+#| label: filter-markers
+
 markers_genes %>%
     group_by(cluster) %>%
     top_n(-25, p_val_adj) -> top25
@@ -136,6 +148,8 @@ head(top25)
 ```
 
 ``` {r}
+#| label: barplot-markers
+
 par(mfrow = c(2, 5), mar = c(4, 6, 3, 1))
 for (i in unique(top25$cluster)) {
     barplot(sort(setNames(top25$avg_log2FC, top25$gene)[top25$cluster == i], F),
@@ -148,6 +162,7 @@ for (i in unique(top25$cluster)) {
 We can visualize them as a heatmap. Here we are selecting the top 5.
 
 ``` {r}
+#| label: heatmap-markers
 #| fig-height: 8
 #| fig-width: 8
 
@@ -163,6 +178,7 @@ Another way is by representing the overall group expression and
 detection rates in a dot-plot.
 
 ``` {r}
+#| label: dotplot-marker
 #| fig-height: 8
 #| fig-width: 8
 
@@ -172,6 +188,7 @@ DotPlot(alldata, features = rev(as.character(unique(top5$gene))), group.by = sel
 We can also plot a violin plot for each gene.
 
 ``` {r}
+#| label: vlnplot-marker
 #| fig-height: 10
 #| fig-width: 10
 
@@ -203,6 +220,8 @@ VlnPlot(alldata, features = as.character(unique(top3$gene)), ncol = 5, group.by 
 The number of cells per cluster differ quite a bit in this data
 
 ``` {r}
+#| label: ident
+
 table(alldata@active.ident)
 ```
 
@@ -214,6 +233,7 @@ rest. We can select a fixed number of cells per cluster with the
 function `WhichCells` and the argument `downsample`.
 
 ``` {r}
+#| label: subsample
 sub <- subset(alldata, cells = WhichCells(alldata, downsample = 300))
 
 table(sub@active.ident)
@@ -222,6 +242,8 @@ table(sub@active.ident)
 Now rerun `FindAllMarkers` with this set and compare the results.
 
 ``` {r}
+#| label: find-marker-sub
+
 markers_genes_sub <- FindAllMarkers(
     sub,
     log2FC.threshold = 0.2,
@@ -238,11 +260,14 @@ The number of significant genes per cluster has changed, with more for
 some clusters and less for others.
 
 ``` {r}
+#| label: count-markers
+
 table(markers_genes$cluster)
 table(markers_genes_sub$cluster)
 ```
 
 ``` {r}
+#| label: dotplot-marker-sub
 #| fig-height: 8
 #| fig-width: 8
 
@@ -264,6 +289,7 @@ cluster, then change the cell identities to the variable of comparison
 (which now in our case is the **type**, e.g. Covid/Ctrl).
 
 ``` {r}
+#| label: markers-subset
 # select all cells in cluster 3
 cell_selection <- subset(alldata, cells = colnames(alldata)[alldata@meta.data[, sel.clust] == 3])
 cell_selection <- SetIdent(cell_selection, value = "type")
@@ -282,6 +308,7 @@ DGE_cell_selection <- FindAllMarkers(cell_selection,
 We can now plot the expression across the **type**.
 
 ``` {r}
+#| label: vlnplot-marker-subset
 #| fig-height: 6
 #| fig-width: 8
 
@@ -295,6 +322,7 @@ We can also plot these genes across all clusters, but split by **type**,
 to check if the genes are also over/under expressed in other celltypes.
 
 ``` {r}
+#| label: vlnplot-marker-subset-split
 #| fig-height: 6
 #| fig-width: 12
 
@@ -315,11 +343,13 @@ To remove some of the bias due to unbalanced sex in the subjects, we can
 remove the sex chromosome related genes.
 
 ``` {r}
+#| label: fetch-annot
 genes_file <- file.path("data/covid/results/genes_table.csv")
 if (!file.exists(genes_file)) download.file(file.path(path_data, "covid/results_seurat/genes_table.csv"), destfile = genes_file,method = "curl", extra = curl_upass)
 ```
 
 ``` {r}
+#| label: remove-sexgenes
 gene.info <- read.csv(genes_file) # was created in the QC exercise
 
 auto.genes <- gene.info$external_gene_name[!(gene.info$chromosome_name %in% c("X", "Y"))]
@@ -335,8 +365,7 @@ cell_selection <- NormalizeData(cell_selection)
 Rerun differential expression:
 
 ``` {r}
-#| fig-height: 6
-#| fig-width: 10
+#| label: markers-nosex
 
 # Compute differential expression
 DGE_cell_selection <- FindMarkers(cell_selection,
@@ -357,6 +386,7 @@ DGE_cell_selection %>%
 ```
 
 ``` {r}
+#| label: plot-markers-nosex
 #| fig-height: 6
 #| fig-width: 12
 
@@ -371,6 +401,7 @@ to check if the genes are also over/under expressed in other
 celltypes/clusters.
 
 ``` {r}
+#| label: plot-markers-nosex-all
 #| fig-height: 6
 #| fig-width: 12
 
@@ -388,6 +419,7 @@ unless we find a way to control for it. So first, let's check how the
 top DEGs are expressed across the individuals within cluster 3:
 
 ``` {r}
+#| label: vlnplot-batch
 #| fig-height: 6
 #| fig-width: 12
 
@@ -400,6 +432,7 @@ one or 2 patients.
 We can examine more genes with a DotPlot:
 
 ``` {r}
+#| label: dotplot-batch
 #| fig-height: 7
 #| fig-width: 7
 
@@ -413,6 +446,7 @@ As you can see, most of the DGEs are driven by the `covid_17` patient.
 It is also a sample with very high number of cells:
 
 ``` {r}
+#| label: count-cells-sel
 table(cell_selection$orig.ident)
 ```
 
@@ -425,6 +459,7 @@ We will use the `downsample` option in the Seurat function
 `WhichCells()` to select 30 cells per cluster:
 
 ``` {r}
+#| label: subsample-clusters
 cell_selection <- SetIdent(cell_selection, value = "orig.ident")
 sub_data <- subset(cell_selection, cells = WhichCells(cell_selection, downsample = 30))
 
@@ -434,6 +469,7 @@ table(sub_data$orig.ident)
 And now we run DGE analysis again:
 
 ``` {r}
+#| label: markers-cond-sub
 #| fig-height: 6
 #| fig-width: 8
 
@@ -466,6 +502,7 @@ Plot as dotplot, but in the full (not subsampled) data, still only
 showing cluster 3:
 
 ``` {r}
+#| label: dotplot-markers-sub
 #| fig-height: 8
 #| fig-width: 8
 
@@ -500,12 +537,14 @@ cells will strongly influence the differential expression you run with
 the pseudobulk.
 
 ``` {r}
+#| label: pseudobulk
 pseudobulk = AggregateExpression(sub_data, group.by = "orig.ident", assays = "RNA")$RNA
 ```
 
 Then run edgeR:
 
 ``` {r}
+#| label: edger
 # define the groups
 bulk.labels <- c("Covid", "Covid", "Covid", "Covid", "Ctrl", "Ctrl", "Ctrl", "Ctrl")
 
@@ -529,6 +568,7 @@ vs 4 samples, we should not expect to find many genes with this method.
 Again as dotplot including top 10 genes:
 
 ``` {r}
+#| label: plot-edger
 #| fig-height: 6
 #| fig-width: 6
 
@@ -566,6 +606,8 @@ that are expressed with at least 2 reads in 2 covid patients or 2
 controls.
 
 ``` {r}
+#| label: prep-mast
+
 # select genes that are expressed in at least 2 patients or 2 ctrls with > 2 reads.
 nPatient <- sapply(unique(cell_selection$orig.ident), function(x) {
     rowSums(cell_selection@assays$RNA@layers$counts[, cell_selection$orig.ident == x] > 2)
@@ -580,6 +622,7 @@ cell_selection_sub <- cell_selection[sel, ]
 Set up the MAST object.
 
 ``` {r}
+#| label: prep-mast2
 # create the feature data
 fData <- data.frame(primerid = rownames(cell_selection_sub))
 m <- cell_selection_sub@meta.data
@@ -598,6 +641,8 @@ sca <- MAST::FromMatrix(
 First, run the regular MAST analysis without random effects
 
 ``` {r}
+#| label: mast-regular
+
 # takes a while to run, so save a file to tmpdir in case you have to rerun the code
 tmpdir <- "data/covid/results/tmp_dge"
 dir.create(tmpdir, showWarnings = F)
@@ -620,6 +665,7 @@ if (file.exists(tmpfile1)) {
 Then run MAST with glmer and random effect.
 
 ``` {r}
+#| label: mast-re
 #| results: hide
 
 library(lme4)
@@ -646,6 +692,7 @@ if (file.exists(tmpfile2)) {
 Top genes with normal MAST:
 
 ``` {r}
+#| label: mast-topgenes1
 top1 <- head(fcHurdle1[order(fcHurdle1$`Pr(>Chisq)`), ], 10)
 top1
 
@@ -662,6 +709,7 @@ mastN <- mastN$primerid
 Top genes with random effect:
 
 ``` {r}
+#| label: mast-topgenes2
 top2 <- head(fcHurdle2[order(fcHurdle2$`Pr(>Chisq)`), ], 10)
 top2
 
@@ -681,6 +729,7 @@ effect added.
 Dotplot for top 10 genes in each direction:
 
 ``` {r}
+#| label: mast-dotplot
 #| fig-height: 7
 #| fig-width: 13
 
@@ -716,6 +765,7 @@ In this case we will use the DGE from MAST with random effect to run
 enrichment analysis.
 
 ``` {r}
+#| label: enrichr
 # Load additional packages
 library(enrichR)
 
@@ -734,6 +784,7 @@ Some databases of interest:\
 You visualize your results using a simple barplot, for example:
 
 ``` {r}
+#| label: plot-enrichr
 par(mfrow = c(1, 1), mar = c(3, 25, 2, 1))
 barplot(
     height = -log10(enrich_results$P.value)[10:1],
@@ -761,7 +812,9 @@ on a larger set of genes, so we will have to rerun the test with more
 lenient cutoffs. We will not use it now but this is how it should be
 run:
 
-\`\`\`{r, eval=FALSE} \## OBS! No need to run
+\`\`\`{r, eval=FALSE} #\| label: gsea-rerun
+
+## OBS! No need to run
 
 sub_data \<- SetIdent(sub_data, value = "type")
 
@@ -784,6 +837,7 @@ casefold(rownames(DGE_cell_selection2), upper = T))
 
 
     ```{r}
+    #| label: rank-gsea
     gene_rank <- setNames(fcHurdle2$z, casefold(fcHurdle2$primerid, upper = T))
 
 Once our list of genes are sorted, we can proceed with the enrichment
@@ -791,6 +845,7 @@ itself. We can use the package to get gene set from the Molecular
 Signature Database (MSigDB) and select KEGG pathways as an example.
 
 ``` {r}
+#| label: gsea
 library(msigdbr)
 
 # Download gene sets
@@ -814,6 +869,7 @@ pathways to visualize only the top ones. You can select/filter them by
 either `p-value` or normalized enrichment score (`NES`).
 
 ``` {r}
+#| label: plot-gsea
 #| fig-height: 5
 #| fig-width: 12
 
@@ -854,6 +910,8 @@ Click here
 </summary>
 ```
 ``` {r}
+#| label: session
+
 sessionInfo()
 ```
 

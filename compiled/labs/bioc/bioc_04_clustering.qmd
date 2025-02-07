@@ -25,6 +25,8 @@ Let's first load all necessary libraries and also the integrated dataset
 from the previous step.
 
 ``` {r}
+#| label: libraries
+
 suppressPackageStartupMessages({
     library(scater)
     library(scran)
@@ -38,6 +40,8 @@ suppressPackageStartupMessages({
 ```
 
 ``` {r}
+#| label: fetch-data
+
 # download pre-computed data if missing or long compute
 fetch_data <- TRUE
 
@@ -71,6 +75,8 @@ done for dimensionality reduction, we will use ony the top *N* PCA
 dimensions for this purpose (the same used for computing UMAP / tSNE).
 
 ``` {r}
+#| label: neighbors
+
 # These 2 lines are for demonstration purposes only
 g <- buildKNNGraph(sce, k = 30, use.dimred = "harmony")
 reducedDim(sce, "KNN") <- igraph::as_adjacency_matrix(g)
@@ -92,6 +98,7 @@ clustering on unweighted graphs is faster for large datasets (\> 100k
 cells).
 
 ``` {r}
+#| label: plot-graph
 #| fig-height: 6
 #| fig-width: 6
 
@@ -155,6 +162,7 @@ the embedding for creating the graph, so here we create a new
 `reducedDim` instance with only 20 components.
 
 ``` {r}
+#| label: cluster
 #| fig-height: 8
 #| fig-width: 10
 
@@ -191,6 +199,7 @@ We can now use the `clustree` package to visualize how cells are
 distributed between clusters depending on resolution.
 
 ``` {r}
+#| label: clustree
 #| fig-height: 8
 #| fig-width: 8
 
@@ -210,6 +219,8 @@ centers, it is typically recommended to run K-means with multiple
 starting configurations (via the `nstart` argument).
 
 ``` {r}
+#| label: kmeans
+
 #| fig-height: 8
 #| fig-width: 10
 
@@ -233,6 +244,7 @@ wrap_plots(
 ```
 
 ``` {r}
+#| label: clustree-kmeans
 #| fig-height: 8
 #| fig-width: 8
 
@@ -257,6 +269,7 @@ distance methods available in `dist` are: 'euclidean', 'maximum',
 'manhattan', 'canberra', 'binary' or 'minkowski'.
 
 ``` {r}
+#| label: hc-dist
 d <- dist(reducedDim(sce, "harmony2"), method = "euclidean")
 ```
 
@@ -278,6 +291,7 @@ transformation does not need to have a maximum of 1, but it is more
 intuitive to have it at 1, rather than at any other number.
 
 ``` {r}
+#| label: hc-dist2
 # Compute sample correlations
 sample_cor <- cor(Matrix::t(reducedDim(sce, "harmony2")))
 
@@ -299,6 +313,7 @@ the distance objects created above. The methods available are: 'ward.D',
 this is very time consuming and we will omit for this tutorial.
 
 ``` {r}
+#| label: hc
 # euclidean
 h_euclidean <- hclust(d, method = "ward.D2")
 
@@ -314,6 +329,7 @@ define the number of clusters or decide on a height. We can simply try
 different clustering levels.
 
 ``` {r}
+#| label: plot-hc
 #| fig-height: 8
 #| fig-width: 13
 
@@ -347,6 +363,7 @@ wrap_plots(
 Finally, lets save the clustered data for further analysis.
 
 ``` {r}
+#| label: save
 saveRDS(sce, "data/covid/results/bioc_covid_qc_dr_int_cl.rds")
 ```
 
@@ -356,6 +373,7 @@ Now, we can select one of our clustering methods and compare the
 proportion of samples across the clusters.
 
 ``` {r}
+#| label: clust-distribution
 #| fig-height: 4
 #| fig-width: 9
 
@@ -376,6 +394,7 @@ We can also plot it in the other direction, the proportion of each
 cluster per sample.
 
 ``` {r}
+#| label: clust-distribution2
 ggplot(as.data.frame(colData(sce)), aes(x = sample, fill = leiden_k20)) +
     geom_bar(position = "fill")
 ```
@@ -396,6 +415,7 @@ ggplot(as.data.frame(colData(sce)), aes(x = sample, fill = leiden_k20)) +
 </div>
 
 ``` {r}
+#| label: plot-qc
 #| fig-height: 8
 #| fig-width: 10
 
@@ -430,6 +450,7 @@ know that T-cells express CD3E, and the main subtypes are CD4 and CD8,
 while NK-cells express GNLY.
 
 ``` {r}
+#| label: plot-tcells
 #| fig-height: 8
 #| fig-width: 10
 
@@ -447,6 +468,7 @@ We can clearly see what clusters are T-cell clusters, so lets subset the
 data for those cells
 
 ``` {r}
+#| label: select-tcells
 tcells = sce[,sce$leiden_k30 %in% c(3,4)]
 
 table(tcells$sample)
@@ -459,6 +481,8 @@ possible. We will start with selecting a new set of genes that better
 reflecs the variability within this celltype
 
 ``` {r}
+#| label: hvg-tcells
+
 var.out <- modelGeneVar(tcells, block = tcells$sample)
 hvgs.tcell <- getTopHVGs(var.out, n = 2000)
 
@@ -473,6 +497,7 @@ Now we have to run the full pipeline with scaling, pca, integration and
 clustering on this subset of cells, using the new set of variable genes
 
 ``` {r}
+#| label: subcluster
 tcells = runPCA(tcells, exprs_values = "logcounts", ncomponents = 30, subset_row = hvgs.tcell, scale = TRUE)
 
 
@@ -490,6 +515,7 @@ tcells$leiden_tcell_k20 <- clusterCells(tcells, use.dimred = "harmony", BLUSPARA
 ```
 
 ``` {r}
+#| label: plot-subcluster
 #| fig-height: 6
 #| fig-width: 10
 
@@ -510,7 +536,7 @@ before. But in general the separation looks very similar.
 Lets also have a look at the same genes in the new umap:
 
 ``` {r}
-
+#| label: subcluster-gene-plot
 wrap_plots(
     plotReducedDim(tcells, dimred = "UMAP_tcell", colour_by = "CD3E"),
     plotReducedDim(tcells, dimred = "UMAP_tcell", colour_by = "CD4"),
@@ -519,6 +545,17 @@ wrap_plots(
     ncol = 2
 )
 ```
+
+<div>
+
+> **Discuss**
+>
+> Have a look at the T-cells in the umaps with all cells or only T/NK
+> cells. What are the main differences? Do you think it improved with
+> subclustering? Also, there are some cells in these clusters that fall
+> far away from the rest in the UMAPs, why do you think that is?
+
+</div>
 
 ## Session info
 
@@ -533,6 +570,7 @@ Click here
 </summary>
 ```
 ``` {r}
+#| label: session
 sessionInfo()
 ```
 

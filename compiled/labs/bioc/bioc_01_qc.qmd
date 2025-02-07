@@ -22,6 +22,7 @@ have been subsampled to 1500 cells per sample. We can start by defining
 our paths.
 
 ``` {r}
+#| label: paths
 # download pre-computed annotation
 fetch_annotation <- TRUE
 
@@ -37,6 +38,7 @@ if (!dir.exists(path_results)) dir.create(path_results, recursive = T)
 ```
 
 ``` {r}
+#| label: fetch-data
 file_list <- c(
     "normal_pbmc_13.h5", "normal_pbmc_14.h5", "normal_pbmc_19.h5", "normal_pbmc_5.h5",
     "ncov_pbmc_15.h5", "ncov_pbmc_16.h5", "ncov_pbmc_17.h5", "ncov_pbmc_1.h5"
@@ -55,6 +57,8 @@ With data in place, now we can start loading libraries we will use in
 this tutorial.
 
 ``` {r}
+#| label: libraries
+
 suppressPackageStartupMessages({
     library(scater)
     library(scran)
@@ -68,6 +72,7 @@ We can first load the data individually by reading directly from HDF5
 file format (.h5).
 
 ``` {r}
+#| label: read-data
 cov.15 <- Seurat::Read10X_h5(
     filename = file.path(path_covid, "ncov_pbmc_15.h5"),
     use.names = T
@@ -112,6 +117,8 @@ overlapping barcodes between the datasets. After that we add a column
 **type** in the metadata to define covid and ctrl samples.
 
 ``` {r}
+#| label: create-sce
+
 sce <- SingleCellExperiment(assays = list(counts = cbind(cov.1, cov.15, cov.16, cov.17, ctrl.5, ctrl.13, ctrl.14,ctrl.19)))
 dim(sce)
 # Adding metadata
@@ -124,6 +131,8 @@ individual count matrices and objects are not needed anymore. It is a
 good idea to remove them and run garbage collect to free up some memory.
 
 ``` {r}
+#| label: gc
+
 # remove all objects that will not be used.
 rm(cov.15, cov.1, cov.17, cov.16, ctrl.5, ctrl.13, ctrl.14, ctrl.19)
 # run garbage collect to free up memory
@@ -133,6 +142,8 @@ gc()
 Here is how the count matrix and the metadata look like for every cell.
 
 ``` {r }
+#| label: show-object
+
 head(counts(sce)[, 1:10])
 head(sce@colData, 10)
 ```
@@ -157,6 +168,8 @@ than individual transcript molecules and less likely to escape through
 tears in the cell membrane.
 
 ``` {r}
+#| label: qc-genes
+
 # Mitochondrial genes
 mito_genes <- rownames(sce)[grep("^MT-", rownames(sce))]
 # Ribosomal genes
@@ -171,6 +184,7 @@ of counts for specific gene subsets, so first we need to define which
 genes are mitochondrial, ribosomal and hemoglobin.
 
 ``` {r}
+#| label: qc-calc
 sce <- addPerCellQC(sce, flatten = T, subsets = list(mt = mito_genes, hb = hb_genes, ribo = ribo_genes))
 
 # Way2: Doing it manually
@@ -180,6 +194,8 @@ sce@colData$percent_mito <- Matrix::colSums(counts(sce)[mito_genes, ]) / sce@col
 Now you can see that we have additional data in the metadata slot.
 
 ``` {r}
+#| label: coldata
+
 head(colData(sce))
 ```
 
@@ -188,6 +204,7 @@ head(colData(sce))
 Now we can plot some of the QC variables as violin plots.
 
 ``` {r}
+#| label: qc-vln
 #| fig-height: 6
 #| fig-width: 10
 
@@ -205,6 +222,15 @@ wrap_plots(
 ) + plot_layout(guides = "collect")
 ```
 
+<div>
+
+> **Discuss**
+>
+> Looking at the violin plots, what do you think are appropriate cutoffs
+> for filtering these samples
+
+</div>
+
 As you can see, there is quite some difference in quality for these
 samples, with for instance the covid_15 and covid_16 samples having
 cells with fewer detected genes and more mitochondrial content. As the
@@ -214,6 +240,7 @@ expressed genes are detected. We can also plot the different QC-measures
 as scatter plots.
 
 ``` {r}
+#| label: qc-scatter
 #| fig-height: 5
 #| fig-width: 6
 plotColData(sce, x = "total", y = "detected", colour_by = "sample")
@@ -244,6 +271,7 @@ subsets etc. But in this case, we will take one setting at a time and
 run through the steps of filtering cells.
 
 ``` {r}
+#| label: filter
 dim(sce)
 
 selected_c <- colnames(sce)[sce$detected > 200]
@@ -281,6 +309,7 @@ the gene contribution, but the function is quite slow, so we will do it
 on our own instead..
 
 ``` {r}
+#| label: top-genes
 #| fig-height: 7
 #| fig-width: 7
 # Compute the relative expression of each gene per cell
@@ -318,6 +347,7 @@ cells are below 20% mitochondrial reads and that will be used as a
 cutoff. We will also remove cells with less than 5% ribosomal reads.
 
 ``` {r}
+#| label: filter2
 selected_mito <- sce.filt$subsets_mt_percent < 20
 selected_ribo <- sce.filt$subsets_ribo_percent > 5
 
@@ -338,6 +368,7 @@ content, according to their function.
 Lets plot the same QC-stats once more.
 
 ``` {r}
+#| label: qc-vln-filt
 #| fig-height: 6
 #| fig-width: 10
 
@@ -359,6 +390,8 @@ before any further analysis. In this case we will also remove the HB
 genes.
 
 ``` {r}
+#| label: filt-genes
+
 dim(sce.filt)
 
 # Filter MALAT1
@@ -405,6 +438,7 @@ advance.
 > in the step below.
 >
 > ``` {r}
+> #| label: annot
 > # fetch_annotation is defined at the top of this document
 > if (!fetch_annotation) {
 >   suppressMessages(library(biomaRt))
@@ -427,6 +461,8 @@ advance.
 Download precomputed data.
 
 ``` {r}
+#| label: fetch-annot
+
 # fetch_annotation is defined at the top of this document
 if (fetch_annotation) {
   genes_file <- file.path(path_results, "genes_table.csv")
@@ -436,6 +472,8 @@ if (fetch_annotation) {
 ```
 
 ``` {r}
+#| label: read-annot
+
 genes.table <- read.csv(genes_file)
 genes.table <- genes.table[genes.table$external_gene_name %in% rownames(sce.filt), ]
 ```
@@ -448,6 +486,8 @@ have to remove all genes in the pseudoautosmal regions of chrY that are:
 155701383 - 156030895 (PAR2)
 
 ``` {r}
+#| label: par
+
 par1 = c(10001, 2781479)
 par2 = c(56887903, 57217415)
 p1.gene = genes.table$external_gene_name[genes.table$start_position > par1[1] & genes.table$start_position < par1[2] & genes.table$chromosome_name == "Y"]
@@ -464,6 +504,7 @@ samples are clearly on either side, even if some cells do not have
 detection of either.
 
 ``` {r}
+#| label: sex-scatter
 #| fig-height: 5
 #| fig-width: 5
 
@@ -475,6 +516,7 @@ plotColData(sce.filt, "XIST", "pct_chrY")
 Plot as violins.
 
 ``` {r}
+#| label: sex-vln
 #| fig-height: 4
 #| fig-width: 8
 
@@ -507,6 +549,8 @@ metadata, a score for S phase, a score for G2M phase and the predicted
 cell cycle phase.
 
 ``` {r}
+#| label: cc
+
 hs.pairs <- readRDS(system.file("exdata", "human_cycle_markers.rds", package = "scran"))
 anno <- select(org.Hs.eg.db, keys = rownames(sce.filt), keytype = "SYMBOL", column = "ENSEMBL")
 ensembl <- anno$ENSEMBL[match(rownames(sce.filt), anno$SYMBOL)]
@@ -534,6 +578,7 @@ table(sce.filt$phase)
 We can now create a violin plot for the cell cycle scores as well.
 
 ``` {r}
+#| label: cc-plot
 #| fig-height: 4
 #| fig-width: 14
 
@@ -593,6 +638,8 @@ UMAP for visualization. These steps will be explored in more detail in
 coming exercises.
 
 ``` {r}
+#| label: doublet-norm
+
 sce.filt <- logNormCounts(sce.filt)
 dec <- modelGeneVar(sce.filt, block = sce.filt$sample)
 hvgs <- getTopHVGs(dec, n = 2000)
@@ -603,11 +650,13 @@ sce.filt <- runUMAP(sce.filt, pca = 10)
 ```
 
 ``` {r}
+#| label: doublet
 # run computeDoubletDensity with 10 principal components.
 sce.filt <- scDblFinder(sce.filt, dims = 10)
 ```
 
 ``` {r}
+#| label: doublet-plot
 #| fig-height: 5
 #| fig-width: 14
 wrap_plots(
@@ -623,12 +672,14 @@ cell, lets check if our predicted doublets also have more detected genes
 in general.
 
 ``` {r}
+#| label: doublet-vln
 plotColData(sce.filt, y = "detected", x = "scDblFinder.class")
 ```
 
 Now, lets remove all predicted doublets from our data.
 
 ``` {r}
+#| label: doublet-filt
 sce.filt <- sce.filt[, sce.filt$scDblFinder.class == "singlet"]
 dim(sce.filt)
 ```
@@ -638,9 +689,21 @@ started with 1500 cells per sample. Looking back at the intitial QC
 plots does it make sense that some samples have much fewer cells now?
 
 ``` {r}
+#| label: view-data
 table(sce$sample)
 table(sce.filt$sample)
 ```
+
+<div>
+
+> **Discuss**
+>
+> "In this case we ran doublet detection with all samples together since
+> we have very small subsampled datasets. But in a real scenario it
+> should be run one sample at a time. Why is this important do you
+> think?"
+
+</div>
 
 ## Save data
 
@@ -649,6 +712,7 @@ output directory `data/covid/results` and save data to that folder. This
 will be used in downstream labs.
 
 ``` {r}
+#| label: save
 saveRDS(sce.filt, file.path(path_results, "bioc_covid_qc.rds"))
 ```
 
@@ -665,6 +729,7 @@ Click here
 </summary>
 ```
 ``` {r}
+#| label: session
 sessionInfo()
 ```
 
