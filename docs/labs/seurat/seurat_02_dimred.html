@@ -207,7 +207,7 @@ background-size: cover;
       <div>
       <div class="quarto-title-meta-heading">Published</div>
       <div class="quarto-title-meta-contents">
-        <p class="date">28-Jan-2025</p>
+        <p class="date">07-Feb-2025</p>
       </div>
     </div>
     
@@ -370,7 +370,19 @@ Note
 </div>
 </div>
 </div>
-<p>Clearly, <code>orig,ident</code> (and <code>ident</code> which is created by <code>SingleCellExperiment</code>) clearly contributes to many of the PCs and PC7 is trongly influenced by cell cycle,</p>
+<div class="callout callout-style-default callout-note callout-titled" title="Discuss">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Discuss
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Have a look at the plot from <code>plotExplanatoryPCs</code> and the gene loadings plots. Do you think the top components are biologically relevant or more driven by technical noise</p>
+</div>
+</div>
 </section>
 <section id="meta-dimred_tsne" class="level2" data-number="5">
 <h2 data-number="5" class="anchored" data-anchor-id="meta-dimred_tsne"><span class="header-section-number">5</span> tSNE</h2>
@@ -505,30 +517,39 @@ Discuss
 <p>To run tSNE or UMAP on the a graph, we first need to build a graph from the data. In fact, both tSNE and UMAP first build a graph from the data using a specified distance matrix and then optimize the embedding. Since a graph is just a matrix containing distances from cell to cell and as such, you can run either UMAP or tSNE using any other distance metric desired. Euclidean and Correlation are usually the most commonly used.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="co">#OBS! Skip for now, known issue with later version of umap-learn in Seurat5</span></span>
-<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a><span class="co"># have 0.5.6 now, tested downgrading to 0.5.4 or 0.5.3 but still have same error.</span></span>
-<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Build Graph</span></span>
-<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>alldata <span class="ot">&lt;-</span> <span class="fu">FindNeighbors</span>(alldata,</span>
-<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">reduction =</span> <span class="st">"pca"</span>,</span>
-<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">assay =</span> <span class="st">"RNA"</span>,</span>
-<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">k.param =</span> <span class="dv">20</span>,</span>
-<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">features =</span> <span class="fu">VariableFeatures</span>(alldata)</span>
-<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a>alldata <span class="ot">&lt;-</span> <span class="fu">RunUMAP</span>(alldata,</span>
-<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">reduction.name =</span> <span class="st">"UMAP_on_Graph"</span>,</span>
-<span id="cb17-14"><a href="#cb17-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">umap.method =</span> <span class="st">"umap-learn"</span>,</span>
-<span id="cb17-15"><a href="#cb17-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">graph =</span> <span class="st">"RNA_snn"</span>,</span>
-<span id="cb17-16"><a href="#cb17-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">n.epochs =</span> <span class="dv">200</span>,</span>
-<span id="cb17-17"><a href="#cb17-17" aria-hidden="true" tabindex="-1"></a>    <span class="at">assay =</span> <span class="st">"RNA"</span></span>
-<span id="cb17-18"><a href="#cb17-18" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a><span class="co"># have 0.5.7 now, tested downgrading to 0.5.4 or 0.5.3 but still have same error.</span></span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Seurat 5.2.0 has a fix for this, but not the version we have now.</span></span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Build Graph</span></span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>alldata <span class="ot">&lt;-</span> <span class="fu">FindNeighbors</span>(alldata,</span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">reduction =</span> <span class="st">"pca"</span>,</span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">assay =</span> <span class="st">"RNA"</span>,</span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">k.param =</span> <span class="dv">20</span>,</span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">features =</span> <span class="fu">VariableFeatures</span>(alldata)</span>
+<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a>alldata <span class="ot">&lt;-</span> <span class="fu">RunUMAP</span>(alldata,</span>
+<span id="cb17-14"><a href="#cb17-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">reduction.name =</span> <span class="st">"UMAP_on_Graph"</span>,</span>
+<span id="cb17-15"><a href="#cb17-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">umap.method =</span> <span class="st">"umap-learn"</span>,</span>
+<span id="cb17-16"><a href="#cb17-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">graph =</span> <span class="st">"RNA_snn"</span>,</span>
+<span id="cb17-17"><a href="#cb17-17" aria-hidden="true" tabindex="-1"></a>    <span class="at">n.epochs =</span> <span class="dv">200</span>,</span>
+<span id="cb17-18"><a href="#cb17-18" aria-hidden="true" tabindex="-1"></a>    <span class="at">assay =</span> <span class="st">"RNA"</span></span>
+<span id="cb17-19"><a href="#cb17-19" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>We can now plot the UMAP comparing both on PCA vs ScaledSata vs Graph.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>p1 <span class="ot">&lt;-</span> <span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"umap"</span>, <span class="at">group.by =</span> <span class="st">"orig.ident"</span>) <span class="sc">+</span> ggplot2<span class="sc">::</span><span class="fu">ggtitle</span>(<span class="at">label =</span> <span class="st">"UMAP_on_PCA"</span>)</span>
 <span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>p2 <span class="ot">&lt;-</span> <span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"UMAP_on_ScaleData"</span>, <span class="at">group.by =</span> <span class="st">"orig.ident"</span>) <span class="sc">+</span> ggplot2<span class="sc">::</span><span class="fu">ggtitle</span>(<span class="at">label =</span> <span class="st">"UMAP_on_ScaleData"</span>)</span>
-<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>p3 <span class="ot">&lt;-</span> <span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"UMAP_on_Graph"</span>, <span class="at">group.by =</span> <span class="st">"orig.ident"</span>) <span class="sc">+</span> ggplot2<span class="sc">::</span><span class="fu">ggtitle</span>(<span class="at">label =</span> <span class="st">"UMAP_on_Graph"</span>)</span>
-<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a><span class="fu">wrap_plots</span>(p1, p2, p3, <span class="at">ncol =</span> <span class="dv">3</span>) <span class="sc">+</span> <span class="fu">plot_layout</span>(<span class="at">guides =</span> <span class="st">"collect"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a><span class="co">#p3 &lt;- DimPlot(alldata, reduction = "UMAP_on_Graph", group.by = "orig.ident") + ggplot2::ggtitle(label = "UMAP_on_Graph")</span></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a><span class="co">#wrap_plots(p1, p2, p3, ncol = 3) + plot_layout(guides = "collect")</span></span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a><span class="fu">wrap_plots</span>(p1, p2, <span class="at">ncol =</span> <span class="dv">2</span>) <span class="sc">+</span> <span class="fu">plot_layout</span>(<span class="at">guides =</span> <span class="st">"collect"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-left">
+<figure class="figure">
+<p><a href="seurat_02_dimred_files/figure-html/plot-umap-graph-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-10"><img src="seurat_02_dimred_files/figure-html/plot-umap-graph-1.png" class="img-fluid figure-img" width="1152"></a></p>
+</figure>
+</div>
+</div>
 </div>
 </section>
 </section>
@@ -579,12 +600,11 @@ Discuss
 </table>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>myfeatures <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"CD3E"</span>, <span class="st">"CD4"</span>, <span class="st">"CD8A"</span>, <span class="st">"NKG7"</span>, <span class="st">"GNLY"</span>, <span class="st">"MS4A1"</span>, <span class="st">"CD14"</span>, <span class="st">"LYZ"</span>, <span class="st">"MS4A7"</span>, <span class="st">"FCGR3A"</span>, <span class="st">"CST3"</span>, <span class="st">"FCER1A"</span>)</span>
-<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a><span class="fu">FeaturePlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"umap"</span>, <span class="at">dims =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">2</span>, <span class="at">features =</span> myfeatures, <span class="at">ncol =</span> <span class="dv">4</span>, <span class="at">order =</span> T) <span class="sc">+</span></span>
-<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">NoLegend</span>() <span class="sc">+</span> <span class="fu">NoAxes</span>() <span class="sc">+</span> <span class="fu">NoGrid</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a><span class="fu">FeaturePlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"umap"</span>, <span class="at">dims =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">2</span>, <span class="at">features =</span> myfeatures, <span class="at">ncol =</span> <span class="dv">4</span>, <span class="at">order =</span> T)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="seurat_02_dimred_files/figure-html/plot-markers-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-10"><img src="seurat_02_dimred_files/figure-html/plot-markers-1.png" class="img-fluid figure-img" width="1152"></a></p>
+<p><a href="seurat_02_dimred_files/figure-html/plot-markers-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-11"><img src="seurat_02_dimred_files/figure-html/plot-markers-1.png" class="img-fluid figure-img" width="1152"></a></p>
 </figure>
 </div>
 </div>
@@ -604,12 +624,11 @@ Discuss
 </div>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>myfeatures <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"nCount_RNA"</span>,<span class="st">"nFeature_RNA"</span>, <span class="st">"percent_mito"</span>,<span class="st">"percent_ribo"</span>,<span class="st">"percent_hb"</span>,<span class="st">"percent_plat"</span>)</span>
-<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a><span class="fu">FeaturePlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"umap"</span>, <span class="at">dims =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">2</span>, <span class="at">features =</span> myfeatures, <span class="at">ncol =</span> <span class="dv">3</span>, <span class="at">order =</span> T) <span class="sc">+</span></span>
-<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">NoLegend</span>() <span class="sc">+</span> <span class="fu">NoAxes</span>() <span class="sc">+</span> <span class="fu">NoGrid</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a><span class="fu">FeaturePlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"umap"</span>, <span class="at">dims =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">2</span>, <span class="at">features =</span> myfeatures, <span class="at">ncol =</span> <span class="dv">3</span>, <span class="at">order =</span> T) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-left">
 <figure class="figure">
-<p><a href="seurat_02_dimred_files/figure-html/plot-qc-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-11"><img src="seurat_02_dimred_files/figure-html/plot-qc-1.png" class="img-fluid figure-img" width="1152"></a></p>
+<p><a href="seurat_02_dimred_files/figure-html/plot-qc-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-12"><img src="seurat_02_dimred_files/figure-html/plot-qc-1.png" class="img-fluid figure-img" width="1152"></a></p>
 </figure>
 </div>
 </div>
@@ -980,7 +999,7 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
 </div>
   </div>
 </footer>
-<script>var lightboxQuarto = GLightbox({"openEffect":"zoom","descPosition":"bottom","closeEffect":"zoom","selector":".lightbox","loop":true});</script>
+<script>var lightboxQuarto = GLightbox({"descPosition":"bottom","loop":true,"openEffect":"zoom","closeEffect":"zoom","selector":".lightbox"});</script>
 
 
 
