@@ -1,41 +1,39 @@
 #! /bin/bash
 
 ## Example usage:
-#   ./download-labs.sh scanpy
-#   ./download-labs.sh seurat
+#   ./download-labs.sh "https://github.com/NBISweden" "workshop-scRNAseq-devel" "compiled/labs" "scanpy" "labs"
 
-orgurl="https://github.com/NBISweden"
-reponame="workshop-scRNAseq-devel"
-repodir="compiled/labs"
-localdir="labs"
-toolkit="$1"
+orgurl="$1"
+reponame="$2"
+repodir="$3"
+toolkit="$4"
+localdir="$5"
 
-function git_sparse_clone() (
+function select_kernel() (
+    for nb in $(find $1 -name "*.ipynb"); do
+        jq '.metadata.kernelspec = {"display_name": "scanpy", "language": "python", "name": "scanpy"}' ${nb} > tmp.$$.json && mv tmp.$$.json ${nb}
+    done
+)
+
+function main() (
+    echo "downloading files from ${orgurl}/${reponame}/${repodir}/${toolkit} into ${localdir}/..."
     mkdir -p ${localdir}
     git clone -n --depth=1 --filter=tree:0 ${orgurl}/${reponame} > /dev/null 2>&1
     cd ${reponame}
     git sparse-checkout set --no-cone ${repodir}/${toolkit} > /dev/null 2>&1
     git checkout > /dev/null 2>&1
     cd - > /dev/null 2>&1
-    find . -type f -name '*.ipynb' -exec mv -n {} ./${localdir}/ \;
+    if [[ "${toolkit}" == "scanpy" ]]
+    then
+        echo "processing .ipynb"
+        find ${reponame} -type f -name "*.ipynb" -exec mv -n {} ./${localdir}/ \;
+        echo "making 'scanpy' default kernel..."
+        select_kernel ${localdir}
+    else
+        echo "processing .qmd"
+        find ${reponame} -type f -name "*.qmd" -exec mv -n {} ./${localdir}/ \;
+    fi
     rm -rf ./${reponame}
 )
-
-
-function select_kernel() (
-    notebooks=( $(find . -name "*.ipynb" -print) )
-    for nb in "${notebooks[@]}"; do
-        jq '.metadata.kernelspec = {"display_name": "scanpy", "language": "python", "name": "scanpy"}' ${nb} > tmp.$$.json && mv tmp.$$.json ${nb}
-    done
-)
-
-
-function main() (
-    echo "downloading files from ${orgurl}/${reponame}/${repodir}/${toolkit} into ${localdir}/..."
-    git_sparse_clone
-    echo "making 'scanpy' default kernel..."
-    select_kernel
-)
-
 
 main
