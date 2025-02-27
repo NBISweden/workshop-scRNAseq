@@ -221,10 +221,14 @@ To remove some of the bias due to inbalanced sex in the subjects we can remove t
 
 ```{python}
 #| label: sex-genes
-annot = sc.queries.biomart_annotations(
-        "hsapiens",
-        ["ensembl_gene_id", "external_gene_name", "start_position", "end_position", "chromosome_name"],
-    ).set_index("external_gene_name")
+
+annot_file = 'data/covid/results/gene_annotations_pybiomart.csv'
+
+if not os.path.exists(annot_file):
+    annot = sc.queries.biomart_annotations("hsapiens", ["ensembl_gene_id", "external_gene_name", "start_position", "end_position", "chromosome_name"] ).set_index("external_gene_name")
+    annot.to_csv(annot_file)
+else:
+    annot = pd.read_csv(annot_file, index_col=0)
 
 chrY_genes = adata.var_names.intersection(annot.index[annot.chromosome_name == "Y"])
 chrX_genes = adata.var_names.intersection(annot.index[annot.chromosome_name == "X"])

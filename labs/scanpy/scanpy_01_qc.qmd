@@ -19,9 +19,6 @@ Code chunks run Python commands unless it starts with `%%bash`, in which case, t
 
 import os
 
-# download pre-computed annotation
-fetch_annotation = False
-
 path_data = "https://nextcloud.dc.scilifelab.se/public.php/webdav"
 curl_upass = "zbC5fr2LbEZ9rSE:scRNAseq2025"
 
@@ -59,6 +56,7 @@ import numpy as np
 import pandas as pd
 import scanpy as sc
 import warnings
+import gc
 
 warnings.simplefilter(action='ignore', category=Warning)
 
@@ -123,6 +121,7 @@ adata = data_cov1.concatenate(data_cov15, data_cov16, data_cov17, data_ctrl5, da
 # and delete individual datasets to save space
 del(data_cov1, data_cov15, data_cov16, data_cov17)
 del(data_ctrl5, data_ctrl13, data_ctrl14, data_ctrl19)
+gc.collect()
 ```
 
 You can print a summary of the datasets in the Scanpy object, or a summary of the whole object.
@@ -308,9 +307,15 @@ as it has the exact same annotation version/gene naming. However, it may not alw
 ```{python}
 #| label: fetch-annot
 # requires pybiomart
-if not fetch_annotation:
-    annot = sc.queries.biomart_annotations("hsapiens", ["ensembl_gene_id", "external_gene_name", "start_position", "end_position", "chromosome_name"], ).set_index("external_gene_name")
-   
+
+annot_file = 'data/covid/results/gene_annotations_pybiomart.csv'
+
+if not os.path.exists(annot_file):
+    annot = sc.queries.biomart_annotations("hsapiens", ["ensembl_gene_id", "external_gene_name", "start_position", "end_position", "chromosome_name"] ).set_index("external_gene_name")
+    annot.to_csv(annot_file)
+else:
+    annot = pd.read_csv(annot_file, index_col=0)
+
 ```
 
 {{< meta qc_sex_3 >}}
@@ -395,7 +400,7 @@ Before running cell cycle we have to normalize the data. In the scanpy object, t
 adata.raw = adata
 
 # normalize to depth 10 000
-sc.pp.normalize_per_cell(adata, counts_per_cell_after=1e4)
+sc.pp.normalize_total(adata, target_sum=1e4)
 
 # logaritmize
 sc.pp.log1p(adata)
