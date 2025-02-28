@@ -24,13 +24,14 @@ Code chunks run Python commands unless it starts with `%%bash`, in which case, t
 {{< meta int_prep_1 >}}
 
 ```{python}
+#| label: libraries
 import numpy as np
 import pandas as pd
 import scanpy as sc
 import matplotlib.pyplot as plt
 import warnings
 import os
-import urllib.request
+import subprocess
 
 warnings.simplefilter(action='ignore', category=Warning)
 
@@ -44,11 +45,14 @@ sc.settings.set_figure_params(dpi=80)
 Create individual **adata** objects per batch.
 
 ```{python}
+#| label: fetch-data
 # download pre-computed data if missing or long compute
 fetch_data = True
 
 # url for source and intermediate data
-path_data = "https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"
+path_data = "https://nextcloud.dc.scilifelab.se/public.php/webdav"
+curl_upass = "zbC5fr2LbEZ9rSE:scRNAseq2025"
+
 
 path_results = "data/covid/results"
 if not os.path.exists(path_results):
@@ -56,20 +60,22 @@ if not os.path.exists(path_results):
 
 path_file = "data/covid/results/scanpy_covid_qc_dr.h5ad"
 if fetch_data and not os.path.exists(path_file):
-    urllib.request.urlretrieve(os.path.join(
-        path_data, 'covid/results/scanpy_covid_qc_dr.h5ad'), path_file)
+    file_url = os.path.join(path_data, "covid/results_scanpy/scanpy_covid_qc_dr.h5ad")
+    subprocess.call(["curl", "-u", curl_upass, "-o", path_file, file_url ])
 
 adata = sc.read_h5ad(path_file)
 adata
 ```
 
 ```{python}
+#| label: check-data
 print(adata.X.shape)
 ```
 
 As the stored AnnData object contains scaled data based on variable genes, we need to make a new object with the logtransformed normalized counts. The new variable gene selection should not be performed on the scaled data matrix.
 
 ```{python}
+#| label: from-raw
 adata2 = adata.raw.to_adata() 
 
 # in some versions of Anndata there is an issue with information on the logtransformation in the slot log1p.base so we set it to None to not get errors.
@@ -84,6 +90,7 @@ print(adata2.X[1:10,1:10])
 Variable genes can be detected across the full dataset, but then we run the risk of getting many batch-specific genes that will drive a lot of the variation. Or we can select variable genes from each batch separately to get only celltype variation. In the dimensionality reduction exercise, we already selected variable genes, so they are already stored in `adata.var.highly_variable`.
 
 ```{python}
+#| label: hvg
 var_genes_all = adata.var.highly_variable
 
 print("Highly variable genes: %d"%sum(var_genes_all))
@@ -92,6 +99,7 @@ print("Highly variable genes: %d"%sum(var_genes_all))
 Detect variable genes in each dataset separately using the `batch_key` parameter.
 
 ```{python}
+#| label: hvg2
 sc.pp.highly_variable_genes(adata2, min_mean=0.0125, max_mean=3, min_disp=0.5, batch_key = 'sample')
 
 print("Highly variable genes intersection: %d"%sum(adata2.var.highly_variable_intersection))
@@ -105,6 +113,7 @@ var_genes_batch = adata2.var.highly_variable_nbatches > 0
 Compare overlap of variable genes with batches or with all data.
 
 ```{python}
+#| label: hvg3
 print("Any batch var genes: %d"%sum(var_genes_batch))
 print("All data var genes: %d"%sum(var_genes_all))
 print("Overlap: %d"%sum(var_genes_batch & var_genes_all))
@@ -112,9 +121,14 @@ print("Variable genes in all batches: %d"%sum(adata2.var.highly_variable_nbatche
 print("Overlap batch instersection and all: %d"%sum(var_genes_all & adata2.var.highly_variable_intersection))
 ```
 
+:::{.callout-note title="Discuss"}
+{{< meta int_hvg >}}
+:::
+
 Select all genes that are variable in at least 2 datasets and use for remaining analysis.
 
 ```{python}
+#| label: hvg4
 var_select = adata2.var.highly_variable_nbatches > 2
 var_genes = var_select.index[var_select]
 len(var_genes)
@@ -125,8 +139,14 @@ len(var_genes)
 First, we will run BBKNN that is implemented in scanpy.
 
 ```{python}
+#| label: bbknn
 import bbknn
 bbknn.bbknn(adata2,batch_key='sample')
+
+# Before calculating a new umap and tsne, we want to store the old one. 
+adata2.obsm['X_umap_uncorr'] = adata2.obsm['X_umap']
+adata2.obsm['X_tsne_uncorr'] = adata2.obsm['X_tsne']
+
 
 # then run umap on the integrated space
 sc.tl.umap(adata2)
@@ -136,6 +156,7 @@ sc.tl.tsne(adata2)
 {{< meta int_plot >}}
 
 ```{python}
+#| label: plot-bbknn
 fig, axs = plt.subplots(2, 2, figsize=(10,8),constrained_layout=True)
 sc.pl.tsne(adata2, color="sample", title="BBKNN Corrected tsne", ax=axs[0,0], show=False)
 sc.pl.tsne(adata, color="sample", title="Uncorrected tsne", ax=axs[0,1], show=False)
@@ -146,7 +167,53 @@ sc.pl.umap(adata, color="sample", title="Uncorrected umap", ax=axs[1,1], show=Fa
 {{< meta int_save >}}
 
 ```{python}
+#| label: save-bbknn
+# Before calculating a new umap and tsne, we want to store the old one. 
+adata2.obsm['X_umap_bbknn'] = adata2.obsm['X_umap']
+adata2.obsm['X_tsne_bbknn'] = adata2.obsm['X_tsne']
+
 save_file = './data/covid/results/scanpy_covid_qc_dr_bbknn.h5ad'
+adata2.write_h5ad(save_file)
+```
+
+## Harmony
+
+An alternative method for integration is Harmony, for more details on the method, please se their paper  [Nat. Methods](https://www.nature.com/articles/s41592-019-0619-0). This method runs the integration on a dimensionality reduction, in most applications the PCA.
+
+```{python}
+#| label: harmony
+import scanpy.external as sce 
+import harmonypy as hm 
+
+sce.pp.harmony_integrate(adata2, 'sample')
+
+# Then we calculate a new umap and tsne.
+sc.pp.neighbors(adata2, n_neighbors=10, n_pcs=30, use_rep='X_pca_harmony')
+sc.tl.umap(adata2)
+sc.tl.tsne(adata2, use_rep='X_pca_harmony')
+sc.tl.leiden(adata2, resolution=0.5)
+
+```
+
+```{python}
+#| label: plot-harmony
+fig, axs = plt.subplots(2, 2, figsize=(10,8),constrained_layout=True)
+sc.pl.embedding(adata2, 'X_tsne_bbknn', color="sample", title="BBKNN tsne", ax=axs[0,0], show=False)
+sc.pl.tsne(adata2, color="sample", title="Harmony tsne", ax=axs[0,1], show=False)
+sc.pl.embedding(adata2, 'X_umap_bbknn', color="sample", title="BBKNN umap", ax=axs[1,0], show=False)
+sc.pl.umap(adata2, color="sample", title="Harmony umap", ax=axs[1,1], show=False)
+```
+
+{{< meta int_save >}}
+
+```{python}
+#| label: save-harmony
+# Store this umap and tsne with a new name.
+adata2.obsm['X_umap_harmony'] = adata2.obsm['X_umap']
+adata2.obsm['X_tsne_harmony'] = adata2.obsm['X_tsne']
+
+#save to file
+save_file = './data/covid/results/scanpy_covid_qc_dr_harmony.h5ad'
 adata2.write_h5ad(save_file)
 ```
 
@@ -155,6 +222,7 @@ adata2.write_h5ad(save_file)
 Batch correction can also be performed with combat. Note that ComBat batch correction requires a dense matrix format as input (which is already the case in this example).
 
 ```{python}
+#| label: combat
 # create a new object with lognormalized counts
 adata_combat = sc.AnnData(X=adata.raw.X, var=adata.raw.var, obs = adata.obs)
 
@@ -168,6 +236,7 @@ sc.pp.combat(adata_combat, key='sample')
 Then we run the regular steps of dimensionality reduction on the combat corrected data. Variable gene selection, pca and umap with combat data.
 
 ```{python}
+#| label: process-combat
 sc.pp.highly_variable_genes(adata_combat)
 print("Highly variable genes: %d"%sum(adata_combat.var.highly_variable))
 sc.pl.highly_variable_genes(adata_combat)
@@ -181,6 +250,7 @@ sc.tl.tsne(adata_combat)
 ```
 
 ```{python}
+#| label: hvg-combat
 # compare var_genes
 var_genes_combat = adata_combat.var.highly_variable
 print("With all data %d"%sum(var_genes_all))
@@ -194,16 +264,18 @@ print("Overlap %d"%sum(var_genes_combat & var_select))
 {{< meta int_plot >}}
 
 ```{python}
+#| label: plot-combat
 fig, axs = plt.subplots(2, 2, figsize=(10,8),constrained_layout=True)
-sc.pl.tsne(adata2, color="sample", title="BBKNN tsne", ax=axs[0,0], show=False)
+sc.pl.tsne(adata2, color="sample", title="Harmony tsne", ax=axs[0,0], show=False)
 sc.pl.tsne(adata_combat, color="sample", title="Combat tsne", ax=axs[0,1], show=False)
-sc.pl.umap(adata2, color="sample", title="BBKNN umap", ax=axs[1,0], show=False)
+sc.pl.umap(adata2, color="sample", title="Harmony umap", ax=axs[1,0], show=False)
 sc.pl.umap(adata_combat, color="sample", title="Combat umap", ax=axs[1,1], show=False)
 ```
 
 {{< meta int_save >}}
 
 ```{python}
+#| label: save-combat
 #save to file
 save_file = './data/covid/results/scanpy_covid_qc_dr_combat.h5ad'
 adata_combat.write_h5ad(save_file)
@@ -214,8 +286,9 @@ adata_combat.write_h5ad(save_file)
 {{< meta int_scanorama_1 >}}
 
 ```{python}
+#| label: prep-scanorama
 # split per batch into new objects.
-batches = adata.obs['sample'].cat.categories.tolist()
+batches = adata2.obs['sample'].cat.categories.tolist()
 alldata = {}
 for batch in batches:
     alldata[batch] = adata2[adata2.obs['sample'] == batch,]
@@ -224,6 +297,7 @@ alldata
 ```
 
 ```{python}
+#| label: scanorama
 import scanorama
 
 #subset the individual dataset to the variable genes we defined at the beginning
@@ -240,11 +314,13 @@ scanorama.integrate_scanpy(adatas, dimred = 50)
 ```
 
 ```{python}
+#| label: scanorama-output
 #scanorama adds the corrected matrix to adata.obsm in each of the datasets in adatas.
 adatas[0].obsm['X_scanorama'].shape
 ```
 
 ```{python}
+#| label: scanorama-merge
 # Get all the integrated matrices.
 scanorama_int = [ad.obsm['X_scanorama'] for ad in adatas]
 
@@ -253,33 +329,39 @@ all_s = np.concatenate(scanorama_int)
 print(all_s.shape)
 
 # add to the AnnData object, create a new object first
-adata_sc = adata.copy()
-adata_sc.obsm["Scanorama"] = all_s
+adata2.obsm["Scanorama"] = all_s
 ```
 
 ```{python}
+#| label: process-scanorama
 # tsne and umap
-sc.pp.neighbors(adata_sc, n_pcs =30, use_rep = "Scanorama")
-sc.tl.umap(adata_sc)
-sc.tl.tsne(adata_sc, n_pcs = 30, use_rep = "Scanorama")
+sc.pp.neighbors(adata2, n_pcs =30, use_rep = "Scanorama")
+sc.tl.umap(adata2)
+sc.tl.tsne(adata2, n_pcs = 30, use_rep = "Scanorama")
 ```
 
 {{< meta int_plot >}}
 
 ```{python}
+#| label: plot-scanorama
 fig, axs = plt.subplots(2, 2, figsize=(10,8),constrained_layout=True)
-sc.pl.tsne(adata2, color="sample", title="BBKNN tsne", ax=axs[0,0], show=False)
-sc.pl.tsne(adata_sc, color="sample", title="Scanorama tsne", ax=axs[0,1], show=False)
-sc.pl.umap(adata2, color="sample", title="BBKNN umap", ax=axs[1,0], show=False)
-sc.pl.umap(adata_sc, color="sample", title="Scanorama umap", ax=axs[1,1], show=False)
+sc.pl.embedding(adata2, 'X_tsne_harmony', color="sample", title="Harmony tsne", ax=axs[0,0], show=False)
+sc.pl.tsne(adata2, color="sample", title="Scanorama tsne", ax=axs[0,1], show=False)
+sc.pl.embedding(adata2, 'X_umap_harmony', color="sample", title="Harmony umap", ax=axs[1,0], show=False)
+sc.pl.umap(adata2, color="sample", title="Scanorama umap", ax=axs[1,1], show=False)
 ```
 
 {{< meta int_save >}}
 
 ```{python}
-#save to file
-save_file = './data/covid/results/scanpy_covid_qc_dr_scanorama.h5ad'
-adata_sc.write_h5ad(save_file)
+#| label: save-scanorama
+# Store this umap and tsne with a new name.
+adata2.obsm['X_umap_scanorama'] = adata2.obsm['X_umap']
+adata2.obsm['X_tsne_scanorama'] = adata2.obsm['X_tsne']
+
+#save to file, now contains all integrations except the combat one.
+save_file = './data/covid/results/scanpy_covid_qc_dr_int.h5ad'
+adata2.write_h5ad(save_file)
 ```
 
 ## Overview all methods
@@ -288,11 +370,13 @@ Now we will plot UMAPS with all three integration methods side by side.
 
 
 ```{python}
-fig, axs = plt.subplots(2, 2, figsize=(10,8),constrained_layout=True)
+#| label: plot-all
+fig, axs = plt.subplots(2, 3, figsize=(10,8),constrained_layout=True)
 sc.pl.umap(adata, color="sample", title="Uncorrected", ax=axs[0,0], show=False)
-sc.pl.umap(adata2, color="sample", title="BBKNN", ax=axs[0,1], show=False)
-sc.pl.umap(adata_combat, color="sample", title="Combat", ax=axs[1,0], show=False)
-sc.pl.umap(adata_sc, color="sample", title="Scanorama", ax=axs[1,1], show=False)
+sc.pl.embedding(adata2, 'X_umap_bbknn', color="sample", title="BBKNN", ax=axs[0,1], show=False)
+sc.pl.umap(adata_combat, color="sample", title="Combat", ax=axs[0,2], show=False)
+sc.pl.embedding(adata2, 'X_umap_harmony', color="sample", title="Harmony", ax=axs[1,0], show=False)
+sc.pl.umap(adata2, color="sample", title="Scanorama", ax=axs[1,1], show=False)
 ```
 
 
@@ -312,6 +396,7 @@ Try changing some of the parameteres in BBKNN, such as distance metric, number o
   <summary>Click here</summary>
 
 ```{python}
+#| label: session
 sc.logging.print_versions()
 ```
 

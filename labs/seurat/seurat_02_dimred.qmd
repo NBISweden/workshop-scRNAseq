@@ -14,9 +14,7 @@ Code chunks run R commands unless otherwise specified.
 {{< meta dimred_prep_1 >}}
 
 ```{r}
-# Activate conda environment to get the correct python path
-reticulate::use_condaenv("seurat", conda = "/opt/conda/bin/conda")
-reticulate::py_discover_config()
+#| label: libraries
 
 suppressPackageStartupMessages({
     library(Seurat)
@@ -27,14 +25,19 @@ suppressPackageStartupMessages({
 ```
 
 ```{r}
+#| label: fetch-data
+
 # download pre-computed data if missing or long compute
 fetch_data <- TRUE
 
 # url for source and intermediate data
-path_data <- "https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"
+path_data <- "https://nextcloud.dc.scilifelab.se/public.php/webdav"
+curl_upass <- "-u zbC5fr2LbEZ9rSE:scRNAseq2025"
+
 path_file <- "data/covid/results/seurat_covid_qc.rds"
 if (!dir.exists(dirname(path_file))) dir.create(dirname(path_file), recursive = TRUE)
-if (fetch_data && !file.exists(path_file)) download.file(url = file.path(path_data, "covid/results/seurat_covid_qc.rds"), destfile = path_file)
+if (fetch_data && !file.exists(path_file)) download.file(url = file.path(path_data, "covid/results_seurat/seurat_covid_qc.rds"), destfile = path_file, method = "curl", extra = curl_upass)
+
 alldata <- readRDS(path_file)
 ```
 
@@ -43,6 +46,8 @@ alldata <- readRDS(path_file)
 {{< meta dimred_fs_2 >}}
 
 ```{r}
+#| label: hvg
+
 suppressWarnings(suppressMessages(alldata <- FindVariableFeatures(alldata, selection.method = "vst", nfeatures = 2000, verbose = FALSE, assay = "RNA")))
 top20 <- head(VariableFeatures(alldata), 20)
 
@@ -54,6 +59,8 @@ LabelPoints(plot = VariableFeaturePlot(alldata), points = top20, repel = TRUE)
 {{< meta dimred_zs_1 >}}
 
 ```{r}
+#| label: scale
+
 alldata <- ScaleData(alldata, vars.to.regress = c("percent_mito", "nFeature_RNA"), assay = "RNA")
 ```
 
@@ -64,12 +71,15 @@ alldata <- ScaleData(alldata, vars.to.regress = c("percent_mito", "nFeature_RNA"
 To run PCA, you can use the function `RunPCA()`.
 
 ```{r}
+#| label: pca
+
 alldata <- RunPCA(alldata, npcs = 50, verbose = F)
 ```
 
 {{< meta dimred_pca_2 >}}
 
 ```{r}
+#| label: pca-plot
 #| fig-height: 4
 #| fig-width: 12
 
@@ -84,6 +94,7 @@ wrap_plots(
 {{< meta dimred_pca_3 >}}
 
 ```{r}
+#| label: pca-loadings
 #| fig-height: 6
 #| fig-width: 14
 
@@ -93,6 +104,7 @@ VizDimLoadings(alldata, dims = 1:5, reduction = "pca", ncol = 5, balanced = T)
 {{< meta dimred_pca_4 >}}
 
 ```{r}
+#| label: pca-elbow
 #| fig-height: 4
 #| fig-width: 5
 
@@ -101,11 +113,29 @@ ElbowPlot(alldata, reduction = "pca", ndims = 50)
 
 {{< meta dimred_pca_5 >}}
 
+With the `scater` package we can check how different metadata variables contribute to each PCs.
+This can be important to look at to understand different biases you may have in your data.
+
+
+```{r}
+#| label: pca-explanatory
+#| fig-height: 4
+#| fig-width: 10
+
+scater::plotExplanatoryPCs(as.SingleCellExperiment(alldata), nvars_to_plot = 15, npcs_to_plot = 20)
+```
+
+:::{.callout-note title="Discuss"}
+{{< meta dimred_pca_6 >}}
+:::
+
 ## {{< meta dimred_tsne >}}
 
 {{< meta dimred_tsne_1 >}}
 
 ```{r}
+#| label: run-tsne
+
 alldata <- RunTSNE(
     alldata,
     reduction = "pca", dims = 1:30,
@@ -121,6 +151,7 @@ alldata <- RunTSNE(
 {{< meta dimred_tsne_2 >}}
 
 ```{r}
+#| label: plot-tsne
 #| fig-height: 5
 #| fig-width: 6
 
@@ -133,6 +164,8 @@ DimPlot(alldata, reduction = "tsne", group.by = "orig.ident")
 {{< meta dimred_umap_1 >}}
 
 ```{r}
+#| label: run-umap
+
 alldata <- RunUMAP(
     alldata,
     reduction = "pca",
@@ -152,6 +185,8 @@ A feature of UMAP is that it is not limited by the number of dimensions the data
 In Seurat, we can add in additional reductions, by default they are named "pca", "umap", "tsne" etc. depending on the function you run. Here we will specify an alternative name for the umap with the `reduction.name` parameter. 
 
 ```{r}
+#| label: run-umap2
+
 alldata <- RunUMAP(
     alldata,
     reduction.name = "UMAP10_on_PCA",
@@ -170,6 +205,7 @@ alldata <- RunUMAP(
 {{< meta dimred_umap_2 >}}
 
 ```{r}
+#| label: plot-umap
 #| fig-height: 4
 #| fig-width: 12
 
@@ -184,6 +220,7 @@ wrap_plots(
 {{< meta dimred_umap_3 >}}
 
 ```{r}
+#| label: plot-dimred
 #| fig-height: 4
 #| fig-width: 12
 
@@ -208,10 +245,12 @@ wrap_plots(
 {{< meta dimred_zsg_zs_1 >}}
 
 ```{r}
+#| label: run-umap-sd
+
 alldata <- RunUMAP(
     alldata,
     reduction.name = "UMAP_on_ScaleData",
-    features = alldata@assays$RNA@var.features,
+    features = VariableFeatures(alldata),
     assay = "RNA",
     n.components = 2,
     n.neighbors = 30,
@@ -227,12 +266,19 @@ alldata <- RunUMAP(
 {{< meta dimred_zsg_g_1 >}}
 
 ```{r}
+#| label: umap-graph
+#| eval: false
+
+#OBS! Skip for now, known issue with later version of umap-learn in Seurat5
+# have 0.5.7 now, tested downgrading to 0.5.4 or 0.5.3 but still have same error.
+# Seurat 5.2.0 has a fix for this, but not the version we have now.
+
 # Build Graph
 alldata <- FindNeighbors(alldata,
     reduction = "pca",
     assay = "RNA",
     k.param = 20,
-    features = alldata@assays$RNA@var.features
+    features = VariableFeatures(alldata)
 )
 
 alldata <- RunUMAP(alldata,
@@ -247,13 +293,16 @@ alldata <- RunUMAP(alldata,
 {{< meta dimred_zsg_g_2 >}}
 
 ```{r}
+#| label: plot-umap-graph
+#| eval: true
 #| fig-height: 4
 #| fig-width: 12
 
 p1 <- DimPlot(alldata, reduction = "umap", group.by = "orig.ident") + ggplot2::ggtitle(label = "UMAP_on_PCA")
 p2 <- DimPlot(alldata, reduction = "UMAP_on_ScaleData", group.by = "orig.ident") + ggplot2::ggtitle(label = "UMAP_on_ScaleData")
-p3 <- DimPlot(alldata, reduction = "UMAP_on_Graph", group.by = "orig.ident") + ggplot2::ggtitle(label = "UMAP_on_Graph")
-wrap_plots(p1, p2, p3, ncol = 3) + plot_layout(guides = "collect")
+#p3 <- DimPlot(alldata, reduction = "UMAP_on_Graph", group.by = "orig.ident") + ggplot2::ggtitle(label = "UMAP_on_Graph")
+#wrap_plots(p1, p2, p3, ncol = 3) + plot_layout(guides = "collect")
+wrap_plots(p1, p2, ncol = 2) + plot_layout(guides = "collect")
 ```
 
 ## {{< meta dimred_plotgenes >}}
@@ -272,23 +321,35 @@ wrap_plots(p1, p2, p3, ncol = 3) + plot_layout(guides = "collect")
 |FCER1A, CST3|DCs|
 
 ```{r}
+#| label: plot-markers
 #| fig-height: 9
 #| fig-width: 12
 
 myfeatures <- c("CD3E", "CD4", "CD8A", "NKG7", "GNLY", "MS4A1", "CD14", "LYZ", "MS4A7", "FCGR3A", "CST3", "FCER1A")
-FeaturePlot(alldata, reduction = "umap", dims = 1:2, features = myfeatures, ncol = 4, order = T) +
-    NoLegend() + NoAxes() + NoGrid()
+FeaturePlot(alldata, reduction = "umap", dims = 1:2, features = myfeatures, ncol = 4, order = T)
 ```
 
 :::{.callout-note title="Discuss"}
 {{< meta dimred_plotgenes_2 >}}
 :::
 
+```{r}
+#| label: plot-qc
+#| fig-height: 9
+#| fig-width: 12
+
+myfeatures <- c("nCount_RNA","nFeature_RNA", "percent_mito","percent_ribo","percent_hb","percent_plat")
+FeaturePlot(alldata, reduction = "umap", dims = 1:2, features = myfeatures, ncol = 3, order = T) 
+```
+
+
 ## {{< meta dimred_save >}}
 
 {{< meta dimred_save_1 >}}
 
 ```{r}
+#| label: save
+
 saveRDS(alldata, "data/covid/results/seurat_covid_qc_dr.rds")
 ```
 
@@ -298,6 +359,8 @@ saveRDS(alldata, "data/covid/results/seurat_covid_qc_dr.rds")
   <summary>Click here</summary>
 
 ```{r}
+#| label: session
+
 sessionInfo()
 ```
 

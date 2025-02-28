@@ -24,9 +24,7 @@ Code chunks run R commands unless otherwise specified.
 
 
 ```{r}
-# Activate scanorama Python venv
-reticulate::use_virtualenv("/opt/venv/scanorama")
-reticulate::py_discover_config()
+#| label: libraries
 
 suppressPackageStartupMessages({
     library(scater)
@@ -35,43 +33,53 @@ suppressPackageStartupMessages({
     library(ggplot2)
     library(batchelor)
     library(harmony)
-    library(reticulate)
+    library(basilisk)
 })
 
+# path to conda env for python environment with scanorama.
+condapath =  "/usr/local/conda/envs/seurat"
 
 ```
 
 ```{r}
+#| label: fetch-data
 # download pre-computed data if missing or long compute
 fetch_data <- TRUE
 
 # url for source and intermediate data
-path_data <- "https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"
+path_data <- "https://nextcloud.dc.scilifelab.se/public.php/webdav"
+curl_upass <- "-u zbC5fr2LbEZ9rSE:scRNAseq2025"
+
 path_file <- "data/covid/results/bioc_covid_qc_dr.rds"
 if (!dir.exists(dirname(path_file))) dir.create(dirname(path_file), recursive = TRUE)
-if (fetch_data && !file.exists(path_file)) download.file(url = file.path(path_data, "covid/results/bioc_covid_qc_dr.rds"), destfile = path_file)
+if (fetch_data && !file.exists(path_file)) download.file(url = file.path(path_data, "covid/results_bioc/bioc_covid_qc_dr.rds"), destfile = path_file, method = "curl", extra = curl_upass)
+
 sce <- readRDS(path_file)
 print(reducedDims(sce))
 ```
 
 {{< meta int_prep_2 >}}
 
+If you recall from the dimensionality reduction exercise, we can run variable genes detection with a blocking parameter to avoid including batch effect genes. Here we will explore the genesets we get with and without the blocking parameter and also the variable genes per dataset.
+
 ```{r}
-sce.list <- lapply(unique(sce$sample), function(x) {
-    x <- sce[, sce$sample == x]
-})
+#| label: hvg
 
-hvgs_per_dataset <- lapply(sce.list, function(x) {
-    x <- computeSumFactors(x, sizes = c(20, 40, 60, 80))
-    x <- logNormCounts(x)
-    var.out <- modelGeneVar(x, method = "loess")
-    hvg.out <- var.out[which(var.out$FDR <= 0.05 & var.out$bio >= 0.2), ]
-    hvg.out <- hvg.out[order(hvg.out$bio, decreasing = TRUE), ]
-    return(rownames(hvg.out))
-})
-names(hvgs_per_dataset) <- unique(sce$sample)
+var.out <- modelGeneVar(sce, block = sce$sample)
+hvgs <- getTopHVGs(var.out, n = 2000)
 
-# venn::venn(hvgs_per_dataset,opacity = .4,zcolor = scales::hue_pal()(3),cexsn = 1,cexil = 1,lwd=1,col="white",borders = NA)
+var.out.nobatch <- modelGeneVar(sce)
+hvgs.nobatch <- getTopHVGs(var.out.nobatch, n = 2000)
+
+# the var out with block has a data frame of data frames in column 7. 
+# one per dataset.
+hvgs_per_dataset <- lapply(var.out[[7]], getTopHVGs, n=2000)
+                           
+hvgs_per_dataset$all = hvgs
+hvgs_per_dataset$all.nobatch = hvgs.nobatch
+
+
+
 
 temp <- unique(unlist(hvgs_per_dataset))
 overlap <- sapply(hvgs_per_dataset, function(x) {
@@ -80,41 +88,65 @@ overlap <- sapply(hvgs_per_dataset, function(x) {
 ```
 
 ```{r}
+#| label: hvg-overlap
 #| fig-height: 4
 #| fig-width: 8
 
 pheatmap::pheatmap(t(overlap * 1), cluster_rows = F, color = c("grey90", "grey20")) ## MNN
 ```
 
+As you can see, there are a lot of genes that are variable in just one dataset. There are also some genes in the gene set that was selected using all the data without blocking samples, that are not variable in any of the individual datasets. These are most likely genes driven by batch effects.
+
+The best way to select features for integration is to combine the information on variable genes across the dataset. This
+is what we have in the `all` section where the information on variable features in the different datasets is combined.
+
+:::{.callout-note title="Discuss"}
+{{< meta int_hvg >}}
+:::
+
+For all downstream integration we will use this set of genes so that it is comparable across the methods. We already used that set of genes in the dimensionality reduction exercise to run scaling and pca.
+
+We also store the variable gene information in the object for use furhter down the line. 
+
+```{r}
+#| label: hvg2
+
+metadata(sce)$hvgs = hvgs
+```
+
+
+## fastMNN
+
 The mutual nearest neighbors (MNN) approach within the scran package utilizes a novel approach to adjust for batch effects. The `fastMNN()` function returns a representation of the data with reduced dimensionality, which can be used in a similar fashion to other lower-dimensional representations such as PCA. In particular, this representation can be used for downstream methods such as clustering. The BNPARAM can be used to specify the specific nearest neighbors method to use from the BiocNeighbors package. Here we make use of the [Annoy library](https://github.com/spotify/annoy) via the `BiocNeighbors::AnnoyParam()` argument. We save the reduced-dimension MNN representation into the reducedDims slot of our sce object.
 
 ```{r}
-mnn_out <- batchelor::fastMNN(sce, subset.row = unique(unlist(hvgs_per_dataset)), batch = factor(sce$sample), k = 20, d = 50)
+#| label: mnn
+mnn_out <- batchelor::fastMNN(sce, subset.row = hvgs, batch = factor(sce$sample), k = 20, d = 50)
 ```
 
 :::{.callout-caution}
 `fastMNN()` does not produce a batch-corrected expression matrix.
 :::
 
+We will take the reduced dimension in the new `mnn_out` object and add it into the original `sce` object. 
+
 ```{r}
-mnn_out <- t(reducedDim(mnn_out, "corrected"))
-colnames(mnn_out) <- unlist(lapply(sce.list, function(x) {
-    colnames(x)
-}))
-mnn_out <- mnn_out[, colnames(sce)]
-rownames(mnn_out) <- paste0("dim", 1:50)
-reducedDim(sce, "MNN") <- t(mnn_out)
+#| label: dimred-mnn
+mnn_dim <- reducedDim(mnn_out, "corrected")
+reducedDim(sce, "MNN") <- mnn_dim
 ```
 
 We can observe that a new assay slot is now created under the name `MNN`.
 
 ```{r}
+#| label: dimred-list
 reducedDims(sce)
 ```
 
 Thus, the result from `fastMNN()` should solely be treated as a reduced dimensionality representation, suitable for direct plotting, TSNE/UMAP, clustering, and trajectory analysis that relies on such results.
 
 ```{r}
+#| label: proc-mnn
 set.seed(42)
 sce <- runTSNE(sce, dimred = "MNN", n_dimred = 50, perplexity = 30, name = "tSNE_on_MNN")
 sce <- runUMAP(sce, dimred = "MNN", n_dimred = 50, ncomponents = 2, name = "UMAP_on_MNN")
@@ -123,6 +155,7 @@ sce <- runUMAP(sce, dimred = "MNN", n_dimred = 50, ncomponents = 2, name = "UMAP
 {{< meta int_plot >}}
 
 ```{r}
+#| label: plot-mnn
 #| fig-height: 6
 #| fig-width: 12
 
@@ -151,6 +184,7 @@ wrap_plots(
 |FCER1A, CST3|DCs|
 
 ```{r}
+#| label: plot-markers
 #| fig-height: 16
 #| fig-width: 13
 
@@ -168,6 +202,7 @@ wrap_plots(plotlist = plotlist, ncol = 3)
 
 
 ```{r}
+#| label: harmony
 #| fig-height: 5
 #| fig-width: 14
 
@@ -185,43 +220,46 @@ sce <- RunHarmony(
 
 # Here we use all PCs computed from Harmony for UMAP calculation
 sce <- runUMAP(sce, dimred = "harmony", n_dimred = 50, ncomponents = 2, name = "UMAP_on_Harmony")
+
+plotReducedDim(sce, dimred = "UMAP_on_Harmony", colour_by = "sample", point_size = 0.6) + ggplot2::ggtitle(label = "UMAP_on_Harmony")
 ```
 
 ## {{< meta dimred_scanorama >}}
-
-:::{.callout-important}
-If you are running locally using Docker and you have a Mac with ARM chip, the Scanorama reticulate module is known to crash. In this case, you might want to skip this section.
-:::
 
 {{< meta dimred_scanorama_1 >}}
 
 {{< meta dimred_scanorama_2 >}}
 
 ```{r}
+#| label: prep-scanorama
 #| fig-height: 5
 #| fig-width: 15
 
-hvgs <- unique(unlist(hvgs_per_dataset))
-
-scelist <- list()
-genelist <- list()
-for (i in 1:length(sce.list)) {
-    scelist[[i]] <- t(as.matrix(logcounts(sce.list[[i]])[hvgs, ]))
-    genelist[[i]] <- hvgs
-}
+scelist <- lapply(unique(sce$sample), function(x) {
+    x <- t(as.matrix(assay(sce, "logcounts")[hvgs,sce$sample == x]))
+})
+genelist =  rep(list(hvgs),length(scelist))
 
 lapply(scelist, dim)
 ```
 
-Now we can run scanorama:
+Scanorama is implemented in python, but through reticulate we can load python packages and run python functions. In this case we also use the `basilisk` package for a more clean activation of python environment.
+
+At the top of this script, we set the variable `condapath` to point to the conda environment where scanorama is included.
 
 ```{r}
+#| label: scanorama
 #| fig-height: 5
 #| fig-width: 15
 
-scanorama <- reticulate::import("scanorama")
 
-integrated.data <- scanorama$integrate(datasets_full = scelist, genes_list = genelist)
+# run scanorama via basilisk with scelist and genelist as input.
+integrated.data = basiliskRun(env=condapath, fun=function(datas, genes) {
+  scanorama <- reticulate::import("scanorama")
+  output <- scanorama$integrate(datasets_full = datas,
+                                         genes_list = genes )
+  return(output)
+}, datas = scelist, genes = genelist, testload="scanorama")
 
 intdimred <- do.call(rbind, integrated.data[[1]])
 colnames(intdimred) <- paste0("PC_", 1:100)
@@ -231,10 +269,10 @@ rownames(intdimred) <- colnames(logcounts(sce))
 stdevs <- apply(intdimred, MARGIN = 2, FUN = sd)
 attr(intdimred, "varExplained") <- stdevs
 
-reducedDim(sce, "Scanorama_PCA") <- intdimred
+reducedDim(sce, "Scanorama") <- intdimred
 
 # Here we use all PCs computed from Scanorama for UMAP calculation
-sce <- runUMAP(sce, dimred = "Scanorama_PCA", n_dimred = 50, ncomponents = 2, name = "UMAP_on_Scanorama")
+sce <- runUMAP(sce, dimred = "Scanorama", n_dimred = 50, ncomponents = 2, name = "UMAP_on_Scanorama")
 
 plotReducedDim(sce, dimred = "UMAP_on_Scanorama", colour_by = "sample", point_size = 0.6) + ggplot2::ggtitle(label = "UMAP_on_Scanorama")
 ```
@@ -245,6 +283,7 @@ Now we will plot UMAPS with all three integration methods side by side.
 
 
 ```{r}
+#| label: plot-all
 #| fig-height: 8
 #| fig-width: 10
 
@@ -257,10 +296,16 @@ wrap_plots(p1, p2, p3, p4, nrow = 2) +
     plot_layout(guides = "collect")
 ```
 
+::: {.callout-note title="Discuss"}
+{{< meta int_conclusion >}}
+:::
+
 
 {{< meta int_save >}}
 
 ```{r}
+#| label: save
+
 saveRDS(sce, "data/covid/results/bioc_covid_qc_dr_int.rds")
 ```
 
@@ -270,6 +315,8 @@ saveRDS(sce, "data/covid/results/bioc_covid_qc_dr_int.rds")
   <summary>Click here</summary>
 
 ```{r}
+#| label: session
+
 sessionInfo()
 ```
 

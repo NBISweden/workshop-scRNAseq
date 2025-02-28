@@ -17,8 +17,10 @@ Celltype prediction can either be performed on indiviudal cells where
 each cell gets a predicted celltype label, or on the level of clusters.
 All methods are based on similarity to other datasets, single cell or
 sorted bulk RNAseq, or uses known marker genes for each cell type.\
-We will select one sample from the Covid data, `ctrl_13` and predict
-celltype by cell on that sample.\
+Ideally celltype predictions should be run on each sample separately and
+not using the integrated data. In this case we will select one sample
+from the Covid data, `ctrl_13` and predict celltype by cell on that
+sample.\
 Some methods will predict a celltype to each cell based on what it is
 most similar to, even if that celltype is not included in the reference.
 Other methods include an uncertainty so that cells with low similarity
@@ -27,8 +29,10 @@ There are multiple different methods to predict celltypes, here we will
 just cover a few of those.
 
 We will use a reference PBMC dataset from the `scPred` package which is
-provided as a Seurat object with counts. And we will test classification
-based on the `scPred` and `scMap` methods. Finally we will use gene set
+provided as a Seurat object with counts. Unfortunately scPred has not
+been updated to run with Seurat v5, so we will not use it here. We will
+test classification based on Seurat `labelTransfer`, the `SingleR`
+method `scPred` and using `Azimuth`. Finally we will use gene set
 enrichment predict celltype based on the DEGs of each cluster.
 
 ## Read data
@@ -36,47 +40,77 @@ enrichment predict celltype based on the DEGs of each cluster.
 First, lets load required libraries
 
 ``` {r}
+#| label: libraries
+
 suppressPackageStartupMessages({
     library(Seurat)
     library(dplyr)
     library(patchwork)
     library(ggplot2)
     library(pheatmap)
-    # remotes::install_github("powellgenomicslab/scPred")
     library(scPred)
+    library(celldex)
+    library(SingleR)
+    library(remotes)
+    remotes::install_github(
+        "https://github.com/satijalab/seurat-data@4dc08e022f51c324bc7bf785b1b5771d2742701d",
+        upgrade = FALSE,
+        dependencies = FALSE
+    )
+    library(SeuratData)
+    remotes::install_github(
+        "https://github.com/immunogenomics/presto@7636b3d0465c468c35853f82f1717d3a64b3c8f6",
+        upgrade = FALSE,
+        dependencies = FALSE
+    )
+    remotes::install_github(
+        "https://github.com/mojaveazure/seurat-disk@877d4e18ab38c686f5db54f8cd290274ccdbe295",
+        upgrade = FALSE,
+        dependencies = FALSE)
+    remotes::install_github(
+        "https://github.com/satijalab/azimuth@243ee5db80fcbffa3452c944254a325a3da2ef9e",
+        upgrade = FALSE,
+        dependencies = FALSE
+    )
+    library(Azimuth)
 })
 ```
 
 Let's read in the saved Covid-19 data object from the clustering step.
 
 ``` {r}
+#| label: fetch-data
+
 # download pre-computed data if missing or long compute
 fetch_data <- TRUE
 
 # url for source and intermediate data
-path_data <- "https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"
+path_data <- "https://nextcloud.dc.scilifelab.se/public.php/webdav"
+curl_upass <- "-u zbC5fr2LbEZ9rSE:scRNAseq2025"
 path_file <- "data/covid/results/seurat_covid_qc_dr_int_cl.rds"
+
 if (!dir.exists(dirname(path_file))) dir.create(dirname(path_file), recursive = TRUE)
-if (fetch_data && !file.exists(path_file)) download.file(url = file.path(path_data, "covid/results/seurat_covid_qc_dr_int_cl.rds"), destfile = path_file)
+if (fetch_data && !file.exists(path_file)) download.file(url = file.path(path_data, "covid/results_seurat/seurat_covid_qc_dr_int_cl.rds"), destfile = path_file, method = "curl", extra = curl_upass)
+
 alldata <- readRDS(path_file)
 ```
 
 Subset one patient.
 
 ``` {r}
-ctrl <- alldata[, alldata$orig.ident == "ctrl_13"]
+#| label: subset
 
-# set active assay to RNA and remove the CCA assay
-ctrl@active.assay <- "RNA"
-ctrl[["CCA"]] <- NULL
-ctrl
+ctrl <- alldata[, alldata$orig.ident == "ctrl_13"]
 ```
 
 ## Reference data
 
-Load the reference dataset with annotated labels.
+Load the reference dataset with annotated labels that is provided by the
+`scPred` package, it is a subsampled set of cells from human PBMCs.
 
 ``` {r}
+#| label: fetch-ref
+
 reference <- scPred::pbmc_1
 reference
 ```
@@ -88,6 +122,8 @@ Here, we will run all the steps that we did in previous labs in one go
 using the `magittr` package with the pipe-operator `%>%`.
 
 ``` {r}
+#| label: process-ref
+
 reference <- reference %>%
     NormalizeData() %>%
     FindVariableFeatures() %>%
@@ -97,6 +133,7 @@ reference <- reference %>%
 ```
 
 ``` {r}
+#| label: plot-ref
 #| fig-height: 5
 #| fig-width: 6
 
@@ -107,8 +144,9 @@ Run all steps of the analysis for the **ctrl** sample as well. Use the
 clustering from the integration lab with resolution 0.5.
 
 ``` {r}
-# Set the identity as louvain with resolution 0.3
-ctrl <- SetIdent(ctrl, value = "CCA_snn_res.0.5")
+#| label: process-data
+# Set the identity as louvain with resolution 0.5
+ctrl <- SetIdent(ctrl, value = "RNA_snn_res.0.5")
 
 ctrl <- ctrl %>%
     NormalizeData() %>%
@@ -119,6 +157,7 @@ ctrl <- ctrl %>%
 ```
 
 ``` {r}
+#| label: plot-data
 #| fig-height: 5
 #| fig-width: 6
 
@@ -134,6 +173,7 @@ query dataset is projected onto the PCA of the reference dataset. Then,
 the labels of the reference data are predicted.
 
 ``` {r}
+#| label: transfer
 transfer.anchors <- FindTransferAnchors(
     reference = reference, query = ctrl,
     dims = 1:30
@@ -146,6 +186,7 @@ ctrl <- AddMetaData(object = ctrl, metadata = predictions)
 ```
 
 ``` {r}
+#| label: plot-transfer
 #| fig-height: 5
 #| fig-width: 6
 
@@ -155,63 +196,82 @@ DimPlot(ctrl, group.by = "predicted.id", label = T, repel = T) + NoAxes()
 Now plot how many cells of each celltypes can be found in each cluster.
 
 ``` {r}
+#| label: plot-proportions
 #| fig-height: 5
 #| fig-width: 6
 
-ggplot(ctrl@meta.data, aes(x = CCA_snn_res.0.5, fill = predicted.id)) +
+ggplot(ctrl@meta.data, aes(x = RNA_snn_res.0.5, fill = predicted.id)) +
     geom_bar() +
     theme_classic()
 ```
 
-## scPred
+## SinlgeR
 
-scPred will train a classifier based on all principal components. First,
-`getFeatureSpace()` will create a scPred object stored in the `@misc`
-slot where it extracts the PCs that best separates the different
-celltypes. Then `trainModel()` will do the actual training for each
-celltype.
+SingleR is performs unbiased cell type recognition from single-cell RNA
+sequencing data, by leveraging reference transcriptomic datasets of pure
+cell types to infer the cell of origin of each single cell
+independently.
+
+We first have to convert the Seurat object to a SingleCellExperiment
+object.
 
 ``` {r}
-reference <- getFeatureSpace(reference, "cell_type")
-reference <- trainModel(reference)
+#| label: sce
+sce = as.SingleCellExperiment(ctrl)
 ```
 
-We can then print how well the training worked for the different
-celltypes by printing the number of PCs used, the ROC value and
-Sensitivity/Specificity. Which celltypes do you think are harder to
-classify based on this dataset?
+There are multiple datasets included in the `celldex` package that can
+be used for celltype prediction, here we will test two different ones,
+the `DatabaseImmuneCellExpressionData` and the
+`HumanPrimaryCellAtlasData`. In addition we will use the same reference
+dataset that we used for label transfer above but using SingleR instead.
+
+### Immune cell reference
 
 ``` {r}
-get_scpred(reference)
+#| label: singler-immune
+
+immune = celldex::DatabaseImmuneCellExpressionData()
+singler.immune <- SingleR(test = sce, ref = immune, assay.type.test=1,
+    labels = immune$label.main)
+
+head(singler.immune)
 ```
 
-You can optimize parameters for each dataset by chaining parameters and
-testing different types of models, see more at:
-<https://powellgenomicslab.github.io/scPred/articles/introduction.html>.
-But for now, we will continue with this model. Now, let's predict
-celltypes on our data, where scPred will align the two datasets with
-Harmony and then perform classification.
+### HPCA reference
 
 ``` {r}
-ctrl <- scPredict(ctrl, reference)
+#| label: singler-hpca
+
+hpca <- celldex::HumanPrimaryCellAtlasData()
+singler.hpca <- SingleR(test = sce, ref = hpca, assay.type.test=1,
+    labels = hpca$label.main)
+
+head(singler.hpca)
 ```
 
-``` {r}
-#| fig-height: 5
-#| fig-width: 6
+### With own reference data
 
-DimPlot(ctrl, group.by = "scpred_prediction", label = T, repel = T) + NoAxes()
+``` {r}
+#| label: singler-ref
+
+sce.ref = as.SingleCellExperiment(reference)
+singler.ref <- SingleR(test=sce, ref=sce.ref, labels=sce.ref$cell_type, de.method="wilcox")
+head(singler.ref)
 ```
 
-Now plot how many cells of each celltypes can be found in each cluster.
+Compare results:
 
 ``` {r}
-#| fig-height: 5
-#| fig-width: 6
+#| label: plot-singler
+#| fig-height: 7
+#| fig-width: 8
 
-ggplot(ctrl@meta.data, aes(x = CCA_snn_res.0.5, fill = scpred_prediction)) +
-    geom_bar() +
-    theme_classic()
+ctrl$singler.immune = singler.immune$pruned.labels
+ctrl$singler.hpca = singler.hpca$pruned.labels
+ctrl$singler.ref = singler.ref$pruned.labels
+
+DimPlot(ctrl, group.by = c("singler.hpca", "singler.immune", "singler.ref"), ncol = 2)
 ```
 
 ## Azimuth
@@ -221,36 +281,27 @@ methods to integrate and do label transfer. One such resource is
 [Azimuth](https://azimuth.hubmapconsortium.org/) another one is
 [Disco](https://www.immunesinglecell.org/).
 
-Azimuth is also possible to install and run locally, but in this case we
-have used the online app and ran the predictions for you. So you just
-have to download the prediction file.
-
-This is how to save the count matrix:
+Here we will use the PBMC reference provided with Azimuth. Which in
+principle runs label transfer of your dataset onto a large curated
+reference. The first time you run the command, the `pbmcref` dataset
+will be downloaded to your local computer.
 
 ``` {r}
-#| eval: false
+#| label: azimuth
+options(future.globals.maxSize = 1e9)
 
-# No need to run now.
-C = ctrl@assays$RNA@counts
-saveRDS(C, file = "data/covid/results/ctrl13_count_matrix.rds")
+# will install the pbmcref dataset first time you run it.
+ctrl <- RunAzimuth(ctrl, reference = "pbmcref")
 ```
 
-Instead load the results and visualize:
+This dataset has predictions at 3 different levels of annotation wiht
+`l1` being the more broad celltypes and `l3` more detailed annotation.
 
 ``` {r}
-#| fig-height: 7
-#| fig-width: 8
-
-path_data <- "https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"
-path_file <- "data/covid/results/azimuth_pred.tsv"
-if (!dir.exists(dirname(path_file))) dir.create(dirname(path_file), recursive = TRUE)
-if (fetch_data && !file.exists(path_file)) download.file(url = file.path(path_data, "covid/results/azimuth_pred.tsv"), destfile = path_file)
-
-azimuth_pred <- read.table(path_file, sep = "\t", header = T)
-
-# add predictions to the seurat object
-ctrl$azimuth = azimuth_pred$predicted.celltype.l2[match(colnames(ctrl), azimuth_pred$cell)]
-DimPlot(ctrl, group.by = "azimuth", label = T, repel = T) + NoAxes()
+#| label: plot-azimuth
+DimPlot(ctrl, group.by = "predicted.celltype.l1", label = T, repel = T) + NoAxes()
+DimPlot(ctrl, group.by = "predicted.celltype.l2", label = T, repel = T) + NoAxes()
+DimPlot(ctrl, group.by = "predicted.celltype.l3", label = T, repel = T) + NoAxes()
 ```
 
 ## Compare results
@@ -260,20 +311,24 @@ function in scPred `crossTab()` that prints the overlap between two
 metadata slots.
 
 ``` {r}
-crossTab(ctrl, "predicted.id", "scpred_prediction")
+#| label: crosstab
+
+crossTab(ctrl, "predicted.id", "singler.hpca")
 ```
 
 We can also plot all the different predictions side by side
 
 ``` {r}
-#| fig-height: 5
+#| label: plot-all
+#| fig-height: 10
 #| fig-width: 16
 
 wrap_plots(
-    DimPlot(ctrl, label = T, group.by = "predicted.id") + NoAxes(),
-    DimPlot(ctrl, label = T, group.by = "scpred_prediction") + NoAxes(),
-    DimPlot(ctrl, label = T, group.by = "azimuth") + NoAxes(),
-    ncol = 3
+    DimPlot(ctrl, label = T, group.by = "predicted.id") + NoAxes() + ggtitle("LabelTransfer"),
+    DimPlot(ctrl, label = T, group.by = "singler.hpca") + NoAxes() + ggtitle("SingleR HPCA"),
+    DimPlot(ctrl, label = T, group.by = "singler.ref") + NoAxes() + ggtitle("SingleR Ref"),
+    DimPlot(ctrl, label = T, group.by = "predicted.celltype.l1") + NoAxes() + ggtitle("Azimuth l1"),
+    ncol = 2
 )
 ```
 
@@ -298,8 +353,14 @@ report as many genes as possible, hence we set the cutoffs quite
 lenient.
 
 ``` {r}
+#| label: dge
 # run differential expression in our dataset, using clustering at resolution 0.5
-alldata <- SetIdent(alldata, value = "CCA_snn_res.0.5")
+# first we need to join the layers
+alldata@active.assay = "RNA"
+alldata <- JoinLayers(object = alldata, layers = c("data","counts"))
+
+# set the clustering you want to use as the identity class.
+alldata <- SetIdent(alldata, value = "RNA_snn_res.0.5")
 DGE_table <- FindAllMarkers(
     alldata,
     logfc.threshold = 0,
@@ -307,7 +368,7 @@ DGE_table <- FindAllMarkers(
     min.pct = 0.1,
     min.diff.pct = 0,
     only.pos = TRUE,
-    max.cells.per.ident = 20,
+    max.cells.per.ident = 100,
     return.thresh = 1,
     assay = "RNA"
 )
@@ -319,6 +380,7 @@ unlist(lapply(DGE_list, nrow))
 ```
 
 ``` {r}
+#| label: dge-ref
 # Compute differential gene expression in reference dataset (that has cell annotation)
 reference <- SetIdent(reference, value = "cell_type")
 reference_markers <- FindAllMarkers(
@@ -348,6 +410,7 @@ Now we can run GSEA for the DEGs from our dataset and check for
 enrichment of top DEGs in the reference dataset.
 
 ``` {r}
+#| label: gsea
 suppressPackageStartupMessages(library(fgsea))
 
 # run fgsea for each of the clusters in the list
@@ -382,6 +445,7 @@ instance the ncMono and cMono celltypes are equally good for some
 clusters.
 
 ``` {r}
+#| label: plot-gsea
 #| fig-height: 5
 #| fig-width: 11
 
@@ -389,10 +453,12 @@ new.cluster.ids <- unlist(lapply(res, function(x) {
     as.data.frame(x)[1, 1]
 }))
 
-alldata$ref_gsea <- new.cluster.ids[as.character(alldata@active.ident)]
+annot = new.cluster.ids[as.character(alldata@active.ident)]
+names(annot) = colnames(alldata)
+alldata$ref_gsea <- annot
 
 wrap_plots(
-    DimPlot(alldata, label = T, group.by = "CCA_snn_res.0.5") + NoAxes(),
+    DimPlot(alldata, label = T, group.by = "RNA_snn_res.0.5") + NoAxes(),
     DimPlot(alldata, label = T, group.by = "ref_gsea") + NoAxes(),
     ncol = 2
 )
@@ -402,6 +468,7 @@ Compare the results with the other celltype prediction methods in the
 **ctrl_13** sample.
 
 ``` {r}
+#| label: plot-gsea-sub
 #| fig-height: 5
 #| fig-width: 16
 
@@ -410,8 +477,7 @@ ctrl$ref_gsea <- alldata$ref_gsea[alldata$orig.ident == "ctrl_13"]
 wrap_plots(
     DimPlot(ctrl, label = T, group.by = "ref_gsea") + NoAxes() + ggtitle("GSEA"),
     DimPlot(ctrl, label = T, group.by = "predicted.id") + NoAxes() + ggtitle("LabelTransfer"),
-    DimPlot(ctrl, label = T, group.by = "scpred_prediction") + NoAxes() + ggtitle("scPred"),
-    ncol = 3
+    ncol = 2
 )
 ```
 
@@ -423,11 +489,13 @@ converted the excel file to a csv for you. Read in the gene lists and do
 some filtering.
 
 ``` {r}
+#| label: fetch-markers
 path_file <- file.path("data/cell_marker_human.csv")
-if (!file.exists(path_file)) download.file(file.path(path_data, "cell_marker_human.csv"), destfile = path_file)
+if (!file.exists(path_file)) download.file(file.path(path_data, "misc/cell_marker_human.csv"), destfile = path_file, method = "curl", extra = curl_upass)
 ```
 
 ``` {r}
+#| label: prep-markers
 # Load the human marker table
 markers <- read.delim("data/cell_marker_human.csv", sep = ";")
 markers <- markers[markers$species == "Human", ]
@@ -457,6 +525,7 @@ celltype_list <- celltype_list[unlist(lapply(celltype_list, length)) > 5]
 ```
 
 ``` {r}
+#| label: gsea-marker
 # run fgsea for each of the clusters in the list
 res <- lapply(DGE_list, function(x) {
     gene_rank <- setNames(x$avg_log2FC, x$gene)
@@ -483,13 +552,16 @@ lapply(res, head, 3)
 Let's plot the results.
 
 ``` {r}
+#| label: plot-gsea-marker
 #| fig-height: 5
 #| fig-width: 11
 
 new.cluster.ids <- unlist(lapply(res, function(x) {
     as.data.frame(x)[1, 1]
 }))
-alldata$cellmarker_gsea <- new.cluster.ids[as.character(alldata@active.ident)]
+annot = new.cluster.ids[as.character(alldata@active.ident)]
+names(annot) = colnames(alldata)
+alldata$cellmarker_gsea <- annot
 
 wrap_plots(
     DimPlot(alldata, label = T, group.by = "ref_gsea") + NoAxes(),
@@ -516,6 +588,8 @@ results make sense.
 Finally, lets save the data with predictions.
 
 ``` {r}
+#| label: save
+
 saveRDS(ctrl, "data/covid/results/seurat_covid_qc_dr_int_cl_ct-ctrl13.rds")
 ```
 
@@ -532,6 +606,8 @@ Click here
 </summary>
 ```
 ``` {r}
+#| label: session
+
 sessionInfo()
 ```
 

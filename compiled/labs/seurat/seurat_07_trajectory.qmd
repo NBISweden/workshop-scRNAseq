@@ -17,6 +17,8 @@ title:  Trajectory inference using Slingshot
 ## Loading libraries
 
 ``` {r}
+#| label: libraries
+
 suppressPackageStartupMessages({
   library(Seurat)
   library(plotly)
@@ -37,6 +39,8 @@ pal <- rep(sample(pal, length(pal)), 200)
 Nice function to easily draw a graph:
 
 ``` {r}
+#| label: graph-func
+
 # Add graph to the base R graphics plot
 draw_graph <- function(layout, graph, lwd = 0.2, col = "grey") {
   res <- rep(x = 1:(length(graph@p) - 1), times = (graph@p[-1] - graph@p[-length(graph@p)]))
@@ -71,14 +75,21 @@ which later circulate in the blood to all other organs.
 You can download the data:
 
 ``` {r}
+#| label: fetch-data
+
 # download pre-computed data if missing or long compute
 fetch_data <- TRUE
 
+path_trajectory <- "./data/trajectory"
+if (!dir.exists(path_trajectory)) dir.create(path_trajectory, recursive = T)
+
 # url for source and intermediate data
-path_data <- "https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"
+path_data <- "https://nextcloud.dc.scilifelab.se/public.php/webdav"
+curl_upass <- "-u zbC5fr2LbEZ9rSE:scRNAseq2025"
 path_file <- "data/trajectory/trajectory_seurat_filtered.rds"
+
 if (!dir.exists(dirname(path_file))) dir.create(dirname(path_file), recursive = TRUE)
-if (!file.exists(path_file)) download.file(url = file.path(path_data, "trajectory/trajectory_seurat_filtered.rds"), destfile = path_file)
+if (!file.exists(path_file)) download.file(url = file.path(path_data, "trajectory/trajectory_seurat_filtered.rds"), destfile = path_file, method = "curl", extra = curl_upass)
 ```
 
 We already have pre-computed and subsetted the dataset (with 6688 cells
@@ -93,7 +104,9 @@ in this
 
 ## Reading data
 
-``` {r }
+``` {r}
+#| label: read-data
+
 obj <- readRDS("data/trajectory/trajectory_seurat_filtered.rds")
 
 # Calculate cluster centroids (for plotting the labels later)
@@ -105,6 +118,7 @@ centroids2d <- as.matrix(t(t(obj@reductions$umap@cell.embeddings) %*% mm) / Matr
 Let's visualize which clusters we have in our dataset:
 
 ``` {r}
+#| label: plot-data
 #| fig-height: 8
 #| fig-width: 8
 
@@ -120,7 +134,9 @@ wrap_plots(pl)
 You can check, for example, the number of cells in each cluster:
 
 ``` {r}
-table(obj$clusters)
+#| label: table-clust
+
+table(obj$clusters_use)
 ```
 
 ## Exploring the data
@@ -145,6 +161,7 @@ cluster numbers in your dataset express these key markers.
   Pf4       Megakaryocyte cell lineage
 
 ``` {r}
+#| label: plot-markers
 #| fig-height: 9
 #| fig-width: 12
 
@@ -156,6 +173,29 @@ for (i in vars) {
   pl[[i]] <- FeaturePlot(obj, features = i, order = T) + theme_void() + NoLegend()
 }
 wrap_plots(pl)
+```
+
+To make it easier to interpret the data, we will add in some labels to
+the most important clusters.
+
+``` {r}
+#| label: annot
+
+new_clust = as.character(obj$clusters_use)
+new_clust[new_clust == "34"] = "34-Prog" # progenitors
+new_clust[new_clust == "17"] = "17-Gran" # granulocytes
+new_clust[new_clust == "27"] = "27-DC" # dendritic cells
+new_clust[new_clust == "25"] = "25-Mac" # macrophage
+new_clust[new_clust == "16"] = "16-TC" # T-cells
+new_clust[new_clust == "20"] = "20-BC" # B-cells
+new_clust[new_clust == "26"] = "26-Mast" # Mast cells
+new_clust[new_clust == "53"] = "53-Mega" # Megakaryocytes
+new_clust[new_clust == "49"] = "49-RBC" # Red blood cells
+
+obj$clust_annot = factor(new_clust)
+
+DimPlot(obj, group.by = "clust_annot", label = T) + theme_void() + NoLegend()
+
 ```
 
 Another way to better explore your data is to look in higher dimensions,
@@ -171,19 +211,22 @@ dimensions.
 
 </div>
 
-Since the steps below are identical to both `Seurat` and `Scran`
-pipelines, we will extract the matrices from both, so it is clear what
-is being used where and to remove long lines of code used to get those
+Since the steps below are identical to both `Seurat` and `Bioconductor`
+toolkits, we will extract the matrices from both, so it is clear what is
+being used where and to remove long lines of code used to get those
 matrices. We will use them all. Plot in 3D with `Plotly`:
 
 ``` {r}
-df <- data.frame(obj@reductions$umap3d@cell.embeddings, variable = factor(obj$clusters_use))
+#| label: plot-3d
+
+df <- data.frame(obj@reductions$umap3d@cell.embeddings, variable = factor(obj$clust_annot))
 colnames(df)[1:3] <- c("UMAP_1", "UMAP_2", "UMAP_3")
 p_State <- plot_ly(df, x = ~UMAP_1, y = ~UMAP_2, z = ~UMAP_3, color = ~variable, colors = pal, size = .5)  %>% add_markers()
 p_State
 ```
 
 ``` {r}
+#| label: save-3d
 #| eval: false
 # to save interactive plot and open in a new tab
 try(htmlwidgets::saveWidget(p_State, selfcontained = T, "data/trajectory/umap_3d_clustering_plotly.html"), silent = T)
@@ -193,19 +236,20 @@ utils::browseURL("data/trajectory/umap_3d_clustering_plotly.html")
 We can now compute the lineages on these dataset.
 
 ``` {r}
+#| label: plot-lineages
 #| fig-height: 6
 #| fig-width: 6
 
 # Define lineage ends
-ENDS <- c("17", "27", "25", "16", "26", "53", "49")
+ENDS <- c("17-Gran", "27-DC", "25-Mac", "16-TC", "26-Mast", "53-Mega", "49-RBC")
 
 set.seed(1)
 lineages <- as.SlingshotDataSet(getLineages(
   data           = obj@reductions$umap3d@cell.embeddings,
-  clusterLabels  = obj$clusters_use,
+  clusterLabels  = obj$clust_annot,
   dist.method    = "mnn", # It can be: "simple", "scaled.full", "scaled.diag", "slingshot" or "mnn"
   end.clus       = ENDS, # You can also define the ENDS!
-  start.clus     = "34"
+  start.clus     = "34-Prog"
 )) # define where to START the trajectories
 
 
@@ -220,13 +264,11 @@ lineages <- as.SlingshotDataSet(getLineages(
 lineages@reducedDim <- obj@reductions$umap@cell.embeddings
 
 {
-  plot(obj@reductions$umap@cell.embeddings, col = pal[obj$clusters_use], cex = .5, pch = 16)
+  plot(obj@reductions$umap@cell.embeddings, col = pal[obj$clust_annot], cex = .5, pch = 16)
   lines(lineages, lwd = 1, col = "black", cex = 2)
   text(centroids2d, labels = rownames(centroids2d), cex = 0.8, font = 2, col = "white")
 }
 ```
-
-Much better!
 
 ## Defining Principal Curves
 
@@ -249,6 +291,7 @@ had set `approx_points` to 300 to speed up. Feel free to adjust that for
 your dataset.
 
 ``` {r}
+#| label: principal-curves
 #| fig-height: 6
 #| fig-width: 6
 
@@ -265,16 +308,27 @@ curves
 
 # Plots
 {
-  plot(obj@reductions$umap@cell.embeddings, col = pal[obj$clusters_use], pch = 16)
+  plot(obj@reductions$umap@cell.embeddings, col = pal[obj$clust_annot], pch = 16)
   lines(curves, lwd = 2, col = "black")
-  text(centroids2d, labels = rownames(centroids2d), cex = 1, font = 2)
+  text(centroids2d, labels = levels(obj$clust_annot), cex = 1, font = 2)
 }
 ```
+
+<div>
+
+> **Discuss**
+>
+> Does these lineages fit the biological expectations given what you
+> know of hematopoesis. Please have a look at the figure in Section 2
+> and compare to the paths you now have.
+
+</div>
 
 With those results in hands, we can now compute the differentiation
 **pseudotime**.
 
 ``` {r}
+#| label: pseudotime
 #| fig-height: 6
 #| fig-width: 6
 
@@ -291,16 +345,17 @@ o <- order(x)
     col = colorRampPalette(c("grey70", "orange3", "firebrick", "purple4"))(99)[x[o] * 98 + 1]
   )
   points(centroids2d, cex = 2.5, pch = 16, col = "#FFFFFF99")
-  text(centroids2d, labels = rownames(centroids2d), cex = 1, font = 2)
+  text(centroids2d, labels = levels(obj$clust_annot), cex = 1, font = 2)
 }
 ```
 
 <div>
 
-> **Tip**
+> **Discuss**
 >
 > The pseudotime represents the distance of every cell to the starting
-> cluster!
+> cluster. Have a look at the pseudotime plot, how well do you think it
+> represents actual developmental time? What does it represent?
 
 </div>
 
@@ -324,6 +379,8 @@ additive models (GAMs), and testing whether certain coefficients are
 statistically different between points in the trajectory.
 
 ``` {r}
+#| label: multicore
+
 BiocParallel::register(BiocParallel::MulticoreParam())
 ```
 
@@ -340,7 +397,9 @@ purposes we first do a very stringent filtering** of the genes.
 </div>
 
 ``` {r}
-sel_cells <- split(colnames(obj@assays$RNA@data), obj$clusters_use)
+#| label: subset-genes
+
+sel_cells <- split(colnames(obj@assays$RNA@data), obj$clust_annot)
 sel_cells <- unlist(lapply(sel_cells, function(x) {
   set.seed(1)
   return(sample(x, 20))
@@ -363,6 +422,8 @@ Fitting the model:
 </div>
 
 ``` {r}
+#| label: fit-gam
+
 path_file <- "data/trajectory/seurat_scegam.rds"
 
 # fetch_data is defined at the top of this document
@@ -381,28 +442,33 @@ if (!fetch_data) {
 Download the precomputed file.
 
 ``` {r}
+#| label: fetch-gam
+
 path_file <- "data/trajectory/seurat_scegam.rds"
 
 # fetch_data is defined at the top of this document
 if (fetch_data) {
-  if (!file.exists(path_file)) download.file(url = file.path(path_data, "trajectory/results/seurat_scegam.rds"), destfile = path_file)
+  if (!file.exists(path_file)) download.file(url = file.path(path_data, "trajectory/seurat_scegam.rds"), destfile = path_file, method = "curl", extra = curl_upass)
 }
 ```
 
 ``` {r}
+#| label: load-gam
 # read data
 sceGAM <- readRDS(path_file)
 ```
 
 ``` {r}
+#| label: plot-gam
 #| fig-height: 5
 #| fig-width: 7
 
-plotGeneCount(curves, clusters = obj$clusters_use, models = sceGAM)
+plotGeneCount(curves, clusters = obj$clust_annot, models = sceGAM)
 lineages
 ```
 
 ``` {r}
+#| label: plot-gam-lineages
 #| fig-height: 6
 #| fig-width: 6
 
@@ -410,12 +476,13 @@ lc <- sapply(lineages@lineages, function(x) {
   rev(x)[1]
 })
 names(lc) <- gsub("Lineage", "L", names(lc))
+lc.idx = match(lc, levels(obj$clust_annot))
 
 {
-  plot(obj@reductions$umap@cell.embeddings, col = pal[obj$clusters_use], pch = 16)
+  plot(obj@reductions$umap@cell.embeddings, col = pal[obj$clust_annot], pch = 16)
   lines(curves, lwd = 2, col = "black")
-  points(centroids2d[lc, ], col = "black", pch = 16, cex = 4)
-  text(centroids2d[lc, ], labels = names(lc), cex = 1, font = 2, col = "white")
+  points(centroids2d[lc.idx, ], col = "black", pch = 16, cex = 4)
+  text(centroids2d[lc.idx, ], labels = names(lc), cex = 1, font = 2, col = "white")
 }
 ```
 
@@ -425,6 +492,7 @@ We can first look at general trends of gene expression across
 pseudotime.
 
 ``` {r}
+#| label: dge
 set.seed(8)
 res <- na.omit(associationTest(sceGAM, contrastType = "consecutive"))
 res <- res[res$pvalue < 1e-3, ]
@@ -436,6 +504,7 @@ res[1:10, ]
 We can plot their expression:
 
 ``` {r}
+#| label: plot-dge
 #| fig-height: 12
 #| fig-width: 12
 
@@ -443,8 +512,8 @@ par(mfrow = c(4, 4), mar = c(.1, .1, 2, 1))
 {
   plot(obj@reductions$umap@cell.embeddings, col = pal[obj$clusters_use], cex = .5, pch = 16, axes = F, xlab = "", ylab = "")
   lines(curves, lwd = 2, col = "black")
-  points(centroids2d[lc, ], col = "black", pch = 15, cex = 3, xpd = T)
-  text(centroids2d[lc, ], labels = names(lc), cex = 1, font = 2, col = "white", xpd = T)
+  points(centroids2d[lc.idx, ], col = "black", pch = 15, cex = 3, xpd = T)
+  text(centroids2d[lc.idx, ], labels = names(lc), cex = 1, font = 2, col = "white", xpd = T)
 }
 
 vars <- rownames(res[1:15, ])
@@ -468,6 +537,8 @@ in genes that change between particular point in pseudotime. By default,
 we can look at differences between start and end:
 
 ``` {r}
+#| label: dge-pt
+
 res <- na.omit(startVsEndTest(sceGAM, pseudotimeValues = c(0, 1)))
 res <- res[res$pvalue < 1e-3, ]
 res <- res[res$waldStat > mean(res$waldStat), ]
@@ -480,6 +551,7 @@ lineage. This table represents the differential expression within each
 lineage, to identify which genes go up or down. Let's check lineage 1:
 
 ``` {r}
+#| label: plot-dge-pt
 #| fig-height: 12
 #| fig-width: 12
 
@@ -493,8 +565,8 @@ par(mfrow = c(4, 4), mar = c(.1, .1, 2, 1))
 {
   plot(obj@reductions$umap@cell.embeddings, col = pal[obj$clusters_use], cex = .5, pch = 16, axes = F, xlab = "", ylab = "")
   lines(curves, lwd = 2, col = "black")
-  points(centroids2d[lc, ], col = "black", pch = 15, cex = 3, xpd = T)
-  text(centroids2d[lc, ], labels = names(lc), cex = 1, font = 2, col = "white", xpd = T)
+  points(centroids2d[lc.idx, ], col = "black", pch = 15, cex = 3, xpd = T)
+  text(centroids2d[lc.idx, ], labels = names(lc), cex = 1, font = 2, col = "white", xpd = T)
 }
 
 for (i in vars) {
@@ -524,6 +596,8 @@ Note that the last function requires that the pseudotimes between two
 lineages are aligned.
 
 ``` {r}
+#| label: dge-lin
+
 res <- na.omit(diffEndTest(sceGAM))
 res <- res[res$pvalue < 1e-3, ]
 res <- res[res$waldStat > mean(res$waldStat), ]
@@ -535,6 +609,7 @@ You can see now that there are even more columns, one for the pairwise
 comparison between each lineage. Let's check lineage 1 vs lineage 2:
 
 ``` {r}
+#| label: plot-dge-lin
 #| fig-height: 12
 #| fig-width: 12
 
@@ -547,8 +622,8 @@ par(mfrow = c(4, 4), mar = c(.1, .1, 2, 1))
 {
   plot(obj@reductions$umap@cell.embeddings, col = pal[obj$clusters_use], cex = .5, pch = 16, axes = F, xlab = "", ylab = "")
   lines(curves, lwd = 2, col = "black")
-  points(centroids2d[lc, ], col = "black", pch = 15, cex = 3, xpd = T)
-  text(centroids2d[lc, ], labels = names(lc), cex = 1, font = 2, col = "white", xpd = T)
+  points(centroids2d[lc.idx, ], col = "black", pch = 15, cex = 3, xpd = T)
+  text(centroids2d[lc.idx, ], labels = names(lc), cex = 1, font = 2, col = "white", xpd = T)
 }
 
 for (i in vars) {
@@ -604,6 +679,8 @@ Click here
 </summary>
 ```
 ``` {r}
+#| label: session
+
 sessionInfo()
 ```
 

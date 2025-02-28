@@ -1,0 +1,968 @@
+---
+title: "Comparison of normalization"
+subtitle: "{{< meta subtitle_seurat >}} {{< meta subtitle_bioc >}} {{< meta subtitle_scanpy >}}"
+description: "Overview of different normalization methods"
+format: html
+---
+
+
+Run different methods of normalization and look at how the distributions look after norm.
+
+* Lognorm with different scale factors.
+* SCT with all cells or per sample. How are residuals effected?
+* TMM, Quantile. 
+* Deconvolution
+* Pearson residuals in scanpy
+
+
+```{r}
+#| label: libraries
+suppressPackageStartupMessages({
+    library(Seurat)
+    library(Matrix)
+    library(ggplot2)
+    library(patchwork)
+    library(scran)
+    library(basilisk)
+    library(dplyr)
+})
+
+devtools::source_url("https://raw.githubusercontent.com/asabjorklund/single_cell_R_scripts/main/overlap_phyper_v2.R")
+
+```
+
+
+# Load data
+
+```{r}
+#| label: load
+path_seurat = "../seurat/data/covid/results/"
+
+# seurat
+sobj = readRDS(file.path(path_seurat,"seurat_covid_qc_dr_int_cl.rds"))
+sobj
+```
+
+The object has the data split into layers, both counts and data. One single scale.data layer.
+
+Plot integrated data:
+
+```{r}
+#| label: umaps
+#| fig-height: 4
+#| fig-width: 10
+
+wrap_plots(
+    DimPlot(sobj, group.by = "RNA_snn_res.0.5", reduction = "umap_cca") + NoAxes(),
+    DimPlot(sobj, group.by = "orig.ident", reduction = "umap_cca") + NoAxes(),
+    FeaturePlot(sobj,  "nFeature_RNA", reduction = "umap_cca") + NoAxes(), 
+    FeaturePlot(sobj,  "percent_mito", reduction = "umap_cca") + NoAxes(), 
+    ncol = 2
+)
+
+sobj = SetIdent(sobj, value = "RNA_snn_res.0.5")
+sobj@active.assay = "RNA"
+```
+
+
+Select a set of variable genes to analyse across all normalizations, 5K genes.
+
+```{r}
+#| label: hvgs
+sobj = FindVariableFeatures(sobj, nfeatures = 5000, verbose = F)
+
+hvg = VariableFeatures(sobj)
+```
+
+# Normalize
+
+## SCT per layer
+
+First, run SCT on each layer, e.g. each sample.
+
+
+```{r}
+#| label: sctl
+
+sobj = SCTransform(sobj, new.assay.name = "SCTL", verbose = F)
+
+dim(sobj@assays$SCTL@counts)
+dim(sobj@assays$SCTL@data)
+dim(sobj@assays$SCTL@scale.data)
+```
+
+First runs SCT for each layer separately, then creates one merged counts, data, scale.data.
+
+Fewer genes in the SCT counts/data matrix.
+
+```{r}
+#| label: sctl-var
+vg = list()
+for (n in names(sobj@assays$SCTL@SCTModel.list)){ 
+  vg[[n]] = rownames(sobj@assays$SCTL@SCTModel.list[[n]]@feature.attributes)[sobj@assays$SCTL@SCTModel.list[[n]]@feature.attributes$genes_log_gmean_step1]
+}
+
+o = overlap_phyper2(vg,vg, bg = nrow(sobj@assays$RNA))
+
+all.vg = unique(unlist(vg))
+
+length(all.vg)
+
+dim(sobj@assays$SCTL@scale.data)
+sum(rownames(sobj@assays$SCTL@scale.data) %in% all.vg)
+```
+Total variable genes from each dataset is more than the size of `scale.data`. The function first runs SCT for each dataset, then runs Seurat VariableFeatures on each object. and takes the union!
+
+```
+# from the seurat function:
+      vf.list <- lapply(X  = sct.assay.list, FUN = function(object.i) VariableFeatures(object = object.i))
+      variable.features.union <- Reduce(f = union, x = vf.list)
+```
+
+Those genes are used to calculate the residuals in scale.data. Still, among those genes, only 4437 are among the first set of 5000 variable genes.
+
+
+Calculate residuals for all genes:
+
+
+```{r}
+#| label: prep-sctl
+sobj = PrepSCTFindMarkers(sobj, assay = "SCTL")
+#, anchor.features = intersect(rownames(sobj), hvg))$s
+
+```
+
+## Annotation
+
+Merge the layers and run all normalization with all genes together. Filter genes with less than 5 cells.
+
+```{r}
+#| label: join-layers
+sobj@active.assay = "RNA"
+sobj <- JoinLayers(object = sobj, layers = c("data","counts"))
+
+# remove genes with less than 5 cells.
+nC = rowSums(sobj@assays$RNA@layers$counts > 0)
+sobj = sobj[nC>4,]
+sobj = NormalizeData(sobj, verbose = F)
+
+# add the normalized to a list 
+ndata = list()
+C = sobj@assays$RNA@layers$counts
+rownames(C) = rownames(sobj)
+colnames(C) = colnames(sobj)
+ndata$counts = C
+D = sobj@assays$RNA@layers$data
+rownames(D) = rownames(sobj)
+colnames(D) = colnames(sobj)
+ndata$lognorm10k = D
+
+
+# also add in the SCTL data
+ndata$sctl_counts = sobj@assays$SCTL@counts
+ndata$sctl_data = sobj@assays$SCTL@data
+ndata$sctl_scaledata = sobj@assays$SCTL@scale.data
+
+
+
+```
+
+
+Add celltype annotation from Azimuth. Define as broad celltypes based on the clusters for visualization.
+
+```{r}
+#| label: celltypes
+celltype.file = "data/celltype_azimuth.csv"
+if (file.exists(celltype.file)){
+  ct = read.csv(celltype.file, row.names = 1)
+  sobj$celltype = ct$celltype
+  sobj$predicted.celltype.l1 = ct$predicted.celltype.l1
+}else {
+  library(Azimuth)
+  sobj <- RunAzimuth(sobj, reference = "pbmcref")
+  annot = list("0"="Mono","5"="Mono","8"="Other","9"="Mix","3"="BC","6"="BC","1"="NK","2"="TC","4"="TC", "7"="TC")
+  sobj$celltype = unname(unlist(annot[as.character(sobj@active.ident)]))
+  ct = sobj@meta.data[,c("celltype","predicted.celltype.l1")]
+  write.csv(ct, file=celltype.file)
+  
+}
+p1 = DimPlot(sobj, label = T, reduction = "umap_cca")  + NoAxes()
+p2 = DimPlot(sobj, reduction = "umap_cca", group.by = "predicted.celltype.l1", label = T) + NoAxes()
+
+p3 = DimPlot(sobj, reduction = "umap_cca", group.by = "celltype", label = T) + NoAxes()
+wrap_plots(p1,p2,p3, ncol=2)
+
+sobj = SetIdent(sobj, value = "celltype")
+
+```
+
+
+## SCT merged
+
+Run with all cells considered a single sample.
+
+```{r}
+#| fig.height: 6
+#| label: sct
+
+sobj = SCTransform(sobj, new.assay.name = "SCT", verbose = F)
+ndata$sct_data = sobj@assays$SCT@data
+ndata$sct_counts = sobj@assays$SCT@counts
+
+VlnPlot(sobj, c("CD3E","CD14","CCR7","RPL10"), assay = "SCT", slot = "data", ncol=4)
+VlnPlot(sobj, c("CD3E","CD14","CCR7","RPL10"), assay = "SCTL", slot = "data", ncol=4)
+```
+
+Returns a Seurat object with a new assay (named SCT by default) with counts being (corrected) counts, data being log1p(counts), scale.data being pearson residuals
+
+
+```{r}
+#| label: sct-dims
+dim(sobj@assays$RNA@layers$counts)
+dim(sobj@assays$SCT@counts)
+dim(sobj@assays$SCT@scale.data)
+```
+
+
+
+```{r}
+#| label: sct-plot
+#| fig.height: 8
+wrap_plots(
+FeatureScatter(sobj, "nCount_RNA","nCount_SCT", group.by = "orig.ident") + NoLegend(),
+FeatureScatter(sobj, "nFeature_RNA","nFeature_SCT", group.by = "orig.ident") + NoLegend(),
+FeatureScatter(sobj, "nCount_RNA","nCount_SCTL", group.by = "orig.ident") + NoLegend(),
+FeatureScatter(sobj, "nFeature_RNA","nFeature_SCTL", group.by = "orig.ident")+ NoLegend(),
+ncol = 2
+)
+range(sobj$nFeature_RNA)
+range(sobj$nFeature_SCT)
+
+VlnPlot(sobj, c("nCount_RNA","nCount_SCT", "nCount_SCTL")) + NoLegend()
+VlnPlot(sobj, c("nFeature_RNA","nFeature_SCT", "nFeature_SCTL")) + NoLegend() 
+```
+
+Much lower number of features per cell, especially in the high nF cells. But also higher lowest number of features. How can the nFeatures increase?
+
+Seems like it is mainly genes that are high in most cells that get "imputed" counts in SCT, but they are still low.
+
+
+Plot stats per gene:
+
+```{r}
+#| label: sct-gene-plot
+df.genes = data.frame(
+  nCell_RNA=rowSums(ndata$counts>0),
+  nUMI_RNA=rowSums(ndata$counts),
+  nCell_SCT=rowSums(ndata$sct_counts>0),
+  nUMI_SCT=rowSums(ndata$sct_counts))
+
+wrap_plots(
+ggplot(df.genes, aes(x=nCell_RNA,y=nCell_SCT)) + geom_point() + theme_classic(),
+ggplot(df.genes, aes(x=nUMI_RNA,y=nUMI_SCT)) + geom_point() + theme_classic() + scale_x_log10() + scale_y_log10(),
+ggplot(df.genes, aes(x=nUMI_RNA,y=nCell_RNA)) + geom_point() + theme_classic() + scale_x_log10(),
+ggplot(df.genes, aes(x=nUMI_SCT,y=nCell_SCT)) + geom_point() + theme_classic() + scale_x_log10(),
+ncol = 2
+)
+```
+
+Each gene is found in a similar number of cells, but the nUMI per gene is much lower with SCT
+
+
+Get residuals for all of the hvgs
+
+```{r}
+#| label: sct-prep
+sobj@active.assay = "SCT"
+sobj = PrepSCTIntegration(list(s = sobj), anchor.features = intersect(rownames(sobj), hvg))$s
+# some of the hvgs are not in the SCT assay!
+ndata$sct_scaledata = sobj@assays$SCT@scale.data
+
+
+dim(sobj@assays$SCT@scale.data)
+```
+
+
+Many cells have counts for genes where there was no detection. Check for instance chrY genes and the XIST gene. That we know should mainly be in males/females.
+
+
+```{r}
+#| label: chrYgenes
+
+genes_file <- file.path(path_seurat, "genes_table.csv")
+genes.table <- read.csv(genes_file)
+genes.table <- genes.table[genes.table$external_gene_name %in% rownames(sobj), ]
+
+par1 = c(10001, 2781479)
+par2 = c(56887903, 57217415)
+p1.gene = genes.table$external_gene_name[genes.table$start_position > par1[1] & genes.table$start_position < par1[2] & genes.table$chromosome_name == "Y"]
+p2.gene = genes.table$external_gene_name[genes.table$start_position > par2[1] & genes.table$start_position < par2[2] & genes.table$chromosome_name == "Y"]
+
+chrY.gene <- genes.table$external_gene_name[genes.table$chromosome_name == "Y"]
+chrY.gene = setdiff(chrY.gene, c(p1.gene, p2.gene))
+
+sobj <- PercentageFeatureSet(sobj, features = chrY.gene, col.name = "pct_chrY_SCT", assay = "SCT")
+# SCTL has fewer genes in the count matrix, 
+sobj <- PercentageFeatureSet(sobj, features = intersect(chrY.gene, rownames(sobj@assays$SCTL@counts)), col.name = "pct_chrY_SCTL", assay = "SCTL")
+sobj <- PercentageFeatureSet(sobj, features = chrY.gene, col.name = "pct_chrY_RNA", assay = "RNA")
+
+
+VlnPlot(sobj, group.by = "orig.ident", features = c("pct_chrY_RNA", "pct_chrY_SCT","pct_chrY_SCTL"))
+```
+
+ChrY genes have low counts in the female cells with SCT. But not in SCTL which is run per sample, so SCT borrows information across the samples.
+
+```{r}
+#| label: sex-plot
+#| fig.height: 8
+p1 = VlnPlot(sobj, group.by = "orig.ident", features = "XIST", assay = "RNA", slot = "data") + NoLegend()
+p2 = VlnPlot(sobj, group.by = "orig.ident", features = "XIST", assay = "SCT", slot = "data") + NoLegend()
+
+p3 = VlnPlot(sobj, group.by = "orig.ident", features = "XIST", assay = "SCTL", slot = "data") + NoLegend()
+
+p1 + p2 + p3
+```
+
+Same for XIST expression.
+
+
+## Subsample
+
+From now, use a smaller dataset.
+
+Select 10 cells per sample and cluster to make a smaller dataset for the comparison. Use resolution 1 with 11 clusters.
+
+Then filter again for genes detected in at least 5 cells.
+
+```{r}
+#| label: subsample
+dim(sobj)
+
+sobj@active.assay = "RNA"
+sobj = DietSeurat(sobj, assays = "RNA")
+
+sobj$clust_sample = paste0(sobj$RNA_snn_res.1, sobj$orig.ident)
+sobj = SetIdent(sobj, value = "clust_sample")
+sobj = subset(sobj, cells = WhichCells(sobj, downsample = 10))
+
+nC = rowSums(sobj@assays$RNA@layers$counts > 0)
+sobj = sobj[nC>4,]
+
+dim(sobj)
+```
+
+Also subset all normdata for the same cells/genes, and also the subset of variable genes
+
+```{r}
+#| label: subset-ndata
+hvg = intersect(rownames(sobj),hvg)
+
+for (n in names(ndata)){
+  tmp = intersect(hvg, rownames(ndata[[n]]))
+  ndata[[n]] = ndata[[n]][tmp,colnames(sobj)]
+}
+
+# clean memory 
+gc()
+
+```
+
+
+## Scalefactors lognorm
+
+First plot counts and default lognorm (sf=10K) and calculate scale.data for the different normalizations.
+
+Also calculate hvgs to get dispersions at different scale factors.
+
+### SF 10K
+
+```{r}
+#| label: lognorm10k
+
+sobj = SetIdent(sobj, value =  "RNA_snn_res.0.5")
+
+#VlnPlot(sobj, c("CD3E","CD14","CCR7","RPL10"), slot = "counts", ncol=4)
+#VlnPlot(sobj, c("CD3E","CD14","CCR7","RPL10"), slot = "data", ncol=4)
+
+
+# vagenes for 10k
+vinfo = list()
+tmp = FindVariableFeatures(sobj, selection.method = "mean.var.plot", verbose = F, assay = "RNA")
+vinfo[["10k"]] = tmp@assays$RNA@meta.data
+
+
+
+sobj = ScaleData(sobj, features = hvg, assay = "RNA")
+D = sobj@assays$RNA@layers$scale.data
+rownames(D) = hvg
+colnames(D) = colnames(sobj)
+ndata$lognorm10k_scaledata = D
+
+cd3plots = list()
+cd3plots[[1]] = VlnPlot(sobj, features = "CD3E") + NoAxes() + ggtitle("10K") + NoLegend()
+
+```
+
+### SF 1K 
+
+```{r}
+#| label: lognorm1k
+
+tmp = NormalizeData(sobj, scale.factor = 1000, verbose = F)
+
+tmp = FindVariableFeatures(tmp, selection.method = "mean.var.plot", verbose = F, assay = "RNA")
+vinfo[["1k"]] = tmp@assays$RNA@meta.data
+
+
+D = tmp@assays$RNA@layers$data
+rownames(D) = rownames(sobj)
+colnames(D) = colnames(sobj)
+ndata$lognorm1k = D[hvg,]
+#VlnPlot(tmp, c("CD3E","CD14","CCR7","RPL10"), slot = "data", ncol=4)
+
+tmp = ScaleData(tmp, features = hvg, assay = "RNA")
+D = tmp@assays$RNA@layers$scale.data
+rownames(D) = hvg
+colnames(D) = colnames(sobj)
+ndata$lognorm1k_scaledata = D
+
+cd3plots[[2]] = VlnPlot(tmp, features = "CD3E") + NoAxes() + ggtitle("1K") + NoLegend()
+
+
+```
+
+### SF 100K 
+
+```{r}
+#| label: lognorm100k
+tmp = NormalizeData(sobj, scale.factor = 100000, verbose = F)
+
+D = tmp@assays$RNA@layers$data
+rownames(D) = rownames(sobj)
+colnames(D) = colnames(sobj)
+ndata$lognorm100k = D[hvg,]
+
+tmp = ScaleData(tmp, features = hvg, assay = "RNA")
+D = tmp@assays$RNA@layers$scale.data
+rownames(D) = hvg
+colnames(D) = colnames(sobj)
+ndata$lognorm100k_scaledata = D
+
+tmp = FindVariableFeatures(tmp, selection.method = "mean.var.plot", verbose = F, assay = "RNA")
+vinfo[["100k"]] = tmp@assays$RNA@meta.data
+
+#VlnPlot(tmp, c("CD3E","CD14","CCR7","RPL10"), slot = "data", ncol=4)
+
+cd3plots[[3]] = VlnPlot(tmp, features = "CD3E") + NoAxes() + ggtitle("100K") + NoLegend()
+wrap_plots(cd3plots, ncol = 3)
+
+```
+
+Clearly gives a larger difference to zero with larger size factors. So the dispersion will be higher.
+
+In principle is the same as changing the pseudocount which is now 1. 
+
+### Dispersions
+
+Plot the estimated dispersions with mvp vs mean.
+
+```{r}
+#| label: dispersions
+
+vinfo = vinfo[sort(names(vinfo))]
+
+plots = list()
+for (n in names(vinfo)){
+  plots[[n]] = ggplot(vinfo[[n]], aes(x=vf_mvp_data_mvp.mean, y=vf_mvp_data_mvp.dispersion.scaled, color = vf_mvp_data_variable)) + geom_point()+ ggtitle(paste0(n, " - ", sum(vinfo[[n]]$vf_mvp_data_variable), " hvgs")) + theme_classic() + NoLegend() 
+}
+
+wrap_plots(plots, ncol=2)
+
+```
+
+Much higher dispersions and more variable genes with 100K, very low with 1k.
+
+The cutoffs are dispersions over 1 and mean 0.1-8
+
+
+```{r}
+#| label: dispersions-pair
+disp = data.frame(Reduce(cbind,lapply(vinfo, function(x) x$vf_mvp_data_mvp.dispersion.scaled)))
+colnames(disp) = names(vinfo)
+plot(disp)
+
+```
+
+Still similar trend on the dispersions, the same genes have high dispersion.
+
+
+## Logcounts
+
+Log of counts without depth normalization
+
+```{r}
+#| label: logcounts
+ndata$logcounts = log1p(ndata$counts)
+```
+
+
+## TMM
+
+Run EdgeR TMM, 
+
+```{r}
+#| eval: true 
+#| label: tmm
+
+# TMM
+dge = edgeR::DGEList(sobj@assays$RNA@layers$counts)
+dge <- edgeR::normLibSizes(dge, method = "TMM")
+tmp  = edgeR::cpm(dge) # is with log = FALSE
+colnames(tmp) = colnames(sobj)
+tmp = tmp[rownames(sobj) %in% hvg,]
+rownames(tmp) = hvg
+ndata$tmm = tmp
+
+tmp = edgeR::cpm(dge, log = TRUE)
+colnames(tmp) = colnames(sobj)
+tmp = tmp[rownames(sobj) %in% hvg,]
+rownames(tmp) = hvg
+ndata$tmm_log = tmp
+
+```
+
+
+## Quantile
+
+limma-voom quantile
+
+```{r}
+#| label: quantile
+# should be run on the lognorm values. use the full dataset to calculate.
+tmp = limma::voom(sobj@assays$RNA@layers$data,normalize.method = "quantile")$E
+colnames(tmp) = colnames(sobj)
+rownames(tmp) = rownames(sobj)
+ndata$quantile = tmp[hvg,]
+
+```
+
+
+## Deconvolution
+
+Run `quickCluster` and then `computeSumFactors`. 
+
+```{r}
+#| label: deconv
+library(scran)
+set.seed(100)
+
+sce = as.SingleCellExperiment(sobj)
+cl = quickCluster(sce)
+table(cl)
+sce <- computeSumFactors(sce, cluster=cl, min.mean=0.1)
+sce <- logNormCounts(sce)
+assayNames(sce)
+
+tmp = assay(sce, "logcounts")
+tmp = tmp[hvg,]
+ndata$deconv = tmp
+
+```
+
+
+## Pearson residuals
+
+Using the method implemented in scanpy.
+
+```{r}
+#| label: pearson
+
+penv = "/Users/asabjor/miniconda3/envs/scanpy_2024_nopip"
+norm.scanpy = basiliskRun(env=penv, fun=function(counts) {
+    scanpy <- reticulate::import("scanpy")
+    ad = reticulate::import("anndata")
+    adata = ad$AnnData(counts)
+    print(adata$X[1:10,1:10])
+    #sc.experimental.pp.normalize_pearson_residuals(adata)
+    scanpy$experimental$pp$normalize_pearson_residuals(adata)
+    return(list(norm=adata$X))
+
+}, counts = t(sobj@assays$RNA@layers$counts),  testload="scanpy")
+
+
+
+rownames(norm.scanpy$norm) = colnames(sobj)
+colnames(norm.scanpy$norm) = rownames(sobj)
+
+ndata$pearson = t(norm.scanpy$norm[,hvg])
+
+```
+
+## CD3 violins
+
+Plot cd3 violins for these different normalizations.
+
+```{r}
+#| fig.width: 14
+#| fig.height: 14
+#| label: cd3
+
+
+cd3 = data.frame(Reduce(cbind, lapply(ndata, function(x) x["CD3E",])))
+colnames(cd3)=names(ndata)
+cd3$clusters = sobj@active.ident
+
+df = reshape2::melt(cd3, id = "clusters")
+df$variable = factor(df$variable, levels = sort(names(ndata)))
+
+ggplot(df, aes(x=clusters, y=value, fill=clusters)) + geom_violin(trim = T, scale = "width" , adjust = 1) + facet_wrap(~variable, scales = "free")
+```
+
+
+
+# Distributions
+
+Plot the expression distribution for a few single cells using each method. Select cells with highest/medium/lowest total counts. 
+
+```{r}
+#| label: select-cells
+cs = colSums(ndata$counts)
+r = order(cs)
+sel = r[c(1,460,length(r))]
+cs[sel]
+```
+
+```{r}
+#| fig.height: 14
+#| warning: false
+#| label: distributions
+subset = lapply(ndata, function(x) x[,sel])
+ 
+plots = list()
+for (ds in sort(names(subset))){
+  l = reshape2::melt(data.frame(subset[[ds]]))
+  plots[[ds]] = ggplot(l, aes(x=value)) + geom_histogram(bins = 200) + theme_classic() + facet_wrap(~variable, scales="free") + scale_y_log10() + ggtitle(ds) 
+}
+
+wrap_plots(plots[1:6], ncol=1)
+wrap_plots(plots[7:12], ncol=1)
+wrap_plots(plots[13:length(plots)], ncol=1)
+```
+
+
+
+
+# Cell correlations
+
+For all the different normalizations, calculate the correlation between cells. For a fair comparison, use the same set of genes.
+
+Except for the scaledata for SCTL that has too few genes!
+
+```{r}
+#| label: cor-function
+# corSparse function copied from Signac package utilities.R
+
+corSparse <- function(X, Y = NULL, cov = FALSE) {
+  X <- as(object = X, Class = "CsparseMatrix")
+  n <- nrow(x = X)
+  muX <- colMeans(x = X)
+  
+  if (!is.null(x = Y)) {
+    if (nrow(x = X) != nrow(x = Y)) {
+      stop("Matrices must contain the same number of rows")
+    }
+    Y <- as(object = Y, Class = "CsparseMatrix")
+    muY <- colMeans(x = Y)
+    covmat <- ( as.matrix(x = crossprod(x = X, y = Y)) - n * tcrossprod(x = muX, y = muY) ) / (n-1)
+    sdvecX <- sqrt( (colSums(x = X^2) - n*muX^2) / (n-1) )
+    sdvecY <- sqrt( (colSums(x = Y^2) - n*muY^2) / (n-1) )
+    cormat <- covmat / tcrossprod(x = sdvecX, y = sdvecY)
+  } else {		
+    covmat <- ( as.matrix(crossprod(x = X)) - n * tcrossprod(x = muX) ) / (n-1)
+    sdvec <- sqrt(x = diag(x = covmat))
+    cormat <- covmat / tcrossprod(x = sdvec)
+  }
+  if (cov) {
+    dimnames(x = covmat) <- NULL
+    return(covmat)
+  } else {
+    dimnames(x = cormat) <- NULL
+    return(cormat)
+  }
+}
+```
+
+
+
+```{r}
+#| label: correl
+
+# have fewer genes for sctl-scaledata, still use the same set for all other samples ignoring that sctl has fewer!
+t = table(unlist(lapply(ndata, rownames)))
+selG = names(t)[t >= (length(ndata)-1)] 
+ndata = lapply(ndata, function(x) x[intersect(rownames(x),selG),])
+
+cors = list()
+for (n in sort(names(ndata))){
+  print(n)
+  cors[[n]] = corSparse(ndata[[n]])
+}
+#cors = lapply(ndata, function(x) corSparse(x))
+```
+
+```{r}
+#| label: correl-plot
+breaks = seq(-0.5,1,0.01)
+
+cc = lapply(cors, function(x) 
+  hist(x[upper.tri(x)],breaks=breaks,plot=F)$counts)
+
+count.hist = data.frame(Reduce(cbind,cc))
+colnames(count.hist) = names(ndata)
+count.hist$breaks = breaks[-1]
+
+c = Reduce(cbind, lapply(cors, function(x) x[upper.tri(x)]))
+colnames(c) = names(cors)
+long = reshape2::melt(c)
+
+ggplot(long, aes(x=value)) + geom_histogram(bins=100) + 
+  facet_wrap(~Var2, scales = "free_y") + geom_vline(xintercept =0, color="red") 
+
+stats = apply(c, 2, summary)
+t(stats)
+```
+
+# Clustering
+
+Run a quick umap/clustering with the different normalizations. All with same set of genes, pca with 20 PCs, 
+
+```{r}
+#| label: cluster
+
+# need to run the commands to get all setting correct in the seurat object. 
+sobj.all =  CreateSeuratObject(counts = ndata$counts[selG,])
+sobj.all = NormalizeData(sobj.all, verbose = F)
+sobj.all = ScaleData(sobj.all, verbose = F)
+sobj.all$old_clust = sobj$RNA_snn_res.0.5
+sobj.all$sample = sobj$orig.ident
+
+# then run per dataset
+for (ds in sort(names(ndata))){
+  if (ds == "sctl_scaledata") { next }
+  d = as(ndata[[ds]][selG,], "matrix")
+  sobj.all@assays$RNA@layers$scale.data = d
+  sobj.all = sobj.all %>% RunPCA(npcs=50,verbose = F, features = selG) %>% RunUMAP(dims=1:20, verbose = F) %>% FindNeighbors(dims=1:20, verbose = F) %>% FindClusters(resolution = 0.6, verbose = F)
+  sobj.all[[paste0("umap_",ds)]] = sobj.all[["umap"]]
+  sobj.all[[paste0("clusters_",ds)]] = sobj.all[["seurat_clusters"]]
+  sobj.all[[paste0("pca_",ds)]] = sobj.all[["pca"]]
+}
+
+```
+
+Gene detection in all:
+
+```{r}
+#| label: features
+plots = list()
+for (ds in sort(names(ndata))){
+  if (ds == "sctl_scaledata") { next }
+  plots[[ds]] = FeaturePlot(sobj.all, features = "nFeature_RNA", reduction = paste0("umap_",ds), pt.size = .2) + NoLegend() + NoAxes() + ggtitle(ds) + theme(plot.title = element_text(size = 6))
+}
+
+wrap_plots(plots, ncol=4)
+
+```
+
+Celltype predictions in all:
+
+```{r}
+#| label: celltype-plot
+plots = list()
+sobj.all$celltype = sobj[,colnames(sobj.all)]$celltype
+
+for (ds in sort(names(ndata))){
+  if (ds == "sctl_scaledata") { next }
+  plots[[ds]] = DimPlot(sobj.all, group.by = "celltype", label = T, label.size = 2, reduction = paste0("umap_",ds), pt.size = .2) + NoLegend() + NoAxes() + ggtitle(ds) + theme(plot.title = element_text(size = 6))
+}
+
+wrap_plots(plots, ncol=4)
+
+```
+
+### PCs stats
+
+#### Contribution to variance
+
+How much variance is in each pc, among the 50 PCs calculated. Plot for first 10 PCs
+
+```{r}
+#| label: pcs
+nplot = 10
+
+pcs = names(sobj.all@reductions)[grepl("pca_", names(sobj.all@reductions))]
+
+std = lapply(pcs, function(x) Stdev(sobj.all, reduction = x))
+
+variance_explained <- data.frame(Reduce(cbind,lapply(std, function(x) (x^2 / sum(x^2) * 100)[1:nplot])))
+colnames(variance_explained) = pcs
+
+variance_explained$PC = factor(as.character(1:nrow(variance_explained)), levels = as.character(1:nrow(variance_explained)))
+df = reshape2::melt(variance_explained[1:10,])
+
+ggplot(df, aes(x=PC, y=value)) + geom_bar(stat="identity") + facet_wrap(~variable)
+
+```
+
+For TMM and quantile, pretty much all variance is in PC1. 
+
+More flat for the scaled data and for residuals. 
+
+Also more flat with lower size factors.
+
+#### PC correlation to different stats
+
+Correlation to nFeatures - plot as R-squared. 
+
+```{r}
+#| label: pcs-features
+
+emb = lapply(pcs, function(x) Embeddings(sobj.all, reduction = x))
+
+plot_pc_correl = function(emb, feature){
+  f = as.matrix(sobj[[feature]])
+  cors = Reduce(rbind,lapply(emb, function(x) {
+      apply(x[,1:10],2,function(y) summary(lm(y ~ f))$r.squared)
+    }))
+    
+  df = data.frame(t(cors))
+  colnames(df) = pcs
+  df$PC = factor(as.character(1:10), levels = as.character(1:10))
+
+  df2 = reshape2::melt(df)
+  df2$value = abs(df2$value)
+
+  ggplot(df2, aes(x=PC, y=value)) + geom_bar(stat="identity") + facet_wrap(~variable)
+}
+
+plot_pc_correl(emb, "nFeature_RNA")
+```
+
+Most methods have PC1 dominated by nFeatures, but more so for logcounts, lognorm with large size factors and bulk methods.
+
+
+Same for mito genes and total counts:
+
+```{r}
+#| label: pcs-qc
+plot_pc_correl(emb, "percent_mito")
+
+plot_pc_correl(emb, "nCount_RNA")
+```
+
+Vs celltypes:
+
+```{r}
+#| label: pcs-celltype
+plot_pc_correl(emb, "celltype")
+```
+
+
+
+# DGE
+
+Run DGE detection between 2 clusters, do NK vs T-cell, using the differently normalized data and compare results.
+
+One parametric test (MAST), one rank-based (wilcoxon). Select 150 cells of each celltype.
+
+Just for lognorm, deconvolution, sct data, tmm-log and logcounts.
+
+```{r}
+#| label: run-dge
+# select 150 cells from each celltype
+sobj = SetIdent(sobj, value = "celltype")
+selC = intersect(colnames(sobj)[which(sobj$celltype %in% c("NK","TC"))], WhichCells(sobj, downsample = 150))
+tmp = sobj[selG,selC]
+
+
+# then run per dataset
+markersM = list()
+sel.methods = c("lognorm10k","deconv","logcounts","sct_data","tmm_log")
+
+for (ds in sel.methods){
+  d = as(ndata[[ds]][rownames(tmp),selC], "matrix")
+  tmp@assays$RNA@layers$data = d
+  markersM[[paste0("M-",ds)]] = FindMarkers(tmp, ident.1 = "TC", ident.2 = "NK", test.use = "MAST")
+  markersM[[paste0("W-",ds)]] = FindMarkers(tmp, ident.1 = "TC", ident.2 = "NK", test.use = "wilcox")
+}
+
+
+```
+
+Select significant genes below 0.01. OBS! test only among 4.6K genes, so adjusted pvalue is lower than it should.
+
+
+```{r}
+#| label: alltests
+signM = lapply(markersM, function(x) {
+  up = rownames(x)[x$avg_log2FC>0 & x$p_val_adj < 0.01]
+  down = rownames(x)[x$avg_log2FC<0 & x$p_val_adj < 0.01] 
+  return(list(up=up, down=down))
+})
+
+nM = Reduce(cbind, lapply(signM, function(x)  c(length(x$up), length(x$down))))
+colnames(nM) = names(signM)
+rownames(nM) = c("TC","NK")
+
+df = reshape2::melt(nM)
+ggplot(df, aes(x=Var2, y=value, fill = Var1)) + geom_bar(stat = "identity") + theme_classic() + RotatedAxis() + ggtitle("Number of significant genes") 
+```
+
+
+Select all genes enriched in NK, top 100 genes
+
+
+```{r}
+#| label: dge-nk
+
+l1 = lapply(signM, function(x) x$down[1:100])
+
+
+o = overlap_phyper2(l1,l1, silent = T,  remove.diag = T)
+m = o$M[1:length(l1), 1:length(l1)]
+diag(m) = NA
+pheatmap(m, display_numbers = m, main="top 100 NK genes")
+
+```
+
+Same for Tcell degs, fewer significant genes, take top 65
+
+```{r}
+#| label: dge-tc
+
+l1 = lapply(signM, function(x) x$up[1:65])
+
+
+o = overlap_phyper2(l1,l1, silent = T,  remove.diag = T)
+m = o$M[1:length(l1), 1:length(l1)]
+diag(m) = NA
+pheatmap(m, display_numbers = m, main="top 65 TC genes")
+
+```
+For TC genes 55 - 64 genes overlap among top 65.
+For NK genes 90 - 99 of top 100 genes overlap. 
+
+Quite similar regardless of normalization. 
+
+
+
+# {{< meta session >}}
+
+<details>
+  <summary>Click here</summary>
+
+```{r}
+#| label: session
+sessionInfo()
+```
+
+</details>

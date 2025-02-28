@@ -15,20 +15,24 @@ Code chunks run R commands unless otherwise specified.
 
 
 ```{r}
+#| label: paths
 # download pre-computed annotation
 fetch_annotation <- TRUE
 
 # url for source and intermediate data
-path_data <- "https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"
+path_data <- "https://nextcloud.dc.scilifelab.se/public.php/webdav"
+curl_upass <- "-u zbC5fr2LbEZ9rSE:scRNAseq2025"
 
-path_covid <- "./data/covid"
+path_covid <- "./data/covid/raw"
 if (!dir.exists(path_covid)) dir.create(path_covid, recursive = T)
 
-path_results <- "data/covid/results"
+path_results <- "./data/covid/results"
 if (!dir.exists(path_results)) dir.create(path_results, recursive = T)
+
 ```
 
 ```{r}
+#| label: fetch-data
 file_list <- c(
     "normal_pbmc_13.h5", "normal_pbmc_14.h5", "normal_pbmc_19.h5", "normal_pbmc_5.h5",
     "ncov_pbmc_15.h5", "ncov_pbmc_16.h5", "ncov_pbmc_17.h5", "ncov_pbmc_1.h5"
@@ -37,7 +41,8 @@ file_list <- c(
 for (i in file_list) {
     path_file <- file.path(path_covid, i)
     if (!file.exists(path_file)) {
-        download.file(url = file.path(file.path(path_data, "covid"), i), destfile = path_file)
+        download.file(url = file.path(file.path(path_data, "covid/raw"), i), 
+                      destfile = path_file, method = "curl", extra = curl_upass)
     }
 }
 ```
@@ -45,17 +50,21 @@ for (i in file_list) {
 {{< meta qc_data_2 >}}
 
 ```{r}
+#| label: libraries
+
 suppressPackageStartupMessages({
     library(scater)
     library(scran)
     library(patchwork) # combining figures
     library(org.Hs.eg.db)
+    library(scDblFinder)
 })
 ```
 
 {{< meta qc_data_3 >}}
 
 ```{r}
+#| label: read-data
 cov.15 <- Seurat::Read10X_h5(
     filename = file.path(path_covid, "ncov_pbmc_15.h5"),
     use.names = T
@@ -96,6 +105,8 @@ ctrl.19 <- Seurat::Read10X_h5(
 {{< meta qc_collate_1 >}}
 
 ```{r}
+#| label: create-sce
+
 sce <- SingleCellExperiment(assays = list(counts = cbind(cov.1, cov.15, cov.16, cov.17, ctrl.5, ctrl.13, ctrl.14,ctrl.19)))
 dim(sce)
 # Adding metadata
@@ -106,6 +117,8 @@ sce@colData$type <- ifelse(grepl("cov", sce@colData$sample), "Covid", "Control")
 {{< meta qc_collate_2 >}}
 
 ```{r}
+#| label: gc
+
 # remove all objects that will not be used.
 rm(cov.15, cov.1, cov.17, cov.16, ctrl.5, ctrl.13, ctrl.14, ctrl.19)
 # run garbage collect to free up memory
@@ -115,6 +128,8 @@ gc()
 {{< meta qc_collate_3 >}}
 
 ```{r }
+#| label: show-object
+
 head(counts(sce)[, 1:10])
 head(sce@colData, 10)
 ```
@@ -126,6 +141,8 @@ head(sce@colData, 10)
 {{< meta qc_calqc_2 >}}
 
 ```{r}
+#| label: qc-genes
+
 # Mitochondrial genes
 mito_genes <- rownames(sce)[grep("^MT-", rownames(sce))]
 # Ribosomal genes
@@ -137,15 +154,18 @@ hb_genes <- rownames(sce)[grep("^HB[^(P|E|S)]", rownames(sce))]
 First, let Scran calculate some general qc-stats for genes and cells with the function `perCellQCMetrics`. It can also calculate proportion of counts for specific gene subsets, so first we need to define which genes are mitochondrial, ribosomal and hemoglobin.
 
 ```{r}
+#| label: qc-calc
 sce <- addPerCellQC(sce, flatten = T, subsets = list(mt = mito_genes, hb = hb_genes, ribo = ribo_genes))
 
 # Way2: Doing it manually
-sce@colData$percent_mito <- Matrix::colSums(counts(sce)[mito_genes, ]) / sce@colData$total
+sce@colData$percent_mito <- Matrix::colSums(counts(sce)[mito_genes, ]) / sce@colData$total * 100
 ```
 
 {{< meta qc_calqc_3 >}}
 
 ```{r}
+#| label: coldata
+
 head(colData(sce))
 ```
 
@@ -154,6 +174,7 @@ head(colData(sce))
 {{< meta qc_plotqc_1 >}}
 
 ```{r}
+#| label: qc-vln
 #| fig-height: 6
 #| fig-width: 10
 
@@ -171,9 +192,15 @@ wrap_plots(
 ) + plot_layout(guides = "collect")
 ```
 
+:::{.callout-note title="Discuss"}
+{{< meta qc_plotqc_vln >}}
+:::
+
+
 {{< meta qc_plotqc_2 >}}
 
 ```{r}
+#| label: qc-scatter
 #| fig-height: 5
 #| fig-width: 6
 plotColData(sce, x = "total", y = "detected", colour_by = "sample")
@@ -192,6 +219,7 @@ plotColData(sce, x = "total", y = "detected", colour_by = "sample")
 In Scran, we can use the function `quickPerCellQC` to filter out outliers from distributions of qc stats, such as detected genes, gene subsets etc. But in this case, we will take one setting at a time and run through the steps of filtering cells.
 
 ```{r}
+#| label: filter
 dim(sce)
 
 selected_c <- colnames(sce)[sce$detected > 200]
@@ -218,14 +246,15 @@ dim(sce.filt)
 
 {{< meta qc_filter_detect_4 >}}
 
-In Scater, you can also use the function `plotHighestExprs()` to plot the gene contribution, but the function is quite slow.
+In Scater, you can also use the function `plotHighestExprs()` to plot the gene contribution, but the function is quite slow, so we will do it on our own instead..
 
 ```{r}
+#| label: top-genes
 #| fig-height: 7
 #| fig-width: 7
 # Compute the relative expression of each gene per cell
 # Use sparse matrix operations, if your dataset is large, doing matrix devisions the regular way will take a very long time.
-C <- counts(sce)
+C <- counts(sce.filt)
 C@x <- C@x / rep.int(colSums(C), diff(C@p)) * 100
 most_expressed <- order(Matrix::rowSums(C), decreasing = T)[20:1]
 boxplot(as.matrix(t(C[most_expressed, ])), cex = .1, las = 1, xlab = "% total count per cell", col = scales::hue_pal()(20)[20:1], horizontal = TRUE)
@@ -242,6 +271,7 @@ rm(C)
 {{< meta qc_filter_mr_1 >}}
 
 ```{r}
+#| label: filter2
 selected_mito <- sce.filt$subsets_mt_percent < 20
 selected_ribo <- sce.filt$subsets_ribo_percent > 5
 
@@ -257,6 +287,7 @@ dim(sce.filt)
 {{< meta qc_filter_plot_1 >}}
 
 ```{r}
+#| label: qc-vln-filt
 #| fig-height: 6
 #| fig-width: 10
 
@@ -275,6 +306,8 @@ wrap_plots(
 {{< meta qc_filter_genes_1 >}}
 
 ```{r}
+#| label: filt-genes
+
 dim(sce.filt)
 
 # Filter MALAT1
@@ -287,7 +320,7 @@ sce.filt <- sce.filt[!grepl("^MT-", rownames(sce.filt)), ]
 # sce.filt <- sce.filt[ ! grepl("^RP[SL]", rownames(sce.filt)), ]
 
 # Filter Hemoglobin gene  (optional if that is a problem on your data)
-#sce.filt <- sce.filt[!grepl("^HB[^(P|E|S)]", rownames(sce.filt)), ]
+sce.filt <- sce.filt[!grepl("^HB[^(P|E|S)]", rownames(sce.filt)), ]
 
 dim(sce.filt)
 ```
@@ -304,6 +337,7 @@ dim(sce.filt)
 Here is the code to download annotation data from Ensembl using biomaRt. We will not run this now and instead use a pre-computed file in the step below.
 
 ```{r}
+#| label: annot
 # fetch_annotation is defined at the top of this document
 if (!fetch_annotation) {
   suppressMessages(library(biomaRt))
@@ -326,14 +360,20 @@ if (!fetch_annotation) {
 Download precomputed data.
 
 ```{r}
+#| label: fetch-annot
+
 # fetch_annotation is defined at the top of this document
 if (fetch_annotation) {
   genes_file <- file.path(path_results, "genes_table.csv")
-  if (!file.exists(genes_file)) download.file(file.path(path_data, "covid/results/genes_table.csv"), destfile = genes_file)
+  if (!file.exists(genes_file)) download.file(file.path(path_data, "covid/results_bioc/genes_table.csv"), destfile = genes_file,
+                                              method = "curl", extra = curl_upass)
 }
+
 ```
 
 ```{r}
+#| label: read-annot
+
 genes.table <- read.csv(genes_file)
 genes.table <- genes.table[genes.table$external_gene_name %in% rownames(sce.filt), ]
 ```
@@ -341,13 +381,23 @@ genes.table <- genes.table[genes.table$external_gene_name %in% rownames(sce.filt
 {{< meta qc_sex_3 >}}
 
 ```{r}
+#| label: par
+
+par1 = c(10001, 2781479)
+par2 = c(56887903, 57217415)
+p1.gene = genes.table$external_gene_name[genes.table$start_position > par1[1] & genes.table$start_position < par1[2] & genes.table$chromosome_name == "Y"]
+p2.gene = genes.table$external_gene_name[genes.table$start_position > par2[1] & genes.table$start_position < par2[2] & genes.table$chromosome_name == "Y"]
+
 chrY.gene <- genes.table$external_gene_name[genes.table$chromosome_name == "Y"]
+chrY.gene = setdiff(chrY.gene, c(p1.gene, p2.gene))
+
 sce.filt@colData$pct_chrY <- Matrix::colSums(counts(sce.filt)[chrY.gene, ]) / colSums(counts(sce.filt))
 ```
 
 {{< meta qc_sex_4 >}}
 
 ```{r}
+#| label: sex-scatter
 #| fig-height: 5
 #| fig-width: 5
 
@@ -359,6 +409,7 @@ plotColData(sce.filt, "XIST", "pct_chrY")
 {{< meta qc_sex_5 >}}
 
 ```{r}
+#| label: sex-vln
 #| fig-height: 4
 #| fig-width: 8
 
@@ -382,6 +433,8 @@ wrap_plots(
 {{< meta qc_cellcycle_1 >}}
 
 ```{r}
+#| label: cc
+
 hs.pairs <- readRDS(system.file("exdata", "human_cycle_markers.rds", package = "scran"))
 anno <- select(org.Hs.eg.db, keys = rownames(sce.filt), keytype = "SYMBOL", column = "ENSEMBL")
 ensembl <- anno$ENSEMBL[match(rownames(sce.filt), anno$SYMBOL)]
@@ -402,11 +455,14 @@ sce.filt$G1.score <- assignments$scores$G1
 sce.filt$G2M.score <- assignments$scores$G2M
 sce.filt$S.score <- assignments$scores$S
 sce.filt$phase <- assignments$phases
+
+table(sce.filt$phase)
 ```
 
 {{< meta qc_cellcycle_2 >}}
 
 ```{r}
+#| label: cc-plot
 #| fig-height: 4
 #| fig-width: 14
 
@@ -434,6 +490,8 @@ Cyclone does an automatic prediction of cell cycle phase with a default cutoff o
 There is a method to predict if a cluster consists of mainly doublets `findDoubletClusters()`, but we can also predict individual cells based on simulations using the function `computeDoubletDensity()` which we will do here. Doublet detection will be performed using PCA, so we need to first normalize the data and run variable gene detection, as well as UMAP for visualization. These steps will be explored in more detail in coming exercises.
 
 ```{r}
+#| label: doublet-norm
+
 sce.filt <- logNormCounts(sce.filt)
 dec <- modelGeneVar(sce.filt, block = sce.filt$sample)
 hvgs <- getTopHVGs(dec, n = 2000)
@@ -444,13 +502,13 @@ sce.filt <- runUMAP(sce.filt, pca = 10)
 ```
 
 ```{r}
-suppressPackageStartupMessages(library(scDblFinder))
-
+#| label: doublet
 # run computeDoubletDensity with 10 principal components.
 sce.filt <- scDblFinder(sce.filt, dims = 10)
 ```
 
 ```{r}
+#| label: doublet-plot
 #| fig-height: 5
 #| fig-width: 14
 wrap_plots(
@@ -461,18 +519,44 @@ wrap_plots(
 )
 ```
 
+{{< meta qc_doublet_3 >}}
+
+```{r}
+#| label: doublet-vln
+plotColData(sce.filt, y = "detected", x = "scDblFinder.class")
+
+```
+
+
+
 {{< meta qc_doublet_4 >}}
 
 ```{r}
-sce.filt <- sce.filt[, sce.filt$scDblFinder.score < 2]
+#| label: doublet-filt
+sce.filt <- sce.filt[, sce.filt$scDblFinder.class == "singlet"]
 dim(sce.filt)
 ```
+
+
+{{< meta qc_doublet_5 >}}
+
+```{r}
+#| label: view-data
+table(sce$sample)
+table(sce.filt$sample)
+```
+
+:::{.callout-note title="Discuss"}
+{{< meta qc_doublet_6 >}}
+:::
+
 
 ## {{< meta qc_save >}}
 
 {{< meta qc_save_1 >}}
 
 ```{r}
+#| label: save
 saveRDS(sce.filt, file.path(path_results, "bioc_covid_qc.rds"))
 ```
 
@@ -482,6 +566,7 @@ saveRDS(sce.filt, file.path(path_results, "bioc_covid_qc.rds"))
   <summary>Click here</summary>
 
 ```{r}
+#| label: session
 sessionInfo()
 ```
 

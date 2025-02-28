@@ -15,13 +15,14 @@ In this tutorial we will continue the analysis of the integrated dataset. We wil
 {{< meta clust_2 >}}
 
 ```{python}
+#| label: libraries
 import numpy as np
 import pandas as pd
 import scanpy as sc
 import matplotlib.pyplot as plt
 import warnings
 import os
-import urllib.request
+import subprocess
 
 warnings.simplefilter(action="ignore", category=Warning)
 
@@ -31,20 +32,22 @@ sc.settings.set_figure_params(dpi=80)
 ```
 
 ```{python}
+#| label: fetch-data
 # download pre-computed data if missing or long compute
 fetch_data = True
 
 # url for source and intermediate data
-path_data = "https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"
+path_data = "https://nextcloud.dc.scilifelab.se/public.php/webdav"
+curl_upass = "zbC5fr2LbEZ9rSE:scRNAseq2025"
 
 path_results = "data/covid/results"
 if not os.path.exists(path_results):
     os.makedirs(path_results, exist_ok=True)
 
-path_file = "data/covid/results/scanpy_covid_qc_dr_scanorama.h5ad"
+path_file = "data/covid/results/scanpy_covid_qc_dr_int.h5ad"
 if fetch_data and not os.path.exists(path_file):
-    urllib.request.urlretrieve(os.path.join(
-        path_data, 'covid/results/scanpy_covid_qc_dr_scanorama.h5ad'), path_file)
+    file_url = os.path.join(path_data, "covid/results_scanpy/scanpy_covid_qc_dr_int.h5ad")
+    subprocess.call(["curl", "-u", curl_upass, "-o", path_file, file_url ])
 
 adata = sc.read_h5ad(path_file)
 adata
@@ -54,28 +57,49 @@ adata
 
 {{< meta clust_graphclust_1 >}}
 
-If you recall from the integration, we already constructed a knn graph before running UMAP. Hence we do not need to do it again, and can run the community detection right away.
+In Scanpy we do not build an SNN graph, instead the community detection is done on the KNN graph which we construct using the command `sc.pp.neighbors()`. 
 
-The modularity optimization algoritm in Scanpy are *Leiden* and *Louvain*. Lets test both and see how they compare.
+The main options to consider are:
+
+* **n_pcs** - the number of dimensions from the initial reduction to include when calculating distances between cells.
+* **n_neighbors** - the number of neighbors per cell to include in the KNN graph.
+
+In this case, we will use the integrated data using Harmony. If you recall, we stored the harmony reduction in `X_pca_harmony` in the previous lab.
+
+```{python}
+#| label: neighbors
+sc.pp.neighbors(adata, n_neighbors=20, n_pcs=30, use_rep='X_pca_harmony')
+
+# We will also set the default umap to the one created with harmony
+# so that sc.pl.umap selects that embedding.
+adata.obsm["X_umap"] = adata.obsm["X_umap_harmony"]
+
+```
+
+The modularity optimization algoritm in Scanpy is *Leiden*. Previously ther was also *Louvain*, but since the Louvain algorithm is no longer maintained, using Leiden is recommended by the Scanpy community. 
 
 ### Leiden
 
 ```{python}
-sc.tl.leiden(adata, key_added = "leiden_1.0") # default resolution in 1.0
-sc.tl.leiden(adata, resolution = 0.6, key_added = "leiden_0.6")
+#| label: leiden
+# default resolution is 1.0, but we will try a few different values.
 sc.tl.leiden(adata, resolution = 0.4, key_added = "leiden_0.4")
+sc.tl.leiden(adata, resolution = 0.6, key_added = "leiden_0.6")
+sc.tl.leiden(adata, resolution = 1.0, key_added = "leiden_1.0")
 sc.tl.leiden(adata, resolution = 1.4, key_added = "leiden_1.4")
 ```
 
 Plot the clusters, as you can see, with increased resolution, we get higher granularity in the clustering.
 
 ```{python}
-sc.pl.umap(adata, color=['leiden_0.4', 'leiden_0.6', 'leiden_1.0','leiden_1.4'])
+#| label: plot-leiden
+sc.pl.umap(adata, color=['leiden_0.4', 'leiden_0.6', 'leiden_1.0','leiden_1.4'], legend_fontsize=8)
 ```
 
-Once we have done clustering, the relationships between clusters can be calculated as correlation in PCA space and we also visualize some of the marker genes that we used in the Dim Reduction lab onto the clusters.
+Once we have done clustering, the relationships between clusters can be calculated as correlation in PCA space and we also visualize some of the marker genes that we used in the Dim Reduction lab onto the clusters. If we set `dendrogram=True` the clusters are ordered by the dendrogram in the dotplot.
 
 ```{python}
+#| label: plot-dendro
 sc.tl.dendrogram(adata, groupby = "leiden_0.6")
 sc.pl.dendrogram(adata, groupby = "leiden_0.6")
 
@@ -84,34 +108,18 @@ sc.pl.dotplot(adata, genes, groupby='leiden_0.6', dendrogram=True)
 ```
 
 
-### Louvain
-
-```{python}
-sc.tl.louvain(adata, key_added = "louvain_1.0") # default resolution in 1.0
-sc.tl.louvain(adata, resolution = 0.6, key_added = "louvain_0.6")
-sc.tl.louvain(adata, resolution = 0.4, key_added = "louvain_0.4")
-sc.tl.louvain(adata, resolution = 1.4, key_added = "louvain_1.4")
-
-sc.pl.umap(adata, color=['louvain_0.4', 'louvain_0.6', 'louvain_1.0','louvain_1.4'])
-
-sc.tl.dendrogram(adata, groupby = "louvain_0.6")
-sc.pl.dendrogram(adata, groupby = "louvain_0.6")
-
-genes  = ["CD3E", "CD4", "CD8A", "GNLY","NKG7", "MS4A1","FCGR3A","CD14","LYZ","CST3","MS4A7","FCGR1A"]
-
-sc.pl.dotplot(adata, genes, groupby='louvain_0.6', dendrogram=True)
-```
 
 ## {{< meta clust_kmean >}}
 
 {{< meta clust_kmean_1 >}}
 
 ```{python}
+#| label: kmeans
 from sklearn.cluster import KMeans
 from sklearn.metrics import adjusted_rand_score
 
 # extract pca coordinates
-X_pca = adata.obsm['Scanorama'] 
+X_pca = adata.obsm['X_pca_harmony'] 
 
 # kmeans with k=5
 kmeans = KMeans(n_clusters=5, random_state=0).fit(X_pca) 
@@ -143,6 +151,7 @@ Hierarchical clustering is another generic form of clustering that can be applie
 The function `AgglomerativeClustering` has the option of running with disntance metrics “euclidean”, “l1”, “l2”, “manhattan”, “cosine”, or “precomputed". However, with ward linkage only euklidean distances works. Here we will try out euclidean distance and ward linkage calculated in PCA space.
 
 ```{python}
+#| label: hclust
 from sklearn.cluster import AgglomerativeClustering
 
 cluster = AgglomerativeClustering(n_clusters=5, linkage='ward')
@@ -160,7 +169,8 @@ sc.pl.umap(adata, color=['hclust_5', 'hclust_10', 'hclust_15'])
 {{< meta clust_save >}}
 
 ```{python}
-adata.write_h5ad('./data/covid/results/scanpy_covid_qc_dr_scanorama_cl.h5ad')
+#| label: save
+adata.write_h5ad('./data/covid/results/scanpy_covid_qc_dr_int_cl.h5ad')
 ```
 
 
@@ -173,6 +183,7 @@ Select the "leiden_0.6" and plot proportion of samples per cluster and also prop
 Plot proportion of cells from each condition per cluster.
 
 ```{python}
+#| label: clust-distribution
 tmp = pd.crosstab(adata.obs['leiden_0.6'],adata.obs['type'], normalize='index')
 tmp.plot.bar(stacked=True).legend(bbox_to_anchor=(1.4, 1), loc='upper right')
 
@@ -186,6 +197,7 @@ tmp.plot.bar(stacked=True).legend(bbox_to_anchor=(1.4, 1),loc='upper right')
 {{< meta clust_distribution_3 >}}
 
 ```{python}
+#| label: clust-distribution2
 tmp = pd.crosstab(adata.obs['sample'],adata.obs['leiden_0.6'], normalize='index')
 tmp.plot.bar(stacked=True).legend(bbox_to_anchor=(1.4, 1), loc='upper right')
 
@@ -195,12 +207,112 @@ tmp.plot.bar(stacked=True).legend(bbox_to_anchor=(1.4, 1), loc='upper right')
 {{< meta clust_3 >}}
 :::
 
+```{python}
+#| label: plot-qc
+sc.pl.violin(adata, ['n_genes_by_counts', 'total_counts', 'pct_counts_mt'], jitter=0.4, groupby = 'leiden_0.6', rotation= 45)
+```
+
+{{< meta clust_4 >}}
+
+## {{< meta clust_sub >}}
+
+{{< meta clust_sub_1 >}}
+
+{{< meta clust_sub_2 >}}
+
+```{python}
+#| label: plot-tcells
+# check with the lowest resolution
+fig, axs = plt.subplots(2, 3, figsize=(10,8),constrained_layout=True)
+sc.pl.umap(adata, color="leiden_0.4", ax=axs[0,0], show=False, legend_loc = "on data")
+sc.pl.umap(adata, color="CD3E", ax=axs[0,1], show=False)
+sc.pl.umap(adata, color="CD4", ax=axs[0,2], show=False)
+sc.pl.umap(adata, color="CD8A", ax=axs[1,0], show=False)
+sc.pl.umap(adata, color="GNLY", ax=axs[1,1], show=False)
+
+```
+
+
+We can clearly see what clusters are T-cell clusters, so lets subset the data for those cells
+
+
+```{python}
+#| label: select-tcells
+tcells = adata[adata.obs["leiden_0.4"].isin(['1','3','4']),:]
+tcells.obs["sample"].value_counts()
+```
+
+{{< meta clust_sub_3 >}}
+
+```{python}
+#| label: hvg-tcells
+sc.pp.highly_variable_genes(tcells, min_mean=0.0125, max_mean=3, min_disp=0.5)
+
+
+print("Full data:" , sum(adata.var.highly_variable ))
+print("Tcells:" , sum(tcells.var.highly_variable))
+print("Intersection:" , sum(tcells.var.highly_variable & adata.var.highly_variable))
+```
+
+{{< meta clust_sub_4 >}}
+
+{{< meta clust_sub_5 >}}
+
+```{python}
+#| label: subclustering
+import scanpy.external as sce 
+import harmonypy as hm 
+
+tcells.raw = tcells
+tcells = tcells[:, tcells.var.highly_variable]
+sc.pp.regress_out(tcells, ['total_counts', 'pct_counts_mt'])
+sc.pp.scale(tcells, max_value=10)
+sc.tl.pca(tcells, svd_solver='arpack')
+sce.pp.harmony_integrate(tcells, 'sample')
+sc.pp.neighbors(tcells, n_neighbors=10, n_pcs=30, use_rep='X_pca_harmony')
+sc.tl.leiden(tcells, resolution = 0.6, key_added = "tcells_0.6")
+sc.tl.umap(tcells)
+
+```
+
+
+```{python}
+#| label: plot-subcluster
+fig, axs = plt.subplots(2, 3, figsize=(10,8),constrained_layout=True)
+sc.pl.umap(tcells, color="sample", title="Tcell umap", ax=axs[0,0], show=False)
+sc.pl.embedding(tcells, 'X_umap_harmony', color="sample", title="Full umap", ax=axs[1,0], show=False)
+sc.pl.umap(tcells, color="leiden_0.6", title="Tcell umap, full clust", ax=axs[0,1], show=False)
+sc.pl.embedding(tcells, 'X_umap_harmony', color="leiden_0.6", title="Full umap, full clust", ax=axs[1,1], show=False)
+sc.pl.umap(tcells, color="tcells_0.6", title="Tcell umap, tcell clust", ax=axs[0,2], show=False)
+sc.pl.embedding(tcells, 'X_umap_harmony', color="tcells_0.6", title="Full umap, tcell clust", ax=axs[1,2], show=False)
+
+```
+
+As you can see, we do have some new clusters that did not stand out before. But in general the separation looks very similar.
+
+We can plot the subtype genes again. If you try plotting the genes with `use_raw=False` you will notice that some of the genes are not in the `adata.X` matrix. Since they are no longer included in the variable genes. So now we have to plot with `use_raw=True`. 
+
+```{python}
+#| label: subcluster-gene-plot
+fig, axs = plt.subplots(2, 2, figsize=(10,8),constrained_layout=True)
+sc.pl.umap(tcells, color="CD3E", ax=axs[0,0], show=False, use_raw=True)
+sc.pl.umap(tcells, color="CD4", ax=axs[0,1], show=False, use_raw=True)
+sc.pl.umap(tcells, color="CD8A", ax=axs[1,0], show=False, use_raw=True)
+sc.pl.umap(tcells, color="GNLY", ax=axs[1,1], show=False, use_raw=True)
+
+```
+
+:::{.callout-note title="Discuss"}
+{{< meta clust_sub_6 >}}
+:::
+
 ## {{< meta session >}}
 
 <details>
   <summary>Click here</summary>
 
 ```{python}
+#| label: session
 sc.logging.print_versions()
 ```
 

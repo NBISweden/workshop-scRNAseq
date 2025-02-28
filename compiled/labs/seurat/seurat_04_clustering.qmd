@@ -15,15 +15,17 @@ title:  Clustering
 </div>
 
 In this tutorial, we will continue the analysis of the integrated
-dataset. We will use the integrated PCA to perform the clustering.
-First, we will construct a $k$-nearest neighbor graph in order to
-perform a clustering on the graph. We will also show how to perform
-hierarchical clustering and k-means clustering on PCA space.
+dataset. We will use the integrated PCA or CCA to perform the
+clustering. First, we will construct a $k$-nearest neighbor graph in
+order to perform a clustering on the graph. We will also show how to
+perform hierarchical clustering and k-means clustering on the selected
+space.
 
 Let's first load all necessary libraries and also the integrated dataset
 from the previous step.
 
 ``` {r}
+#| label: libraries
 suppressPackageStartupMessages({
     library(Seurat)
     library(patchwork)
@@ -34,14 +36,19 @@ suppressPackageStartupMessages({
 ```
 
 ``` {r}
+#| label: fetch-data
+
 # download pre-computed data if missing or long compute
 fetch_data <- TRUE
 
 # url for source and intermediate data
-path_data <- "https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"
+path_data <- "https://nextcloud.dc.scilifelab.se/public.php/webdav"
+curl_upass <- "-u zbC5fr2LbEZ9rSE:scRNAseq2025"
+
 path_file <- "data/covid/results/seurat_covid_qc_dr_int.rds"
 if (!dir.exists(dirname(path_file))) dir.create(dirname(path_file), recursive = TRUE)
-if (fetch_data && !file.exists(path_file)) download.file(url = file.path(path_data, "covid/results/seurat_covid_qc_dr_int.rds"), destfile = path_file)
+if (fetch_data && !file.exists(path_file)) download.file(url = file.path(path_data, "covid/results_seurat/seurat_covid_qc_dr_int.rds"), destfile = path_file, method = "curl", extra = curl_upass)
+
 alldata <- readRDS(path_file)
 print(names(alldata@reductions))
 ```
@@ -68,14 +75,20 @@ computes both the KNN and SNN graphs, in which we can control the
 minimal percentage of shared neighbours to be kept. See `?FindNeighbors`
 for additional options.
 
+The main options to consider are:
+
+-   **dims** - the number of dimensions from the initial reduction to
+    include when calculating distances between cells.
+-   **k.param** - the number of neighbors per cell to include in the KNN
+    graph.
+-   **prune.SNN** - sets the cutoff for Jaccard index when pruning the
+    graph.
+
 ``` {r}
-# check if CCA is still the active assay
-alldata@active.assay
+#| label: neighbors
 
-# set the correct assay.
-alldata@active.assay <- "CCA"
-
-alldata <- FindNeighbors(alldata, dims = 1:30, k.param = 60, prune.SNN = 1 / 15)
+# use the CCA integration to create the neighborhood graph.
+alldata <- FindNeighbors(alldata, dims = 1:30, k.param = 60, prune.SNN = 1 / 15, reduction =  "integrated_cca")
 
 # check the names for graphs in the object.
 names(alldata@graphs)
@@ -93,15 +106,16 @@ clustering on unweighted graphs is faster for large datasets (\> 100k
 cells).
 
 ``` {r}
+#| label: plot-graph
 #| fig-height: 6
 #| fig-width: 6
 
-pheatmap(alldata@graphs$CCA_nn[1:200, 1:200],
+pheatmap(alldata@graphs$RNA_nn[1:200, 1:200],
     col = c("white", "black"), border_color = "grey90", main = "KNN graph",
     legend = F, cluster_rows = F, cluster_cols = F, fontsize = 2
 )
 
-pheatmap(alldata@graphs$CCA_snn[1:200, 1:200],
+pheatmap(alldata@graphs$RNA_snn[1:200, 1:200],
     col = colorRampPalette(c("white", "yellow", "red"))(100),
     border_color = "grey90", main = "SNN graph",
     legend = F, cluster_rows = F, cluster_cols = F, fontsize = 2
@@ -125,28 +139,32 @@ previous step, but you can also specify different graphs for clustering
 with `graph.name`.
 
 ``` {r}
+#| label: graph-clust
 #| fig-height: 4
 #| fig-width: 12
 #| results: hide
 
 # Clustering with louvain (algorithm 1) and a few different resolutions
 for (res in c(0.1, 0.25, .5, 1, 1.5, 2)) {
-    alldata <- FindClusters(alldata, graph.name = "CCA_snn", resolution = res, algorithm = 1)
+    alldata <- FindClusters(alldata, graph.name = "RNA_snn", resolution = res, algorithm = 1)
 }
 
 # each time you run clustering, the data is stored in meta data columns:
 # seurat_clusters - lastest results only
-# CCA_snn_res.XX - for each different resolution you test.
+# RNA_snn_res.XX - for each different resolution you test.
 ```
 
 ``` {r}
-#| fig-height: 4
-#| fig-width: 13
+#| label: plot-graph-clust
+#| fig-height: 8
+#| fig-width: 14
 
 wrap_plots(
-    DimPlot(alldata, reduction = "umap", group.by = "CCA_snn_res.0.5") + ggtitle("louvain_0.5"),
-    DimPlot(alldata, reduction = "umap", group.by = "CCA_snn_res.1") + ggtitle("louvain_1"),
-    DimPlot(alldata, reduction = "umap", group.by = "CCA_snn_res.2") + ggtitle("louvain_2"),
+    DimPlot(alldata, reduction = "umap_cca", group.by = "RNA_snn_res.0.1", label=T) + ggtitle("louvain_0.1"),
+    DimPlot(alldata, reduction = "umap_cca", group.by = "RNA_snn_res.0.25", label=T) + ggtitle("louvain_0.25"),
+    DimPlot(alldata, reduction = "umap_cca", group.by = "RNA_snn_res.0.5", label=T) + ggtitle("louvain_0.5"),
+    DimPlot(alldata, reduction = "umap_cca", group.by = "RNA_snn_res.1", label=T) + ggtitle("louvain_1"),
+    DimPlot(alldata, reduction = "umap_cca", group.by = "RNA_snn_res.2", label=T) + ggtitle("louvain_2"),
     ncol = 3
 )
 ```
@@ -155,11 +173,12 @@ We can now use the `clustree` package to visualize how cells are
 distributed between clusters depending on resolution.
 
 ``` {r}
+#| label: clustree
 #| fig-height: 8
 #| fig-width: 8
 
 suppressPackageStartupMessages(library(clustree))
-clustree(alldata@meta.data, prefix = "CCA_snn_res.")
+clustree(alldata@meta.data, prefix = "RNA_snn_res.")
 ```
 
 ## K-means clustering
@@ -174,22 +193,24 @@ centers, it is typically recommended to run K-means with multiple
 starting configurations (via the `nstart` argument).
 
 ``` {r}
+#| label: kmeans
 #| fig-height: 4
 #| fig-width: 13
 
 for (k in c(5, 7, 10, 12, 15, 17, 20)) {
-    alldata@meta.data[, paste0("kmeans_", k)] <- kmeans(x = alldata@reductions[["pca"]]@cell.embeddings, centers = k, nstart = 100)$cluster
+    alldata@meta.data[, paste0("kmeans_", k)] <- kmeans(x = Embeddings(alldata, "integrated_cca"), centers = k, nstart = 100)$cluster
 }
 
 wrap_plots(
-    DimPlot(alldata, reduction = "umap", group.by = "kmeans_5") + ggtitle("kmeans_5"),
-    DimPlot(alldata, reduction = "umap", group.by = "kmeans_10") + ggtitle("kmeans_10"),
-    DimPlot(alldata, reduction = "umap", group.by = "kmeans_15") + ggtitle("kmeans_15"),
+    DimPlot(alldata, reduction = "umap_cca", group.by = "kmeans_5", label=T) + ggtitle("kmeans_5"),
+    DimPlot(alldata, reduction = "umap_cca", group.by = "kmeans_10", label=T) + ggtitle("kmeans_10"),
+    DimPlot(alldata, reduction = "umap_cca", group.by = "kmeans_15", label=T) + ggtitle("kmeans_15"),
     ncol = 3
 )
 ```
 
 ``` {r}
+#| label: clustree-kmeans
 #| fig-height: 8
 #| fig-width: 8
 
@@ -209,7 +230,9 @@ distance methods available in `dist` are: 'euclidean', 'maximum',
 'manhattan', 'canberra', 'binary' or 'minkowski'.
 
 ``` {r}
-d <- dist(alldata@reductions[["pca"]]@cell.embeddings, method = "euclidean")
+#| label: hc-dist
+
+d <- dist(Embeddings(alldata, "integrated_cca"), method = "euclidean")
 ```
 
 As you might have realized, correlation is not a method implemented in
@@ -230,8 +253,10 @@ transformation does not need to have a maximum of 1, but it is more
 intuitive to have it at 1, rather than at any other number.
 
 ``` {r}
+#| label: hc-dist2
+
 # Compute sample correlations
-sample_cor <- cor(Matrix::t(alldata@reductions[["pca"]]@cell.embeddings))
+sample_cor <- cor(Matrix::t(Embeddings(alldata, "integrated_cca")))
 
 # Transform the scale from correlations
 sample_cor <- (1 - sample_cor) / 2
@@ -251,6 +276,8 @@ the distance objects created above. The methods available are: 'ward.D',
 this is very time consuming and we will omit for this tutorial.
 
 ``` {r}
+#| label: hc
+
 # euclidean
 h_euclidean <- hclust(d, method = "ward.D2")
 
@@ -266,6 +293,7 @@ define the number of clusters or decide on a height. We can simply try
 different clustering levels.
 
 ``` {r}
+#| label: plot-hc
 #| fig-height: 8
 #| fig-width: 14
 
@@ -280,12 +308,12 @@ alldata$hc_corelation_10 <- cutree(h_correlation, k = 10)
 alldata$hc_corelation_15 <- cutree(h_correlation, k = 15)
 
 wrap_plots(
-    DimPlot(alldata, reduction = "umap", group.by = "hc_euclidean_5") + ggtitle("hc_euc_5"),
-    DimPlot(alldata, reduction = "umap", group.by = "hc_euclidean_10") + ggtitle("hc_euc_10"),
-    DimPlot(alldata, reduction = "umap", group.by = "hc_euclidean_15") + ggtitle("hc_euc_15"),
-    DimPlot(alldata, reduction = "umap", group.by = "hc_corelation_5") + ggtitle("hc_cor_5"),
-    DimPlot(alldata, reduction = "umap", group.by = "hc_corelation_10") + ggtitle("hc_cor_10"),
-    DimPlot(alldata, reduction = "umap", group.by = "hc_corelation_15") + ggtitle("hc_cor_15"),
+    DimPlot(alldata, reduction = "umap_cca", group.by = "hc_euclidean_5", label=T) + ggtitle("hc_euc_5"),
+    DimPlot(alldata, reduction = "umap_cca", group.by = "hc_euclidean_10", label=T) + ggtitle("hc_euc_10"),
+    DimPlot(alldata, reduction = "umap_cca", group.by = "hc_euclidean_15", label=T) + ggtitle("hc_euc_15"),
+    DimPlot(alldata, reduction = "umap_cca", group.by = "hc_corelation_5", label=T) + ggtitle("hc_cor_5"),
+    DimPlot(alldata, reduction = "umap_cca", group.by = "hc_corelation_10", label=T) + ggtitle("hc_cor_10"),
+    DimPlot(alldata, reduction = "umap_cca", group.by = "hc_corelation_15", label=T) + ggtitle("hc_cor_15"),
     ncol = 3
 ) + plot_layout()
 ```
@@ -293,6 +321,8 @@ wrap_plots(
 Finally, lets save the clustered data for further analysis.
 
 ``` {r}
+#| label: save
+
 saveRDS(alldata, "data/covid/results/seurat_covid_qc_dr_int_cl.rds")
 ```
 
@@ -301,16 +331,17 @@ saveRDS(alldata, "data/covid/results/seurat_covid_qc_dr_int_cl.rds")
 Now, we can select one of our clustering methods and compare the
 proportion of samples across the clusters.
 
-Select the **CCA_snn_res.0.5** and plot proportion of samples per
+Select the **RNA_snn_res.0.5** and plot proportion of samples per
 cluster and also proportion covid vs ctrl.
 
 ``` {r}
+#| label: clust-distribution
 #| fig-height: 4
 #| fig-width: 9
 
-p1 <- ggplot(alldata@meta.data, aes(x = CCA_snn_res.0.5, fill = orig.ident)) +
+p1 <- ggplot(alldata@meta.data, aes(x = RNA_snn_res.0.5, fill = orig.ident)) +
     geom_bar(position = "fill")
-p2 <- ggplot(alldata@meta.data, aes(x = CCA_snn_res.0.5, fill = type)) +
+p2 <- ggplot(alldata@meta.data, aes(x = RNA_snn_res.0.5, fill = type)) +
     geom_bar(position = "fill")
 
 p1 + p2
@@ -325,7 +356,8 @@ We can also plot it in the other direction, the proportion of each
 cluster per sample.
 
 ``` {r}
-ggplot(alldata@meta.data, aes(x = orig.ident, fill = CCA_snn_res.0.5)) +
+#| label: clust-distribution2
+ggplot(alldata@meta.data, aes(x = orig.ident, fill = RNA_snn_res.0.5)) +
     geom_bar(position = "fill")
 ```
 
@@ -344,6 +376,140 @@ ggplot(alldata@meta.data, aes(x = orig.ident, fill = CCA_snn_res.0.5)) +
 
 </div>
 
+``` {r}
+#| label: plot-qc
+#| fig-height: 4
+#| fig-width: 9
+
+VlnPlot(alldata, group.by = "RNA_snn_res.0.5", features = c("nFeature_RNA", "percent_mito"))
+```
+
+Some clusters that are clearly defined by higher number of genes and
+counts. These are either doublets or a larger celltype. And some
+clusters with low values on these metrics that are either low quality
+cells or a smaller celltype. You will have to explore these clusters in
+more detail to judge what you believe them to be.
+
+## Subclustering of T and NK-cells
+
+It is common that the subtypes of cells within a cluster is not so well
+separated when you have a heterogeneous dataset. In such a case it could
+be a good idea to run subclustering of individual celltypes. The main
+reason for subclustering is that the variable genes and the first
+principal components in the full analysis are mainly driven by
+differences between celltypes, while with subclustering we may detect
+smaller differences between subtypes within celltypes.
+
+So first, lets find out where our T-cell and NK-cell clusters are. We
+know that T-cells express CD3E, and the main subtypes are CD4 and CD8,
+while NK-cells express GNLY.
+
+``` {r}
+#| label: plot-tcells
+#| fig-height: 9
+#| fig-width: 14
+
+# check with the lowest resolution
+p1 = DimPlot(alldata, reduction = "umap_cca", group.by = "RNA_snn_res.0.1", label = T) + ggtitle("louvain_0.1")
+p2 = FeaturePlot(alldata, features = "CD3E", reduction = "umap_cca", order = T) 
+p3 = FeaturePlot(alldata, features = "CD4", reduction = "umap_cca", order = T) 
+p4 = FeaturePlot(alldata, features = "CD8A", reduction = "umap_cca", order = T) 
+p5 = FeaturePlot(alldata, features = "GNLY", reduction = "umap_cca", order = T) 
+
+
+wrap_plots(p1,p2,p3,p4,p5, ncol=3) + plot_layout(guides = "collect")
+```
+
+We can clearly see what clusters are T-cell clusters, so lets subset the
+data for those cells
+
+``` {r}
+#| label: select-tcells
+tcells = alldata[,alldata$RNA_snn_res.0.1 %in% c(0,3)]
+
+table(tcells$orig.ident)
+```
+
+Ideally we should rerun all steps of integration with that subset of
+cells instead of just taking the joint embedding. If you have too few
+cells per sample in the celltype that you want to cluster it may not be
+possible. We will start with selecting a new set of genes that better
+reflecs the variability within this celltype
+
+``` {r}
+tcells = FindVariableFeatures(tcells, verbose = FALSE)
+
+# check overlap with the variable genes using all the data
+length(intersect(VariableFeatures(alldata), VariableFeatures(tcells)))
+```
+
+We clearly have a very different geneset now, so hopefully it should
+better capture the variability within T-cells.
+
+Now we have to run the full pipeline with scaling, pca, integration and
+clustering on this subset of cells, using the new set of variable genes
+
+``` {r}
+#| label: subcluster
+
+# run all the steps from before:
+tcells = ScaleData(tcells, vars.to.regress = c("percent_mito", "nFeature_RNA"), assay = "RNA")
+tcells = RunPCA(tcells, npcs = 50, verbose = F)
+
+tcells <- IntegrateLayers(object = tcells, 
+                           method = CCAIntegration, orig.reduction = "pca", 
+                           new.reduction = "integrated_tcells", verbose = FALSE)
+
+tcells <- RunUMAP(tcells, reduction = "integrated_tcells", dims = 1:30, reduction.name = "umap_tcells")
+
+tcells <- FindNeighbors(tcells, reduction = "integrated_tcells", dims = 1:30)
+tcells <- FindClusters(tcells, graph.name = "RNA_snn", resolution = 0.5, algorithm = 1, cluster.name = "tcell_0.5")
+```
+
+``` {r}
+#| label: plot-subcluster
+#| fig-height: 6
+#| fig-width: 10
+
+wrap_plots(
+  DimPlot(tcells, reduction = "umap_cca", group.by = "orig.ident")+NoAxes()+ggtitle("Full umap"),
+  DimPlot(tcells, reduction = "umap_cca", group.by = "RNA_snn_res.0.5", label = T)+NoAxes()+ggtitle("Full umap, full clust"),
+  DimPlot(tcells, reduction = "umap_cca", group.by = "tcell_0.5", label = T)+NoAxes()+ggtitle("Full umap, T-cell clust"),
+  DimPlot(tcells, reduction = "umap_tcells", group.by = "orig.ident")+NoAxes()+ggtitle("T-cell umap, T-cell clust"),
+  DimPlot(tcells, reduction = "umap_tcells", group.by = "RNA_snn_res.0.5", label=T)+NoAxes()+ggtitle("T-cell umap, full clust"),
+  DimPlot(tcells, reduction = "umap_tcells", group.by = "tcell_0.5", label = T)+NoAxes()+ggtitle("T-cell umap"),  
+  ncol = 3
+) + plot_layout(guides = "collect")
+```
+
+As you can see, we do have some new clusters that did not stand out
+before (clusters 6,7). But in general the separation looks very similar.
+
+Lets also have a look at some genes in the new umap:
+
+``` {r}
+#| label: subcluster-gene-plot
+
+wrap_plots(
+  FeaturePlot(tcells, features = "CD3E", reduction = "umap_tcells", order = T), 
+  FeaturePlot(tcells, features = "CD4", reduction = "umap_tcells", order = T), 
+  FeaturePlot(tcells, features = "CD8A", reduction = "umap_tcells", order = T), 
+  FeaturePlot(tcells, features = "GNLY", reduction = "umap_tcells", order = T), 
+  ncol = 2
+) + plot_layout(guides = "collect")
+```
+
+<div>
+
+> **Discuss**
+>
+> Have a look at the T-cells in the umaps with all cells or only T/NK
+> cells. What are the main differences? Do you think it improved with
+> subclustering? Also, there are some cells in these clusters that fall
+> far away from the rest in the UMAPs, why do you think that is?
+
+</div>
+
 ## Session info
 
 ```{=html}
@@ -357,6 +523,8 @@ Click here
 </summary>
 ```
 ``` {r}
+#| label: session
+
 sessionInfo()
 ```
 

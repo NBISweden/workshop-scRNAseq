@@ -1,0 +1,720 @@
+---
+title: "Comparison of all pipelines"
+subtitle: "{{< meta subtitle_seurat >}} {{< meta subtitle_bioc >}} {{< meta subtitle_scanpy >}}"
+description: "Overview of all three pipeline results."
+format: html
+---
+
+Go through all the main steps of the pipelines and plot the results side by side.
+
+
+```{r}
+#| label: libraries
+suppressPackageStartupMessages({
+    library(Seurat)
+    library(zellkonverter)
+    library(Matrix)
+    library(ggplot2)
+    library(patchwork)
+    library(scran)
+    library(ComplexHeatmap)
+})
+```
+
+
+## Load data
+
+OBS! Zellkonverter installs conda env with basilisk! Takes a while to run first time!!
+
+```{r}
+#| label: load
+path_results <- "data/covid/results"
+if (!dir.exists(path_results)) dir.create(path_results, recursive = T)
+
+path_seurat = "../seurat/data/covid/results/"
+path_bioc = "../bioc/data/covid/results/"
+path_scanpy = "../scanpy/data/covid/results/"
+
+# fetch the files with qc and dimred for each 
+
+# seurat
+sobj = readRDS(file.path(path_seurat,"seurat_covid_qc_dr_int_cl.rds"))
+
+# bioc
+sce = readRDS(file.path(path_bioc,"bioc_covid_qc_dr_int_cl.rds"))
+bioc = as.Seurat(sce)
+
+# scanpy
+scanpy.sce = readH5AD(file.path(path_scanpy, "scanpy_covid_qc_dr_scanorama_cl.h5ad"))
+scanpy = as.Seurat(scanpy.sce, counts = NULL, data = "X") # only have the var.genes data that is scaled.
+
+```
+
+## Umaps
+
+```{r}
+#| label: umaps
+#| fig-height: 4
+#| fig-width: 10
+
+wrap_plots(
+    DimPlot(sobj, group.by = "orig.ident") + NoAxes() + ggtitle("Seurat"),
+    DimPlot(bioc, group.by = "sample") + NoAxes() + ggtitle("Bioc"),
+    DimPlot(scanpy, group.by = "sample", reduction = "X_umap_uncorr") + NoAxes() + ggtitle("Scanpy"),
+    ncol = 3
+)
+```
+
+Settings for umap differs, especially on number of neighbors:
+
+* Seurat 
+
+    * dims = 1:30,
+    * n.neighbors = 30,
+    * n.epochs = 200,
+    * min.dist = 0.3,
+    * learning.rate = 1,
+    * spread = 1
+* Bioc
+
+    * n_dimred = 30, 
+    * n_neighbors = 15,   
+    * spread = 1,
+    * min_dist = 0.01, 
+    * n_epchs = 200
+  
+* Scanpy
+
+  * does not use the umap algorithm for neigbors, feeds the KNN to the umap function.
+  * n_pcs = 30, 
+  * n_neighbors = 20,
+  * min_dist=0.5, 
+  * spread=1.0,
+
+
+## Doublet predictions
+
+In all 3 pipelines we run the filtering of cells in the exact same way, but doublet detection is different.
+
+* In Seurat - `DoubletFinder` with predefined 4% doublets, all samples together.
+* In Scanpy - `Scrublet`, done per batch. No predefined cutoff. 
+* In Bioc - `scDblFinder` - default cutoffs, no batch separation. 
+
+```{r}
+#| label: doublet1
+cat("Seurat: ", dim(sobj),"\n")
+cat("Bioc: ", dim(bioc),"\n")
+cat("Scanpy: ", dim(scanpy),"\n")
+
+```
+
+
+Highest number of cells filtered with Bioc. Lowest with scanpy.
+
+Cell names are different in all 3, have to make a conversion to match them. 
+
+* Seurat has the sample name merged to cell name.
+* Scanpy has sample number after cell name. 
+* Bioc has just cell name.
+
+```{r}
+#| label: doublet2
+meta.seurat = sobj@meta.data
+meta.scanpy = scanpy@meta.data
+meta.bioc = bioc@meta.data
+
+meta.bioc$cell = rownames(meta.bioc)
+meta.scanpy$cell = sapply(rownames(meta.scanpy), function(x) substr(x,1,nchar(x)-2))
+meta.seurat$cell = unlist(lapply(strsplit(rownames(meta.seurat),"_"), function(x) x[3]))
+```
+
+
+
+
+
+Visualize overlap of cells using an UpSet plot in the `ComplexHeatmap` package.
+
+```{r}
+#| label: doublet-upset
+l = list(seurat = meta.seurat$cell, bioc = meta.bioc$cell, scanpy = meta.scanpy$cell)
+
+cmat = make_comb_mat(l)
+print(cmat)
+
+UpSet(cmat)
+```
+
+### Doublet scores
+
+Create one dataset with the cells that are present in all samples. Also add in umap from all 3 pipelines.
+
+```{r}
+#| label: doublet-scores
+in.all = intersect(intersect(meta.scanpy$cell, meta.seurat$cell), meta.bioc$cell)
+
+tmp1 = meta.bioc[match(in.all, meta.bioc$cell),]
+colnames(tmp1) = paste0(colnames(tmp1),"_bioc")
+tmp2 = meta.scanpy[match(in.all, meta.scanpy$cell),]
+colnames(tmp2) = paste0(colnames(tmp2),"_scpy")
+
+all = sobj[,match(in.all, meta.seurat$cell)]
+
+meta.all = cbind(all@meta.data, tmp1,tmp2)
+all@meta.data = meta.all
+
+Reductions(all)
+
+tmp = bioc@reductions$UMAP_on_PCA@cell.embeddings[match(in.all, meta.bioc$cell),]
+rownames(tmp) = colnames(all)
+all[["umap_bioc"]] = CreateDimReducObject(tmp, key = "umapbioc_", assay = "RNA")
+tmp = scanpy@reductions$X_umap_uncorr@cell.embeddings[match(in.all, meta.scanpy$cell),]
+rownames(tmp) = colnames(all)
+all[["umap_scpy"]] = CreateDimReducObject(tmp, key = "umapscpy_", assay = "RNA")
+
+Reductions(all)
+```
+
+
+```{r}
+#| label: doublet-scores2
+#| fig-height: 4
+#| fig-width: 10
+
+wrap_plots(
+  FeatureScatter(all, "pANN_0.25_0.09_297","scDblFinder.score_bioc"),
+  FeatureScatter(all, "pANN_0.25_0.09_297","doublet_scores_scpy"),
+ FeatureScatter(all, "scDblFinder.score_bioc","doublet_scores_scpy"),
+  ncol = 3 
+) + plot_layout(guides = "collect")
+```
+
+Highest correlation for the doublet scores in Scrublet and scDblFinder, but still only 0.27 in correlation.
+
+```{r}
+#| label: doublet-scores3
+#| fig-height: 10
+#| fig-width: 10
+
+wrap_plots(
+  FeaturePlot(all, reduction = "umap", features = "pANN_0.25_0.09_297") + NoAxes(),
+  FeaturePlot(all, reduction = "umap", features = "scDblFinder.score_bioc") + NoAxes(),
+  FeaturePlot(all, reduction = "umap", features = "doublet_scores_scpy") + NoAxes(),
+  FeaturePlot(all, reduction = "umap_bioc", features = "pANN_0.25_0.09_297") + NoAxes(),
+  FeaturePlot(all, reduction = "umap_bioc", features = "scDblFinder.score_bioc") + NoAxes(),
+  FeaturePlot(all, reduction = "umap_bioc", features = "doublet_scores_scpy") + NoAxes(),  
+  FeaturePlot(all, reduction = "umap_scpy", features = "pANN_0.25_0.09_297") + NoAxes(),
+  FeaturePlot(all, reduction = "umap_scpy", features = "scDblFinder.score_bioc") + NoAxes(),
+  FeaturePlot(all, reduction = "umap_scpy", features = "doublet_scores_scpy") + NoAxes(),  
+  ncol = 3
+) + plot_layout(guides = "collect")
+```
+
+It seems like the DoubletFinder scores are mainly high in the monocyte populations, while it is more mixed in the other 2 methods.
+
+## Cell cycle
+
+Cell cycle predictions are done in a similar way for Seurat and Scanpy using module scores, while in Bioc we are using Cyclone. 
+
+Visualize the phase predictions onto the Seurat umap.
+
+```{r}
+#| label: cc
+#| fig-height: 4
+#| fig-width: 10
+
+table(all$Phase)
+table(all$phase_bioc)
+table(all$phase_scpy)
+
+wrap_plots(
+DimPlot(all, group.by = "Phase") + NoAxes(),
+DimPlot(all, group.by = "phase_bioc") + NoAxes(),
+DimPlot(all, group.by = "phase_scpy") + NoAxes(),
+  ncol = 3 
+) + plot_layout(guides = "collect")
+```
+In seurat, most T/B-cells look like cycling.
+With bioc, more mixed. 
+With scanpy also more in B/T-cells, but much more G1 prediction.
+
+Plot the scores. 
+
+```{r}
+#| label: cc-scores
+#| fig-height: 10
+#| fig-width: 12
+
+cc.scores = c("S.Score", "G2M.Score","G1.score_bioc", "G2M.score_bioc", "S.score_bioc","S_score_scpy", "G2M_score_scpy")
+
+
+# copied from pairs help section.
+panel.cor <- function(x, y, digits = 2, prefix = "", cex.cor, ...) {
+    usr <- par("usr")
+    on.exit(par(usr))
+    par(usr = c(0, 1, 0, 1))
+    nas = is.na(x) | is.na(y)
+    Cor <- cor(x[!nas], y[!nas], method = "spearman") # Remove abs function if desired
+    txt <- paste0(prefix, format(c(Cor, 0.123456789), digits = digits)[1])
+    if(missing(cex.cor)) {
+        cex.cor <- 0.4 / strwidth(txt)
+    }
+    text(0.5, 0.5, txt,
+         cex = 1 + cex.cor) 
+} 
+
+pairs(all@meta.data[,cc.scores], a.action = na.omit,
+      upper.panel = panel.cor,    # Correlation panel
+      lower.panel = panel.smooth)
+
+```
+
+
+Use spearman cor as the distributions are very different
+
+* S and G2M scores in Scanpy and Seurat are correlated to eachother 
+* S vs G2M are also correlated.
+* In BioC all scores are anticorrelated.
+
+
+
+## Variable features
+
+In Seurat, `FindVariableFeatures` is not batch aware unless the data is split into layers by samples, here we have the variable genes created with layers. In Bioc `modelGeneVar` we used sample as a blocking parameter, e.g calculates the variable genes per sample and combines the variances. Similar in scanpy we used the samples as `batch_key`. 
+
+
+```{r}
+#| label: hvg
+hvgs = list()
+hvgs$seurat = VariableFeatures(sobj)
+hvgs$bioc = sce@metadata$hvgs
+# scanpy has no strict number on selection, instead uses dispersion cutoff. So select instead top 2000 dispersion genes.
+tmp = rowData(scanpy.sce)
+hvgs_scanpy = rownames(tmp)[tmp$highly_variable]
+hvgs$scanpy = rownames(tmp)[order(tmp$dispersions_norm, decreasing = T)][1:2000]
+
+cmat = make_comb_mat(hvgs)
+print(cmat)
+
+UpSet(cmat)
+```
+Surprisingly low overlap between the methods and many genes that are unique to one pipeline. With discrepancies in the doublet filtering the cells used differ to some extent, but otherwise the variation should be similar. Even if it is estimated in different ways.
+
+Is the differences more due to the combination of ranks/dispersions or also found within a single dataset?
+
+Only Seurat have the dispersions for each individual dataset stored in the object. 
+
+Explore more in the `comparison_hvg.qmd` script.
+
+## Integrations
+
+```{r}
+#| label: add-integration
+reductions = c("umap","umap_cca", "umap_harmony",  "umap_scanorama",    "umap_scanoramaC", "umap_bioc",  "umap_bioc_mnn", "umap_bioc_harmony", "umap_bioc_scanorama", "umap_scpy","umap_scpy_bbknn", "umap_scpy_scanorama", "umap_scpy_harmony"   )
+
+tmp = bioc@reductions$UMAP_on_MNN@cell.embeddings[match(in.all, meta.bioc$cell),]
+rownames(tmp) = colnames(all)
+all[["umap_bioc_mnn"]] = CreateDimReducObject(tmp, key = "umapbiocmnn_", assay = "RNA")
+
+tmp = bioc@reductions$UMAP_on_Harmony@cell.embeddings[match(in.all, meta.bioc$cell),]
+rownames(tmp) = colnames(all)
+all[["umap_bioc_harmony"]] = CreateDimReducObject(tmp, key = "umapbiocharmony_", assay = "RNA")
+
+tmp = bioc@reductions$UMAP_on_Scanorama@cell.embeddings[match(in.all, meta.bioc$cell),]
+rownames(tmp) = colnames(all)
+all[["umap_bioc_scanorama"]] = CreateDimReducObject(tmp, key = "umapbioscanorama_", assay = "RNA")
+
+tmp = scanpy@reductions$X_umap_bbknn@cell.embeddings[match(in.all, meta.scanpy$cell),]
+rownames(tmp) = colnames(all)
+all[["umap_scpy_bbknn"]] = CreateDimReducObject(tmp, key = "umapscpybbknn_", assay = "RNA")
+
+tmp = scanpy@reductions$X_umap_scanorama@cell.embeddings[match(in.all, meta.scanpy$cell),]
+rownames(tmp) = colnames(all)
+all[["umap_scpy_scanorama"]] = CreateDimReducObject(tmp, key = "umapscpyscanorama_", assay = "RNA")
+
+tmp = scanpy@reductions$X_umap_harmony@cell.embeddings[match(in.all, meta.scanpy$cell),]
+rownames(tmp) = colnames(all)
+all[["umap_scpy_harmony"]] = CreateDimReducObject(tmp, key = "umapscpyharmony_", assay = "RNA")
+
+```
+
+
+```{r}
+#| label: integrations
+#| fig-height: 10
+#| fig-width: 12
+plotlist = lapply(reductions, function(x) DimPlot(all, reduction = x, group.by = "orig.ident") + NoAxes() + ggtitle(x))
+
+wrap_plots(
+  plotlist,
+  ncol = 4
+) + plot_layout(guides = "collect")
+```
+
+
+### Clustering on integrations
+
+Run clustering on each of the integrations but with same method. Use Seurat, with 30 first components, k=30, and louvain with a few different resolutions.
+
+For BBKNN the full integration matrix is not in the reductions, skip for now.
+
+
+```{r}
+#| label: integration-clusters
+# all seurat integrations.
+
+integrations = list(
+  seu_cca = "integrated_cca",
+  seu_harm = "harmony",
+  seu_scan = "scanorama",
+  seu_scanC = "scanoramaC"
+)
+res = c(0.4,0.6,0.8,1.0)
+
+for (i in 1:length(integrations)){
+  sname = names(integrations)[i]
+  sobj = FindNeighbors(sobj, reduction = integrations[[sname]], dims = 1:30, verbose = F)
+  for (r in res){
+    sobj = FindClusters(sobj, resolution = r, cluster.name = paste(sname,r,sep="_"), verbose = F)
+  }
+}
+
+meta.clust = sobj@meta.data[,grepl("^seu_", colnames(sobj@meta.data))]
+meta.clust = meta.clust[match(in.all, meta.seurat$cell),]
+
+# all bioc
+integrations = list(
+  bio_mnn = "MNN",
+  bio_harm = "harmony",
+  bio_scan = "Scanorama"
+)
+
+for (i in 1:length(integrations)){
+  sname = names(integrations)[i]
+  bioc = FindNeighbors(bioc, reduction = integrations[[sname]], dims = 1:30, verbose = F)
+  for (r in res){
+    bioc = FindClusters(bioc, resolution = r, cluster.name = paste(sname,r,sep="_"), verbose = F)
+  }
+}
+
+tmp = bioc@meta.data[,grepl("^bio_", colnames(bioc@meta.data))]
+tmp = tmp[match(in.all, meta.bioc$cell),]
+meta.clust = cbind(tmp, meta.clust)
+
+# all scanpy
+integrations = list(
+  scpy_harm = "X_pca_harmony",
+  scpy_scan = "Scanorama"
+)
+
+for (i in 1:length(integrations)){
+  sname = names(integrations)[i]
+  scanpy = FindNeighbors(scanpy, reduction = integrations[[sname]], dims = 1:30, verbose = F)
+  for (r in res){
+    scanpy = FindClusters(scanpy, resolution = r, cluster.name = paste(sname,r,sep="_"), verbose = F)
+  }
+}
+
+tmp = scanpy@meta.data[,grepl("^scpy_", colnames(scanpy@meta.data))]
+tmp = tmp[match(in.all, meta.scanpy$cell),]
+meta.clust = cbind(tmp, meta.clust)
+
+
+
+```
+
+Calculate adjusted Rand index, with mclust package.
+
+
+```{r}
+#| label: clust-ari
+#| fig-height: 10
+#| fig-width: 12
+
+ari = mat.or.vec(ncol(meta.clust), ncol(meta.clust))
+
+for (i in 1:ncol(meta.clust)){
+  for (j in 1:ncol(meta.clust)){
+  ari[i,j] = mclust::adjustedRandIndex(meta.clust[,i], meta.clust[,j])
+  }
+}
+rownames(ari) = colnames(meta.clust)
+colnames(ari) = colnames(meta.clust)
+
+annot = data.frame(Reduce(rbind,strsplit(colnames(meta.clust), "_")))
+colnames(annot) = c("Pipe", "Integration", "Resolution")
+rownames(annot) = colnames(meta.clust)
+nclust = apply(meta.clust, 2, function(x) length(unique(x)))
+annot$nClust = nclust
+pheatmap::pheatmap(ari, annotation_row = annot)
+```
+
+All the scanorama ones are similar, except for the one with counts. Harmony on the bioc object also stands out as quite different. 
+
+Number of clusters per method:
+
+```{r}
+#| label: nclust
+nclust = apply(meta.clust, 2, function(x) length(unique(x)))
+par(mar = c(3,10,3,3))
+barplot(nclust, horiz=T, las=2, cex.names=0.6)
+```
+
+For similar number of clusters, select the ones with nclust close to 15.
+
+```{r}
+#| label: clust-ari-sel
+selCl = c("scpy_harm_0.8","scpy_scan_0.6","bio_mnn_0.8","bio_harm_0.8","bio_scan_0.8","seu_cca_1","seu_harm_0.8","seu_scan_0.6","seu_scanC_1")
+
+pheatmap::pheatmap(ari[selCl,selCl], annotation_row = annot[selCl,])
+```
+
+
+
+## Clustering in the exercises
+
+Above, we did the clustering with the same method on the different integrated spaces. Now we will instead explore the integrated clustering from the different pipelines. We still only use the cells that are in common from all 3 toolkits. 
+
+The graph clustering is implemented quite differently in the different pipelines.
+
+* Seurat - runs detection on SNN, resolution implemented
+* Scanpy - runs detection on KNN, resolution implemented
+* Bioc - runs detection on SNN, but different scoring to Seurat, resolution parameter behaves strange. Instead use `k` to tweak cluster resolution.
+
+
+```{r}
+#| label: pipe-clust
+seu.columns = c("RNA_snn_res","kmeans_","hc_")
+bioc.columns = c("louvain_","leiden_","hc_","kmeans_")
+scpy.columns = c("leiden_","hclust_","kmeans_")
+  
+
+idx = which(rowSums(sapply(seu.columns, grepl, colnames(sobj@meta.data)))>0)
+tmp1 = sobj@meta.data[match(in.all, meta.seurat$cell), idx]
+colnames(tmp1) = paste0("seur_", colnames(tmp1))
+
+idx = which(rowSums(sapply(bioc.columns, grepl, colnames(bioc@meta.data)))>0)
+tmp2 = bioc@meta.data[match(in.all, meta.bioc$cell), idx]
+colnames(tmp2) = paste0("bioc_", colnames(tmp2))
+
+meta.clust2 = cbind(tmp1, tmp2)
+
+idx = which(rowSums(sapply(scpy.columns, grepl, colnames(scanpy@meta.data)))>0)
+tmp2 = scanpy@meta.data[match(in.all, meta.scanpy$cell), idx]
+colnames(tmp2) = paste0("scpy_", colnames(tmp2))
+
+meta.clust2 = cbind(meta.clust2, tmp2)
+```
+
+
+Group based on adjusted Rand index. 
+
+```{r}
+#| label: ari-clust2
+#| fig-height: 10
+#| fig-width: 12
+
+ari = mat.or.vec(ncol(meta.clust2), ncol(meta.clust2))
+
+for (i in 1:ncol(meta.clust2)){
+  for (j in 1:ncol(meta.clust2)){
+  ari[i,j] = mclust::adjustedRandIndex(meta.clust2[,i], meta.clust2[,j])
+  }
+}
+rownames(ari) = colnames(meta.clust2)
+colnames(ari) = colnames(meta.clust2)
+
+
+m = unlist(lapply(strsplit(colnames(meta.clust2), "_"), function(x) x[2]))
+p = unlist(lapply(strsplit(colnames(meta.clust2), "_"), function(x) x[1]))
+nc = apply(meta.clust2, 2, function(x) length(unique(x)))
+       
+annot = data.frame(Pipe=p, Method=m, nC=nc)
+rownames(annot) = colnames(meta.clust2)
+pheatmap::pheatmap(ari, annotation_row = annot)
+```
+
+
+
+```{r}
+#| label: save
+saveRDS(all, "data/covid/results/merged_all.rds")
+```
+
+
+## Celltype prediction.
+
+Done only for sample `ctrl13`, load all the results.
+
+```{r}
+#| label: celltypes
+sobj = readRDS(file.path(path_seurat, "seurat_covid_qc_dr_int_cl_ct-ctrl13.rds"))
+
+sce = readRDS(file.path(path_bioc, "bioc_covid_qc_dr_int_cl_ct-ctrl13.rds"))
+bioc = as.Seurat(sce)
+bioc$scmap_cluster = sce$scmap_cluster #for some reason that column dissappears when running as.Seurat.
+
+scanpy.sce = readH5AD(file.path(path_scanpy, "scanpy_covid_qc_dr_int_cl_ct-ctrl13.h5ad"))
+scanpy = as.Seurat(scanpy.sce, counts = NULL, data = "X")
+```
+Merge into one object.
+
+```{r}
+#| label: celltypes2
+
+meta.seurat = sobj@meta.data
+meta.scanpy = scanpy@meta.data
+meta.bioc = bioc@meta.data
+
+meta.bioc$cell = rownames(meta.bioc)
+meta.scanpy$cell = sapply(rownames(meta.scanpy), function(x) substr(x,1,nchar(x)-2))
+meta.seurat$cell = unlist(lapply(strsplit(rownames(meta.seurat),"_"), function(x) x[3]))
+
+in.all = intersect(intersect(meta.scanpy$cell, meta.seurat$cell), meta.bioc$cell)
+
+tmp1 = meta.bioc[match(in.all, meta.bioc$cell),]
+colnames(tmp1) = paste0(colnames(tmp1),"_bioc")
+tmp2 = meta.scanpy[match(in.all, meta.scanpy$cell),]
+colnames(tmp2) = paste0(colnames(tmp2),"_scpy")
+
+all = sobj[,match(in.all, meta.seurat$cell)]
+
+meta.all = cbind(all@meta.data, tmp1,tmp2)
+all@meta.data = meta.all
+
+
+```
+
+Celltype predictions:
+
+
+* Seurat
+  * `predicted.id` - `TransferData`
+  * `singler.immune` - singleR with `DatabaseImmuneCellExpressionData`
+  * `singler.hpca`- singleR with `HumanPrimaryCellAtlasData`
+  * `singler.ref`- singleR with own ref.
+  * `predicted.celltype.l1`, `predicted.celltype.l2`, `predicted.celltype.l3` - Azimuth predictions at different levels.
+  
+* Bioc
+
+  * `scmap_cluster` - scMap with clusters in ref data
+  * `scmap_cell` - scMap with all cells in ref data
+  * `singler.immune` - singleR with `DatabaseImmuneCellExpressionData`
+  * `singler.hpca`- singleR with `HumanPrimaryCellAtlasData`
+  * `singler.ref`- singleR with own ref.
+
+* Scanpy
+
+  * `label_trans` - label transfer with scanorama
+  * `louvain` - bbknn
+  * `predicted_labels`, `majority_voting` - celltypist "Immune_All_High" reference
+  * `predicted_labels_ref`, `majority_voting_ref` - celltypist with own reference
+  
+  
+  
+
+```{r}
+#| label: celltype-plot
+#| fig-height: 10
+#| fig-width: 12
+
+all.pred = c("label_trans_scpy",   "louvain_scpy",  "predicted_labels_scpy", "majority_voting_scpy", "predicted_labels_ref_scpy",  "majority_voting_ref_scpy",      "scmap_cluster_bioc", "scmap_cell_bioc",  "singler.immune_bioc", "singler.hpca_bioc",  "singler.ref_bioc", "predicted.id", "singler.immune", "singler.hpca",  "singler.ref", "predicted.celltype.l1", "predicted.celltype.l2", "predicted.celltype.l3")
+
+ct = all@meta.data[,all.pred]
+
+plots = sapply(all.pred, function(x) DimPlot(all, reduction = "umap_harmony", group.by = x) + NoAxes() + ggtitle(x))
+
+wrap_plots(plots[1:9], ncol = 3)
+wrap_plots(plots[10:18], ncol = 3)
+```
+Subset for ones that are using same ref:
+
+```{r}
+#| label: celltype-plot2
+#| fig-height: 10
+#| fig-width: 12
+
+
+ref.pred = c("label_trans_scpy",   "louvain_scpy", "predicted_labels_ref_scpy",  "majority_voting_ref_scpy",      "scmap_cluster_bioc", "scmap_cell_bioc",   "singler.ref_bioc", "predicted.id",  "singler.ref")
+
+lev = sort(unique(unlist(apply(all@meta.data[,ref.pred],2,unique))))
+lev = unique(sub("cells","cell",lev))
+
+#"FCGR3A+ Monocytes" -> "ncMono"
+#"CD14+ Monocytes" -> "cMono"
+#"Dendritic cell" -> "cDC"
+lev = lev[!grepl("\\+",lev)]
+lev = lev[!grepl("Dendr",lev)]
+
+for (rp in ref.pred){
+  tmp = as.character(all@meta.data[,rp])
+  tmp = sub("cells","cell",tmp)
+  tmp = sub("FCGR3A\\+ Monocytes","ncMono",tmp)
+  tmp = sub("CD14\\+ Monocytes","cMono",tmp)
+  tmp = sub("Dendritic cell","cDC",tmp)
+  tmp[is.na(tmp)] = "unassigned"
+  all@meta.data[,paste0(rp,"2")] = factor(tmp,levels = lev)
+  
+}
+
+coldef =  RColorBrewer::brewer.pal(9,"Paired")
+names(coldef) = lev
+plots2 = sapply(paste0(ref.pred,"2"), function(x) DimPlot(all, reduction = "umap_harmony", group.by = x) + NoAxes() + ggtitle(x) + scale_color_manual(values = coldef))
+
+
+wrap_plots(plots2, ncol = 3) + plot_layout(guides = "collect")
+```
+The largest differences in predictions is for CD8T vs NK where the methods make quite different prediction for the cells in between the two celltypes.
+
+
+
+```{r}
+#| label: celltype-barplot
+ref.pred2 = paste0(ref.pred,"2")
+
+tmp = all@meta.data[,ref.pred2]
+
+counts = sapply(ref.pred2,function(x) table(tmp[,x]))
+counts = reshape2::melt(counts)
+
+
+ggplot(counts, aes(x=Var2, y=value, fill=Var1)) + geom_bar(stat = "identity") + RotatedAxis() 
+```
+
+Only singleR and scMap has unassigned cells.
+
+
+Prediction overlaps, based on ARI.
+
+
+```{r}
+#| label: celltype-ari
+
+ari = mat.or.vec(ncol(tmp), ncol(tmp))
+
+for (i in 1:ncol(tmp)){
+  for (j in 1:ncol(tmp)){
+  ari[i,j] = mclust::adjustedRandIndex(tmp[,i], tmp[,j])
+  }
+}
+rownames(ari) = colnames(tmp)
+colnames(ari) = colnames(tmp)
+
+pheatmap::pheatmap(ari)
+
+```
+
+
+Celltypist and singleR are quite similar.
+
+
+## {{< meta session >}}
+
+<details>
+  <summary>Click here</summary>
+
+```{r}
+#| label: session
+sessionInfo()
+```
+
+</details>

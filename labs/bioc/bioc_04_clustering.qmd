@@ -14,6 +14,8 @@ Code chunks run R commands unless otherwise specified.
 {{< meta clust_2 >}}
 
 ```{r}
+#| label: libraries
+
 suppressPackageStartupMessages({
     library(scater)
     library(scran)
@@ -22,18 +24,24 @@ suppressPackageStartupMessages({
     library(pheatmap)
     library(igraph)
     library(clustree)
+    library(bluster)
 })
 ```
 
 ```{r}
+#| label: fetch-data
+
 # download pre-computed data if missing or long compute
 fetch_data <- TRUE
 
 # url for source and intermediate data
-path_data <- "https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"
+path_data <- "https://nextcloud.dc.scilifelab.se/public.php/webdav"
+curl_upass <- "-u zbC5fr2LbEZ9rSE:scRNAseq2025"
+
 path_file <- "data/covid/results/bioc_covid_qc_dr_int.rds"
 if (!dir.exists(dirname(path_file))) dir.create(dirname(path_file), recursive = TRUE)
-if (fetch_data && !file.exists(path_file)) download.file(url = file.path(path_data, "covid/results/bioc_covid_qc_dr_int.rds"), destfile = path_file)
+if (fetch_data && !file.exists(path_file)) download.file(url = file.path(path_data, "covid/results_bioc/bioc_covid_qc_dr_int.rds"), destfile = path_file, method = "curl", extra = curl_upass)
+
 sce <- readRDS(path_file)
 print(reducedDims(sce))
 ```
@@ -47,18 +55,21 @@ print(reducedDims(sce))
 {{< meta clust_graphclust_knn_1 >}}
 
 ```{r}
+#| label: neighbors
+
 # These 2 lines are for demonstration purposes only
-g <- buildKNNGraph(sce, k = 30, use.dimred = "MNN")
+g <- buildKNNGraph(sce, k = 30, use.dimred = "harmony")
 reducedDim(sce, "KNN") <- igraph::as_adjacency_matrix(g)
 
-# These 2 lines are the most recommended
-g <- buildSNNGraph(sce, k = 30, use.dimred = "MNN")
+# These 2 lines are the most recommended, it first run the KNN graph construction and then creates the SNN graph.
+g <- buildSNNGraph(sce, k = 30, use.dimred = "harmony")
 reducedDim(sce, "SNN") <- as_adjacency_matrix(g, attr = "weight")
 ```
 
 {{< meta clust_graphclust_knn_2 >}}
 
 ```{r}
+#| label: plot-graph
 #| fig-height: 6
 #| fig-width: 6
 
@@ -78,30 +89,64 @@ pheatmap(reducedDim(sce, "SNN")[1:200, 1:200],
 
 As you can see, the way Scran computes the SNN graph is different to Seurat. It gives edges to all cells that shares a neighbor, but weights the edges by how similar the neighbors are. Hence, the SNN graph has more edges than the KNN graph.
 
+There are 3 different options how to define the SNN these are:
+
+* `rank`- scoring based on shared close neighbors, i.e. ranking the neighbors of two cells and comparing the ranks.
+* `number` - number of shared neighbors
+* `jaccard` - calculate Jaccard similarity, same as in Seurat.
+
+
 ### {{< meta clust_graphclust_graph >}}
 
 {{< meta clust_graphclust_graph_1 >}}
 
+For clustering we can use the function `clusterCells()` which actually runs the steps of building the KNN and SNN graph for us, and also does the graph partition. All the clustering builds on the `bluster` package and we specify the different options using the `NNGraphParam()` class. 
+
+Some parameters to consider are:
+
+* `shared`, can be TRUE/FALSE - construct SNN graph (TRUE) or cluster on the KNN graph (FALSE)
+* `type` - for SNN graph method, can be `rank`, `number` or `jaccard`
+* `k` - number of neighbors in the KNN construction. Can be any function implemented in ighraph
+* `cluster.fun` - which community detection method. 
+* `cluster.args` - paramters to the different clustering functions
+
+So to find out what the different options are for the different methods you would have to check the documentation in the igraph package, e.g. `?igraph::cluster_leiden`. 
+
+Here we will use the integration with Harmony to build the graph, and the umap built on Harmony for visualization.
+
+OBS! There is no method to select fewer than the total 50 components in the embedding for creating the graph, so here we create a new `reducedDim` instance with only 20 components. 
+
+
 ```{r}
-#| fig-height: 3
-#| fig-width: 12
+#| label: cluster
+#| fig-height: 8
+#| fig-width: 10
 
-g <- buildSNNGraph(sce, k = 5, use.dimred = "MNN")
-sce$louvain_SNNk5 <- factor(cluster_louvain(g)$membership)
+reducedDims(sce)$harmony2 = reducedDims(sce)$harmony[,1:20]
 
-g <- buildSNNGraph(sce, k = 10, use.dimred = "MNN")
-sce$louvain_SNNk10 <- factor(cluster_louvain(g)$membership)
+sce$louvain_k30 <- clusterCells(sce, use.dimred = "harmony2", BLUSPARAM=SNNGraphParam(k=30, cluster.fun="louvain",  cluster.args = list(resolution=0.5)))
+sce$louvain_k20 <- clusterCells(sce, use.dimred = "harmony2", BLUSPARAM=SNNGraphParam(k=20, cluster.fun="louvain",  cluster.args = list(resolution=0.5)))
+sce$louvain_k10 <- clusterCells(sce, use.dimred = "harmony2", BLUSPARAM=SNNGraphParam(k=10, cluster.fun="louvain",  cluster.args = list(resolution=0.5)))
 
-g <- buildSNNGraph(sce, k = 15, use.dimred = "MNN")
-sce$louvain_SNNk15 <- factor(cluster_louvain(g)$membership)
+sce$leiden_k30 <- clusterCells(sce, use.dimred = "harmony2", BLUSPARAM=SNNGraphParam(k=30, cluster.fun="leiden",  cluster.args = list(resolution_parameter=0.3)))
+sce$leiden_k20 <- clusterCells(sce, use.dimred = "harmony2", BLUSPARAM=SNNGraphParam(k=20, cluster.fun="leiden",  cluster.args = list(resolution_parameter=0.3)))
+sce$leiden_k10 <- clusterCells(sce, use.dimred = "harmony2", BLUSPARAM=SNNGraphParam(k=10, cluster.fun="leiden",  cluster.args = list(resolution_parameter=0.3)))
+
+
 
 wrap_plots(
-    plotReducedDim(sce, dimred = "UMAP_on_MNN", colour_by = "louvain_SNNk5") +
-        ggplot2::ggtitle(label = "louvain_SNNk5"),
-    plotReducedDim(sce, dimred = "UMAP_on_MNN", colour_by = "louvain_SNNk10") +
-        ggplot2::ggtitle(label = "louvain_SNNk10"),
-    plotReducedDim(sce, dimred = "UMAP_on_MNN", colour_by = "louvain_SNNk15") +
-        ggplot2::ggtitle(label = "louvain_SNNk15"),
+    plotReducedDim(sce, dimred = "UMAP_on_Harmony", colour_by = "louvain_k30") +
+        ggplot2::ggtitle(label = "louvain_k30"),  
+    plotReducedDim(sce, dimred = "UMAP_on_Harmony", colour_by = "louvain_k20") +
+        ggplot2::ggtitle(label = "louvain_k20"),
+    plotReducedDim(sce, dimred = "UMAP_on_Harmony", colour_by = "louvain_k10") +
+        ggplot2::ggtitle(label = "louvain_k10"),
+    plotReducedDim(sce, dimred = "UMAP_on_Harmony", colour_by = "leiden_k30") +
+        ggplot2::ggtitle(label = "leiden_k30"),
+    plotReducedDim(sce, dimred = "UMAP_on_Harmony", colour_by = "leiden_k20") +
+        ggplot2::ggtitle(label = "leiden_k20"),
+    plotReducedDim(sce, dimred = "UMAP_on_Harmony", colour_by = "leiden_k10") +
+        ggplot2::ggtitle(label = "leiden_k10"),
     ncol = 3
 )
 ```
@@ -109,11 +154,12 @@ wrap_plots(
 {{< meta clust_graphclust_graph_2 >}}
 
 ```{r}
+#| label: clustree
 #| fig-height: 8
 #| fig-width: 8
 
 suppressPackageStartupMessages(library(clustree))
-clustree(sce, prefix = "louvain_SNNk")
+clustree(sce, prefix = "louvain_k")
 ```
 
 ## {{< meta clust_kmean >}}
@@ -121,25 +167,32 @@ clustree(sce, prefix = "louvain_SNNk")
 {{< meta clust_kmean_1 >}}
 
 ```{r}
-#| fig-height: 3
+#| label: kmeans
+
+#| fig-height: 8
 #| fig-width: 10
 
-sce$kmeans_5 <- factor(kmeans(x = reducedDim(sce, "MNN"), centers = 5)$cluster)
-sce$kmeans_10 <- factor(kmeans(x = reducedDim(sce, "MNN"), centers = 10)$cluster)
-sce$kmeans_15 <- factor(kmeans(x = reducedDim(sce, "MNN"), centers = 15)$cluster)
+sce$kmeans_5 <- clusterCells(sce, use.dimred = "harmony2", BLUSPARAM=KmeansParam(centers=5))
+sce$kmeans_10 <- clusterCells(sce, use.dimred = "harmony2", BLUSPARAM=KmeansParam(centers=10))  
+sce$kmeans_15 <- clusterCells(sce, use.dimred = "harmony2", BLUSPARAM=KmeansParam(centers=15))
+sce$kmeans_20 <- clusterCells(sce, use.dimred = "harmony2", BLUSPARAM=KmeansParam(centers=20))
+
 
 wrap_plots(
-    plotReducedDim(sce, dimred = "UMAP_on_MNN", colour_by = "kmeans_5") +
+    plotReducedDim(sce, dimred = "UMAP_on_Harmony", colour_by = "kmeans_5") +
         ggplot2::ggtitle(label = "KMeans5"),
-    plotReducedDim(sce, dimred = "UMAP_on_MNN", colour_by = "kmeans_10") +
+    plotReducedDim(sce, dimred = "UMAP_on_Harmony", colour_by = "kmeans_10") +
         ggplot2::ggtitle(label = "KMeans10"),
-    plotReducedDim(sce, dimred = "UMAP_on_MNN", colour_by = "kmeans_15") +
+    plotReducedDim(sce, dimred = "UMAP_on_Harmony", colour_by = "kmeans_15") +
         ggplot2::ggtitle(label = "KMeans15"),
-    ncol = 3
+    plotReducedDim(sce, dimred = "UMAP_on_Harmony", colour_by = "kmeans_15") +
+        ggplot2::ggtitle(label = "KMeans20"),
+    ncol = 2
 )
 ```
 
 ```{r}
+#| label: clustree-kmeans
 #| fig-height: 8
 #| fig-width: 8
 
@@ -148,19 +201,23 @@ clustree(sce, prefix = "kmeans_")
 
 ## {{< meta clust_hier >}}
 
+There is the optioni to run hierarchical clustering in the `clusterCells` function using `HclustParam`, but there are limited options to specify distances such as correlations that we show below, so we will run the clustering with our own implementation. 
+
 ### {{< meta clust_hier_dist >}}
 
 {{< meta clust_hier_dist_1 >}}
 
 ```{r}
-d <- dist(reducedDim(sce, "MNN"), method = "euclidean")
+#| label: hc-dist
+d <- dist(reducedDim(sce, "harmony2"), method = "euclidean")
 ```
 
 {{< meta clust_hier_dist_2 >}}
 
 ```{r}
+#| label: hc-dist2
 # Compute sample correlations
-sample_cor <- cor(Matrix::t(reducedDim(sce, "MNN")))
+sample_cor <- cor(Matrix::t(reducedDim(sce, "harmony2")))
 
 # Transform the scale from correlations
 sample_cor <- (1 - sample_cor) / 2
@@ -173,17 +230,21 @@ d2 <- as.dist(sample_cor)
 
 {{< meta clust_hier_clust_1 >}}
 
+
 ```{r}
+#| label: hc
 # euclidean
 h_euclidean <- hclust(d, method = "ward.D2")
 
 # correlation
 h_correlation <- hclust(d2, method = "ward.D2")
+
 ```
 
 {{< meta clust_hier_clust_2 >}}
 
 ```{r}
+#| label: plot-hc
 #| fig-height: 8
 #| fig-width: 13
 
@@ -198,17 +259,17 @@ sce$hc_corelation_10 <- factor(cutree(h_correlation, k = 10))
 sce$hc_corelation_15 <- factor(cutree(h_correlation, k = 15))
 
 wrap_plots(
-    plotReducedDim(sce, dimred = "UMAP_on_MNN", colour_by = "hc_euclidean_5") +
+    plotReducedDim(sce, dimred = "UMAP_on_Harmony", colour_by = "hc_euclidean_5") +
         ggplot2::ggtitle(label = "HC_euclidean_5"),
-    plotReducedDim(sce, dimred = "UMAP_on_MNN", colour_by = "hc_euclidean_10") +
+    plotReducedDim(sce, dimred = "UMAP_on_Harmony", colour_by = "hc_euclidean_10") +
         ggplot2::ggtitle(label = "HC_euclidean_10"),
-    plotReducedDim(sce, dimred = "UMAP_on_MNN", colour_by = "hc_euclidean_15") +
+    plotReducedDim(sce, dimred = "UMAP_on_Harmony", colour_by = "hc_euclidean_15") +
         ggplot2::ggtitle(label = "HC_euclidean_15"),
-    plotReducedDim(sce, dimred = "UMAP_on_MNN", colour_by = "hc_corelation_5") +
+    plotReducedDim(sce, dimred = "UMAP_on_Harmony", colour_by = "hc_corelation_5") +
         ggplot2::ggtitle(label = "HC_correlation_5"),
-    plotReducedDim(sce, dimred = "UMAP_on_MNN", colour_by = "hc_corelation_10") +
+    plotReducedDim(sce, dimred = "UMAP_on_Harmony", colour_by = "hc_corelation_10") +
         ggplot2::ggtitle(label = "HC_correlation_10"),
-    plotReducedDim(sce, dimred = "UMAP_on_MNN", colour_by = "hc_corelation_15") +
+    plotReducedDim(sce, dimred = "UMAP_on_Harmony", colour_by = "hc_corelation_15") +
         ggplot2::ggtitle(label = "HC_correlation_15"),
     ncol = 3
 )
@@ -217,6 +278,7 @@ wrap_plots(
 {{< meta clust_save >}}
 
 ```{r}
+#| label: save
 saveRDS(sce, "data/covid/results/bioc_covid_qc_dr_int_cl.rds")
 ```
 
@@ -225,12 +287,13 @@ saveRDS(sce, "data/covid/results/bioc_covid_qc_dr_int_cl.rds")
 {{< meta clust_distribution_1 >}}
 
 ```{r}
+#| label: clust-distribution
 #| fig-height: 4
 #| fig-width: 9
 
-p1 <- ggplot(as.data.frame(colData(sce)), aes(x = louvain_SNNk10, fill = sample)) +
+p1 <- ggplot(as.data.frame(colData(sce)), aes(x = leiden_k20, fill = sample)) +
     geom_bar(position = "fill")
-p2 <- ggplot(as.data.frame(colData(sce)), aes(x = louvain_SNNk10, fill = type)) +
+p2 <- ggplot(as.data.frame(colData(sce)), aes(x = leiden_k20, fill = type)) +
     geom_bar(position = "fill")
 
 p1 + p2
@@ -241,12 +304,133 @@ p1 + p2
 {{< meta clust_distribution_3 >}}
 
 ```{r}
-ggplot(as.data.frame(colData(sce)), aes(x = sample, fill = louvain_SNNk10)) +
+#| label: clust-distribution2
+ggplot(as.data.frame(colData(sce)), aes(x = sample, fill = leiden_k20)) +
     geom_bar(position = "fill")
 ```
 
 :::{.callout-note title="Discuss"}
 {{< meta clust_3 >}}
+:::
+
+
+```{r}
+#| label: plot-qc
+#| fig-height: 8
+#| fig-width: 10
+
+wrap_plots(
+    plotColData(sce, y = "detected", x = "leiden_k20", colour_by = "leiden_k20"),
+    plotColData(sce, y = "total", x = "leiden_k20", colour_by = "leiden_k20"),
+    plotColData(sce, y = "subsets_mt_percent", x = "leiden_k20", colour_by = "leiden_k20"),
+    plotColData(sce, y = "subsets_ribo_percent", x = "leiden_k20", colour_by = "leiden_k20"),
+    plotColData(sce, y = "subsets_hb_percent", x = "leiden_k20", colour_by = "leiden_k20"),
+    ncol = 3
+) + plot_layout(guides = "collect")
+```
+
+{{< meta clust_4 >}}
+
+
+## {{< meta clust_sub >}}
+
+{{< meta clust_sub_1 >}}
+
+{{< meta clust_sub_2 >}}
+
+```{r}
+#| label: plot-tcells
+#| fig-height: 8
+#| fig-width: 10
+
+wrap_plots(
+    plotReducedDim(sce, dimred = "UMAP_on_Harmony", colour_by = "leiden_k30"),
+    plotReducedDim(sce, dimred = "UMAP_on_Harmony", colour_by = "CD3E"),
+    plotReducedDim(sce, dimred = "UMAP_on_Harmony", colour_by = "CD4"),
+    plotReducedDim(sce, dimred = "UMAP_on_Harmony", colour_by = "CD8A"),
+    plotReducedDim(sce, dimred = "UMAP_on_Harmony", colour_by = "GNLY"),
+    ncol = 3
+)
+```
+
+We can clearly see what clusters are T-cell clusters, so lets subset the data for those cells
+
+```{r}
+#| label: select-tcells
+tcells = sce[,sce$leiden_k30 %in% c(3,4)]
+
+table(tcells$sample)
+```
+
+{{< meta clust_sub_3 >}}
+
+```{r}
+#| label: hvg-tcells
+
+var.out <- modelGeneVar(tcells, block = tcells$sample)
+hvgs.tcell <- getTopHVGs(var.out, n = 2000)
+
+# check overlap with the variable genes using all the data
+length(intersect(metadata(sce)$hvgs, hvgs.tcell))
+```
+{{< meta clust_sub_4 >}}
+
+{{< meta clust_sub_5 >}}
+
+```{r}
+#| label: subcluster
+tcells = runPCA(tcells, exprs_values = "logcounts", ncomponents = 30, subset_row = hvgs.tcell, scale = TRUE)
+
+
+library(harmony)
+tcells <- RunHarmony(
+    tcells,
+    group.by.vars = "sample",
+    reduction.save = "harmony",
+    reduction = "PCA"
+)
+
+# Here we use all PCs computed from Harmony for UMAP calculation
+tcells <- runUMAP(tcells, dimred = "harmony", n_dimred = 30, ncomponents = 2, name = "UMAP_tcell")
+tcells$leiden_tcell_k20 <- clusterCells(tcells, use.dimred = "harmony", BLUSPARAM=SNNGraphParam(k=20, cluster.fun="leiden",  cluster.args = list(resolution_parameter=0.3)))
+
+```
+
+```{r}
+#| label: plot-subcluster
+#| fig-height: 6
+#| fig-width: 10
+
+wrap_plots(
+    plotReducedDim(tcells, dimred = "UMAP_on_Harmony", colour_by = "sample") +ggtitle("Full umap"),
+    plotReducedDim(tcells, dimred = "UMAP_on_Harmony", colour_by = "leiden_k20") +ggtitle("Full umap, full clust"),
+    plotReducedDim(tcells, dimred = "UMAP_on_Harmony", colour_by = "leiden_tcell_k20") +ggtitle("Full umap, T-cell clust"),
+    plotReducedDim(tcells, dimred = "UMAP_tcell", colour_by = "sample") +ggtitle("T-cell umap"),
+    plotReducedDim(tcells, dimred = "UMAP_tcell", colour_by = "leiden_k20") +ggtitle("T-cell umap, full clust"),
+    plotReducedDim(tcells, dimred = "UMAP_tcell", colour_by = "leiden_tcell_k20") +ggtitle("T-cell umap, T-cell clust"),
+    ncol = 3
+)+ plot_layout(guides = "collect")
+
+```
+
+As you can see, we do have some new clusters that did not stand out before. But in general the separation looks very similar.
+
+Lets also have a look at the same genes in the new umap:
+
+```{r}
+#| label: subcluster-gene-plot
+wrap_plots(
+    plotReducedDim(tcells, dimred = "UMAP_tcell", colour_by = "CD3E"),
+    plotReducedDim(tcells, dimred = "UMAP_tcell", colour_by = "CD4"),
+    plotReducedDim(tcells, dimred = "UMAP_tcell", colour_by = "CD8A"),
+    plotReducedDim(tcells, dimred = "UMAP_tcell", colour_by = "GNLY"),
+    ncol = 2
+)
+
+```
+
+:::{.callout-note title="Discuss"}
+{{< meta clust_sub_6 >}}
 :::
 
 ## {{< meta session >}}
@@ -255,6 +439,7 @@ ggplot(as.data.frame(colData(sce)), aes(x = sample, fill = louvain_SNNk10)) +
   <summary>Click here</summary>
 
 ```{r}
+#| label: session
 sessionInfo()
 ```
 

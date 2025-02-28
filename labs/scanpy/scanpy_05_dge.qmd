@@ -22,6 +22,7 @@ The clustering with resolution 0.6 seems to give a reasonable number of clusters
 First, let's import libraries and fetch the clustered data from the previous lab.
 
 ```{python}
+#| label: libraries
 import numpy as np
 import pandas as pd
 import scanpy as sc
@@ -29,7 +30,7 @@ import gseapy
 import matplotlib.pyplot as plt
 import warnings
 import os
-import urllib.request
+import subprocess
 
 warnings.simplefilter(action="ignore", category=Warning)
 
@@ -42,62 +43,65 @@ sc.settings.set_figure_params(dpi=80)
 Read in the clustered data object.
 
 ```{python}
+#| label: fetch-data
 # download pre-computed data if missing or long compute
 fetch_data = True
 
 # url for source and intermediate data
-path_data = "https://export.uppmax.uu.se/naiss2023-23-3/workshops/workshop-scrnaseq"
+path_data = "https://nextcloud.dc.scilifelab.se/public.php/webdav"
+curl_upass = "zbC5fr2LbEZ9rSE:scRNAseq2025"
 
 path_results = "data/covid/results"
 if not os.path.exists(path_results):
     os.makedirs(path_results, exist_ok=True)
 
-# path_file = "data/covid/results/scanpy_covid_qc_dr_scanorama_cl.h5ad"
-path_file = "data/covid/results/scanpy_covid_qc_dr_scanorama_cl.h5ad"
+# path_file = "data/covid/results/scanpy_covid_qc_dr_int_cl.h5ad"
+path_file = "data/covid/results/scanpy_covid_qc_dr_int_cl.h5ad"
 if fetch_data and not os.path.exists(path_file):
-    urllib.request.urlretrieve(os.path.join(
-        path_data, 'covid/results/scanpy_covid_qc_dr_scanorama_cl.h5ad'), path_file)
+    file_url = os.path.join(path_data, "covid/results_scanpy/scanpy_covid_qc_dr_int_cl.h5ad")
+    subprocess.call(["curl", "-u", curl_upass, "-o", path_file, file_url ])
 
 adata = sc.read_h5ad(path_file)
 adata
 ```
 
+Check what you have in the different matrices.
+
 ```{python}
+#| label: check-data
 print(adata.X.shape)
-print(adata.raw.X.shape)
-print(adata.raw.X[:10,:10])
+print(type(adata.raw))
+print(adata.X[:10,:10])
 ```
 
-As you can see, the X matrix only contains the variable genes, while the raw matrix contains all genes.
+As you can see, the X matrix contains all genes and the data looks logtransformed.
 
-Printing a few of the values in adata.raw.X shows that the raw matrix is normalized.
+For DGE analysis we would like to run with all genes, on normalized values, so if you did subset the `adata.X` for variable genes you would have to revert back to the raw matrix with `adata = adata.raw.to_adata()`. In case you have raw counts in the matrix you also have to renormalize and logtransform.
 
-For DGE analysis we would like to run with all genes, on normalized values, so we will have to revert back to the raw matrix. In case you have raw counts in the matrix you also have to renormalize and logtransform.
 
-```{python}
-adata = adata.raw.to_adata()
-```
-
-Now lets look at the clustering of the object we loaded in the umap. We will use louvain_0.6 clustering in this exercise.
+Now lets look at the clustering of the object we loaded in the umap. We will use leiden_0.6 clustering in this exercise. If you recall from the previous exercise, we set the default umap to the umap created with Harmony.
 
 ```{python}
-sc.pl.umap(adata, color='louvain_0.6')
+#| label: plot-umap
+sc.pl.umap(adata, color='leiden_0.6')
 ```
 
 ## T-test
 
 ```{python}
-sc.tl.rank_genes_groups(adata, 'louvain_0.6', method='t-test', key_added = "t-test")
+#| label: ttest
+sc.tl.rank_genes_groups(adata, 'leiden_0.6', method='t-test', key_added = "t-test")
 sc.pl.rank_genes_groups(adata, n_genes=25, sharey=False, key = "t-test")
 
 # results are stored in the adata.uns["t-test"] slot
-adata
+adata.uns.keys()
 ```
 
 ## T-test overestimated_variance
 
 ```{python}
-sc.tl.rank_genes_groups(adata, 'louvain_0.6', method='t-test_overestim_var', key_added = "t-test_ov")
+#| label: ttest-o
+sc.tl.rank_genes_groups(adata, 'leiden_0.6', method='t-test_overestim_var', key_added = "t-test_ov")
 sc.pl.rank_genes_groups(adata, n_genes=25, sharey=False, key = "t-test_ov")
 ```
 
@@ -106,7 +110,8 @@ sc.pl.rank_genes_groups(adata, n_genes=25, sharey=False, key = "t-test_ov")
 The result of a Wilcoxon rank-sum (Mann-Whitney-U) test is very similar. We recommend using the latter in publications, see e.g., Sonison & Robinson (2018). You might also consider much more powerful differential testing packages like MAST, limma, DESeq2 and, for python, the recent diffxpy.
 
 ```{python}
-sc.tl.rank_genes_groups(adata, 'louvain_0.6', method='wilcoxon', key_added = "wilcoxon")
+#| label: wilcoxon
+sc.tl.rank_genes_groups(adata, 'leiden_0.6', method='wilcoxon', key_added = "wilcoxon")
 sc.pl.rank_genes_groups(adata, n_genes=25, sharey=False, key="wilcoxon")
 ```
 
@@ -115,7 +120,8 @@ sc.pl.rank_genes_groups(adata, n_genes=25, sharey=False, key="wilcoxon")
 As an alternative, let us rank genes using logistic regression. For instance, this has been suggested by Natranos et al. (2018). The essential difference is that here, we use a multi-variate appraoch whereas conventional differential tests are uni-variate. Clark et al. (2014) has more details.
 
 ```{python}
-sc.tl.rank_genes_groups(adata, 'louvain_0.6', method='logreg',key_added = "logreg")
+#| label: logreg
+sc.tl.rank_genes_groups(adata, 'leiden_0.6', method='logreg',key_added = "logreg")
 sc.pl.rank_genes_groups(adata, n_genes=25, sharey=False, key = "logreg")
 ```
 
@@ -124,6 +130,7 @@ sc.pl.rank_genes_groups(adata, n_genes=25, sharey=False, key = "logreg")
 Take all significant DE genes for cluster0 with each test and compare the overlap.
 
 ```{python}
+#| label: compare
 #compare cluster1 genes, only stores top 100 by default
 
 wc = sc.get.rank_genes_groups_df(adata, group='0', key='wilcoxon', pval_cutoff=0.01, log2fc_min=0)['names']
@@ -140,13 +147,14 @@ As you can see, the Wilcoxon test and the T-test with overestimated variance giv
 
 ## Visualization
 
-There are several ways to visualize the expression of top DE genes. Here we will plot top 5 genes per cluster from Wilcoxon test as heatmap, dotplot, violin plot or matrix.
+There are several ways to visualize the expression of top DE genes. Here we will plot top 5 genes per cluster from Wilcoxon test as heatmap, dotplot, violin plots or a matrix with average expression.
 
 ```{python}
-sc.pl.rank_genes_groups_heatmap(adata, n_genes=5, key="wilcoxon", groupby="louvain_0.6", show_gene_labels=True)
-sc.pl.rank_genes_groups_dotplot(adata, n_genes=5, key="wilcoxon", groupby="louvain_0.6")
-sc.pl.rank_genes_groups_stacked_violin(adata, n_genes=5, key="wilcoxon", groupby="louvain_0.6")
-sc.pl.rank_genes_groups_matrixplot(adata, n_genes=5, key="wilcoxon", groupby="louvain_0.6")
+#| label: visualize
+sc.pl.rank_genes_groups_heatmap(adata, n_genes=5, key="wilcoxon", groupby="leiden_0.6", show_gene_labels=True)
+sc.pl.rank_genes_groups_dotplot(adata, n_genes=5, key="wilcoxon", groupby="leiden_0.6")
+sc.pl.rank_genes_groups_stacked_violin(adata, n_genes=5, key="wilcoxon", groupby="leiden_0.6")
+sc.pl.rank_genes_groups_matrixplot(adata, n_genes=5, key="wilcoxon", groupby="leiden_0.6")
 ```
 
 ## Compare specific clusters
@@ -154,20 +162,22 @@ sc.pl.rank_genes_groups_matrixplot(adata, n_genes=5, key="wilcoxon", groupby="lo
 We can also do pairwise comparisons of individual clusters on one vs many clusters. For instance, clusters 1 & 2 have very similar expression profiles.
 
 ```{python}
-sc.tl.rank_genes_groups(adata, 'louvain_0.6', groups=['1'], reference='2', method='wilcoxon')
+#| label: subset
+sc.tl.rank_genes_groups(adata, 'leiden_0.6', groups=['1'], reference='2', method='wilcoxon')
 sc.pl.rank_genes_groups(adata, groups=['1'], n_genes=20)
 ```
 
-Plot as violins for those two groups.
+Plot as violins for those two groups, or across all the clusters. 
 
 ```{python}
+#| label: plot-subset
 sc.pl.rank_genes_groups_violin(adata, groups='1', n_genes=10)
 
 # plot the same genes as violins across all the datasets.
 
 # convert numpy.recarray to list
 mynames = [x[0] for x in adata.uns['rank_genes_groups']['names'][:10]]
-sc.pl.stacked_violin(adata, mynames, groupby = 'louvain_0.6')
+sc.pl.stacked_violin(adata, mynames, groupby = 'leiden_0.6')
 ```
 
 ## {{< meta dge_cond >}}
@@ -175,7 +185,8 @@ sc.pl.stacked_violin(adata, mynames, groupby = 'louvain_0.6')
 {{< meta dge_cond_1 >}}
 
 ```{python}
-cl1 = adata[adata.obs['louvain_0.6'] == '4',:]
+#| label: condition
+cl1 = adata[adata.obs['leiden_0.6'] == '4',:]
 cl1.obs['type'].value_counts()
 
 sc.tl.rank_genes_groups(cl1, 'type', method='wilcoxon', key_added = "wilcoxon")
@@ -183,34 +194,41 @@ sc.pl.rank_genes_groups(cl1, n_genes=25, sharey=False, key="wilcoxon")
 ```
 
 ```{python}
+#| label: condition-vln
 sc.pl.rank_genes_groups_violin(cl1, n_genes=10, key="wilcoxon")
 ```
 
 We can also plot these genes across all clusters, but split by "type", to check if the genes are also up/downregulated in other celltypes.
 
 ```{python}
+#| label: condition-vln-all
 import seaborn as sns
 
 genes1 = sc.get.rank_genes_groups_df(cl1, group='Covid', key='wilcoxon')['names'][:5]
 genes2 = sc.get.rank_genes_groups_df(cl1, group='Ctrl', key='wilcoxon')['names'][:5]
 genes = genes1.tolist() +  genes2.tolist() 
-df = sc.get.obs_df(adata, genes + ['louvain_0.6','type'], use_raw=False)
-df2 = df.melt(id_vars=["louvain_0.6",'type'], value_vars=genes)
+df = sc.get.obs_df(adata, genes + ['leiden_0.6','type'], use_raw=False)
+df2 = df.melt(id_vars=["leiden_0.6",'type'], value_vars=genes)
 
-sns.catplot(x = "louvain_0.6", y = "value", hue = "type", kind = 'violin', col = "variable", data = df2, col_wrap=4, inner=None)
+sns.catplot(x = "leiden_0.6", y = "value", hue = "type", kind = 'violin', col = "variable", data = df2, col_wrap=4, inner=None)
 ```
 
-As you can see, we have many sex chromosome related genes among the top DE genes. And if you remember from the QC lab, we have inbalanced sex distribution among our subjects, so this may not be related to covid at all.
+As you can see, we have many sex chromosome related genes among the top DE genes. And if you remember from the QC lab, we have inbalanced sex distribution among our subjects, so this is probably not related to covid at all.
 
 ### Remove sex chromosome genes
 
 To remove some of the bias due to inbalanced sex in the subjects we can remove the sex chromosome related genes.
 
 ```{python}
-annot = sc.queries.biomart_annotations(
-        "hsapiens",
-        ["ensembl_gene_id", "external_gene_name", "start_position", "end_position", "chromosome_name"],
-    ).set_index("external_gene_name")
+#| label: sex-genes
+
+annot_file = 'data/covid/results/gene_annotations_pybiomart.csv'
+
+if not os.path.exists(annot_file):
+    annot = sc.queries.biomart_annotations("hsapiens", ["ensembl_gene_id", "external_gene_name", "start_position", "end_position", "chromosome_name"] ).set_index("external_gene_name")
+    annot.to_csv(annot_file)
+else:
+    annot = pd.read_csv(annot_file, index_col=0)
 
 chrY_genes = adata.var_names.intersection(annot.index[annot.chromosome_name == "Y"])
 chrX_genes = adata.var_names.intersection(annot.index[annot.chromosome_name == "X"])
@@ -229,21 +247,25 @@ cl1 = cl1[:,keep_genes]
 Rerun differential expression.
 
 ```{python}
+#| label: markers-nosex
 sc.tl.rank_genes_groups(cl1, 'type', method='wilcoxon', key_added = "wilcoxon")
 sc.pl.rank_genes_groups(cl1, n_genes=25, sharey=False, key="wilcoxon")
 ```
 
+Now at least we do not have the sex chromosome genes as DE but still, some of the differences between patient and control could still be related to sex.
+
 ### Patient batch effects
 
-When we are testing for Covid vs Control we are running a DGE test for 3 vs 3 individuals. That will be very sensitive to sample differences unless we find a way to control for it. So first, lets check how the top DGEs are expressed across the individuals:
+When we are testing for Covid vs Control we are running a DGE test for 4 vs 4 individuals. That will be very sensitive to sample differences unless we find a way to control for it. So first, lets check how the top DGEs are expressed in that cluster, across the individuals:
 
 ```{python}
+#| label: vln-batch
 genes1 = sc.get.rank_genes_groups_df(cl1, group='Covid', key='wilcoxon')['names'][:5]
 genes2 = sc.get.rank_genes_groups_df(cl1, group='Ctrl', key='wilcoxon')['names'][:5]
 genes = genes1.tolist() +  genes2.tolist() 
 
-sc.pl.violin(cl1, genes1, groupby='sample')
-sc.pl.violin(cl1, genes2, groupby='sample')
+sc.pl.violin(cl1, genes1, groupby='sample', rotation=45)
+sc.pl.violin(cl1, genes2, groupby='sample', rotation=45)
 ```
 
 As you can see, many of the genes detected as DGE in Covid are unique to one or 2 patients.
@@ -251,6 +273,7 @@ As you can see, many of the genes detected as DGE in Covid are unique to one or 
 We can also plot the top Covid and top Ctrl genes as a dotplot:
 
 ```{python}
+#| label: dotplot-batch
 genes1 = sc.get.rank_genes_groups_df(cl1, group='Covid', key='wilcoxon')['names'][:20]
 genes2 = sc.get.rank_genes_groups_df(cl1, group='Ctrl', key='wilcoxon')['names'][:20]
 genes = genes1.tolist() +  genes2.tolist() 
@@ -263,6 +286,7 @@ Clearly many of the top Covid genes are only high in the covid_17 sample, and no
 This is also the patient with the highest number of cells in this cluster:
 
 ```{python}
+#| label: count-cells
 cl1.obs['sample'].value_counts()
 ```
 
@@ -274,6 +298,7 @@ So we will downsample to an equal number of cells per sample, in this case 34 ce
 
 
 ```{python}
+#| label: subsample-clusters
 target_cells = 37
 
 tmp = [cl1[cl1.obs['sample'] == s] for s in cl1.obs['sample'].cat.categories]
@@ -288,11 +313,13 @@ cl1_sub.obs['sample'].value_counts()
 ```
 
 ```{python}
+#| label: markers-sub
 sc.tl.rank_genes_groups(cl1_sub, 'type', method='wilcoxon', key_added = "wilcoxon")
 sc.pl.rank_genes_groups(cl1_sub, n_genes=25, sharey=False, key="wilcoxon")
 ```
 
 ```{python}
+#| label: dotplot-sub
 genes1 = sc.get.rank_genes_groups_df(cl1_sub, group='Covid', key='wilcoxon')['names'][:20]
 genes2 = sc.get.rank_genes_groups_df(cl1_sub, group='Ctrl', key='wilcoxon')['names'][:20]
 genes = genes1.tolist() +  genes2.tolist() 
@@ -300,7 +327,7 @@ genes = genes1.tolist() +  genes2.tolist()
 sc.pl.dotplot(cl1,genes, groupby='sample')
 ```
 
-It looks much better now. But if we look per patient you can see that we still have some genes that are dominated by a single patient. Still, it is often a good idea to control the number of cells from each sample when doing differential expression.
+It looks much better now. But if we look per subject you can see that we still have some genes that are dominated by a single patient. Still, it is often a good idea to control the number of cells from each sample when doing differential expression.
 
 There are many different ways to try and resolve the issue of patient batch effects, however most of them require R packages. These can be run via rpy2 as is demonstraded in this compendium:
 https://www.sc-best-practices.org/conditions/differential_gene_expression.html
@@ -314,6 +341,7 @@ However, we have not included it here as of now. So please have a look at the pa
 {{< meta dge_gsa_hyper_1 >}}
 
 ```{python}
+#| label: gsea-genesets
 #Available databases : ‘Human’, ‘Mouse’, ‘Yeast’, ‘Fly’, ‘Fish’, ‘Worm’ 
 gene_set_names = gseapy.get_library_name(organism='Human')
 print(gene_set_names)
@@ -322,12 +350,14 @@ print(gene_set_names)
 Get the significant DEGs for the Covid patients.
 
 ```{python}
+#| label: get-dges
 #?gseapy.enrichr
 glist = sc.get.rank_genes_groups_df(cl1_sub, group='Covid', key='wilcoxon', log2fc_min=0.25, pval_cutoff=0.05)['names'].squeeze().str.strip().tolist()
 print(len(glist))
 ```
 
 ```{python}
+#| label: gsea
 enr_res = gseapy.enrichr(gene_list=glist, organism='Human', gene_sets='GO_Biological_Process_2018', cutoff = 0.5)
 enr_res.results.head()
 ```
@@ -335,6 +365,7 @@ enr_res.results.head()
 {{< meta dge_gsa_hyper_2 >}}
 
 ```{python}
+#| label: plot-gsea
 gseapy.barplot(enr_res.res2d,title='GO_Biological_Process_2018')
 ```
 
@@ -345,6 +376,7 @@ gseapy.barplot(enr_res.res2d,title='GO_Biological_Process_2018')
 We need a table with all DEGs and their log foldchanges. However, many lowly expressed genes will have high foldchanges and just contribue noise, so also filter for expression in enough cells.
 
 ```{python}
+#| label: gene-rank
 gene_rank = sc.get.rank_genes_groups_df(cl1_sub, group='Covid', key='wilcoxon')[['names','logfoldchanges']]
 gene_rank.sort_values(by=['logfoldchanges'], inplace=True, ascending=False)
 
@@ -360,6 +392,7 @@ gene_rank
 {{< meta dge_gsea_2 >}}
 
 ```{python}
+#| label: gsea-genesets2
 #Available databases : ‘Human’, ‘Mouse’, ‘Yeast’, ‘Fly’, ‘Fish’, ‘Worm’ 
 gene_set_names = gseapy.get_library_name(organism='Human')
 print(gene_set_names)
@@ -368,6 +401,7 @@ print(gene_set_names)
 {{< meta dge_gsea_3 >}}
 
 ```{python}
+#| label: gsea-rank
 res = gseapy.prerank(rnk=gene_rank, gene_sets='KEGG_2021_Human')
 
 terms = res.res2d.Term
@@ -375,6 +409,7 @@ terms[:10]
 ```
 
 ```{python}
+#| label: plot-gsea-rank
 gseapy.gseaplot(rank_metric=res.ranking, term=terms[0], **res.results[terms[0]])
 ```
 
@@ -385,6 +420,7 @@ gseapy.gseaplot(rank_metric=res.ranking, term=terms[0], **res.results[terms[0]])
 {{< meta dge_save >}}
 
 ```{python}
+#| label: save
 adata.write_h5ad('./data/covid/results/scanpy_covid_qc_dr_scanorama_cl_dge.h5ad')
 ```
 
@@ -394,6 +430,7 @@ adata.write_h5ad('./data/covid/results/scanpy_covid_qc_dr_scanorama_cl_dge.h5ad'
   <summary>Click here</summary>
 
 ```{python}
+#| label: session
 sc.logging.print_versions()
 ```
 
