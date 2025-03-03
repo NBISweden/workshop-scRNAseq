@@ -89,6 +89,7 @@ docker run --rm --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work $docker_site
 docker run --rm --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work $docker_site quarto render /work/home_schedule.qmd
 docker run --rm --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work $docker_site quarto render /work/home_syllabus.qmd
 docker run --rm --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work $docker_site quarto render /work/other/uppmax.qmd
+docker run --rm --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work $docker_site quarto render /work/other/scilifelab-serve.qmd
 docker run --rm --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work $docker_site quarto render /work/other/docker.qmd
 docker run --rm --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work $docker_site quarto render /work/other/containers.qmd
 docker run --rm --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work $docker_site quarto render /work/other/faq.qmd
