@@ -1,0 +1,124 @@
+name: Build and Push Toolkits
+
+on:
+  push:
+    branches:
+      - "main"
+  workflow_dispatch:
+
+env:
+  GITHUB_ORG: nbisweden
+  SEURAT_REPO_NAME: workshop-scrnaseq-seurat
+  SCANPY_REPO_NAME: workshop-scrnaseq-scanpy
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      seurat: ${{ steps.filter.outputs.seurat }}
+      scanpy: ${{ steps.filter.outputs.scanpy }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Filter files
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            seurat:
+              - "containers/*/*seurat*"
+              - "containers/scripts/download-labs.sh"
+            scanpy:
+              - "containers/*/*scanpy*"
+              - "containers/scripts/download-labs.sh"
+
+  seurat:
+    needs: changes
+    if: ${{ needs.changes.outputs.seurat == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f95db51fddba0c2d1ec667646a06c2ce06100226 # v3.0.0
+
+      - name: Log in to GHCR
+        uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # v3.0.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@96383f45573cb7f253c731d3b3ab81c87ef81934 # v5.0.0
+        with:
+          images: |
+            ghcr.io/${{ env.GITHUB_ORG }}/${{ env.SEURAT_REPO_NAME }}
+          tags: |
+            type=sha
+            type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+            type=raw,value={{date 'YYYYMMDD-HHmm' tz='Europe/Stockholm'}}
+
+      - name: Build and push Docker image
+        id: build-and-push
+        uses: docker/build-push-action@v6
+        with:
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          context: ./containers
+          file: ./containers/dockerfiles/seurat-bioc.Dockerfile
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          push: true
+
+  scanpy:
+    needs: changes
+    if: ${{ needs.changes.outputs.scanpy == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f95db51fddba0c2d1ec667646a06c2ce06100226 # v3.0.0
+
+      - name: Log in to GHCR
+        uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # v3.0.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@96383f45573cb7f253c731d3b3ab81c87ef81934 # v5.0.0
+        with:
+          images: |
+            ghcr.io/${{ env.GITHUB_ORG }}/${{ env.SCANPY_REPO_NAME }}
+          tags: |
+            type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+            type=raw,value={{date 'YYYYMMDD-HHmm' tz='Europe/Stockholm'}}
+            type=sha
+
+      - name: Build and push Docker image
+        id: build-and-push
+        uses: docker/build-push-action@v6
+        with:
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          context: ./containers
+          file: ./containers/dockerfiles/scanpy.Dockerfile
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          push: true
