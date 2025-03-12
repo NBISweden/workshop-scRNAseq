@@ -1,9 +1,9 @@
 #!/bin/bash
 
+## Exit on failure
 set -euo pipefail
 
 ## Build ARGs
-NCPUS=${NCPUS:--1}
 QUARTO_VERSION="1.3.450"
 TINI_VERSION="v0.19.0"
 

@@ -2,8 +2,6 @@ FROM ghcr.io/scilifelabdatacentre/serve-rstudio:231030-1146
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-ARG NCPUS=${NCPUS:--1}
-
 USER root
 
 COPY scripts/install_seurat_bioc.sh /tmp/scripts/
@@ -19,10 +17,10 @@ RUN /usr/local/conda/bin/conda-lock install \
     && /usr/local/conda/bin/conda clean --all -f -y
 
 # Configure container start
-COPY --chown="${NB_UID}:${NB_GID}" --chmod=0755 scripts/seurat-start-script.sh ${HOME}/start-script.sh
-COPY --chown="${NB_UID}:${NB_GID}" --chmod=0755 scripts/download-labs.sh ${HOME}/download-labs.sh
+COPY --chown="jovyan:users" --chmod=0755 scripts/seurat-start-script.sh ${HOME}/start-script.sh
+COPY --chown="jovyan:users" --chmod=0755 scripts/download-labs.sh ${HOME}/download-labs.sh
 
-USER ${NB_UID}
+USER jovyan
 
 WORKDIR ${HOME}
 
