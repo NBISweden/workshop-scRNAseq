@@ -1,6 +1,7 @@
 #! /bin/bash
 
 ## Example usage:
+#   ./download-labs.sh "https://github.com/NBISweden" "workshop-scRNAseq-devel" "compiled/labs" "seurat" "labs"
 #   ./download-labs.sh "https://github.com/NBISweden" "workshop-scRNAseq-devel" "compiled/labs" "scanpy" "labs"
 
 orgurl="$1"
