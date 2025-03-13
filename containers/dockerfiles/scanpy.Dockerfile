@@ -27,6 +27,8 @@ COPY --chown="${NB_UID}:${NB_GID}" --chmod=0755 scripts/download-labs.sh ${HOME}
 
 USER ${NB_UID}
 
+RUN mkdir -p ${HOME}/work
+
 EXPOSE 8888
 
 ENTRYPOINT ["tini", "-g", "--", "./start-script.sh"]

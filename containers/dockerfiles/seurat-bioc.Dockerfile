@@ -26,6 +26,8 @@ RUN chown -R jovyan:users ${HOME} \
 
 USER jovyan
 
+RUN mkdir -p ${HOME}/work
+
 WORKDIR ${HOME}
 
 EXPOSE 8787
