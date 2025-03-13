@@ -1,8 +1,8 @@
 #! /bin/bash
 
 ## Example usage:
-#   ./download-labs.sh "https://github.com/NBISweden" "workshop-scRNAseq-devel" "compiled/labs" "seurat" "labs"
-#   ./download-labs.sh "https://github.com/NBISweden" "workshop-scRNAseq-devel" "compiled/labs" "scanpy" "labs"
+#   ./download-labs.sh "https://github.com/NBISweden" "workshop-scRNAseq" "compiled/labs" "seurat" "work/labs"
+#   ./download-labs.sh "https://github.com/NBISweden" "workshop-scRNAseq" "compiled/labs" "scanpy" "work/labs"
 
 orgurl="$1"
 reponame="$2"
