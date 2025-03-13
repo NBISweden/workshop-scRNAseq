@@ -17,8 +17,12 @@ RUN /usr/local/conda/bin/conda-lock install \
     && /usr/local/conda/bin/conda clean --all -f -y
 
 # Configure container start
-COPY --chown="jovyan:users" --chmod=0755 scripts/seurat-start-script.sh ${HOME}/start-script.sh
-COPY --chown="jovyan:users" --chmod=0755 scripts/download-labs.sh ${HOME}/download-labs.sh
+COPY scripts/seurat-start-script.sh ${HOME}/start-script.sh
+COPY scripts/download-labs.sh ${HOME}/download-labs.sh
+
+RUN chown -R jovyan:users ${HOME} \
+    && chmod a+x ${HOME}/start-script.sh \
+    && chmod a+x ${HOME}/download-labs.sh
 
 USER jovyan
 
