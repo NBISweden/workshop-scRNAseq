@@ -1,6 +1,6 @@
 ---
 title: Differential Gene Expression
-author: Roy Francis, Åsa Björklund, Olga Dethlefson
+author: Jennifer Fransson, Roy Francis, Åsa Björklund, Olga Dethlefson
 format:
   revealjs:
     df-print: kable
@@ -18,6 +18,7 @@ bibliography: references.bib
 library(Seurat)
 library(ggplot2)
 library(dplyr)
+library(ggpubr)
 
 theme_set(theme_minimal(base_size=10))
 options(ggplot2.discrete.colour= c("#1f78b4", "#33a02c", "#e31a1c", "#ff7f00", "#6a3d9a"))
@@ -79,15 +80,19 @@ DGE is basically comparing two groups of samples to identify if gene expression 
 ## What is differential gene expression?
 
 ```{r}
-#| fig-height: 6
+#| fig-height: 4
 #| fig-width: 8
+
+set.seed(42)
+
 n <- 30
 dfr <- data.frame(cluster=rep(c(rep("C1",n),rep("C2",n)),3), gene=rep(c("CD79A","FOX1","MS41A"),each=n*2), norm_expression=c(rnorm(n,3,0.5),rnorm(n,1,0.5),rnorm(n,1,0.5),rnorm(n,3,0.5),rnorm(n,1.8,0.5),rnorm(n,2.2,0.5)))
 
 ggplot(dfr, aes(x=cluster, y=norm_expression))+
   #geom_violin(aes(fill=cluster))+
   geom_jitter(aes(color=cluster), alpha=0.8)+
-  facet_wrap(~gene)
+  facet_wrap(~gene) + 
+  theme(panel.spacing.x = unit(30, "pt"))
 ```
 
 :::{.notes}
@@ -132,8 +137,21 @@ Most methods do not take zeros into account.
 > ...most computational methods still stick with the old mentality of viewing differential expression as a simple ‘up or down’ phenomenon. We advocate that we should fully embrace the features of single cell data, which allows us to observe binary (from Off to On) as well as continuous (the amount of expression) regulations. @wu2018two
 
 :::{.notes}
-But single cell expression looks more like this. With lots of zeros. Now, it's harder to say if the difference is significant. Apart from the level of expression, the number of samples (cells) that express the gene also becomes relevant. If we only look at expression level, they might be similar, but if we look at number of cells, one might be higher than ohe other.
+But single cell expression looks more like this. With lots of zeros. Now, it's harder to say if the difference is significant. Apart from the level of expression, the number of samples (cells) that express the gene also becomes relevant. If we only look at expression level, they might be similar, but if we look at number of cells, one might be higher than the other.
 :::
+
+
+## Percentage of expression > 0
+
+```{r}
+head(m, n=10) %>%
+  select(avg_log2FC, p_val_adj, pct.1, pct.2)
+```
+
+:::{.notes}
+You can still miss bimodal distributions if the "negative" part is > 0
+:::
+
 
 ## Comparisons
 
@@ -158,6 +176,7 @@ UMAPPlot(obj, pt.size = 1.5, group.by = "seurat_clusters") + NoAxes()
 
 :::
 :::
+
 
 ## Functions
 
@@ -201,11 +220,15 @@ FindAllMarkers(
 )
 ```
 
-[Seurat 4.3.0]{.small}
+[Seurat `r packageVersion("Seurat")`]{.small}
 
 :::{.notes}
 FindAllMarkers() does a 1 vs rest comparison for all Identities. `assay` must be RNA. `slot` is usually data.
 :::
+
+
+
+
 
 ## Tests
 
@@ -321,6 +344,173 @@ Some distributions capture this closely: ZINB, Poisson-Beta
 
 "DESeq2" : Identifies differentially expressed genes between two groups of cells based on a model using DESeq2 which uses a negative binomial distribution (Love et al, Genome Biology, 2014).This test does not support pre-filtering of genes based on average difference (or percent detection rate) between cell groups. However, genes may be pre-filtered based on their minimum detection rate (min.pct) across both cell groups. To use this method, please install DESeq2, using the instructions at https://bioconductor.org/packages/release/bioc/html/DESeq2.html
 ```
+
+
+
+## Statistics - what does the p-value mean?
+
+- Null hypothesis: Mean/median/distribution is equal between group A and group B
+- $p$ < 0.05 : if null hypothesis is true, we can expect the measured result in < 5% of cases where group A and group B have been sampled at $n$
+- $p$ depends on $n$, variance and intergroup difference
+  - As $n$ increases, variance can increase and difference can decrease without losing power
+
+## Statistics - what does the p-value mean?
+
+
+```{r, fig.height=3, fig.width=6}
+
+set.seed(654321)
+
+testdata = do.call("rbind",lapply(
+  list(list(n = 1000, diff = 0.2),
+       list(n = 20, diff = 0.2),
+       list(n = 20, diff = 2)),
+  function(x){
+    rbind(
+      data.frame(group = "A", 
+                 n = paste0("n = ",x$n),
+                 diff = paste0("diff. in pop. means = ",x$diff),
+                 value = rnorm(x$n, 5, 1)),
+      data.frame(group = "B", 
+                 n = paste0("n = ",x$n),
+                 diff = paste0("diff. in pop. means = ",x$diff),
+                 value = rnorm(x$n, 5+x$diff, 1))
+      )
+    }))
+testdata$n = factor(testdata$n, levels = paste0("n = ", c(20, 1000)))
+
+ggplot(testdata, aes(x = group, y = value)) +
+  geom_violin() + geom_jitter(shape = 16, alpha = 0.5) + 
+  facet_wrap(c("n","diff")) + 
+  ggpubr::stat_compare_means( size =3) + 
+  theme(strip.text = element_text(size = 10)) +
+  scale_y_continuous(expand = expansion(mult = c(0.1,0.2)))
+
+
+```
+
+Are all statistically significant differences of interest?
+
+:::{.notes}
+Not as simple as setting a threshold for difference - variance also matters
+:::
+
+
+## Strategies to compare groups of interest
+
+## Statistics - what is the $n$?
+
+Example 1: 1 patient vs 1 control
+
+- $n$: Number of cells (1000s)
+- Populations: Cells in Patient vs Cells in Control
+
+
+```{r, fig.height=3, fig.width=5}
+
+set.seed(654321)
+
+testdata = do.call("rbind",lapply(
+  list(list(n = 1000, diff = 1)),
+  function(x){
+    rbind(
+      data.frame(group = "A", 
+                 n = paste0("n = ",x$n),
+                 diff = paste0("diff. in population means = ",x$diff),
+                 value = rnorm(x$n, 5, 1)),
+      data.frame(group = "B", 
+                 n = paste0("n = ",x$n),
+                 diff = paste0("diff. in population means = ",x$diff),
+                 value = rnorm(x$n, 5+x$diff, 1))
+      )
+    }))
+
+ggplot(testdata, aes(x = group, y = value)) +
+  geom_violin() + geom_jitter(shape = 16, alpha = 0.5) + 
+  ggpubr::stat_compare_means( size =3) + 
+  theme(strip.text = element_text(size = 10)) +
+  scale_y_continuous(expand = expansion(mult = c(0.1,0.2)))
+
+
+```
+
+
+Relevance?
+
+## Statistics - what is the $n$?
+
+Example 2: 3 patients vs 3 controls
+
+- $n$: Number of cells (1000s) or number of individuals (3)?
+- Consider groups of interest and independence when choosing the test
+
+
+```{r, fig.height=3, fig.width=6}
+
+set.seed(654321)
+
+testdata_A = do.call("rbind",lapply(
+  1:3,
+  function(i){
+    data.frame(group = "A",
+               patient = paste0("A",i),
+               value = rnorm(300, 5, 1))}))
+
+testdata_B = do.call("rbind",list(
+    data.frame(group = "B",
+               patient = "B1",
+               value = rnorm(300, 5, 1)),
+    data.frame(group = "B",
+               patient = "B2",
+               value = rnorm(300, 5, 1)),
+    data.frame(group = "B",
+               patient = "B3",
+               value = rnorm(300, 7, 1))
+    ))
+
+cowplot::plot_grid(
+  ggplot(rbind(testdata_A,testdata_B), 
+         aes(x = group, y = value, color = group)) +
+    geom_jitter(shape = 16, alpha = 0.5, size = 0.5) + 
+    ggpubr::stat_compare_means( size =3) +  
+    geom_violin(fill = NA, color = "black") + 
+    theme(legend.position = "none") +
+    scale_y_continuous(expand = expansion(mult = c(0.1,0.2))),
+  ggplot(rbind(testdata_A,testdata_B), aes(x = patient, y = value, color = group)) +
+    geom_jitter(shape = 16, alpha = 0.5) + 
+    geom_violin(fill = NA, color = "black") + 
+    theme(legend.position = "none") +
+    scale_y_continuous(expand = expansion(mult = c(0.1,0.2))),
+  rel_widths = c(2,5))
+
+
+
+```
+
+
+
+## Statistics - biological replicates
+
+- Cells from one source:
+  - Sorted T cells vs sorted B cells
+  - Cells from time point 1 vs cells from time point 2
+- Individuals from group A vs individuals from group B
+- Cells from cluster A vs cells from cluster B?
+  - *How are the underlying populations defined?*
+
+
+::: {.callout-note}
+Interpretation is more limited when groups are defined from data!
+:::
+
+
+## Methods to address group differences
+
+- Simple model
+- Pseudobulk
+- GLM/GAM
+- Mixed model
+- Hurdle model
 
 
 ## MAST
@@ -471,4 +661,4 @@ For highly expressed genes,
 
 ## Acknowledgements
 
-Slides adapted from previous presentations by Olga Dethlefson and Åsa Björklund.
+Slides adapted from previous presentations by Olga Dethlefson, Åsa Björklund and Roy Francis.
