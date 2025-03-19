@@ -7,7 +7,7 @@
 ## 
 ## Usage
 ## Run this script in the root of the repo
-## bash ./scripts/render.sh
+## bash ./scripts/render_partly.sh
 
 
 # instead of running all files, will run all labs in one of the pipelines.
@@ -24,8 +24,8 @@
 set -e
 
 ## define docker images
-docker_r="docker.io/susrei/workshop-scrnaseq:seurat-bioc-21021333"
-docker_scanpy="docker.io/susrei/workshop-scrnaseq:scanpy-2025-serve-app-291751"
+docker_r="docker.io/susrei/workshop-scrnaseq-seurat:20250313-2022"
+docker_scanpy="docker.io/susrei/workshop-scrnaseq-scanpy:20250313-2022"
 
 ## old images for the r spatial labs.
 docker_seurat_spatial="ghcr.io/nbisweden/workshop-scrnaseq:2024-seurat_spatial-r4.3.0"
@@ -125,6 +125,7 @@ then
     docker run --rm --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work $docker_site quarto render /work/other/scilifelab-serve.qmd    
     docker run --rm --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work $docker_site quarto render /work/other/docker.qmd
     docker run --rm --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work $docker_site quarto render /work/other/containers.qmd
+    docker run --rm --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work $docker_site quarto render /work/other/containers-spatial.qmd
     docker run --rm --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work $docker_site quarto render /work/other/faq.qmd
     docker run --rm --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work $docker_site quarto render /work/other/data.qmd
     #docker run --rm --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work $docker_site quarto render /work/404.md
