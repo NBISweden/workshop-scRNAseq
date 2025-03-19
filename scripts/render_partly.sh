@@ -24,8 +24,8 @@
 set -e
 
 ## define docker images
-docker_r="docker.io/susrei/workshop-scrnaseq:seurat-bioc-21021333"
-docker_scanpy="docker.io/susrei/workshop-scrnaseq:scanpy-2025-serve-app-291751"
+docker_r="docker.io/susrei/workshop-scrnaseq-seurat:20250313-2022"
+docker_scanpy="docker.io/susrei/workshop-scrnaseq-scanpy:20250313-2022"
 
 ## old images for the r spatial labs.
 docker_seurat_spatial="ghcr.io/nbisweden/workshop-scrnaseq:2024-seurat_spatial-r4.3.0"
