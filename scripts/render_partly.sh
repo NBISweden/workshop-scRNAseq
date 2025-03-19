@@ -7,7 +7,7 @@
 ## 
 ## Usage
 ## Run this script in the root of the repo
-## bash ./scripts/render.sh
+## bash ./scripts/render_partly.sh
 
 
 # instead of running all files, will run all labs in one of the pipelines.
