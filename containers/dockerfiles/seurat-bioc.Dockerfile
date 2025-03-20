@@ -26,7 +26,9 @@ RUN chown -R jovyan:users ${HOME} \
 
 USER jovyan
 
-RUN mkdir -p ${HOME}/work
+RUN mkdir -p ${HOME}/work \
+    && chown -R jovyan:users ${HOME}
+    && cp ~/.bashrc ~/.bash_profile
 
 WORKDIR ${HOME}
 
