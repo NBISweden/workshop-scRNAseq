@@ -1,6 +1,6 @@
 ---
 title: Run labs in container
-subtitle: Instructions on running labs in Docker containers
+subtitle: Instructions on running labs on SciLifeLab Serve or locally in Docker
 date: ""
 author: ""
 code-tools: false
@@ -8,23 +8,39 @@ format: html
 engine: knitr
 ---
 
-```{r}
-#| echo: false
-library(yaml)
-library(here)
-upc <- yaml::read_yaml(here("_quarto.yml"))$uppmax_compute
-ups <- yaml::read_yaml(here("_quarto.yml"))$uppmax_storage
-```
-
 ::: {.callout-note}
 Three different toolkits, namely **Seurat** (R/RStudio), **Bioconductor** (R/RStudio) and **Scanpy** (Python/Jupyter) are available to perform the scRNAseq analysis. The labs can be run on SciLifeLab Serve or on your local machine using Docker. Both options provide the necessary environment to run the analysis.  
-If you use SciLifeLab Serve, you do not need any local installation or setup on your system but you need a Serve account.
+If you use SciLifeLab Serve, you do not need any local installation or setup on your system but you need a SciLifeLab Serve account. If you use Docker, you will need to set up and run Docker yourself.
 :::
 
 
-## **Option A:** Run apps on SciLifeLab Serve (Recommended)
+## **Option A:** Run labs on SciLifeLab Serve (Recommended)
 
-Instructions for using SciLifeLab Serve for this course are available [here](scilifelab-serve.html).
+### Steps for launching the labs 
+
+1. Log in with your university email account to [SciLifeLab Serve](https://serve.scilifelab.se/accounts/login). 
+
+:::{.callout-important}
+This step requires that you are [registered](https://serve.scilifelab.se/signup), and your account was given access to the course materials. If you did not register yet, please follow the [precourse information](../home_precourse.qmd) and send an email to `serve@scilifelab.se` and let them know that you completed the registration.
+:::
+
+2. Select _My projects_ from the main menu. You should see a project called **SCRNASEQ_VT25**. Click _Open_.
+
+3. In the **SCRNASEQ_VT25** project, you can create an RStudio (**Seurat**/**Bioconductor**) or JupyterLab (**Scanpy**) notebook server instance, depending on which toolkit you choose to work with. Once your instance is _Running_, connect to it.
+
+4. Inside the notebook server the script `download-scripts-lab.sh` is provided that will download the corresponding labs. It creates a `labs` folder with `.qmd` files (**Seurat**/**Bioconductor**) or `.ipynb` files (**Scanpy**). In the terminal, run any of the usage examples below:
+  - Seurat
+  ```
+  ~/download-labs.sh "https://github.com/NBISweden" "workshop-scRNAseq" "compiled/labs" "seurat" "work/labs"
+  ```
+  - Bioconductor
+  ```
+  ~/download-labs.sh "https://github.com/NBISweden" "workshop-scRNAseq" "compiled/labs" "bioc" "work/labs"
+  ```
+  - Scanpy
+  ```
+  ~/download-labs.sh "https://github.com/NBISweden" "workshop-scRNAseq" "compiled/labs" "scanpy" "work/labs"
+  ```
 
 ## **Option B:** Run Docker Locally
 
@@ -32,4 +48,71 @@ Instructions for using SciLifeLab Serve for this course are available [here](sci
 :::{.callout-important}
 These instructions are currently being updated to utilize the new containers created for the 2025 course. Instructions to use containers from the 2024 iteration of the course can be found [here](https://nbisweden.github.io/workshop-scrnaseq-2024/other/containers.html).
 :::
+
+### Local Setup
+
+If you don't have Docker installed locally, please follow these [instructions](./docker.qmd).
+
+### Images
+
+Separate Docker images are made available for **Seurat**/**Bioconductor** and **Scanpy** toolkits. Below you find an overview of the available docker images. Note the space requirements!
+
+|Topic|Image|Size (GB)|
+|---|---|---|
+| Seurat/Bioconductor | `ghcr.io/nbisweden/workshop-scrnaseq-seurat:20250313-2022` | 13.1GB |
+| Scanpy | `ghcr.io/nbisweden/workshop-scrnaseq-scanpy:20250313-2022` | 16.9GB |
+
+### Seurat/Bioconductor
+
+::: {.callout-tip}
+To avoid running out of memory, restart R (_Session > Restart R_) after each lab.
+:::
+
+```
+cd /path/to/labs  # replace this with the full path to the workshop compiled lab folder
+docker pull --platform=linux/amd64 ghcr.io/nbisweden/workshop-scrnaseq-seurat:20250313-2022
+docker run --platform=linux/amd64 --rm -p 8787:8787 -v ${PWD}:/home/jovyan/work ghcr.io/nbisweden/workshop-scrnaseq-seurat:20250313-2022
+```
+
+Do not close the terminal! In the browser, go to [localhost:8787](localhost:8787).
+
+Inside RStudio, the script `download-scripts-lab.sh` is provided that will download the corresponding labs. It creates a `labs` folder with `.qmd` files. In the terminal, run the commands below:
+
+- Seurat
+```
+conda activate seurat
+~/download-labs.sh "https://github.com/NBISweden" "workshop-scRNAseq" "compiled/labs" "seurat" "work/labs"
+```
+- Bioconductor
+```
+conda activate seurat
+~/download-labs.sh "https://github.com/NBISweden" "workshop-scRNAseq" "compiled/labs" "bioc" "work/labs"
+```
+
+Navigate to `/home/jovyan/work/labs/` and open the `.qmd` files.
+
+### Scanpy
+
+::: {.callout-tip}
+To avoid running out of memory, restart the kernel (_Kernel > Restart Kernel_) after each lab.
+:::
+
+```
+cd /path/to/labs  # replace this with the full path to the workshop compiled lab folder
+docker pull --platform=linux/amd64 ghcr.io/nbisweden/workshop-scrnaseq-scanpy:20250313-2022
+docker run --platform=linux/amd64 --rm -p 8888:8888 -v ${PWD}:/home/jovyan/work ghcr.io/nbisweden/workshop-scrnaseq-scanpy:20250313-2022
+```
+
+Do not close the terminal! In the browser, go to [localhost:8888](localhost:8888/lab). Use the following credentials to log in to the JupyterLab server:  
+
+> Password: `scrnaseq`
+
+Inside JupyterLab, the script `download-scripts-lab.sh` is provided that will download the corresponding labs. It creates a `labs` folder with `.ipynb` files. In the terminal, run the commands below:
+
+```
+conda activate scanpy
+~/download-labs.sh "https://github.com/NBISweden" "workshop-scRNAseq" "compiled/labs" "scanpy" "work/labs"
+```
+
+Navigate to `/home/jovyan/work/labs/` and open the `.ipynb` files.
 
