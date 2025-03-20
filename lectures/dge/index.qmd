@@ -19,9 +19,11 @@ library(Seurat)
 library(ggplot2)
 library(dplyr)
 library(ggpubr)
+library(cowplot)
 
 theme_set(theme_minimal(base_size=10))
-options(ggplot2.discrete.colour= c("#1f78b4", "#33a02c", "#e31a1c", "#ff7f00", "#6a3d9a"))
+options(ggplot2.discrete.colour= c("#1f78b4", "#33a02c", "#e31a1c", "#ff7f00", "#6a3d9a"),
+        ggplot2.discrete.fill= c("#1f78b4", "#33a02c", "#e31a1c", "#ff7f00", "#6a3d9a"))
 ```
 
 ```{r}
@@ -504,13 +506,38 @@ Interpretation is more limited when groups are defined from data!
 :::
 
 
-## Methods to address group differences
+## Approaches to compare groups
 
-- Simple model
-- Pseudobulk
-- GLM/GAM
-- Mixed model
-- Hurdle model
+
+```{r}
+cells = data.frame(gene = c(rnorm(100,9), rnorm(100,10)),
+                   group = rep(c("a","b"), each = 100))
+cells$batch = "batch1"
+cells$batch[cells$group == "a" & cells$gene > 9] = "batch2"
+cells$batch[cells$group == "b" & cells$gene > 10] = "batch2"
+
+cells$individual = paste0(cells$group, sample(c(1,2,3), 200, replace = TRUE))
+
+plot_grid(
+ggplot(cells, aes(x = group, y = gene)) + geom_jitter() +
+  labs(title = "Naive model", 
+       subtitle = "Assumes independence witihin groups")
+,
+ggplot(cells, aes(x = group, y = gene, color = batch)) + geom_jitter() +
+  labs(title = "Generalized linear model / latent variables", 
+       subtitle = "Considers potential covariates when comparing cells")
+,
+ggplot(cells, aes(x = individual, y = gene, color = group)) + geom_jitter(width = 0.2) +
+  labs(title = "Mixed model", 
+       subtitle = "Considers cells non-independent within groups")
+,
+ggplot(cells, aes(x = individual, y = gene, color = group)) + geom_jitter(width = 0.2, alpha = 0.4) + 
+  ggplot2::stat_summary(geom = "point", fun = "mean", size = 4, shape = 21, aes(fill = group), color = "black") +
+  labs(title = "Pseudobulk", 
+       subtitle = "Reduces samples to normalized sums (here illustrated with means)")
+)
+
+```
 
 
 ## MAST
