@@ -13,7 +13,7 @@
 set -e
 
 ## define docker images
-docker_r="docker.io/susrei/workshop-scrnaseq-seurat:20250313-2022"
+docker_r="docker.io/susrei/workshop-scrnaseq-seurat:20250320-2311"
 docker_scanpy="docker.io/susrei/workshop-scrnaseq-scanpy:20250313-2022"
 
 ## old images for the r spatial labs.

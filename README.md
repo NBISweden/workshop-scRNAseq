@@ -20,7 +20,7 @@ git push -u origin <branch_name>
 
 ```
 # for seurat/bioconductor labs
-docker pull --platform=linux/amd64 ghcr.io/nbisweden/workshop-scrnaseq-seurat:20250313-2022`
+docker pull --platform=linux/amd64 ghcr.io/nbisweden/workshop-scrnaseq-seurat:20250320-2311`
 docker pull --platform=linux/amd64 ghcr.io/nbisweden/workshop-scrnaseq:2024-seurat_spatial-r4.3.0
 docker pull --platform=linux/amd64 ghcr.io/nbisweden/workshop-scrnaseq:2024-bioconductor_spatial-r4.3.0
 
@@ -36,7 +36,7 @@ docker pull --platform=linux/amd64 ghcr.io/nbisweden/workshop-scrnaseq:2024-scan
 - To run Seurat or Bioconductor labs in RStudio
 
 ```
-docker run --rm --platform=linux/amd64 -p 8787:8787 -v ${PWD}:/home/jovyan/work ghcr.io/nbisweden/workshop-scrnaseq-seurat:20250313-2022
+docker run --rm --platform=linux/amd64 -p 8787:8787 -v ${PWD}:/home/jovyan/work ghcr.io/nbisweden/workshop-scrnaseq-seurat:20250320-2311
 ```
 
 Open in browser: `http://localhost:8787/`
@@ -49,7 +49,7 @@ docker run --rm --platform=linux/amd64 -p 8888:8888 -v ${PWD}:/home/jovyan/work 
 
 Open in browser: `http://localhost:8888/lab` and use password `scrnaseq`
 
-- In the container, start a terminal and run the command below to activate the repective conda environment.
+- In the container, start a terminal and run the command below to activate the respective conda environment.
 
 ```
 # for seurat/bioconductor
@@ -80,10 +80,10 @@ Instructions to render the `.qmd` files to `.html`.
 
 ```
 # r/seurat
-docker run --rm -ti --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work ghcr.io/nbisweden/workshop-scrnaseq-seurat:20250313-2022 quarto render /work/labs/seurat/seurat_01_qc.qmd
+docker run --rm -ti --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work ghcr.io/nbisweden/workshop-scrnaseq-seurat:20250320-2311 quarto render /work/labs/seurat/seurat_01_qc.qmd
 
 # r/bioc
-docker run --rm -ti --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work ghcr.io/nbisweden/workshop-scrnaseq:2024-bioconductor-r4.3.0 quarto render /work/labs/bioc/bioc_01_qc.qmd
+docker run --rm -ti --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work ghcr.io/nbisweden/workshop-scrnaseq-seurat:20250320-2311 quarto render /work/labs/bioc/bioc_01_qc.qmd
 
 # python/scanpy
 docker run --rm -ti --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work ghcr.io/nbisweden/workshop-scrnaseq-scanpy:20250313-2022 quarto render /work/labs/scanpy/scanpy_01_qc.qmd
