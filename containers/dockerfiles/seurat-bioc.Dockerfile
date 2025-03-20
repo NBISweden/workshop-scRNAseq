@@ -1,4 +1,4 @@
-FROM ghcr.io/scilifelabdatacentre/serve-rstudio:231030-1146
+FROM ghcr.io/scilifelabdatacentre/serve-rstudio:250304-1611
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
