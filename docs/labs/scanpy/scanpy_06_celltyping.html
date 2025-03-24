@@ -207,7 +207,7 @@ background-size: cover;
       <div>
       <div class="quarto-title-meta-heading">Published</div>
       <div class="quarto-title-meta-contents">
-        <p class="date">28-Jan-2025</p>
+        <p class="date">24-Mar-2025</p>
       </div>
     </div>
     
@@ -307,19 +307,24 @@ There are multiple different methods to predict celltypes, here we will just cov
 <span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>adata <span class="op">=</span> sc.read_h5ad(path_file)</span>
 <span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>adata</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div id="fetch-data" class="cell-output cell-output-display" data-execution_count="2">
-<pre><code>AnnData object with n_obs × n_vars = 7332 × 19468
+<pre><code>AnnData object with n_obs × n_vars = 7332 × 3984
     obs: 'type', 'sample', 'batch', 'n_genes_by_counts', 'total_counts', 'total_counts_mt', 'pct_counts_mt', 'total_counts_ribo', 'pct_counts_ribo', 'total_counts_hb', 'pct_counts_hb', 'percent_mt2', 'n_counts', 'n_genes', 'percent_chrY', 'XIST-counts', 'S_score', 'G2M_score', 'phase', 'doublet_scores', 'predicted_doublets', 'doublet_info', 'leiden', 'leiden_0.4', 'leiden_0.6', 'leiden_1.0', 'leiden_1.4', 'kmeans5', 'kmeans10', 'kmeans15', 'hclust_5', 'hclust_10', 'hclust_15'
-    var: 'gene_ids', 'feature_types', 'genome', 'mt', 'ribo', 'hb', 'n_cells_by_counts', 'mean_counts', 'pct_dropout_by_counts', 'total_counts', 'n_cells', 'highly_variable', 'means', 'dispersions', 'dispersions_norm', 'highly_variable_nbatches', 'highly_variable_intersection'
+    var: 'gene_ids', 'feature_types', 'genome', 'mt', 'ribo', 'hb', 'n_cells_by_counts', 'mean_counts', 'pct_dropout_by_counts', 'total_counts', 'n_cells', 'highly_variable', 'means', 'dispersions', 'dispersions_norm', 'highly_variable_nbatches', 'highly_variable_intersection', 'mean', 'std'
     uns: 'dendrogram_leiden_0.6', 'doublet_info_colors', 'hclust_10_colors', 'hclust_15_colors', 'hclust_5_colors', 'hvg', 'kmeans10_colors', 'kmeans15_colors', 'kmeans5_colors', 'leiden', 'leiden_0.4', 'leiden_0.4_colors', 'leiden_0.6', 'leiden_0.6_colors', 'leiden_1.0', 'leiden_1.0_colors', 'leiden_1.4', 'leiden_1.4_colors', 'log1p', 'neighbors', 'pca', 'phase_colors', 'sample_colors', 'tsne', 'umap'
-    obsm: 'Scanorama', 'X_pca', 'X_pca_harmony', 'X_tsne', 'X_tsne_bbknn', 'X_tsne_harmony', 'X_tsne_scanorama', 'X_tsne_uncorr', 'X_umap', 'X_umap_bbknn', 'X_umap_harmony', 'X_umap_scanorama', 'X_umap_uncorr'
+    obsm: 'Scanorama', 'X_pca', 'X_pca_combat', 'X_pca_harmony', 'X_tsne', 'X_tsne_bbknn', 'X_tsne_combat', 'X_tsne_harmony', 'X_tsne_scanorama', 'X_tsne_uncorr', 'X_umap', 'X_umap_bbknn', 'X_umap_combat', 'X_umap_harmony', 'X_umap_scanorama', 'X_umap_uncorr'
+    varm: 'PCs'
     obsp: 'connectivities', 'distances'</code></pre>
 </div>
 </div>
 <div id="check-data" class="cell" data-execution_count="3">
 <div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>adata.uns[<span class="st">'log1p'</span>][<span class="st">'base'</span>]<span class="op">=</span><span class="va">None</span></span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(adata.shape)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(adata.shape)</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="co"># have only variable genes in X, use raw instead.</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>adata <span class="op">=</span> adata.raw.to_adata()</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(adata.shape)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>(7332, 19468)</code></pre>
+<pre><code>(7332, 3984)
+(7332, 19468)</code></pre>
 </div>
 </div>
 <p>Subset one patient.</p>
@@ -333,17 +338,18 @@ There are multiple different methods to predict celltypes, here we will just cov
 <div class="cell" data-execution_count="5">
 <div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>adata.obs[<span class="st">"leiden_0.6"</span>].value_counts()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div id="count-cells" class="cell-output cell-output-display" data-execution_count="5">
-<pre><code>0     269
-5     210
-1     134
-6     132
+<pre><code>1     276
+3     207
+0     200
+6     124
 2     123
-4     112
-3     100
-7      24
-10     20
-9      16
-8      14
+4      68
+5      49
+7      32
+8      23
+9      18
+10     18
+11     16
 Name: leiden_0.6, dtype: int64</code></pre>
 </div>
 </div>
@@ -528,10 +534,10 @@ Name: leiden_0.6, dtype: int64</code></pre>
 <div class="cell-output cell-output-stdout">
 <pre><code>computing PCA
     with n_comps=50
-    finished (0:00:00)
+    finished (0:00:02)
 computing neighbors
     using 'X_pca' with n_pcs = 50
-    finished (0:00:10)
+    finished (0:00:11)
 computing UMAP
     finished (0:00:04)</code></pre>
 </div>
@@ -549,7 +555,7 @@ computing UMAP
 <div class="cell-output cell-output-stdout">
 <pre><code>computing PCA
     with n_comps=50
-    finished (0:00:01)
+    finished (0:00:02)
 computing neighbors
     using 'X_pca' with n_pcs = 50
     finished (0:00:00)
@@ -603,7 +609,7 @@ Processing datasets (0, 1)</code></pre>
 <pre><code>computing neighbors
     finished (0:00:00)
 computing UMAP
-    finished (0:00:05)</code></pre>
+    finished (0:00:06)</code></pre>
 </div>
 </div>
 <div class="cell" data-execution_count="15">
@@ -678,7 +684,7 @@ computing UMAP
 <div class="sourceCode cell-code" id="cb28"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>tmp <span class="op">=</span> pd.crosstab(adata.obs[<span class="st">'leiden_0.6'</span>],adata.obs[<span class="st">'label_trans'</span>], normalize<span class="op">=</span><span class="st">'index'</span>)</span>
 <span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>tmp.plot.bar(stacked<span class="op">=</span><span class="va">True</span>).legend(bbox_to_anchor<span class="op">=</span>(<span class="fl">1.8</span>, <span class="dv">1</span>),loc<span class="op">=</span><span class="st">'upper right'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div id="distributions-1" class="cell-output cell-output-display" data-execution_count="18">
-<pre><code>&lt;matplotlib.legend.Legend at 0x7ffe88868970&gt;</code></pre>
+<pre><code>&lt;matplotlib.legend.Legend at 0x7ffe7d6aace0&gt;</code></pre>
 </div>
 <div class="cell-output cell-output-display">
 <div id="distributions-2">
@@ -696,7 +702,7 @@ computing UMAP
 <span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, color<span class="op">=</span>[<span class="st">'louvain'</span>,<span class="st">'leiden_0.6'</span>], wspace<span class="op">=</span><span class="fl">0.5</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>running ingest
-    finished (0:00:22)</code></pre>
+    finished (0:00:23)</code></pre>
 </div>
 <div class="cell-output cell-output-display">
 <div id="ingest">
@@ -720,7 +726,7 @@ computing UMAP
 <div class="sourceCode cell-code" id="cb33"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>tmp <span class="op">=</span> pd.crosstab(adata.obs[<span class="st">'leiden_0.6'</span>],adata.obs[<span class="st">'louvain'</span>], normalize<span class="op">=</span><span class="st">'index'</span>)</span>
 <span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>tmp.plot.bar(stacked<span class="op">=</span><span class="va">True</span>).legend(bbox_to_anchor<span class="op">=</span>(<span class="fl">1.8</span>, <span class="dv">1</span>),loc<span class="op">=</span><span class="st">'upper right'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div id="distributions-ingest-1" class="cell-output cell-output-display" data-execution_count="21">
-<pre><code>&lt;matplotlib.legend.Legend at 0x7ffe88f70550&gt;</code></pre>
+<pre><code>&lt;matplotlib.legend.Legend at 0x7ffe798ae290&gt;</code></pre>
 </div>
 <div class="cell-output cell-output-display">
 <div id="distributions-ingest-2">
@@ -1065,6 +1071,14 @@ Task
 <span id="cb65-23"><a href="#cb65-23" aria-hidden="true" tabindex="-1"></a>        pred[cl] <span class="op">=</span> enr_res.results[<span class="st">"Term"</span>][<span class="dv">0</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>0
+   Gene_set                   Term Overlap   P-value  Adjusted P-value  \
+0  gs_ind_0  Cancer stem-like cell     1/6  0.088981          0.206048   
+5  gs_ind_0             Macrophage     1/6  0.088981          0.206048   
+
+   Odds Ratio  Combined Score  Genes  
+0   17.450448       42.218477  ANPEP  
+5   17.450448       42.218477   AIF1  
+1
    Gene_set                      Term Overlap   P-value  Adjusted P-value  \
 3  gs_ind_0  Parietal progenitor cell     1/7  0.103024          0.255621   
 0  gs_ind_0           Effector T cell    1/13  0.182865          0.255621   
@@ -1072,39 +1086,15 @@ Task
    Odds Ratio  Combined Score  Genes  
 3   14.764993       33.557802  ANXA1  
 0    7.675392       13.040543  IL2RB  
-1
-    Gene_set                      Term Overlap   P-value  Adjusted P-value  \
-1   gs_ind_0     Cancer stem-like cell     1/6  0.088981           0.19465   
-20  gs_ind_0  Spermatogonial stem cell     1/6  0.088981           0.19465   
-
-    Odds Ratio  Combined Score  Genes  
-1    17.450448       42.218477  ANPEP  
-20   17.450448       42.218477   BCL6  
 2
-   Gene_set                      Term Overlap   P-value  Adjusted P-value  \
-3  gs_ind_0                  Monocyte     1/7  0.103024          0.206048   
-4  gs_ind_0  Parietal progenitor cell     1/7  0.103024          0.206048   
+   Gene_set                    Term Overlap   P-value  Adjusted P-value  \
+2  gs_ind_0  Effector memory T cell     1/7  0.103024          0.206048   
+5  gs_ind_0                Monocyte     1/7  0.103024          0.206048   
 
-   Odds Ratio  Combined Score  Genes  
-3   14.764993       33.557802   CD52  
-4   14.764993       33.557802  ANXA1  
+   Odds Ratio  Combined Score Genes  
+2   14.764993       33.557802  IL7R  
+5   14.764993       33.557802  CD52  
 3
-   Gene_set      Term Overlap   P-value  Adjusted P-value  Odds Ratio  \
-0  gs_ind_0    B cell     1/6  0.088981          0.116851   17.450448   
-3  gs_ind_0  Monocyte     1/7  0.103024          0.116851   14.764993   
-
-   Combined Score Genes  
-0       42.218477  CD19  
-3       33.557802  CD52  
-4
-   Gene_set                   Term Overlap   P-value  Adjusted P-value  \
-0  gs_ind_0  Cancer stem-like cell     1/6  0.088981          0.218659   
-5  gs_ind_0             Macrophage     1/6  0.088981          0.218659   
-
-   Odds Ratio  Combined Score  Genes  
-0   17.450448       42.218477  ANPEP  
-5   17.450448       42.218477   AIF1  
-5
    Gene_set                    Term Overlap   P-value  Adjusted P-value  \
 3  gs_ind_0  Effector memory T cell     1/7  0.103024          0.215807   
 5  gs_ind_0                Monocyte     1/7  0.103024          0.215807   
@@ -1112,6 +1102,22 @@ Task
    Odds Ratio  Combined Score Genes  
 3   14.764993       33.557802  IL7R  
 5   14.764993       33.557802  CD52  
+4
+   Gene_set              Term Overlap   P-value  Adjusted P-value  Odds Ratio  \
+2  gs_ind_0          Monocyte     1/7  0.103024          0.116851   14.764993   
+0  gs_ind_0  CD4-CD28+ T cell     1/8  0.116851          0.116851   12.795659   
+
+   Combined Score Genes  
+2       33.557802  CD52  
+0       27.470422  BCL2  
+5
+    Gene_set                      Term Overlap   P-value  Adjusted P-value  \
+1   gs_ind_0     Cancer stem-like cell     1/6  0.088981          0.203113   
+21  gs_ind_0  Spermatogonial stem cell     1/6  0.088981          0.203113   
+
+    Odds Ratio  Combined Score  Genes  
+1    17.450448       42.218477  ANPEP  
+21   17.450448       42.218477   BCL6  
 6
    Gene_set                             Term Overlap   P-value  \
 1  gs_ind_0                       Macrophage     1/6  0.088981   
@@ -1121,54 +1127,63 @@ Task
 1          0.175277   17.450448       42.218477   AIF1  
 2          0.175277   12.795659       27.470422  ITGAX  
 7
-   Gene_set                         Term Overlap   P-value  Adjusted P-value  \
-1  gs_ind_0       Circulating fetal cell    1/40  0.463035          0.712041   
-0  gs_ind_0  AXL+SIGLEC6+ dendritic cell    1/80  0.712041          0.712041   
+   Gene_set      Term Overlap   P-value  Adjusted P-value  Odds Ratio  \
+0  gs_ind_0    B cell     1/6  0.088981          0.116851   17.450448   
+2  gs_ind_0  Monocyte     1/7  0.103024          0.116851   14.764993   
 
-   Odds Ratio  Combined Score Genes  
-1    2.425498        1.867518  ACTB  
-0    1.202602        0.408427  ACPP  
+   Combined Score Genes  
+0       42.218477  CD19  
+2       33.557802  CD52  
 8
-   Gene_set                               Term Overlap   P-value  \
-0  gs_ind_0             CD1C+_A dendritic cell    1/31  0.382330   
-1  gs_ind_0  Effector CD8+ memory T (Tem) cell    1/83  0.725203   
+   Gene_set        Term Overlap   P-value  Adjusted P-value  Odds Ratio  \
+2  gs_ind_0  Macrophage     1/6  0.088981          0.154536   17.450448   
+4  gs_ind_0  Myeloblast     1/6  0.088981          0.154536   17.450448   
+
+   Combined Score  Genes  
+2       42.218477   AIF1  
+4       42.218477  CSF3R  
+9
+   Gene_set             Term Overlap   P-value  Adjusted P-value  Odds Ratio  \
+4  gs_ind_0    T helper cell    1/10  0.143872          0.319526   10.100782   
+1  gs_ind_0  Effector T cell    1/13  0.182865          0.319526    7.675392   
+
+   Combined Score  Genes  
+4       19.583741  ABCB1  
+1       13.040543  IL2RB  
+10
+   Gene_set                                 Term Overlap   P-value  \
+1  gs_ind_0             PROM1Low progenitor cell     1/7  0.103024   
+0  gs_ind_0  Myeloid conventional dendritic cell    1/17  0.232116   
 
    Adjusted P-value  Odds Ratio  Combined Score  Genes  
-0          0.725203    3.142697        3.021616  ADAM8  
-1          0.725203    1.158689        0.372291  ADAM8  
-9
-   Gene_set                    Term Overlap   P-value  Adjusted P-value  \
-2  gs_ind_0  Lake et al.Science.In4     1/6  0.088981          0.212585   
-1  gs_ind_0             Immune cell     1/7  0.103024          0.212585   
+1          0.206048   14.764993       33.557802  ALCAM  
+0          0.232116    5.813477        8.490677   CD1C  
+11
+    Gene_set                             Term Overlap   P-value  \
+1   gs_ind_0            Cancer stem-like cell     1/6  0.088981   
+16  gs_ind_0  Myeloid-derived suppressor cell     1/6  0.088981   
 
-   Odds Ratio  Combined Score    Genes  
-2   17.450448       42.218477  ADAMTS2  
-1   14.764993       33.557802     CD14  
-10
-   Gene_set                      Term Overlap   P-value  Adjusted P-value  \
-2  gs_ind_0  PROM1Low progenitor cell     1/7  0.103024          0.215807   
-0  gs_ind_0             Memory B cell    1/10  0.143872          0.215807   
-
-   Odds Ratio  Combined Score  Genes  
-2   14.764993       33.557802  ALCAM  
-0   10.100782       19.583741   RBPJ  </code></pre>
+    Adjusted P-value  Odds Ratio  Combined Score  Genes  
+1           0.191829   17.450448       42.218477  ANPEP  
+16          0.191829   17.450448       42.218477  ITGAM  </code></pre>
 </div>
 </div>
 <div class="cell" data-execution_count="41">
 <div class="sourceCode cell-code" id="cb67"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb67-1"><a href="#cb67-1" aria-hidden="true" tabindex="-1"></a><span class="co"># prediction per cluster</span></span>
 <span id="cb67-2"><a href="#cb67-2" aria-hidden="true" tabindex="-1"></a>pred</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div id="gsea-res" class="cell-output cell-output-display" data-execution_count="41">
-<pre><code>{'0': 'Effector T cell',
- '1': 'CD16+ dendritic cell',
- '2': 'CD8+ T cell',
- '3': 'B cell',
- '4': 'Cancer stem-like cell',
- '5': 'CD4+ T cell',
+<pre><code>{'0': 'Cancer stem-like cell',
+ '1': 'Effector T cell',
+ '2': 'CD4+ T cell',
+ '3': 'CD4+ T cell',
+ '4': 'CD4-CD28+ T cell',
+ '5': 'CD16+ dendritic cell',
  '6': 'Conventional dendritic cell',
- '7': 'AXL+SIGLEC6+ dendritic cell',
- '8': 'CD1C+_A dendritic cell',
+ '7': 'B cell',
+ '8': 'Immune cell',
  '9': 'Circulating fetal cell',
- '10': 'Memory B cell'}</code></pre>
+ '10': 'Myeloid conventional dendritic cell',
+ '11': 'CD16+ dendritic cell'}</code></pre>
 </div>
 </div>
 <div class="cell" data-execution_count="42">
@@ -1307,7 +1322,7 @@ jupyter_core        5.7.2
 Python 3.10.16 | packaged by conda-forge | (main, Dec  5 2024, 14:16:10) [GCC 13.3.0]
 Linux-6.10.14-linuxkit-x86_64-with-glibc2.35
 -----
-Session information updated at 2025-02-27 15:24</code></pre>
+Session information updated at 2025-03-24 10:42</code></pre>
 </div>
 </div>
 </details>
@@ -1560,7 +1575,7 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
 </div>
   </div>
 </footer>
-<script>var lightboxQuarto = GLightbox({"loop":true,"selector":".lightbox","closeEffect":"zoom","openEffect":"zoom","descPosition":"bottom"});</script>
+<script>var lightboxQuarto = GLightbox({"openEffect":"zoom","descPosition":"bottom","closeEffect":"zoom","selector":".lightbox","loop":true});</script>
 
 
 
