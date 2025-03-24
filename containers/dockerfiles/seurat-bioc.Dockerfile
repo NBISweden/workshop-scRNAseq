@@ -1,4 +1,4 @@
-FROM ghcr.io/scilifelabdatacentre/serve-rstudio:231030-1146
+FROM ghcr.io/scilifelabdatacentre/serve-rstudio:250304-1611
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
@@ -26,7 +26,9 @@ RUN chown -R jovyan:users ${HOME} \
 
 USER jovyan
 
-RUN mkdir -p ${HOME}/work
+RUN mkdir -p ${HOME}/work \
+    && chown -R jovyan:users ${HOME}/work \
+    && cp ~/.bashrc ~/.bash_profile
 
 WORKDIR ${HOME}
 

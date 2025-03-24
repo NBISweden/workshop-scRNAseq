@@ -24,7 +24,7 @@
 set -e
 
 ## define docker images
-docker_r="docker.io/susrei/workshop-scrnaseq-seurat:20250313-2022"
+docker_r="docker.io/susrei/workshop-scrnaseq-seurat:20250320-2311"
 docker_scanpy="docker.io/susrei/workshop-scrnaseq-scanpy:20250313-2022"
 
 ## old images for the r spatial labs.
@@ -110,7 +110,8 @@ then
 
     
     ## lectures, only 2 that are created with qmd.
-    docker run --rm -it --platform=linux/amd64 -v ${PWD}:/home/jovyan/work --entrypoint "/usr/local/conda/bin/conda" $docker_r run -n seurat quarto render /home/jovyan/work/lectures/dge/index.qmd
+# dge requires ggpubr so this is currently being rendered interactively. ggpubr should be added to the container for next year
+#    docker run --rm -it --platform=linux/amd64 -v ${PWD}:/home/jovyan/work --entrypoint "/usr/local/conda/bin/conda" $docker_r run -n seurat quarto render /home/jovyan/work/lectures/dge/index.qmd
     docker run --rm -it --platform=linux/amd64 -v ${PWD}:/home/jovyan/work --entrypoint "/usr/local/conda/bin/conda" $docker_r run -n seurat quarto render /home/jovyan/work/lectures/gsa/index.qmd    
 
     ## site

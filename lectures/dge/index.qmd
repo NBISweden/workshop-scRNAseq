@@ -1,6 +1,6 @@
 ---
 title: Differential Gene Expression
-author: Jennifer Fransson, Roy Francis, Åsa Björklund, Olga Dethlefson
+author: Jennifer Fransson
 format:
   revealjs:
     df-print: kable
@@ -19,6 +19,7 @@ library(Seurat)
 library(ggplot2)
 library(dplyr)
 library(cowplot)
+library(ggpubr)
 
 theme_set(theme_minimal(base_size=10))
 options(ggplot2.discrete.colour= c("#1f78b4", "#33a02c", "#e31a1c", "#ff7f00", "#6a3d9a"),
@@ -131,27 +132,7 @@ ggplot(dfr, aes(x=cluster, y=norm_expression))+
 :::
 :::
 
-. . .
 
-Most methods do not take zeros into account.
-
-> ...most computational methods still stick with the old mentality of viewing differential expression as a simple ‘up or down’ phenomenon. We advocate that we should fully embrace the features of single cell data, which allows us to observe binary (from Off to On) as well as continuous (the amount of expression) regulations. @wu2018two
-
-:::{.notes}
-But single cell expression looks more like this. With lots of zeros. Now, it's harder to say if the difference is significant. Apart from the level of expression, the number of samples (cells) that express the gene also becomes relevant. If we only look at expression level, they might be similar, but if we look at number of cells, one might be higher than the other.
-:::
-
-
-## Percentage of expression > 0
-
-```{r}
-head(m, n=10) %>%
-  select(avg_log2FC, p_val_adj, pct.1, pct.2)
-```
-
-:::{.notes}
-You can still miss bimodal distributions if the "negative" part is > 0
-:::
 
 
 ## Comparisons
@@ -371,19 +352,22 @@ testdata = do.call("rbind",lapply(
       data.frame(group = "A", 
                  n = paste0("n = ",x$n),
                  diff = paste0("diff. in pop. means = ",x$diff),
+                 sd = "sd = 1",
                  value = rnorm(x$n, 5, 1)),
       data.frame(group = "B", 
                  n = paste0("n = ",x$n),
                  diff = paste0("diff. in pop. means = ",x$diff),
+                 sd = "sd = 1",
                  value = rnorm(x$n, 5+x$diff, 1))
       )
     }))
 testdata$n = factor(testdata$n, levels = paste0("n = ", c(20, 1000)))
 
 ggplot(testdata, aes(x = group, y = value)) +
-  geom_violin() + geom_jitter(shape = 16, alpha = 0.5) + 
-  facet_wrap(c("n","diff")) + 
-  #ggpubr::stat_compare_means( size =3) + 
+  geom_jitter(shape = 16, alpha = 0.5, size = 1) + 
+  geom_violin(fill = "white", alpha = 0.5) +
+  facet_wrap(c("n","diff","sd")) + 
+  ggpubr::stat_compare_means( size =3) + 
   theme(strip.text = element_text(size = 10)) +
   scale_y_continuous(expand = expansion(mult = c(0.1,0.2)))
 
@@ -428,7 +412,7 @@ testdata = do.call("rbind",lapply(
 
 ggplot(testdata, aes(x = group, y = value)) +
   geom_violin() + geom_jitter(shape = 16, alpha = 0.5) + 
-  #ggpubr::stat_compare_means( size =3) + 
+  ggpubr::stat_compare_means( size =3) + 
   theme(strip.text = element_text(size = 10)) +
   scale_y_continuous(expand = expansion(mult = c(0.1,0.2)))
 
@@ -473,7 +457,7 @@ cowplot::plot_grid(
   ggplot(rbind(testdata_A,testdata_B), 
          aes(x = group, y = value, color = group)) +
     geom_jitter(shape = 16, alpha = 0.5, size = 0.5) + 
-    #ggpubr::stat_compare_means( size =3) +  
+    ggpubr::stat_compare_means( size =3) +  
     geom_violin(fill = NA, color = "black") + 
     theme(legend.position = "none") +
     scale_y_continuous(expand = expansion(mult = c(0.1,0.2))),
@@ -487,6 +471,7 @@ cowplot::plot_grid(
 
 
 ```
+
 
 
 
@@ -517,26 +502,63 @@ cells$batch[cells$group == "b" & cells$gene > 10] = "batch2"
 
 cells$individual = paste0(cells$group, sample(c(1,2,3), 200, replace = TRUE))
 
+plottheme = theme(plot.subtitle = element_text(size = 8),
+          plot.title = element_text(size = 10),
+          axis.title = element_text(size = 8))
+
 plot_grid(
-ggplot(cells, aes(x = group, y = gene)) + geom_jitter() +
-  labs(title = "Naive model", 
-       subtitle = "Assumes independence witihin groups")
-,
-ggplot(cells, aes(x = group, y = gene, color = batch)) + geom_jitter() +
-  labs(title = "Generalized linear model / latent variables", 
-       subtitle = "Considers potential covariates when comparing cells")
-,
-ggplot(cells, aes(x = individual, y = gene, color = group)) + geom_jitter(width = 0.2) +
-  labs(title = "Mixed model", 
-       subtitle = "Considers cells non-independent within groups")
-,
-ggplot(cells, aes(x = individual, y = gene, color = group)) + geom_jitter(width = 0.2, alpha = 0.4) + 
-  ggplot2::stat_summary(geom = "point", fun = "mean", size = 4, shape = 21, aes(fill = group), color = "black") +
-  labs(title = "Pseudobulk", 
-       subtitle = "Reduces samples to normalized sums (here illustrated with means)")
+  ggplot(cells, aes(x = group, y = gene)) + geom_jitter() +
+    labs(title = "Naive model", 
+         subtitle = "Assumes independence within groups") + 
+    plottheme
+  ,
+  ggplot(cells, aes(x = group, y = gene, color = batch)) + geom_jitter() +
+    labs(title = "Generalized linear model / latent variables", 
+         subtitle = "Considers potential covariates when comparing cells") + 
+    plottheme
+  ,
+  ggplot(cells, aes(x = individual, y = gene, color = group)) + geom_jitter(width = 0.2) +
+    labs(title = "Mixed model", 
+         subtitle = "Considers cells non-independent within groups") + 
+    plottheme
+  ,
+  ggplot(cells, aes(x = individual, y = gene, color = group)) + geom_jitter(width = 0.2, alpha = 0.4) + 
+    ggplot2::stat_summary(geom = "point", fun = "mean", size = 4, shape = 21, aes(fill = group), color = "black") +
+    labs(title = "Pseudobulk", 
+         subtitle = "Reduces samples to normalized sums\n(here illustrated with means)") + 
+    plottheme,
+  align = "hv"
 )
 
 ```
+
+
+
+
+
+
+
+. . .
+
+Most methods do not take zeros into account.
+
+> ...most computational methods still stick with the old mentality of viewing differential expression as a simple ‘up or down’ phenomenon. We advocate that we should fully embrace the features of single cell data, which allows us to observe binary (from Off to On) as well as continuous (the amount of expression) regulations. @wu2018two
+
+:::{.notes}
+But single cell expression looks more like this. With lots of zeros. Now, it's harder to say if the difference is significant. Apart from the level of expression, the number of samples (cells) that express the gene also becomes relevant. If we only look at expression level, they might be similar, but if we look at number of cells, one might be higher than the other.
+:::
+
+## Percentage of expression > 0
+
+```{r}
+head(m, n=10) %>%
+  select(avg_log2FC, p_val_adj, pct.1, pct.2)
+```
+
+:::{.notes}
+You can still miss bimodal distributions if the "negative" part is > 0
+:::
+
 
 
 ## MAST
@@ -603,6 +625,53 @@ Similarity between methods based on genes identified
 - Visual inspection
 
 ## Assessing results
+
+
+
+```{r}
+
+head(obj@meta.data)
+
+obj = SetIdent(obj, value = "letter.idents")
+unique(obj@active.ident)
+
+de_res = FindMarkers(obj, ident.1 = "A", ident.2 = "B")
+
+DimPlot(obj)
+
+
+VlnPlot(obj, rownames(de_res)[de_res$p_val_adj < 0.05]) & 
+  theme(axis.title = element_blank(), 
+        plot.title = element_text(size = 10))
+
+
+DimPlot(obj, group.by = "groups")
+
+
+set.seed(546021)
+obj$mixed = NA
+obj$mixed[obj$RNA_snn_res.0.8 == 0] = sample(c("A","A","A","A","B"), sum(obj$RNA_snn_res.0.8 == 0), replace = TRUE)
+obj$mixed[obj$RNA_snn_res.0.8 == 1] = sample(c("A","B","B","B","B"), sum(obj$RNA_snn_res.0.8 == 1), replace = TRUE)
+obj$mixed[obj$RNA_snn_res.0.8 == 2] = sample(c("A","A","B","B","B"), sum(obj$RNA_snn_res.0.8 == 2), replace = TRUE)
+obj$mixed[obj$RNA_snn_res.0.8 == 3] = sample(c("A","B","B","B","B"), sum(obj$RNA_snn_res.0.8 == 3), replace = TRUE)
+
+obj = SetIdent(obj, value = "mixed")
+
+DimPlot(obj)
+
+
+de_res = FindMarkers(obj, ident.1 = "A", ident.2 = "B")
+
+head(de_res)
+
+VlnPlot(obj, rownames(de_res)[de_res$p_val_adj < 0.05]) & 
+  theme(axis.title = element_blank(), 
+        plot.title = element_text(size = 10))
+
+
+```
+
+
 
 ![](assets/violin.png)
 
@@ -687,4 +756,4 @@ For highly expressed genes,
 
 ## Acknowledgements
 
-Slides adapted from previous presentations by Olga Dethlefson, Åsa Björklund and Roy Francis.
+Slides adapted from previous presentations by Olga Dethlefson, Åsa Björklund, Vincent van Hoef and Roy Francis.
