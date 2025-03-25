@@ -4,6 +4,8 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 ARG TARGETARCH
 
+ENV HOME=/home/${NB_USER}
+
 # Configure  environment
 USER root
 
@@ -17,17 +19,25 @@ COPY conda/scanpy-environment-2025.yaml conda/scanpy-conda-lock.yaml /tmp/conda/
 RUN conda-lock install --name scanpy /tmp/conda/scanpy-conda-lock.yaml && \
     mamba run -n scanpy python -m ipykernel install --name scanpy --display-name "scanpy" && \
     mamba clean --all -f -y && \
-    chown -R ${NB_UID}:${NB_GID} "${CONDA_DIR}" && \
-    chown -R ${NB_UID}:${NB_GID} "${CONDA_DIR}/envs" && \
-    chown -R ${NB_UID}:${NB_GID} "/home/${NB_USER}"
+    chown -R ${NB_UID}:${NB_GID} ${CONDA_DIR} && \
+    chown -R ${NB_UID}:${NB_GID} ${CONDA_DIR}/envs && \
+    chown -R ${NB_UID}:${NB_GID} ${HOME}
+
+RUN mkdir -p ${HOME}/work \
+    && chown -R ${NB_UID}:${NB_GID} ${HOME} \
+    && cp ~/.bashrc ~/.bash_profile
 
 # Configure container start
-COPY --chown="${NB_UID}:${NB_GID}" --chmod=0755 scripts/scanpy-start-script.sh ${HOME}/start-script.sh
-COPY --chown="${NB_UID}:${NB_GID}" --chmod=0755 scripts/download-labs.sh ${HOME}/download-labs.sh
+COPY scripts/scanpy-start-script.sh ${HOME}/work/start-script.sh
+COPY scripts/download-labs.sh ${HOME}/work/download-labs.sh
 
-USER ${NB_UID}
+RUN chown -R ${NB_UID}:${NB_GID} ${HOME} \
+    && chmod a+x ${HOME}/work/start-script.sh \
+    && chmod a+x ${HOME}/work/download-labs.sh
 
-RUN mkdir -p ${HOME}/work
+USER ${NB_USER}
+
+WORKDIR ${HOME}/work
 
 EXPOSE 8888
 
