@@ -26,7 +26,7 @@ set -e
 
 ## define docker images
 docker_r="ghcr.io/nbisweden/workshop-scrnaseq-seurat:20250320-2311"
-docker_scanpy="ghcr.io/nbisweden/workshop-scrnaseq-scanpy:20250313-2022"
+docker_scanpy="ghcr.io/nbisweden/workshop-scrnaseq-scanpy:20250325-2256"
 
 ## old images for the r spatial labs.
 docker_seurat_spatial="ghcr.io/nbisweden/workshop-scrnaseq:2024-seurat_spatial-r4.3.0"
