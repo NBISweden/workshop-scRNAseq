@@ -207,7 +207,7 @@ background-size: cover;
       <div>
       <div class="quarto-title-meta-heading">Published</div>
       <div class="quarto-title-meta-contents">
-        <p class="date">28-Jan-2025</p>
+        <p class="date">24-Mar-2025</p>
       </div>
     </div>
     
@@ -307,19 +307,24 @@ There are multiple different methods to predict celltypes, here we will just cov
 <span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>adata <span class="op">=</span> sc.read_h5ad(path_file)</span>
 <span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>adata</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div id="fetch-data" class="cell-output cell-output-display" data-execution_count="2">
-<pre><code>AnnData object with n_obs × n_vars = 7332 × 19468
+<pre><code>AnnData object with n_obs × n_vars = 7332 × 3984
     obs: 'type', 'sample', 'batch', 'n_genes_by_counts', 'total_counts', 'total_counts_mt', 'pct_counts_mt', 'total_counts_ribo', 'pct_counts_ribo', 'total_counts_hb', 'pct_counts_hb', 'percent_mt2', 'n_counts', 'n_genes', 'percent_chrY', 'XIST-counts', 'S_score', 'G2M_score', 'phase', 'doublet_scores', 'predicted_doublets', 'doublet_info', 'leiden', 'leiden_0.4', 'leiden_0.6', 'leiden_1.0', 'leiden_1.4', 'kmeans5', 'kmeans10', 'kmeans15', 'hclust_5', 'hclust_10', 'hclust_15'
-    var: 'gene_ids', 'feature_types', 'genome', 'mt', 'ribo', 'hb', 'n_cells_by_counts', 'mean_counts', 'pct_dropout_by_counts', 'total_counts', 'n_cells', 'highly_variable', 'means', 'dispersions', 'dispersions_norm', 'highly_variable_nbatches', 'highly_variable_intersection'
+    var: 'gene_ids', 'feature_types', 'genome', 'mt', 'ribo', 'hb', 'n_cells_by_counts', 'mean_counts', 'pct_dropout_by_counts', 'total_counts', 'n_cells', 'highly_variable', 'means', 'dispersions', 'dispersions_norm', 'highly_variable_nbatches', 'highly_variable_intersection', 'mean', 'std'
     uns: 'dendrogram_leiden_0.6', 'doublet_info_colors', 'hclust_10_colors', 'hclust_15_colors', 'hclust_5_colors', 'hvg', 'kmeans10_colors', 'kmeans15_colors', 'kmeans5_colors', 'leiden', 'leiden_0.4', 'leiden_0.4_colors', 'leiden_0.6', 'leiden_0.6_colors', 'leiden_1.0', 'leiden_1.0_colors', 'leiden_1.4', 'leiden_1.4_colors', 'log1p', 'neighbors', 'pca', 'phase_colors', 'sample_colors', 'tsne', 'umap'
-    obsm: 'Scanorama', 'X_pca', 'X_pca_harmony', 'X_tsne', 'X_tsne_bbknn', 'X_tsne_harmony', 'X_tsne_scanorama', 'X_tsne_uncorr', 'X_umap', 'X_umap_bbknn', 'X_umap_harmony', 'X_umap_scanorama', 'X_umap_uncorr'
+    obsm: 'Scanorama', 'X_pca', 'X_pca_combat', 'X_pca_harmony', 'X_tsne', 'X_tsne_bbknn', 'X_tsne_combat', 'X_tsne_harmony', 'X_tsne_scanorama', 'X_tsne_uncorr', 'X_umap', 'X_umap_bbknn', 'X_umap_combat', 'X_umap_harmony', 'X_umap_scanorama', 'X_umap_uncorr'
+    varm: 'PCs'
     obsp: 'connectivities', 'distances'</code></pre>
 </div>
 </div>
 <div id="check-data" class="cell" data-execution_count="3">
 <div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>adata.uns[<span class="st">'log1p'</span>][<span class="st">'base'</span>]<span class="op">=</span><span class="va">None</span></span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(adata.shape)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(adata.shape)</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="co"># have only variable genes in X, use raw instead.</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>adata <span class="op">=</span> adata.raw.to_adata()</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(adata.shape)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>(7332, 19468)</code></pre>
+<pre><code>(7332, 3984)
+(7332, 19468)</code></pre>
 </div>
 </div>
 <p>Subset one patient.</p>
@@ -333,17 +338,18 @@ There are multiple different methods to predict celltypes, here we will just cov
 <div class="cell" data-execution_count="5">
 <div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>adata.obs[<span class="st">"leiden_0.6"</span>].value_counts()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div id="count-cells" class="cell-output cell-output-display" data-execution_count="5">
-<pre><code>0     269
-5     210
-1     134
-6     132
+<pre><code>1     276
+3     207
+0     200
+6     124
 2     123
-4     112
-3     100
-7      24
-10     20
-9      16
-8      14
+4      68
+5      49
+7      32
+8      23
+9      18
+10     18
+11     16
 Name: leiden_0.6, dtype: int64</code></pre>
 </div>
 </div>
@@ -369,7 +375,10 @@ Name: leiden_0.6, dtype: int64</code></pre>
 <span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(adata_ref.shape)</span>
 <span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>adata_ref.obs</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>(2638, 1838)</code></pre>
+<pre><code>try downloading from url
+https://raw.githubusercontent.com/chanzuckerberg/cellxgene/main/example-dataset/pbmc3k.h5ad
+... this may take a while but only happens once
+(2638, 1838)</code></pre>
 </div>
 <div id="fetch-ref" class="cell-output cell-output-display" data-execution_count="7">
 <div>
@@ -528,10 +537,10 @@ Name: leiden_0.6, dtype: int64</code></pre>
 <div class="cell-output cell-output-stdout">
 <pre><code>computing PCA
     with n_comps=50
-    finished (0:00:00)
+    finished (0:00:07)
 computing neighbors
     using 'X_pca' with n_pcs = 50
-    finished (0:00:10)
+    finished (0:00:11)
 computing UMAP
     finished (0:00:04)</code></pre>
 </div>
@@ -603,7 +612,7 @@ Processing datasets (0, 1)</code></pre>
 <pre><code>computing neighbors
     finished (0:00:00)
 computing UMAP
-    finished (0:00:05)</code></pre>
+    finished (0:00:06)</code></pre>
 </div>
 </div>
 <div class="cell" data-execution_count="15">
@@ -678,7 +687,7 @@ computing UMAP
 <div class="sourceCode cell-code" id="cb28"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>tmp <span class="op">=</span> pd.crosstab(adata.obs[<span class="st">'leiden_0.6'</span>],adata.obs[<span class="st">'label_trans'</span>], normalize<span class="op">=</span><span class="st">'index'</span>)</span>
 <span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>tmp.plot.bar(stacked<span class="op">=</span><span class="va">True</span>).legend(bbox_to_anchor<span class="op">=</span>(<span class="fl">1.8</span>, <span class="dv">1</span>),loc<span class="op">=</span><span class="st">'upper right'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div id="distributions-1" class="cell-output cell-output-display" data-execution_count="18">
-<pre><code>&lt;matplotlib.legend.Legend at 0x7ffe88868970&gt;</code></pre>
+<pre><code>&lt;matplotlib.legend.Legend at 0x7ffe7d07f100&gt;</code></pre>
 </div>
 <div class="cell-output cell-output-display">
 <div id="distributions-2">
@@ -696,7 +705,7 @@ computing UMAP
 <span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, color<span class="op">=</span>[<span class="st">'louvain'</span>,<span class="st">'leiden_0.6'</span>], wspace<span class="op">=</span><span class="fl">0.5</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>running ingest
-    finished (0:00:22)</code></pre>
+    finished (0:00:24)</code></pre>
 </div>
 <div class="cell-output cell-output-display">
 <div id="ingest">
@@ -720,7 +729,7 @@ computing UMAP
 <div class="sourceCode cell-code" id="cb33"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>tmp <span class="op">=</span> pd.crosstab(adata.obs[<span class="st">'leiden_0.6'</span>],adata.obs[<span class="st">'louvain'</span>], normalize<span class="op">=</span><span class="st">'index'</span>)</span>
 <span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>tmp.plot.bar(stacked<span class="op">=</span><span class="va">True</span>).legend(bbox_to_anchor<span class="op">=</span>(<span class="fl">1.8</span>, <span class="dv">1</span>),loc<span class="op">=</span><span class="st">'upper right'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div id="distributions-ingest-1" class="cell-output cell-output-display" data-execution_count="21">
-<pre><code>&lt;matplotlib.legend.Legend at 0x7ffe88f70550&gt;</code></pre>
+<pre><code>&lt;matplotlib.legend.Legend at 0x7ffe7ca79120&gt;</code></pre>
 </div>
 <div class="cell-output cell-output-display">
 <div id="distributions-ingest-2">
@@ -915,6 +924,11 @@ Task
 <div class="cell" data-execution_count="28">
 <div class="sourceCode cell-code" id="cb45"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a>adata_ref2 <span class="op">=</span> sc.datasets.pbmc3k() </span>
 <span id="cb45-2"><a href="#cb45-2" aria-hidden="true" tabindex="-1"></a>adata_ref2</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>try downloading from url
+https://falexwolf.de/data/pbmc3k_raw.h5ad
+... this may take a while but only happens once</code></pre>
+</div>
 <div id="prep-refdata2" class="cell-output cell-output-display" data-execution_count="28">
 <pre><code>AnnData object with n_obs × n_vars = 2700 × 32738
     var: 'gene_ids'</code></pre>
@@ -922,9 +936,9 @@ Task
 </div>
 <p>This data is not annotated, so we will have to match the indices from the filtered and processed object. And add in the metadata with annotations.</p>
 <div class="cell" data-execution_count="29">
-<div class="sourceCode cell-code" id="cb47"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb47-1"><a href="#cb47-1" aria-hidden="true" tabindex="-1"></a>adata_ref2 <span class="op">=</span> adata_ref2[adata_ref.obs_names,:]</span>
-<span id="cb47-2"><a href="#cb47-2" aria-hidden="true" tabindex="-1"></a>adata_ref2.obs <span class="op">=</span> adata_ref.obs</span>
-<span id="cb47-3"><a href="#cb47-3" aria-hidden="true" tabindex="-1"></a>adata_ref2</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb48"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb48-1"><a href="#cb48-1" aria-hidden="true" tabindex="-1"></a>adata_ref2 <span class="op">=</span> adata_ref2[adata_ref.obs_names,:]</span>
+<span id="cb48-2"><a href="#cb48-2" aria-hidden="true" tabindex="-1"></a>adata_ref2.obs <span class="op">=</span> adata_ref.obs</span>
+<span id="cb48-3"><a href="#cb48-3" aria-hidden="true" tabindex="-1"></a>adata_ref2</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div id="prep-refdata3" class="cell-output cell-output-display" data-execution_count="29">
 <pre><code>AnnData object with n_obs × n_vars = 2638 × 32738
     obs: 'n_genes', 'percent_mito', 'n_counts', 'louvain', 'sample'
@@ -933,11 +947,11 @@ Task
 </div>
 <p>Now we can normalize the matrix:</p>
 <div class="cell" data-execution_count="30">
-<div class="sourceCode cell-code" id="cb49"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb49-1"><a href="#cb49-1" aria-hidden="true" tabindex="-1"></a>sc.pp.normalize_total(adata_ref2, target_sum <span class="op">=</span> <span class="fl">1e4</span>)</span>
-<span id="cb49-2"><a href="#cb49-2" aria-hidden="true" tabindex="-1"></a>sc.pp.log1p(adata_ref2)</span>
-<span id="cb49-3"><a href="#cb49-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb49-4"><a href="#cb49-4" aria-hidden="true" tabindex="-1"></a><span class="co"># check the sums again</span></span>
-<span id="cb49-5"><a href="#cb49-5" aria-hidden="true" tabindex="-1"></a>adata_ref2.X.expm1().<span class="bu">sum</span>(axis <span class="op">=</span> <span class="dv">1</span>)[:<span class="dv">10</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb50"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb50-1"><a href="#cb50-1" aria-hidden="true" tabindex="-1"></a>sc.pp.normalize_total(adata_ref2, target_sum <span class="op">=</span> <span class="fl">1e4</span>)</span>
+<span id="cb50-2"><a href="#cb50-2" aria-hidden="true" tabindex="-1"></a>sc.pp.log1p(adata_ref2)</span>
+<span id="cb50-3"><a href="#cb50-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb50-4"><a href="#cb50-4" aria-hidden="true" tabindex="-1"></a><span class="co"># check the sums again</span></span>
+<span id="cb50-5"><a href="#cb50-5" aria-hidden="true" tabindex="-1"></a>adata_ref2.X.expm1().<span class="bu">sum</span>(axis <span class="op">=</span> <span class="dv">1</span>)[:<span class="dv">10</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>normalizing counts per cell
     finished (0:00:00)</code></pre>
@@ -957,11 +971,11 @@ Task
 </div>
 <p>And finally train the model.</p>
 <div id="celltypist-train" class="cell" data-execution_count="31">
-<div class="sourceCode cell-code" id="cb52"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb52-1"><a href="#cb52-1" aria-hidden="true" tabindex="-1"></a>new_model <span class="op">=</span> celltypist.train(adata_ref2, labels <span class="op">=</span> <span class="st">'louvain'</span>, n_jobs <span class="op">=</span> <span class="dv">10</span>, feature_selection <span class="op">=</span> <span class="va">True</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb53"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb53-1"><a href="#cb53-1" aria-hidden="true" tabindex="-1"></a>new_model <span class="op">=</span> celltypist.train(adata_ref2, labels <span class="op">=</span> <span class="st">'louvain'</span>, n_jobs <span class="op">=</span> <span class="dv">10</span>, feature_selection <span class="op">=</span> <span class="va">True</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Now we can run predictions on our data</p>
 <div id="celltypist-pred" class="cell" data-execution_count="32">
-<div class="sourceCode cell-code" id="cb53"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb53-1"><a href="#cb53-1" aria-hidden="true" tabindex="-1"></a>predictions2 <span class="op">=</span> celltypist.annotate(adata, model <span class="op">=</span> new_model, majority_voting <span class="op">=</span> <span class="va">True</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb54"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb54-1"><a href="#cb54-1" aria-hidden="true" tabindex="-1"></a>predictions2 <span class="op">=</span> celltypist.annotate(adata, model <span class="op">=</span> new_model, majority_voting <span class="op">=</span> <span class="va">True</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>running Leiden clustering
     finished (0:00:00)</code></pre>
@@ -969,11 +983,11 @@ Task
 </div>
 <p>Instead of converting the predictions to anndata we will just add another column in the <code>adata.obs</code> with these new predictions since the column names from the previous celltypist runs with clash.</p>
 <div id="celltypist-save" class="cell" data-execution_count="33">
-<div class="sourceCode cell-code" id="cb55"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb55-1"><a href="#cb55-1" aria-hidden="true" tabindex="-1"></a>adata.obs[<span class="st">"predicted_labels_ref"</span>] <span class="op">=</span> predictions2.predicted_labels[<span class="st">"predicted_labels"</span>]</span>
-<span id="cb55-2"><a href="#cb55-2" aria-hidden="true" tabindex="-1"></a>adata.obs[<span class="st">"majority_voting_ref"</span>] <span class="op">=</span> predictions2.predicted_labels[<span class="st">"majority_voting"</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb56"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb56-1"><a href="#cb56-1" aria-hidden="true" tabindex="-1"></a>adata.obs[<span class="st">"predicted_labels_ref"</span>] <span class="op">=</span> predictions2.predicted_labels[<span class="st">"predicted_labels"</span>]</span>
+<span id="cb56-2"><a href="#cb56-2" aria-hidden="true" tabindex="-1"></a>adata.obs[<span class="st">"majority_voting_ref"</span>] <span class="op">=</span> predictions2.predicted_labels[<span class="st">"majority_voting"</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <div class="cell" data-execution_count="34">
-<div class="sourceCode cell-code" id="cb56"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb56-1"><a href="#cb56-1" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, color <span class="op">=</span> [<span class="st">'predicted_labels'</span>, <span class="st">'majority_voting'</span>,<span class="st">'predicted_labels_ref'</span>, <span class="st">'majority_voting_ref'</span>], legend_loc <span class="op">=</span> <span class="st">'on data'</span>, ncols<span class="op">=</span><span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb57"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb57-1"><a href="#cb57-1" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, color <span class="op">=</span> [<span class="st">'predicted_labels'</span>, <span class="st">'majority_voting'</span>,<span class="st">'predicted_labels_ref'</span>, <span class="st">'majority_voting_ref'</span>], legend_loc <span class="op">=</span> <span class="st">'on data'</span>, ncols<span class="op">=</span><span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 <div id="celltypist-plot">
 <p><a href="scanpy_06_celltyping_files/figure-html/celltypist-plot-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-15"><img src="scanpy_06_celltyping_files/figure-html/celltypist-plot-output-1.png" class="img-fluid"></a></p>
@@ -986,7 +1000,7 @@ Task
 <h2 data-number="5" class="anchored" data-anchor-id="compare-results"><span class="header-section-number">5</span> Compare results</h2>
 <p>The predictions from ingest is stored in the column ‘louvain’ while we named the label transfer with scanorama as ‘predicted’</p>
 <div class="cell" data-execution_count="35">
-<div class="sourceCode cell-code" id="cb57"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb57-1"><a href="#cb57-1" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, color<span class="op">=</span>[<span class="st">'louvain'</span>,<span class="st">'label_trans'</span>,<span class="st">'majority_voting'</span>, <span class="st">'majority_voting_ref'</span>], wspace<span class="op">=</span><span class="fl">0.5</span>, ncols<span class="op">=</span><span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb58"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb58-1"><a href="#cb58-1" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, color<span class="op">=</span>[<span class="st">'louvain'</span>,<span class="st">'label_trans'</span>,<span class="st">'majority_voting'</span>, <span class="st">'majority_voting_ref'</span>], wspace<span class="op">=</span><span class="fl">0.5</span>, ncols<span class="op">=</span><span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 <div id="plot-all">
 <p><a href="scanpy_06_celltyping_files/figure-html/plot-all-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-16"><img src="scanpy_06_celltyping_files/figure-html/plot-all-output-1.png" class="img-fluid"></a></p>
@@ -1001,70 +1015,78 @@ Task
 <p>Another way of predicting celltypes is to use the differentially expressed genes per cluster and compare to lists of known cell marker genes. This requires a list of genes that you trust and that is relevant for the tissue you are working on.</p>
 <p>You can either run it with a marker list from the ontology or a list of your choice as in the example below.</p>
 <div id="fetch-markers" class="cell" data-execution_count="36">
-<div class="sourceCode cell-code" id="cb58"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb58-1"><a href="#cb58-1" aria-hidden="true" tabindex="-1"></a>path_file <span class="op">=</span> <span class="st">'data/human_cell_markers.txt'</span></span>
-<span id="cb58-2"><a href="#cb58-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(path_file):</span>
-<span id="cb58-3"><a href="#cb58-3" aria-hidden="true" tabindex="-1"></a>    file_url <span class="op">=</span> os.path.join(path_data, <span class="st">"misc/human_cell_markers.txt"</span>)</span>
-<span id="cb58-4"><a href="#cb58-4" aria-hidden="true" tabindex="-1"></a>    subprocess.call([<span class="st">"curl"</span>, <span class="st">"-u"</span>, curl_upass, <span class="st">"-o"</span>, path_file, file_url ])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb59"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb59-1"><a href="#cb59-1" aria-hidden="true" tabindex="-1"></a>path_file <span class="op">=</span> <span class="st">'data/human_cell_markers.txt'</span></span>
+<span id="cb59-2"><a href="#cb59-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(path_file):</span>
+<span id="cb59-3"><a href="#cb59-3" aria-hidden="true" tabindex="-1"></a>    file_url <span class="op">=</span> os.path.join(path_data, <span class="st">"misc/human_cell_markers.txt"</span>)</span>
+<span id="cb59-4"><a href="#cb59-4" aria-hidden="true" tabindex="-1"></a>    subprocess.call([<span class="st">"curl"</span>, <span class="st">"-u"</span>, curl_upass, <span class="st">"-o"</span>, path_file, file_url ])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <div id="read-markers" class="cell" data-execution_count="37">
-<div class="sourceCode cell-code" id="cb59"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb59-1"><a href="#cb59-1" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> pd.read_table(path_file)</span>
-<span id="cb59-2"><a href="#cb59-2" aria-hidden="true" tabindex="-1"></a>df</span>
-<span id="cb59-3"><a href="#cb59-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb59-4"><a href="#cb59-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(df.shape)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb60"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb60-1"><a href="#cb60-1" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> pd.read_table(path_file)</span>
+<span id="cb60-2"><a href="#cb60-2" aria-hidden="true" tabindex="-1"></a>df</span>
+<span id="cb60-3"><a href="#cb60-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-4"><a href="#cb60-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(df.shape)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>(2868, 15)</code></pre>
 </div>
 </div>
 <div id="prep-markers" class="cell" data-execution_count="38">
-<div class="sourceCode cell-code" id="cb61"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb61-1"><a href="#cb61-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Filter for number of genes per celltype</span></span>
-<span id="cb61-2"><a href="#cb61-2" aria-hidden="true" tabindex="-1"></a>df[<span class="st">'nG'</span>] <span class="op">=</span> df.geneSymbol.<span class="bu">str</span>.split(<span class="st">","</span>).<span class="bu">str</span>.<span class="bu">len</span>()</span>
-<span id="cb61-3"><a href="#cb61-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb61-4"><a href="#cb61-4" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> df[df[<span class="st">'nG'</span>] <span class="op">&gt;</span> <span class="dv">5</span>]</span>
-<span id="cb61-5"><a href="#cb61-5" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> df[df[<span class="st">'nG'</span>] <span class="op">&lt;</span> <span class="dv">100</span>]</span>
-<span id="cb61-6"><a href="#cb61-6" aria-hidden="true" tabindex="-1"></a>d <span class="op">=</span> df[df[<span class="st">'cancerType'</span>] <span class="op">==</span> <span class="st">"Normal"</span>]</span>
-<span id="cb61-7"><a href="#cb61-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(df.shape)</span>
-<span id="cb61-8"><a href="#cb61-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb61-9"><a href="#cb61-9" aria-hidden="true" tabindex="-1"></a><span class="co"># convert to dict.</span></span>
-<span id="cb61-10"><a href="#cb61-10" aria-hidden="true" tabindex="-1"></a>df.index <span class="op">=</span> df.cellName</span>
-<span id="cb61-11"><a href="#cb61-11" aria-hidden="true" tabindex="-1"></a>gene_dict <span class="op">=</span> df.geneSymbol.<span class="bu">str</span>.split(<span class="st">","</span>).to_dict()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb62"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb62-1"><a href="#cb62-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Filter for number of genes per celltype</span></span>
+<span id="cb62-2"><a href="#cb62-2" aria-hidden="true" tabindex="-1"></a>df[<span class="st">'nG'</span>] <span class="op">=</span> df.geneSymbol.<span class="bu">str</span>.split(<span class="st">","</span>).<span class="bu">str</span>.<span class="bu">len</span>()</span>
+<span id="cb62-3"><a href="#cb62-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb62-4"><a href="#cb62-4" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> df[df[<span class="st">'nG'</span>] <span class="op">&gt;</span> <span class="dv">5</span>]</span>
+<span id="cb62-5"><a href="#cb62-5" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> df[df[<span class="st">'nG'</span>] <span class="op">&lt;</span> <span class="dv">100</span>]</span>
+<span id="cb62-6"><a href="#cb62-6" aria-hidden="true" tabindex="-1"></a>d <span class="op">=</span> df[df[<span class="st">'cancerType'</span>] <span class="op">==</span> <span class="st">"Normal"</span>]</span>
+<span id="cb62-7"><a href="#cb62-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(df.shape)</span>
+<span id="cb62-8"><a href="#cb62-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb62-9"><a href="#cb62-9" aria-hidden="true" tabindex="-1"></a><span class="co"># convert to dict.</span></span>
+<span id="cb62-10"><a href="#cb62-10" aria-hidden="true" tabindex="-1"></a>df.index <span class="op">=</span> df.cellName</span>
+<span id="cb62-11"><a href="#cb62-11" aria-hidden="true" tabindex="-1"></a>gene_dict <span class="op">=</span> df.geneSymbol.<span class="bu">str</span>.split(<span class="st">","</span>).to_dict()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>(445, 16)</code></pre>
 </div>
 </div>
 <div id="dge" class="cell" data-execution_count="39">
-<div class="sourceCode cell-code" id="cb63"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb63-1"><a href="#cb63-1" aria-hidden="true" tabindex="-1"></a><span class="co"># run differential expression per cluster</span></span>
-<span id="cb63-2"><a href="#cb63-2" aria-hidden="true" tabindex="-1"></a>sc.tl.rank_genes_groups(adata, <span class="st">'leiden_0.6'</span>, method<span class="op">=</span><span class="st">'wilcoxon'</span>, key_added <span class="op">=</span> <span class="st">"wilcoxon"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb64"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb64-1"><a href="#cb64-1" aria-hidden="true" tabindex="-1"></a><span class="co"># run differential expression per cluster</span></span>
+<span id="cb64-2"><a href="#cb64-2" aria-hidden="true" tabindex="-1"></a>sc.tl.rank_genes_groups(adata, <span class="st">'leiden_0.6'</span>, method<span class="op">=</span><span class="st">'wilcoxon'</span>, key_added <span class="op">=</span> <span class="st">"wilcoxon"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>ranking genes
     finished (0:00:01)</code></pre>
 </div>
 </div>
 <div id="gsea" class="cell" data-execution_count="40">
-<div class="sourceCode cell-code" id="cb65"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb65-1"><a href="#cb65-1" aria-hidden="true" tabindex="-1"></a><span class="co"># do gene set overlap to the groups in the gene list and top 300 DEGs.</span></span>
-<span id="cb65-2"><a href="#cb65-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> gseapy</span>
-<span id="cb65-3"><a href="#cb65-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb65-4"><a href="#cb65-4" aria-hidden="true" tabindex="-1"></a>gsea_res <span class="op">=</span> <span class="bu">dict</span>()</span>
-<span id="cb65-5"><a href="#cb65-5" aria-hidden="true" tabindex="-1"></a>pred <span class="op">=</span> <span class="bu">dict</span>()</span>
-<span id="cb65-6"><a href="#cb65-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb65-7"><a href="#cb65-7" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> cl <span class="kw">in</span> adata.obs[<span class="st">'leiden_0.6'</span>].cat.categories.tolist():</span>
-<span id="cb65-8"><a href="#cb65-8" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(cl)</span>
-<span id="cb65-9"><a href="#cb65-9" aria-hidden="true" tabindex="-1"></a>    glist <span class="op">=</span> sc.get.rank_genes_groups_df(adata, group<span class="op">=</span>cl, key<span class="op">=</span><span class="st">'wilcoxon'</span>)[</span>
-<span id="cb65-10"><a href="#cb65-10" aria-hidden="true" tabindex="-1"></a>        <span class="st">'names'</span>].squeeze().<span class="bu">str</span>.strip().tolist()</span>
-<span id="cb65-11"><a href="#cb65-11" aria-hidden="true" tabindex="-1"></a>    enr_res <span class="op">=</span> gseapy.enrichr(gene_list<span class="op">=</span>glist[:<span class="dv">300</span>],</span>
-<span id="cb65-12"><a href="#cb65-12" aria-hidden="true" tabindex="-1"></a>                             organism<span class="op">=</span><span class="st">'Human'</span>,</span>
-<span id="cb65-13"><a href="#cb65-13" aria-hidden="true" tabindex="-1"></a>                             gene_sets<span class="op">=</span>gene_dict,</span>
-<span id="cb65-14"><a href="#cb65-14" aria-hidden="true" tabindex="-1"></a>                             background<span class="op">=</span>adata.shape[<span class="dv">1</span>],</span>
-<span id="cb65-15"><a href="#cb65-15" aria-hidden="true" tabindex="-1"></a>                             cutoff<span class="op">=</span><span class="dv">1</span>)</span>
-<span id="cb65-16"><a href="#cb65-16" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> enr_res.results.shape[<span class="dv">0</span>] <span class="op">==</span> <span class="dv">0</span>:</span>
-<span id="cb65-17"><a href="#cb65-17" aria-hidden="true" tabindex="-1"></a>        pred[cl] <span class="op">=</span> <span class="st">"Unass"</span></span>
-<span id="cb65-18"><a href="#cb65-18" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span>:</span>
-<span id="cb65-19"><a href="#cb65-19" aria-hidden="true" tabindex="-1"></a>        enr_res.results.sort_values(</span>
-<span id="cb65-20"><a href="#cb65-20" aria-hidden="true" tabindex="-1"></a>            by<span class="op">=</span><span class="st">"P-value"</span>, axis<span class="op">=</span><span class="dv">0</span>, ascending<span class="op">=</span><span class="va">True</span>, inplace<span class="op">=</span><span class="va">True</span>)</span>
-<span id="cb65-21"><a href="#cb65-21" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(enr_res.results.head(<span class="dv">2</span>))</span>
-<span id="cb65-22"><a href="#cb65-22" aria-hidden="true" tabindex="-1"></a>        gsea_res[cl] <span class="op">=</span> enr_res</span>
-<span id="cb65-23"><a href="#cb65-23" aria-hidden="true" tabindex="-1"></a>        pred[cl] <span class="op">=</span> enr_res.results[<span class="st">"Term"</span>][<span class="dv">0</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb66"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb66-1"><a href="#cb66-1" aria-hidden="true" tabindex="-1"></a><span class="co"># do gene set overlap to the groups in the gene list and top 300 DEGs.</span></span>
+<span id="cb66-2"><a href="#cb66-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> gseapy</span>
+<span id="cb66-3"><a href="#cb66-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb66-4"><a href="#cb66-4" aria-hidden="true" tabindex="-1"></a>gsea_res <span class="op">=</span> <span class="bu">dict</span>()</span>
+<span id="cb66-5"><a href="#cb66-5" aria-hidden="true" tabindex="-1"></a>pred <span class="op">=</span> <span class="bu">dict</span>()</span>
+<span id="cb66-6"><a href="#cb66-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb66-7"><a href="#cb66-7" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> cl <span class="kw">in</span> adata.obs[<span class="st">'leiden_0.6'</span>].cat.categories.tolist():</span>
+<span id="cb66-8"><a href="#cb66-8" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(cl)</span>
+<span id="cb66-9"><a href="#cb66-9" aria-hidden="true" tabindex="-1"></a>    glist <span class="op">=</span> sc.get.rank_genes_groups_df(adata, group<span class="op">=</span>cl, key<span class="op">=</span><span class="st">'wilcoxon'</span>)[</span>
+<span id="cb66-10"><a href="#cb66-10" aria-hidden="true" tabindex="-1"></a>        <span class="st">'names'</span>].squeeze().<span class="bu">str</span>.strip().tolist()</span>
+<span id="cb66-11"><a href="#cb66-11" aria-hidden="true" tabindex="-1"></a>    enr_res <span class="op">=</span> gseapy.enrichr(gene_list<span class="op">=</span>glist[:<span class="dv">300</span>],</span>
+<span id="cb66-12"><a href="#cb66-12" aria-hidden="true" tabindex="-1"></a>                             organism<span class="op">=</span><span class="st">'Human'</span>,</span>
+<span id="cb66-13"><a href="#cb66-13" aria-hidden="true" tabindex="-1"></a>                             gene_sets<span class="op">=</span>gene_dict,</span>
+<span id="cb66-14"><a href="#cb66-14" aria-hidden="true" tabindex="-1"></a>                             background<span class="op">=</span>adata.shape[<span class="dv">1</span>],</span>
+<span id="cb66-15"><a href="#cb66-15" aria-hidden="true" tabindex="-1"></a>                             cutoff<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb66-16"><a href="#cb66-16" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> enr_res.results.shape[<span class="dv">0</span>] <span class="op">==</span> <span class="dv">0</span>:</span>
+<span id="cb66-17"><a href="#cb66-17" aria-hidden="true" tabindex="-1"></a>        pred[cl] <span class="op">=</span> <span class="st">"Unass"</span></span>
+<span id="cb66-18"><a href="#cb66-18" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span>:</span>
+<span id="cb66-19"><a href="#cb66-19" aria-hidden="true" tabindex="-1"></a>        enr_res.results.sort_values(</span>
+<span id="cb66-20"><a href="#cb66-20" aria-hidden="true" tabindex="-1"></a>            by<span class="op">=</span><span class="st">"P-value"</span>, axis<span class="op">=</span><span class="dv">0</span>, ascending<span class="op">=</span><span class="va">True</span>, inplace<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb66-21"><a href="#cb66-21" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(enr_res.results.head(<span class="dv">2</span>))</span>
+<span id="cb66-22"><a href="#cb66-22" aria-hidden="true" tabindex="-1"></a>        gsea_res[cl] <span class="op">=</span> enr_res</span>
+<span id="cb66-23"><a href="#cb66-23" aria-hidden="true" tabindex="-1"></a>        pred[cl] <span class="op">=</span> enr_res.results[<span class="st">"Term"</span>][<span class="dv">0</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>0
+   Gene_set                   Term Overlap   P-value  Adjusted P-value  \
+0  gs_ind_0  Cancer stem-like cell     1/6  0.088981          0.206048   
+5  gs_ind_0             Macrophage     1/6  0.088981          0.206048   
+
+   Odds Ratio  Combined Score  Genes  
+0   17.450448       42.218477  ANPEP  
+5   17.450448       42.218477   AIF1  
+1
    Gene_set                      Term Overlap   P-value  Adjusted P-value  \
 3  gs_ind_0  Parietal progenitor cell     1/7  0.103024          0.255621   
 0  gs_ind_0           Effector T cell    1/13  0.182865          0.255621   
@@ -1072,39 +1094,15 @@ Task
    Odds Ratio  Combined Score  Genes  
 3   14.764993       33.557802  ANXA1  
 0    7.675392       13.040543  IL2RB  
-1
-    Gene_set                      Term Overlap   P-value  Adjusted P-value  \
-1   gs_ind_0     Cancer stem-like cell     1/6  0.088981           0.19465   
-20  gs_ind_0  Spermatogonial stem cell     1/6  0.088981           0.19465   
-
-    Odds Ratio  Combined Score  Genes  
-1    17.450448       42.218477  ANPEP  
-20   17.450448       42.218477   BCL6  
 2
-   Gene_set                      Term Overlap   P-value  Adjusted P-value  \
-3  gs_ind_0                  Monocyte     1/7  0.103024          0.206048   
-4  gs_ind_0  Parietal progenitor cell     1/7  0.103024          0.206048   
+   Gene_set                    Term Overlap   P-value  Adjusted P-value  \
+2  gs_ind_0  Effector memory T cell     1/7  0.103024          0.206048   
+5  gs_ind_0                Monocyte     1/7  0.103024          0.206048   
 
-   Odds Ratio  Combined Score  Genes  
-3   14.764993       33.557802   CD52  
-4   14.764993       33.557802  ANXA1  
+   Odds Ratio  Combined Score Genes  
+2   14.764993       33.557802  IL7R  
+5   14.764993       33.557802  CD52  
 3
-   Gene_set      Term Overlap   P-value  Adjusted P-value  Odds Ratio  \
-0  gs_ind_0    B cell     1/6  0.088981          0.116851   17.450448   
-3  gs_ind_0  Monocyte     1/7  0.103024          0.116851   14.764993   
-
-   Combined Score Genes  
-0       42.218477  CD19  
-3       33.557802  CD52  
-4
-   Gene_set                   Term Overlap   P-value  Adjusted P-value  \
-0  gs_ind_0  Cancer stem-like cell     1/6  0.088981          0.218659   
-5  gs_ind_0             Macrophage     1/6  0.088981          0.218659   
-
-   Odds Ratio  Combined Score  Genes  
-0   17.450448       42.218477  ANPEP  
-5   17.450448       42.218477   AIF1  
-5
    Gene_set                    Term Overlap   P-value  Adjusted P-value  \
 3  gs_ind_0  Effector memory T cell     1/7  0.103024          0.215807   
 5  gs_ind_0                Monocyte     1/7  0.103024          0.215807   
@@ -1112,6 +1110,22 @@ Task
    Odds Ratio  Combined Score Genes  
 3   14.764993       33.557802  IL7R  
 5   14.764993       33.557802  CD52  
+4
+   Gene_set              Term Overlap   P-value  Adjusted P-value  Odds Ratio  \
+2  gs_ind_0          Monocyte     1/7  0.103024          0.116851   14.764993   
+0  gs_ind_0  CD4-CD28+ T cell     1/8  0.116851          0.116851   12.795659   
+
+   Combined Score Genes  
+2       33.557802  CD52  
+0       27.470422  BCL2  
+5
+    Gene_set                      Term Overlap   P-value  Adjusted P-value  \
+1   gs_ind_0     Cancer stem-like cell     1/6  0.088981          0.203113   
+21  gs_ind_0  Spermatogonial stem cell     1/6  0.088981          0.203113   
+
+    Odds Ratio  Combined Score  Genes  
+1    17.450448       42.218477  ANPEP  
+21   17.450448       42.218477   BCL6  
 6
    Gene_set                             Term Overlap   P-value  \
 1  gs_ind_0                       Macrophage     1/6  0.088981   
@@ -1121,61 +1135,70 @@ Task
 1          0.175277   17.450448       42.218477   AIF1  
 2          0.175277   12.795659       27.470422  ITGAX  
 7
-   Gene_set                         Term Overlap   P-value  Adjusted P-value  \
-1  gs_ind_0       Circulating fetal cell    1/40  0.463035          0.712041   
-0  gs_ind_0  AXL+SIGLEC6+ dendritic cell    1/80  0.712041          0.712041   
+   Gene_set      Term Overlap   P-value  Adjusted P-value  Odds Ratio  \
+0  gs_ind_0    B cell     1/6  0.088981          0.116851   17.450448   
+2  gs_ind_0  Monocyte     1/7  0.103024          0.116851   14.764993   
 
-   Odds Ratio  Combined Score Genes  
-1    2.425498        1.867518  ACTB  
-0    1.202602        0.408427  ACPP  
+   Combined Score Genes  
+0       42.218477  CD19  
+2       33.557802  CD52  
 8
-   Gene_set                               Term Overlap   P-value  \
-0  gs_ind_0             CD1C+_A dendritic cell    1/31  0.382330   
-1  gs_ind_0  Effector CD8+ memory T (Tem) cell    1/83  0.725203   
+   Gene_set        Term Overlap   P-value  Adjusted P-value  Odds Ratio  \
+2  gs_ind_0  Macrophage     1/6  0.088981          0.154536   17.450448   
+4  gs_ind_0  Myeloblast     1/6  0.088981          0.154536   17.450448   
+
+   Combined Score  Genes  
+2       42.218477   AIF1  
+4       42.218477  CSF3R  
+9
+   Gene_set             Term Overlap   P-value  Adjusted P-value  Odds Ratio  \
+4  gs_ind_0    T helper cell    1/10  0.143872          0.319526   10.100782   
+1  gs_ind_0  Effector T cell    1/13  0.182865          0.319526    7.675392   
+
+   Combined Score  Genes  
+4       19.583741  ABCB1  
+1       13.040543  IL2RB  
+10
+   Gene_set                                 Term Overlap   P-value  \
+1  gs_ind_0             PROM1Low progenitor cell     1/7  0.103024   
+0  gs_ind_0  Myeloid conventional dendritic cell    1/17  0.232116   
 
    Adjusted P-value  Odds Ratio  Combined Score  Genes  
-0          0.725203    3.142697        3.021616  ADAM8  
-1          0.725203    1.158689        0.372291  ADAM8  
-9
-   Gene_set                    Term Overlap   P-value  Adjusted P-value  \
-2  gs_ind_0  Lake et al.Science.In4     1/6  0.088981          0.212585   
-1  gs_ind_0             Immune cell     1/7  0.103024          0.212585   
+1          0.206048   14.764993       33.557802  ALCAM  
+0          0.232116    5.813477        8.490677   CD1C  
+11
+    Gene_set                             Term Overlap   P-value  \
+1   gs_ind_0            Cancer stem-like cell     1/6  0.088981   
+16  gs_ind_0  Myeloid-derived suppressor cell     1/6  0.088981   
 
-   Odds Ratio  Combined Score    Genes  
-2   17.450448       42.218477  ADAMTS2  
-1   14.764993       33.557802     CD14  
-10
-   Gene_set                      Term Overlap   P-value  Adjusted P-value  \
-2  gs_ind_0  PROM1Low progenitor cell     1/7  0.103024          0.215807   
-0  gs_ind_0             Memory B cell    1/10  0.143872          0.215807   
-
-   Odds Ratio  Combined Score  Genes  
-2   14.764993       33.557802  ALCAM  
-0   10.100782       19.583741   RBPJ  </code></pre>
+    Adjusted P-value  Odds Ratio  Combined Score  Genes  
+1           0.191829   17.450448       42.218477  ANPEP  
+16          0.191829   17.450448       42.218477  ITGAM  </code></pre>
 </div>
 </div>
 <div class="cell" data-execution_count="41">
-<div class="sourceCode cell-code" id="cb67"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb67-1"><a href="#cb67-1" aria-hidden="true" tabindex="-1"></a><span class="co"># prediction per cluster</span></span>
-<span id="cb67-2"><a href="#cb67-2" aria-hidden="true" tabindex="-1"></a>pred</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb68"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb68-1"><a href="#cb68-1" aria-hidden="true" tabindex="-1"></a><span class="co"># prediction per cluster</span></span>
+<span id="cb68-2"><a href="#cb68-2" aria-hidden="true" tabindex="-1"></a>pred</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div id="gsea-res" class="cell-output cell-output-display" data-execution_count="41">
-<pre><code>{'0': 'Effector T cell',
- '1': 'CD16+ dendritic cell',
- '2': 'CD8+ T cell',
- '3': 'B cell',
- '4': 'Cancer stem-like cell',
- '5': 'CD4+ T cell',
+<pre><code>{'0': 'Cancer stem-like cell',
+ '1': 'Effector T cell',
+ '2': 'CD4+ T cell',
+ '3': 'CD4+ T cell',
+ '4': 'CD4-CD28+ T cell',
+ '5': 'CD16+ dendritic cell',
  '6': 'Conventional dendritic cell',
- '7': 'AXL+SIGLEC6+ dendritic cell',
- '8': 'CD1C+_A dendritic cell',
+ '7': 'B cell',
+ '8': 'Immune cell',
  '9': 'Circulating fetal cell',
- '10': 'Memory B cell'}</code></pre>
+ '10': 'Myeloid conventional dendritic cell',
+ '11': 'CD16+ dendritic cell'}</code></pre>
 </div>
 </div>
 <div class="cell" data-execution_count="42">
-<div class="sourceCode cell-code" id="cb69"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb69-1"><a href="#cb69-1" aria-hidden="true" tabindex="-1"></a>prediction <span class="op">=</span> [pred[x] <span class="cf">for</span> x <span class="kw">in</span> adata.obs[<span class="st">'leiden_0.6'</span>]]</span>
-<span id="cb69-2"><a href="#cb69-2" aria-hidden="true" tabindex="-1"></a>adata.obs[<span class="st">"GS_overlap_pred"</span>] <span class="op">=</span> prediction</span>
-<span id="cb69-3"><a href="#cb69-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb69-4"><a href="#cb69-4" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, color<span class="op">=</span><span class="st">'GS_overlap_pred'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb70"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb70-1"><a href="#cb70-1" aria-hidden="true" tabindex="-1"></a>prediction <span class="op">=</span> [pred[x] <span class="cf">for</span> x <span class="kw">in</span> adata.obs[<span class="st">'leiden_0.6'</span>]]</span>
+<span id="cb70-2"><a href="#cb70-2" aria-hidden="true" tabindex="-1"></a>adata.obs[<span class="st">"GS_overlap_pred"</span>] <span class="op">=</span> prediction</span>
+<span id="cb70-3"><a href="#cb70-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb70-4"><a href="#cb70-4" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, color<span class="op">=</span><span class="st">'GS_overlap_pred'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 <div id="plot-gsea">
 <p><a href="scanpy_06_celltyping_files/figure-html/plot-gsea-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-17"><img src="scanpy_06_celltyping_files/figure-html/plot-gsea-output-1.png" class="img-fluid"></a></p>
@@ -1200,7 +1223,7 @@ Discuss
 <h2 data-number="7" class="anchored" data-anchor-id="meta-dimred_save"><span class="header-section-number">7</span> Save data</h2>
 <p>We can finally save the object for use in future steps.</p>
 <div id="save" class="cell" data-execution_count="43">
-<div class="sourceCode cell-code" id="cb70"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb70-1"><a href="#cb70-1" aria-hidden="true" tabindex="-1"></a>adata.write_h5ad(<span class="st">'data/covid/results/scanpy_covid_qc_dr_int_cl_ct-ctrl13.h5ad'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb71"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb71-1"><a href="#cb71-1" aria-hidden="true" tabindex="-1"></a>adata.write_h5ad(<span class="st">'data/covid/results/scanpy_covid_qc_dr_int_cl_ct-ctrl13.h5ad'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 <section id="meta-session" class="level2" data-number="8">
@@ -1210,7 +1233,7 @@ Discuss
 Click here
 </summary>
 <div id="session" class="cell" data-execution_count="44">
-<div class="sourceCode cell-code" id="cb71"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb71-1"><a href="#cb71-1" aria-hidden="true" tabindex="-1"></a>sc.logging.print_versions()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb72"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb72-1"><a href="#cb72-1" aria-hidden="true" tabindex="-1"></a>sc.logging.print_versions()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>-----
 anndata     0.10.8
@@ -1307,7 +1330,7 @@ jupyter_core        5.7.2
 Python 3.10.16 | packaged by conda-forge | (main, Dec  5 2024, 14:16:10) [GCC 13.3.0]
 Linux-6.10.14-linuxkit-x86_64-with-glibc2.35
 -----
-Session information updated at 2025-02-27 15:24</code></pre>
+Session information updated at 2025-03-26 08:38</code></pre>
 </div>
 </div>
 </details>
@@ -1560,7 +1583,7 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
 </div>
   </div>
 </footer>
-<script>var lightboxQuarto = GLightbox({"loop":true,"selector":".lightbox","closeEffect":"zoom","openEffect":"zoom","descPosition":"bottom"});</script>
+<script>var lightboxQuarto = GLightbox({"closeEffect":"zoom","descPosition":"bottom","loop":true,"openEffect":"zoom","selector":".lightbox"});</script>
 
 
 

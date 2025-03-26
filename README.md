@@ -19,13 +19,15 @@ git push -u origin <branch_name>
 ## Environment
 
 ```
-# for seurat/bioconductor labs
+# for seurat and bioconductor labs
 docker pull --platform=linux/amd64 ghcr.io/nbisweden/workshop-scrnaseq-seurat:20250320-2311`
-docker pull --platform=linux/amd64 ghcr.io/nbisweden/workshop-scrnaseq:2024-seurat_spatial-r4.3.0
-docker pull --platform=linux/amd64 ghcr.io/nbisweden/workshop-scrnaseq:2024-bioconductor_spatial-r4.3.0
 
 # for scanpy labs
-docker pull --platform=linux/amd64 ghcr.io/nbisweden/workshop-scrnaseq-scanpy:20250313-2022
+docker pull --platform=linux/amd64 ghcr.io/nbisweden/workshop-scrnaseq-scanpy:20250325-2256
+
+# for optional spatial labs
+docker pull --platform=linux/amd64 ghcr.io/nbisweden/workshop-scrnaseq:2024-seurat_spatial-r4.3.0
+docker pull --platform=linux/amd64 ghcr.io/nbisweden/workshop-scrnaseq:2024-bioconductor_spatial-r4.3.0
 docker pull --platform=linux/amd64 ghcr.io/nbisweden/workshop-scrnaseq:2024-scanpy_spatial-py3.10
 ```
 
@@ -44,7 +46,7 @@ Open in browser: `http://localhost:8787/`
 - To run Python labs in JupyterLab
 
 ```
-docker run --rm --platform=linux/amd64 -p 8888:8888 -v ${PWD}:/home/jovyan/work ghcr.io/nbisweden/workshop-scrnaseq-scanpy:20250313-2022
+docker run --rm --platform=linux/amd64 -p 8888:8888 -v ${PWD}:/home/jovyan/work ghcr.io/nbisweden/workshop-scrnaseq-scanpy:20250325-2256
 ```
 
 Open in browser: `http://localhost:8888/lab` and use password `scrnaseq`
@@ -63,13 +65,13 @@ conda activate scanpy
 
 ```
 # for seurat
-./download-labs.sh "https://github.com/NBISweden" "workshop-scRNAseq" "compiled/labs" "seurat" "work/labs"
+~/download-labs.sh "https://github.com/NBISweden" "workshop-scRNAseq" "compiled/labs" "seurat" "work/labs"
 
 # for bioconductor
-./download-labs.sh "https://github.com/NBISweden" "workshop-scRNAseq" "compiled/labs" "bioc" "work/labs"
+~/download-labs.sh "https://github.com/NBISweden" "workshop-scRNAseq" "compiled/labs" "bioc" "work/labs"
 
 # for scanpy
-./download-labs.sh "https://github.com/NBISweden" "workshop-scRNAseq" "compiled/labs" "scanpy" "work/labs"
+~/work/download-labs.sh "https://github.com/NBISweden" "workshop-scRNAseq" "compiled/labs" "scanpy" "labs"
 ```
 
 ## Render labs
@@ -86,7 +88,7 @@ docker run --rm -ti --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work ghcr.io/
 docker run --rm -ti --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work ghcr.io/nbisweden/workshop-scrnaseq-seurat:20250320-2311 quarto render /work/labs/bioc/bioc_01_qc.qmd
 
 # python/scanpy
-docker run --rm -ti --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work ghcr.io/nbisweden/workshop-scrnaseq-scanpy:20250313-2022 quarto render /work/labs/scanpy/scanpy_01_qc.qmd
+docker run --rm -ti --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work ghcr.io/nbisweden/workshop-scrnaseq-scanpy:20250325-2256 quarto render /work/labs/scanpy/scanpy_01_qc.qmd
 ```
 
 - Successfully rendered outputs are moved to `docs` folder and chunks are cached under `_freeze`.
@@ -96,10 +98,21 @@ docker run --rm -ti --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work ghcr.io/
 To render all qmd files in the repo to `docs/` as html output, run
 
 ```
-bash scripts/render.sh
+bash scripts/render.sh all
 ```
 
-To compile all qmds into `compiled/labs` as qmds and ipynb with evaluated meta variables, run
+The `render.sh` script has options to render all of the docs/scripts that are needed, but also to render different parts. The options are:
+
+* all - run all the steps
+* seurat - render all seurat labs
+* bioc - render all bioc labs
+* scanpy - render all scanpy labs
+* spatial - render all 3 spatial labs.
+* site - render all site stuff like lectures, contents, schedule etc.
+* compile - compile labs into Rmd/ipynb
+
+
+To compile all qmds into `compiled/labs` as qmds and ipynb with evaluated meta variables, can also be run directly with the compile script using:
 
 ```
 bash scripts/compile.sh
@@ -108,3 +121,4 @@ bash scripts/compile.sh
 ---
 
 **2025** • NBIS • SciLifeLab
+
