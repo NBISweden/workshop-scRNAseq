@@ -7,18 +7,16 @@
 ## 
 ## Usage
 ## Run this script in the root of the repo
-## bash ./scripts/render_partly.sh
+## bash ./scripts/render.sh option
 
-
-# instead of running all files, will run all labs in one of the pipelines.
-# input argument can  be
-# all - run all the steps
-# seurat - render all seurat labs
-# bioc - render all bioc labs
-# scanpy - render all scanpy labs
-# spatial - render all 3 spatial labs.
-# site - render all site stuff.
-# compile - compile labs into Rmd/ipynb
+## input argument can  be either of:
+## all - run all the steps
+## seurat - render all seurat labs
+## bioc - render all bioc labs
+## scanpy - render all scanpy labs
+## spatial - render all 3 spatial labs.
+## site - render all site stuff.
+## compile - compile labs into Rmd/ipynb
 
 
 ## fail fast
@@ -52,12 +50,12 @@ if [[ "$@" =~ 'seurat' ]] ||  [[ "$@" =~ 'all' ]]
 then
     echo "Rendering Seurat files..."
     start_seurat=$(date +%s.%N)
-    docker run --rm -it --platform=linux/amd64 -v ${PWD}:/home/jovyan/work --entrypoint "/usr/local/conda/bin/conda" $docker_r run -n seurat quarto render /home/jovyan/work/labs/seurat/seurat_01_qc.qmd
+    docker run --rm -it -u root --platform=linux/amd64 -v ${PWD}:/home/jovyan/work --entrypoint "/usr/local/conda/bin/conda" $docker_r run -n seurat quarto render /home/jovyan/work/labs/seurat/seurat_01_qc.qmd
     docker run --rm -it --platform=linux/amd64 -v ${PWD}:/home/jovyan/work --entrypoint "/usr/local/conda/bin/conda" $docker_r run -n seurat quarto render /home/jovyan/work/labs/seurat/seurat_02_dimred.qmd
     docker run --rm -it --platform=linux/amd64 -v ${PWD}:/home/jovyan/work --entrypoint "/usr/local/conda/bin/conda" $docker_r run -n seurat quarto render /home/jovyan/work/labs/seurat/seurat_03_integration.qmd
     docker run --rm -it --platform=linux/amd64 -v ${PWD}:/home/jovyan/work --entrypoint "/usr/local/conda/bin/conda" $docker_r run -n seurat quarto render /home/jovyan/work/labs/seurat/seurat_04_clustering.qmd
     docker run --rm -it --platform=linux/amd64 -v ${PWD}:/home/jovyan/work --entrypoint "/usr/local/conda/bin/conda" $docker_r run -n seurat quarto render /home/jovyan/work/labs/seurat/seurat_05_dge.qmd
-    docker run --rm -it --platform=linux/amd64 -v ${PWD}:/home/jovyan/work --entrypoint "/usr/local/conda/bin/conda" $docker_r run -n seurat quarto render /home/jovyan/work/labs/seurat/seurat_06_celltyping.qmd
+    docker run --rm -it -u root --platform=linux/amd64 -v ${PWD}:/home/jovyan/work --entrypoint "/usr/local/conda/bin/conda" $docker_r run -n seurat quarto render /home/jovyan/work/labs/seurat/seurat_06_celltyping.qmd
     docker run --rm -it --platform=linux/amd64 -v ${PWD}:/home/jovyan/work --entrypoint "/usr/local/conda/bin/conda" $docker_r run -n seurat quarto render /home/jovyan/work/labs/seurat/seurat_07_trajectory.qmd
 duration_seurat=$(echo "$(date +%s.%N) - $start_seurat" | bc) && echo "Seurat time elapsed: $duration_seurat seconds"
 echo "time elapsed: $duration_seurat seconds"
