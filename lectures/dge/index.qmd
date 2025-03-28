@@ -37,18 +37,18 @@ obj <- NormalizeData(pbmc_small) %>%
 m <- FindAllMarkers(obj)
 ```
 
-## Workflow
 
-- Quality control
-- Cell cycle phase classification
-- Normalization
-- Select highly variable genes
-- Data integration
-- Clustering
-- **Differential gene expression**
-- GSA/GSEA
-- Cell typing
+## Overview
 
+- What is differential gene expression?
+- How is the analysis performed?
+  - Choosing your groups of interest
+  - Functions
+  - Simple design vs complex design
+  - 1-vs-1 and 1-vs-all
+- Other considerations
+
+# What is differential gene expression?
 
 ## What is differential gene expression?
 
@@ -74,13 +74,77 @@ Count data -> statistical analysis -> Are differences significant (greater than 
 
 :::{.notes}
 Sometimes, it's easy to visually identify if the expression of a gene is significantly different between groups and in which direction. If the samples overlap or the spread is too high, it might be harder.
+
 :::
 
 
 
+## Statistical tests
+
+- Null hypothesis: Mean/median/distribution is equal between group A and group B
+- $p$ < 0.05 : if null hypothesis is true, we can expect the measured result in < 5% of cases where group A and group B have been sampled with sample size $n$
+
+
+```{r whatissignificant, fig.width = 8, fig.height = 3}
+
+
+set.seed(42)
+
+
+n = 1000000
+normdata = data.frame(
+  value = c(rnorm(n, 10, 1),
+        rnorm(n, 12, 1)),
+  group = rep(c("A","B"), each = n)
+)
+
+
+
+normdata_same = data.frame(
+  value = c(rnorm(n, 11, 1),
+        rnorm(n, 11, 1)),
+  group = rep(c("B","A"), each = n)
+)
+
+
+plot_grid(
+  ggplot(normdata, aes(y = value)) + 
+    geom_density(aes(fill = group, color = group), alpha = 0.5) + 
+    lims(y = c(5,16)),
+  ggplot(normdata[sample(1:nrow(normdata),50),], aes(y = value)) + 
+    geom_jitter(aes(x = group, color = group)) + 
+    lims(y = c(5,16)),
+  ggplot(normdata_same, aes(y = value)) + 
+    geom_density(aes(fill = group, color = group, linetype = group), alpha = 0.5) + 
+    geom_density(aes(color = group, linetype = group), fill = NA) + 
+    scale_linetype_manual(values = c(A = 1, B = 2)) + 
+    lims(y = c(5,16)),
+  ncol = 3,
+  rel_widths = c(2,3,2)
+)
+
+
+```
+
+- *Statistical* significance: The result is likely to be from a true difference rather than random chance
+
+
+:::{.notes}
+You still need to decide whether the results are valuable to your research question (e.g. biological relevance).
+
+
+:::
+
 ## What is differential gene expression?
 
-::: {.columns}
+```{r de_res_nopct}
+head(m, n=10) %>%
+  select(avg_log2FC, p_val_adj)
+```
+
+## What is differential gene expression?
+
+::: {.columns}  
 ::: {.column}
 
 ```{r zeroexample}
@@ -125,6 +189,8 @@ head(m, n=10) %>%
 ```
 
 :::{.notes}
+The result is typically a table like this. You get the fold-change as an indication of the difference (positive or negative), the p-value to indicate significance, and the percentage of cells that express the gene in each tested group. 
+
 You can still miss bimodal distributions if the "negative" part is > 0
 :::
 
@@ -146,27 +212,47 @@ You can still miss bimodal distributions if the "negative" part is > 0
 :::
 ::: {.column width="40%"}
 
-- Most methods focus on fold-change
-- Fold-change can reflect many differences
-- Not all differences are evident in fold-change or proportion of cells expressing gene
+- Most methods focus on difference in mean
+- Many different distributions will show a difference in means
+  - But not all!
 
 :::
 
 :::
 
+
+# How is the analysis performed?
 
 ## Defining groups of interest
 
+::: {.columns}
+
+::: {.column width="40%"}
 - *A priori* defined groups: Compare cells from different samples, e.g.:
   - Experimental groups (treatment, time points, clinical information etc)
   - Sorted cells
+
+```{r}
+DimPlot(obj, group.by = "groups") + theme(plot.title = element_blank())
+```
+
+:::
+
+::: {.column width="40%"}
 - Data-driven definition: Compare cells depending on analysis output, e.g.:
   - RNA-based clustering/identity
   - Identity based on other data from multi-omics
+  
+```{r}
+DimPlot(obj, group.by = "seurat_clusters") + theme(plot.title = element_blank())
+```
+  
+  
+:::
+
+:::
 
 *Warning: Performing DE on clusters defined with the same data ("double-dipping") will inflate DE analysis. Be mindful of this when you interpret the results.*
-
-
 
 
 ## Functions
@@ -180,7 +266,124 @@ You can still miss bimodal distributions if the "negative" part is > 0
 
 ## FindAllMarkers
 
-```{r findallmarkers}
+```{r findallmarkers_nohighlight}
+#| eval: false
+#| echo: true
+
+FindAllMarkers(
+  object,
+  assay = NULL,
+  features = NULL,
+  logfc.threshold = 0.1,
+  test.use = "wilcox",
+  slot = "data",
+  min.pct = 0.01,
+  min.diff.pct = -Inf,
+  node = NULL,
+  verbose = TRUE,
+  only.pos = FALSE,
+  max.cells.per.ident = Inf,
+  random.seed = 1,
+  latent.vars = NULL,
+  min.cells.feature = 3,
+  min.cells.group = 3,
+  mean.fxn = NULL,
+  fc.name = NULL,
+  base = 2,
+  return.thresh = 0.01,
+  densify = FALSE,
+  ...
+)
+```
+
+[Seurat 5.1.0]{.small}
+
+:::{.notes}
+FindAllMarkers() does a 1 vs rest comparison for all Identities.
+:::
+
+
+
+## FindAllMarkers
+
+```{r findallmarkers_1}
+#| eval: false
+#| echo: true
+#| code-line-numbers: "3,7"
+
+FindAllMarkers(
+  object,
+  assay = NULL,
+  features = NULL,
+  logfc.threshold = 0.1,
+  test.use = "wilcox",
+  slot = "data",
+  min.pct = 0.01,
+  min.diff.pct = -Inf,
+  node = NULL,
+  verbose = TRUE,
+  only.pos = FALSE,
+  max.cells.per.ident = Inf,
+  random.seed = 1,
+  latent.vars = NULL,
+  min.cells.feature = 3,
+  min.cells.group = 3,
+  mean.fxn = NULL,
+  fc.name = NULL,
+  base = 2,
+  return.thresh = 0.01,
+  densify = FALSE,
+  ...
+)
+```
+
+[Seurat 5.1.0]{.small}
+
+:::{.notes}
+`assay` "must" be RNA. `slot` is usually data.
+:::
+
+
+
+## FindAllMarkers
+
+```{r findallmarkers_2}
+#| eval: false
+#| echo: true
+#| code-line-numbers: "5,8,9,12,16,17"
+
+FindAllMarkers(
+  object,
+  assay = NULL,
+  features = NULL,
+  logfc.threshold = 0.1,
+  test.use = "wilcox",
+  slot = "data",
+  min.pct = 0.01,
+  min.diff.pct = -Inf,
+  node = NULL,
+  verbose = TRUE,
+  only.pos = FALSE,
+  max.cells.per.ident = Inf,
+  random.seed = 1,
+  latent.vars = NULL,
+  min.cells.feature = 3,
+  min.cells.group = 3,
+  mean.fxn = NULL,
+  fc.name = NULL,
+  base = 2,
+  return.thresh = 0.01,
+  densify = FALSE,
+  ...
+)
+```
+
+[Seurat 5.1.0]{.small}
+
+
+## FindAllMarkers
+
+```{r findallmarkers_3}
 #| eval: false
 #| echo: true
 #| code-line-numbers: "6"
@@ -211,15 +414,12 @@ FindAllMarkers(
 )
 ```
 
-[Seurat `r packageVersion("Seurat")`]{.small}
-
-:::{.notes}
-FindAllMarkers() does a 1 vs rest comparison for all Identities. `assay` must be RNA. `slot` is usually data.
-:::
+[Seurat 5.1.0]{.small}
 
 
 
-## Tests
+
+## Statistical tests
 
 ```{yaml}
 #| eval: false
@@ -245,7 +445,7 @@ FindAllMarkers() does a 1 vs rest comparison for all Identities. `assay` must be
 "DESeq2" : Identifies differentially expressed genes between two groups of cells based on a model using DESeq2 which uses a negative binomial distribution (Love et al, Genome Biology, 2014).This test does not support pre-filtering of genes based on average difference (or percent detection rate) between cell groups. However, genes may be pre-filtered based on their minimum detection rate (min.pct) across both cell groups. To use this method, please install DESeq2, using the instructions at https://bioconductor.org/packages/release/bioc/html/DESeq2.html
 ```
 
-## Tests
+## Statistical tests
 
 ```{yaml}
 #| eval: false
@@ -308,7 +508,7 @@ Data is zero inflated.
 Some distributions capture this closely: ZINB, Poisson-Beta
 :::
 
-## Tests
+## Statistical tests
 
 ```{yaml}
 #| eval: false
@@ -343,8 +543,6 @@ Some distributions capture this closely: ZINB, Poisson-Beta
 But single cell expression looks more like this. With lots of zeros. Now, it's harder to say if the difference is significant. Apart from the level of expression, the number of samples (cells) that express the gene also becomes relevant. If we only look at expression level, they might be similar, but if we look at number of cells, one might be higher than the other.
 :::
 
-
-
 . . .
 
 MAST
@@ -363,6 +561,15 @@ MAST
 [@finak2015mast]{.small}
 
 
+
+:::{.notes}
+BEFORE next slide:
+All of these methods can be used when you have a simple design of one group of independent cells vs another group of independent cells. However, experimental designs typically need to be more complex than this in order to draw reliable conclusions about biology.
+:::
+
+
+
+
 ## Complex designs
 
 - Comparing groups of samples (e.g. patients vs controls)
@@ -371,9 +578,7 @@ MAST
 
 ## Complex designs: Groups of samples
 
-
 ::: {.columns}
-
 
 Example: 3 patients vs 3 controls
 
@@ -384,22 +589,22 @@ $n$: Number of cells (1000s) or number of individuals (3)?
 ```{r}
 set.seed(654321)
 
-testdata_A = do.call("rbind",lapply(
+testdata_ctrl = do.call("rbind",lapply(
   1:3,
   function(i){
-    data.frame(group = "A",
-               patient = paste0("A",i),
+    data.frame(group = "ctrl",
+               individual = paste0("ctrl",i),
                value = rnorm(300, 5, 1))}))
 
-testdata_B = do.call("rbind",list(
-    data.frame(group = "B",
-               patient = "B1",
+testdata_pat = do.call("rbind",list(
+    data.frame(group = "pat",
+               individual = "pat1",
                value = rnorm(300, 5, 1)),
-    data.frame(group = "B",
-               patient = "B2",
+    data.frame(group = "pat",
+               individual = "pat2",
                value = rnorm(300, 5, 1)),
-    data.frame(group = "B",
-               patient = "B3",
+    data.frame(group = "pat",
+               individual = "pat3",
                value = rnorm(300, 7, 1))
     ))
 ```
@@ -413,7 +618,7 @@ testdata_B = do.call("rbind",list(
 ```{r simple_complex, fig.height=4, fig.width=3}
 
 
-ggplot(rbind(testdata_A,testdata_B), 
+ggplot(rbind(testdata_ctrl,testdata_pat), 
        aes(x = group, y = value, color = group)) +
   geom_jitter(shape = 16, alpha = 0.5, size = 0.5) + 
   ggpubr::stat_compare_means( size =3) +  
@@ -429,10 +634,10 @@ ggplot(rbind(testdata_A,testdata_B),
 
 ::: {.fragment}
 
-```{r patients, fig.height=4, fig.width=5}
+```{r individuals, fig.height=4, fig.width=5}
 
 
-ggplot(rbind(testdata_A,testdata_B), aes(x = patient, y = value, color = group)) +
+ggplot(rbind(testdata_ctrl,testdata_pat), aes(x = individual, y = value, color = group)) +
   geom_jitter(shape = 16, alpha = 0.5, size = 1) + 
   geom_violin(fill = NA, color = "black") + 
   theme(legend.position = "none") +
@@ -456,6 +661,10 @@ Many tests assume independence!
 
 
 ```{r complexapproaches}
+
+
+## Random data
+
 cells = data.frame(expression = c(rnorm(100,9), rnorm(100,10)),
                    group = rep(c("a","b"), each = 100))
 cells$batch = "batch1"
@@ -464,30 +673,53 @@ cells$batch[cells$group == "b" & cells$expression > 10] = "batch2"
 
 cells$individual = paste0(cells$group, sample(c(1,2,3), 200, replace = TRUE))
 
+
+othergenes = as.data.frame(lapply(1:100, function(i){round(rnorm(100, 50,10))}))
+colnames(othergenes) = paste0("gene",1:100)
+fulldata = cbind(cells, othergenes) %>%
+  mutate(library = rowSums(.[-(2:4)]))
+fulldata$expression = round(fulldata$expression^2-1)
+
+
+fulldata_norm = fulldata %>%
+  mutate(expression = log2(expression/library*1000+1))
+
+
+
+## Pseudo pseudobulk
+
+pseudobulk = fulldata  %>%
+  group_by(individual, group) %>%
+  summarize(expression = sum(expression), library  = sum(library)) %>%
+  mutate(pseudo = log2(expression/library*1000+1))
+
+
+## Plots
+
 plottheme = theme(plot.subtitle = element_text(size = 8),
           plot.title = element_text(size = 12),
           axis.title = element_text(size = 8))
 
 plot_grid(
-  ggplot(cells, aes(x = group, y = expression)) + geom_jitter() +
+  ggplot(fulldata_norm, aes(x = group, y = expression)) + geom_jitter() +
     labs(title = "Naive model (simple design)", 
          subtitle = "Assumes independence within groups") + 
     plottheme
   ,
-  ggplot(cells, aes(x = group, y = expression, color = batch)) + geom_jitter() +
+  ggplot(fulldata_norm, aes(x = group, y = expression, color = batch)) + geom_jitter() +
     labs(title = "Generalized linear model / latent variables", 
          subtitle = "Considers potential covariates when comparing cells") + 
     plottheme
   ,
-  ggplot(cells, aes(x = individual, y = expression, color = group)) + geom_jitter(width = 0.2) +
+  ggplot(fulldata_norm, aes(x = individual, y = expression, color = group)) + geom_jitter(width = 0.2) +
     labs(title = "Mixed model", 
          subtitle = "Considers cells non-independent within groups") + 
     plottheme
   ,
-  ggplot(cells, aes(x = individual, y = expression, color = group)) + geom_jitter(width = 0.2, alpha = 0.4) + 
-    ggplot2::stat_summary(geom = "point", fun = "mean", size = 4, shape = 21, aes(fill = group), color = "black") +
+  ggplot(fulldata_norm, aes(x = individual, y = expression, color = group)) + geom_jitter(width = 0.2, alpha = 0.4) + 
+    geom_point(data = pseudobulk, aes(y = pseudo, fill = group) , size = 4, shape = 21, color = "black") +
     labs(title = "Pseudobulk", 
-         subtitle = "Reduces samples to normalized sums\n(here illustrated with means)") + 
+         subtitle = "Reduces sample expression distribution to normalized sums") + 
     plottheme,
   align = "hv"
 )
@@ -497,20 +729,9 @@ plot_grid(
 
 ## Complex designs: Approaches
 
-
-| Approach | Advantages | Disadvantages |
-| -- | ---- | ---- |
-| Naive model | - Fast | - Sensitive to false positives<br>- Assumptions are often violated |
-| GLM | - Can account for covariates | - Slower<br>- Not recommended to account for separate individuals |
-| Mixed models | - Can account for separate individuals<br>- Lower risk for false positives | - Slow |
-| Pseudobulk | - Accounts for separate individuals/samples<br>- Low risk for false positives<br>- Fast | - Often has lower power<br>- Cannot include information about intrasample distribution |
-
-
-## Complex designs: Approaches
-
 | Approach | Speed | Can include covariates | Can account for multilevel design | Sensitivity | Specificity |
 | --- | -- | --- | --- | -- | -- |
-| Naive model | Fast | - | - | High | Low |
+| Naive model | Fast | &#x2716; | &#x2716; | High | Low |
 | GLM | Slow | &#x2713; | Not recommended | High | Low |
 | Mixed models | Slow | &#x2713; | &#x2713; | Medium | Medium |
 | Pseudobulk | Fast | &#x2713; | &#x2713; | Low | High |
@@ -518,6 +739,10 @@ plot_grid(
 <br>
 *NB: This table broadly summarizes each approach, but each approach includes many methods with their own advantages and disadvantages.*
 
+Further reading: 
+@soneson2018bias
+@juntilla2022benchmarking
+@das20222challenges
 
 
 ## 1-vs-1 and 1-vs-all
@@ -566,62 +791,13 @@ When doing a C4 vs all comparison, very few DEGs are found because Clusters 1 an
 Cluster C3 vs all will be mostly C3 vs C1 because C1 dominates the second group. Subsample to bring all clusters to equal number of cells.
 :::
 
+# Other considerations
 
 
 ## Considerations - what does the p-value mean?
 
-- Null hypothesis: Mean/median/distribution is equal between group A and group B
-- $p$ < 0.05 : if null hypothesis is true, we can expect the measured result in < 5% of cases where group A and group B have been sampled at $n$
 - $p$ depends on $n$, variance and intergroup difference
   - As $n$ increases, variance can increase and difference can decrease without losing power
-
-
-```{r whatissignificant, fig.width = 8, fig.height = 3}
-
-
-set.seed(42)
-
-
-n = 1000000
-normdata = data.frame(
-  value = c(rnorm(n, 10, 1),
-        rnorm(n, 12, 1)),
-  group = rep(c("A","B"), each = n)
-)
-
-
-
-normdata_same = data.frame(
-  value = c(rnorm(n, 11, 1),
-        rnorm(n, 11, 1)),
-  group = rep(c("B","A"), each = n)
-)
-
-
-plot_grid(
-  ggplot(normdata[sample(1:nrow(normdata),50),], aes(y = value)) + 
-    geom_jitter(aes(x = group, color = group)) + 
-    lims(y = c(5,16)),
-  ggplot(normdata, aes(y = value)) + 
-    geom_density(aes(fill = group, color = group), alpha = 0.5) + 
-    lims(y = c(5,16)),
-  ggplot(normdata_same, aes(y = value)) + 
-    geom_density(aes(fill = group, color = group, linetype = group), alpha = 0.5) + 
-    geom_density(aes(color = group, linetype = group), fill = NA) + 
-    scale_linetype_manual(values = c(A = 1, B = 2)) + 
-    lims(y = c(5,16)),
-  ncol = 3,
-  rel_widths = c(3,2,2)
-)
-
-
-```
-
-- Likelihood of differences reflecting a true difference in distribution vs random chance
-
-
-## Statistics - what does the p-value mean?
-
 
 ```{r pvalueexample, fig.height=4, fig.width=6}
 
@@ -660,7 +836,7 @@ ggplot(testdata, aes(x = group, y = value)) +
 
 ```
 
-Are all statistically significant differences of interest?
+Are all statistically significant differences of interest for your research question?
 
 :::{.notes}
 Not as simple as setting a threshold for difference - variance also matters
@@ -669,12 +845,17 @@ Not as simple as setting a threshold for difference - variance also matters
 
 ## Considerations: Composition vs expression
 
+
+:::{.columns}
+
+:::{.column width="30%"}
+
 ```{r composition}
 #| fig-height: 6
 #| fig-width: 6
 
-obj$sample = sample(c(1,2), ncol(obj), replace = TRUE)
-obj$sample[obj$seurat_clusters == 2] = 2
+obj$sample = sample(c("1","2"), ncol(obj), replace = TRUE)
+obj$sample[obj$seurat_clusters == 1] = "2"
 
 UMAPPlot(obj, group.by = "sample", pt.size = 1.5) + 
   labs(color = "Sample", title = "") + 
@@ -682,53 +863,46 @@ UMAPPlot(obj, group.by = "sample", pt.size = 1.5) +
         axis.ticks = element_blank())
 
 ```
+:::
+:::{.column width="30%"}
+
+```{r composition_de}
+#| fig-height: 6
+#| fig-width: 6
+
+
+FindMarkers(SetIdent(obj, value = "sample"), ident.1 = "2", ident.2 = "1") %>%
+  select(avg_log2FC, p_val_adj, pct.1, pct.2) %>%
+  head(5)
+
+VlnPlot(obj, "S100A8", group.by = "sample")
 
 
 
+```
 
-
-
-## Comparing Methods
-
-::: {.columns}
-::: {.column width="35%"}
-
-![](assets/soneson-2018-deg-methods.jpg)
 
 :::
-::: {.column width="65%"}
+:::{.column width="30%"}
 
-- T-test and Wilcoxon work well enough given sufficient number of samples
-- Bulk methods are not worse than single-cell specific methods
-- Pre-filtering lowly expressed genes is important for bulk methods
+```{r, fig.height = 4, fig.width = 3}
+ggplot(obj@meta.data, aes(x = sample)) + 
+  geom_bar(aes(fill = as.factor(seurat_clusters)), position = "fill") + 
+  labs(fill = "Cluster")
 
-[@soneson2018bias]{.small}
+
+```
 
 :::
 :::
 
-:::{.notes}
-- 36 datasets (31 full-length, 5 UMI based)
-- edgeRQLFDetRate: EdgeR when normalized for detection rate
-:::
-
-## Comparing Methods
-
-![](assets/soneson-2018-gene-ranking.jpg)
-
-Similarity between methods based on genes identified
-
-[@soneson2018bias]{.small}
-
-:::{.notes}
-:::
 
 
 ## Assessing results
 
-- We don't know the ground truth
-- Using known data (positive controls)
-- Simulated data by modelling
+- Methods are hard to evaluate - we don't know the ground truth
+  - Using known data (positive controls)
+  - Simulated data by modelling
 - Intersect of multiple methods
 - Visual inspection
 
@@ -780,31 +954,30 @@ Dot plots give a quick overview of both expression and % of cells expressing a g
 
 ## Things to think about
 
+- How many cells/samples do I need for reliable DGE?
+  - How different do I expect my cells/samples to be?
+  - How high is the expression and how deep am I sequencing?
+  - Will also depend on library quality
+- Which test should I use?
+  - Which populations am I comparing?
+  - Are cells independent within my groups of interest?
+  - Do I need to correct for any batch effects?
 - Which data should I use? Raw? Normalized? Log Normalized?
   - Depends on test/method
 - Check that DEGs are not just a result of some batch effect
-- Batch effects can be corrected using covariates
-- Consider independence between cells
-  - Use a method that accounts for non-independence or proceed with caution
-- How many cells/samples do I need for reliable DGE?
-  - Also depends on quality of library prep
-- Distinctness of cell types
-- Differentiate between noise and signal
-  - Any comparison will produce some DEGs
-- Keep in mind what you are comparing
+  - Batch effects can be corrected using latent variables
 - DE results are always relative to other cells
+- Don't just rely on p-values
+- Always assess your results!
+  - Visualize the full distributions
+  - Check for potential confounders
 
+## Conclusions
 
-## Conclusion
-
-- Important to understand what you are trying to compare: mean expression vs probability of being expressed
-- Important to understand the data
-- Take into account single-cell specific nuances
-- Models can get complicated
+- Single cell data is more complex than differences in mean expression
+- Different tests rely on different assumptions
+- Always consider what you are trying to compare
 - Important to assess and validate the results
-- Most tests give similar results for top genes but p values might differ.
-- Fold changes can't be interpreted the same way as bulk rnaseq
-- Too many cells can give extremely low p values
 
 ## References
 
