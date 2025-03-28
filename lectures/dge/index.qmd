@@ -45,9 +45,9 @@ m <- FindAllMarkers(obj)
 - Select highly variable genes
 - Data integration
 - Clustering
-- Cell typing
 - **Differential gene expression**
 - GSA/GSEA
+- Cell typing
 
 
 ## What is differential gene expression?
@@ -140,7 +140,7 @@ You can still miss bimodal distributions if the "negative" part is > 0
 ![](assets/distributions_Tiberi_2023.png)
 
 :::{.small}
-Modified from [@tiberi2023distinct]
+[Modified from @tiberi2023distinct]
 :::
 
 :::
@@ -155,111 +155,18 @@ Modified from [@tiberi2023distinct]
 :::
 
 
-## Types of comparisons
+## Defining groups of interest
 
-- *A priori* defined groups or Data-driven groups
-  - Differences between samples
-  - Differences between clusters
-- Simple designs or Complex designs
-  - Single samples
-  - Sample groups
-  - Batch effects
+- *A priori* defined groups: Compare cells from different samples, e.g.:
+  - Experimental groups (treatment, time points, clinical information etc)
+  - Sorted cells
+- Data-driven definition: Compare cells depending on analysis output, e.g.:
+  - RNA-based clustering/identity
+  - Identity based on other data from multi-omics
 
-
-## Simple design: *A priori* groups
+*Warning: Performing DE on clusters defined with the same data ("double-dipping") will inflate DE analysis. Be mindful of this when you interpret the results.*
 
 
-::: {.columns}
-
-::: {.column}
-
-```{r simpledesign_apriori}
-#| fig-height: 4
-#| fig-width: 6
-
-set.seed(42)
-
-n <- 30
-dfr <- data.frame(sample=rep(c(rep("Timepoint 1",n),rep("Timepoint 2",n)),3),
-                  gene=rep(c("CD79A"),each=n*2), norm_expression=c(rnorm(n,3,0.5),rnorm(n,1,0.5)))
-
-ggplot(dfr, aes(x=sample, y=norm_expression))+
-  #geom_violin(aes(fill=sample))+
-  geom_jitter(aes(color=sample), alpha=0.8)+
-  facet_wrap(~gene) + 
-  theme(panel.spacing.x = unit(30, "pt"), 
-        legend.position = "none")
-```
-
-:::
-
-::: {.column}
-
-- Each cell is a biological replicate
-- What are the populations being tested?
-
-:::
-:::
-
-. . .
-
-
-Be careful when extrapolating from simple designs!
-
-
-## Simple design: Data-driven groups
-
-
-::: {.columns}
-::: {.column width="40%"}
-
-```{r simpledesign_datadriven}
-#| fig-height: 6
-#| fig-width: 6
-UMAPPlot(obj, group.by = "seurat_clusters", pt.size = 1.5)  + 
-  theme(axis.text = element_blank(), 
-        axis.ticks = element_blank())
-```
-
-:::
-
-::: {.column width="60%"}
-
-- C1 vs C2 or C1 vs all
-- Often use only positive DEGs
-
-:::
-:::
-
-
-. . .
-
-Warning: Comparing data-driven clusters will inflate DE analysis ("double-dipping")
-
-DE is helpful to understand why clusters separate, but not to draw novel conclusions about biology
-
-
-## 1-vs-all analysis
-
-
-::: {.columns}
-::: {.column}
-![](assets/unbalanced-clusters-2.png)
-:::
-
-::: {.column}
-- Larger clusters will be over-represented unless subsampled
-- Highly similar clusters
-  - Will have most of their DEGs overlapping
-  - Pairwise comparisons might help rather than 1 vs rest
-:::
-
-:::
-
-:::{.notes}
-When doing a C4 vs all comparison, very few DEGs are found because Clusters 1 and 4 might share a lot of similar genes. 
-Cluster C3 vs all will be mostly C3 vs C1 because C1 dominates the second group. Subsample to bring all clusters to equal number of cells.
-:::
 
 
 ## Functions
@@ -460,7 +367,7 @@ MAST
 
 - Comparing groups of samples (e.g. patients vs controls)
 - Including batch effects
-- Correcting for covariates (e.g. sex)
+- Correcting for covariates (e.g. age)
 
 ## Complex designs: Groups of samples
 
@@ -549,11 +456,11 @@ Many tests assume independence!
 
 
 ```{r complexapproaches}
-cells = data.frame(gene = c(rnorm(100,9), rnorm(100,10)),
+cells = data.frame(expression = c(rnorm(100,9), rnorm(100,10)),
                    group = rep(c("a","b"), each = 100))
 cells$batch = "batch1"
-cells$batch[cells$group == "a" & cells$gene > 9] = "batch2"
-cells$batch[cells$group == "b" & cells$gene > 10] = "batch2"
+cells$batch[cells$group == "a" & cells$expression > 9] = "batch2"
+cells$batch[cells$group == "b" & cells$expression > 10] = "batch2"
 
 cells$individual = paste0(cells$group, sample(c(1,2,3), 200, replace = TRUE))
 
@@ -562,22 +469,22 @@ plottheme = theme(plot.subtitle = element_text(size = 8),
           axis.title = element_text(size = 8))
 
 plot_grid(
-  ggplot(cells, aes(x = group, y = gene)) + geom_jitter() +
-    labs(title = "Naive model", 
+  ggplot(cells, aes(x = group, y = expression)) + geom_jitter() +
+    labs(title = "Naive model (simple design)", 
          subtitle = "Assumes independence within groups") + 
     plottheme
   ,
-  ggplot(cells, aes(x = group, y = gene, color = batch)) + geom_jitter() +
+  ggplot(cells, aes(x = group, y = expression, color = batch)) + geom_jitter() +
     labs(title = "Generalized linear model / latent variables", 
          subtitle = "Considers potential covariates when comparing cells") + 
     plottheme
   ,
-  ggplot(cells, aes(x = individual, y = gene, color = group)) + geom_jitter(width = 0.2) +
+  ggplot(cells, aes(x = individual, y = expression, color = group)) + geom_jitter(width = 0.2) +
     labs(title = "Mixed model", 
          subtitle = "Considers cells non-independent within groups") + 
     plottheme
   ,
-  ggplot(cells, aes(x = individual, y = gene, color = group)) + geom_jitter(width = 0.2, alpha = 0.4) + 
+  ggplot(cells, aes(x = individual, y = expression, color = group)) + geom_jitter(width = 0.2, alpha = 0.4) + 
     ggplot2::stat_summary(geom = "point", fun = "mean", size = 4, shape = 21, aes(fill = group), color = "black") +
     labs(title = "Pseudobulk", 
          subtitle = "Reduces samples to normalized sums\n(here illustrated with means)") + 
@@ -591,6 +498,73 @@ plot_grid(
 ## Complex designs: Approaches
 
 
+| Approach | Advantages | Disadvantages |
+| -- | ---- | ---- |
+| Naive model | - Fast | - Sensitive to false positives<br>- Assumptions are often violated |
+| GLM | - Can account for covariates | - Slower<br>- Not recommended to account for separate individuals |
+| Mixed models | - Can account for separate individuals<br>- Lower risk for false positives | - Slow |
+| Pseudobulk | - Accounts for separate individuals/samples<br>- Low risk for false positives<br>- Fast | - Often has lower power<br>- Cannot include information about intrasample distribution |
+
+
+## Complex designs: Approaches
+
+| Approach | Speed | Can include covariates | Can account for multilevel design | Sensitivity | Specificity |
+| --- | -- | --- | --- | -- | -- |
+| Naive model | Fast | - | - | High | Low |
+| GLM | Slow | &#x2713; | Not recommended | High | Low |
+| Mixed models | Slow | &#x2713; | &#x2713; | Medium | Medium |
+| Pseudobulk | Fast | &#x2713; | &#x2713; | Low | High |
+<br>
+<br>
+*NB: This table broadly summarizes each approach, but each approach includes many methods with their own advantages and disadvantages.*
+
+
+
+## 1-vs-1 and 1-vs-all
+
+::: {.columns}
+::: {.column width="40%"}
+
+```{r simpledesign_datadriven}
+#| fig-height: 6
+#| fig-width: 6
+UMAPPlot(obj, group.by = "seurat_clusters", pt.size = 1.5)  + 
+  theme(axis.text = element_blank(), 
+        axis.ticks = element_blank())
+```
+
+:::
+
+::: {.column width="60%"}
+
+- 1-vs-1: C1 vs C2
+- 1-vs-all: C1 vs C0 + C2 + C3
+
+:::
+:::
+
+
+## 1-vs-all analysis
+
+
+::: {.columns}
+::: {.column}
+![](assets/unbalanced-clusters-2.png)
+:::
+
+::: {.column}
+- Larger clusters will be over-represented unless subsampled
+- Highly similar clusters
+  - Will have most of their DEGs overlapping
+  - Pairwise comparisons might help rather than 1 vs rest
+:::
+
+:::
+
+:::{.notes}
+When doing a C4 vs all comparison, very few DEGs are found because Clusters 1 and 4 might share a lot of similar genes. 
+Cluster C3 vs all will be mostly C3 vs C1 because C1 dominates the second group. Subsample to bring all clusters to equal number of cells.
+:::
 
 
 
@@ -711,6 +685,9 @@ UMAPPlot(obj, group.by = "sample", pt.size = 1.5) +
 
 
 
+
+
+
 ## Comparing Methods
 
 ::: {.columns}
@@ -758,6 +735,10 @@ Similarity between methods based on genes identified
 ## Assessing results
 
 
+::: {.columns}
+
+::: {.column width="50%"}
+
 ![](assets/violin.png)
 
 Violin plots are good to visualize distribution
@@ -770,7 +751,32 @@ Violin plots are good to visualize distribution
 - Ly6g6e: Multiple distributions?
 :::
 
+:::
 
+::: {.column width="50%"}
+
+
+```{r, fig.height=5, fig.width = 5}
+
+top10 = m %>% filter(avg_log2FC > 0) %>% group_by(cluster) %>% slice_min(p_val_adj, n = 5)
+
+DotPlot(obj, rev(unique(top10 %>% pull(gene)))) + 
+  coord_flip() + 
+  theme(axis.text = element_text(size = 10),
+        legend.text = element_text(size = 10),
+        legend.title = element_text(size = 10),
+        axis.title = element_text(size = 10)) + 
+  scale_size_continuous(range = c(0,5)) + 
+  labs(x = "Cluster")
+
+```
+
+Dot plots give a quick overview of both expression and % of cells expressing a gene
+
+
+:::
+
+:::
 
 ## Things to think about
 
@@ -778,17 +784,16 @@ Violin plots are good to visualize distribution
   - Depends on test/method
 - Check that DEGs are not just a result of some batch effect
 - Batch effects can be corrected using covariates
-- How many cells do I need for reliable DGE?
-  - Highly expressed genes: 10-20 cells?
-  - Lowly expressed genes: 20-50 cells?
+- Consider independence between cells
+  - Use a method that accounts for non-independence or proceed with caution
+- How many cells/samples do I need for reliable DGE?
   - Also depends on quality of library prep
 - Distinctness of cell types
 - Differentiate between noise and signal
   - Any comparison will produce some DEGs
+- Keep in mind what you are comparing
+- DE results are always relative to other cells
 
-:::{.notes}
-For highly expressed genes, 
-:::
 
 ## Conclusion
 
