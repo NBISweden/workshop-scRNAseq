@@ -109,7 +109,9 @@ then
 
     
     ## lectures, only 2 that are created with qmd.
-    docker run --rm -it --platform=linux/amd64 -v ${PWD}:/home/jovyan/work --entrypoint "/usr/local/conda/bin/conda" $docker_r run -n seurat quarto render /home/jovyan/work/lectures/dge/index.qmd
+
+    # dge requires ggpubr so this is currently being rendered interactively. ggpubr should be added to the container for next year
+    # docker run --rm -it --platform=linux/amd64 -v ${PWD}:/home/jovyan/work --entrypoint "/usr/local/conda/bin/conda" $docker_r run -n seurat quarto render /home/jovyan/work/lectures/dge/index.qmd
     docker run --rm -it --platform=linux/amd64 -v ${PWD}:/home/jovyan/work --entrypoint "/usr/local/conda/bin/conda" $docker_r run -n seurat quarto render /home/jovyan/work/lectures/gsa/index.qmd    
 
     ## site
