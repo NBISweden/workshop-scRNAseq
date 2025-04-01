@@ -234,7 +234,7 @@ You can still miss bimodal distributions if the "negative" part is > 0
 - Experimental groups (treatment, time points, clinical information etc)
 - Sorted cells
 
-```{r, fig.height=4, fig.width=4}
+```{r, fig.height=3, fig.width=4}
 DimPlot(obj, group.by = "groups") + theme(plot.title = element_blank())
 ```
 
@@ -246,7 +246,7 @@ Data-driven definition of groups: Compare cells depending on analysis output, e.
 - RNA-based clustering/identity
 - Identity based on other data from multi-omics
   
-```{r, fig.height=4, fig.width=4}
+```{r, fig.height=3, fig.width=4}
 DimPlot(obj, group.by = "seurat_clusters") + theme(plot.title = element_blank())
 ```
   
@@ -660,6 +660,46 @@ ggplot(rbind(testdata_ctrl,testdata_pat), aes(x = individual, y = value, color =
 
 Many tests assume independence!
 
+
+## Complex designs: Covariates
+
+```{r, fig.height = 3, fig.width=7}
+batchdata = data.frame(
+  cluster = rep(c("C1","C2"), each = 100),
+  sample = c(rep("Il10-/-", 80),
+             rep("WT", 100),
+             rep("Il10-/-",20)),
+  il10 = 0, 
+  umap_1 = NA,
+  umap_2 = NA
+)
+
+batchdata$il10[batchdata$sample == "WT"] = rnorm(100,5)
+
+batchdata$umap_1 = rnorm(100,-1,0.2) + as.numeric(batchdata$cluster == "C1")
+batchdata$umap_2 = rnorm(100,-1,0.2) + as.numeric(batchdata$cluster == "C1")
+
+plot_grid(
+  ggplot(batchdata, aes(color = sample, shape = cluster,
+                      x = umap_1, y = umap_2)) + 
+    geom_point(),
+  ggplot(batchdata, aes(x = cluster, y = il10)) + 
+    geom_violin() + 
+    geom_jitter(aes(color = sample), size = 1) + 
+    stat_compare_means(label.y = 8, size = 3),
+  rel_widths = c(3,2))
+```
+
+
+```{r, eval = FALSE, include = FALSE}
+nobatch = lm(il10 ~ cluster, batchdata)
+summary(nobatch)$coefficients
+
+batch = lm(il10 ~ cluster + sample, batchdata)
+summary(batch)$coefficients
+
+```
+
 ## Complex designs: Approaches
 
 
@@ -710,7 +750,7 @@ plot_grid(
     plottheme
   ,
   ggplot(fulldata_norm, aes(x = group, y = expression, color = batch)) + geom_jitter() +
-    labs(title = "Generalized linear model / latent variables", 
+    labs(title = "Generalized linear model with latent variables", 
          subtitle = "Considers potential covariates when comparing cells") + 
     plottheme
   ,
@@ -744,6 +784,7 @@ plot_grid(
 
 Further reading: 
 @soneson2018bias
+@zimmerman2021pseudoreplication
 @juntilla2022benchmarking
 @das20222challenges
 
@@ -972,7 +1013,8 @@ Dot plots give a quick overview of both expression and % of cells expressing a g
 - Always assess your results!
   - Visualize the full distributions
   - Check for potential confounders
-    - Batch effects can be corrected using latent variables
+    - Batch effects can be corrected using latent variables (assuming good experimental design)
+    - Removing ambient RNA can also help
 
 ## Conclusions
 
