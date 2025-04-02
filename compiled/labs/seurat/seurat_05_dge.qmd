@@ -126,7 +126,7 @@ set to `TRUE`.
 # Compute differentiall expression
 markers_genes <- FindAllMarkers(
     alldata,
-    log2FC.threshold = 0.2,
+    logfc.threshold = 0.2,
     test.use = "wilcox",
     min.pct = 0.1,
     min.diff.pct = 0.2,
@@ -143,36 +143,36 @@ We can now select the top 25 overexpressed genes for plotting.
 
 markers_genes %>%
     group_by(cluster) %>%
-    top_n(-25, p_val_adj) -> top25
+    top_n(-25, p_val_adj) %>% 
+    # In case of tied p-values, further select the top 25 genes by fold-change
+    top_n(25, avg_log2FC) -> 
+  top25
 head(top25)
 ```
 
-``` {r}
-#| label: barplot-markers
+\`\`\`{r, fig.height = 10, fig.width = 7} #\| label: barplot-markers
 
-par(mfrow = c(2, 5), mar = c(4, 6, 3, 1))
-for (i in unique(top25$cluster)) {
-    barplot(sort(setNames(top25$avg_log2FC, top25$gene)[top25$cluster == i], F),
-        horiz = T, las = 1, main = paste0(i, " vs. rest"), border = "white", yaxs = "i"
-    )
-    abline(v = c(0, 0.25), lty = c(1, 2))
-}
-```
+par(mfrow = c(2, 5), mar = c(4, 6, 3, 1)) for (i in
+unique(top25$cluster)) {  barplot(sort(setNames(top25$avg_log2FC,
+top25$gene)[top25$cluster == i\], F), horiz = T, las = 1, main =
+paste0(i, " vs. rest"), border = "white", yaxs = "i" ) abline(v = c(0,
+0.25), lty = c(1, 2)) }
 
-We can visualize them as a heatmap. Here we are selecting the top 5.
 
-``` {r}
-#| label: heatmap-markers
-#| fig-height: 8
-#| fig-width: 8
+    We can visualize them as a heatmap. Here we are selecting the top 5.
 
-markers_genes %>%
-    group_by(cluster) %>%
-    slice_min(p_val_adj, n = 5, with_ties = FALSE) -> top5
-# create a scale.data slot for the selected genes
-alldata <- ScaleData(alldata, features = as.character(unique(top5$gene)), assay = "RNA")
-DoHeatmap(alldata, features = as.character(unique(top5$gene)), group.by = sel.clust, assay = "RNA")
-```
+
+    ```{r}
+    #| label: heatmap-markers
+    #| fig-height: 8
+    #| fig-width: 8
+
+    markers_genes %>%
+        group_by(cluster) %>%
+        slice_min(p_val_adj, n = 5, with_ties = FALSE) -> top5
+    # create a scale.data slot for the selected genes
+    alldata <- ScaleData(alldata, features = as.character(unique(top5$gene)), assay = "RNA")
+    DoHeatmap(alldata, features = as.character(unique(top5$gene)), group.by = sel.clust, assay = "RNA")
 
 Another way is by representing the overall group expression and
 detection rates in a dot-plot.
@@ -246,7 +246,7 @@ Now rerun `FindAllMarkers` with this set and compare the results.
 
 markers_genes_sub <- FindAllMarkers(
     sub,
-    log2FC.threshold = 0.2,
+    logfc.threshold = 0.2,
     test.use = "wilcox",
     min.pct = 0.1,
     min.diff.pct = 0.2,
@@ -295,7 +295,7 @@ cell_selection <- subset(alldata, cells = colnames(alldata)[alldata@meta.data[, 
 cell_selection <- SetIdent(cell_selection, value = "type")
 # Compute differentiall expression
 DGE_cell_selection <- FindAllMarkers(cell_selection,
-    log2FC.threshold = 0.2,
+    logfc.threshold = 0.2,
     test.use = "wilcox",
     min.pct = 0.1,
     min.diff.pct = 0.2,
@@ -819,7 +819,7 @@ run:
 sub_data \<- SetIdent(sub_data, value = "type")
 
 DGE_cell_selection2 \<- FindMarkers( sub_data, ident.1 = "Covid",
-log2FC.threshold = -Inf, test.use = "wilcox", min.pct = 0.05,
+logfc.threshold = -Inf, test.use = "wilcox", min.pct = 0.05,
 min.diff.pct = 0, only.pos = FALSE, max.cells.per.ident = 50, assay =
 "RNA" )
 

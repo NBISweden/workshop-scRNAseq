@@ -101,7 +101,7 @@ Now we can run the function `FindAllMarkers` that will run each of the clusters 
 # Compute differentiall expression
 markers_genes <- FindAllMarkers(
     alldata,
-    log2FC.threshold = 0.2,
+    logfc.threshold = 0.2,
     test.use = "wilcox",
     min.pct = 0.1,
     min.diff.pct = 0.2,
@@ -118,11 +118,14 @@ markers_genes <- FindAllMarkers(
 
 markers_genes %>%
     group_by(cluster) %>%
-    top_n(-25, p_val_adj) -> top25
+    top_n(-25, p_val_adj) %>% 
+    # In case of tied p-values, further select the top 25 genes by fold-change
+    top_n(25, avg_log2FC) -> 
+  top25
 head(top25)
 ```
 
-```{r}
+```{r, fig.height = 10, fig.width = 7}
 #| label: barplot-markers
 
 par(mfrow = c(2, 5), mar = c(4, 6, 3, 1))
@@ -205,7 +208,7 @@ Now rerun `FindAllMarkers` with this set and compare the results.
 
 markers_genes_sub <- FindAllMarkers(
     sub,
-    log2FC.threshold = 0.2,
+    logfc.threshold = 0.2,
     test.use = "wilcox",
     min.pct = 0.1,
     min.diff.pct = 0.2,
@@ -249,7 +252,7 @@ cell_selection <- subset(alldata, cells = colnames(alldata)[alldata@meta.data[, 
 cell_selection <- SetIdent(cell_selection, value = "type")
 # Compute differentiall expression
 DGE_cell_selection <- FindAllMarkers(cell_selection,
-    log2FC.threshold = 0.2,
+    logfc.threshold = 0.2,
     test.use = "wilcox",
     min.pct = 0.1,
     min.diff.pct = 0.2,
@@ -723,7 +726,7 @@ sub_data <- SetIdent(sub_data, value = "type")
 DGE_cell_selection2 <- FindMarkers(
     sub_data,
     ident.1 = "Covid",
-    log2FC.threshold = -Inf,
+    logfc.threshold = -Inf,
     test.use = "wilcox",
     min.pct = 0.05,
     min.diff.pct = 0,
