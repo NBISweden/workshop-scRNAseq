@@ -116,7 +116,7 @@ Layers(alldata@assays$RNA)
 
 Now we can run the function `FindAllMarkers` that will run each of the
 clusters vs the rest. As you can see, there are some filtering criteria
-to remov genes that do not have certain log2FC or percent expressed.
+to remove genes that do not have certain log2FC or percent expressed.
 Here we only test for upregulated genes, so the `only.pos` parameter is
 set to `TRUE`.
 
@@ -150,29 +150,34 @@ markers_genes %>%
 head(top25)
 ```
 
-\`\`\`{r, fig.height = 10, fig.width = 7} #\| label: barplot-markers
+``` {r}
+#| label: barplot-markers
+#| fig.height: 10
+#| fig.width: 7
 
-par(mfrow = c(2, 5), mar = c(4, 6, 3, 1)) for (i in
-unique(top25$cluster)) {  barplot(sort(setNames(top25$avg_log2FC,
-top25$gene)[top25$cluster == i\], F), horiz = T, las = 1, main =
-paste0(i, " vs. rest"), border = "white", yaxs = "i" ) abline(v = c(0,
-0.25), lty = c(1, 2)) }
+par(mfrow = c(2, 5), mar = c(4, 6, 3, 1))
+for (i in unique(top25$cluster)) {
+    barplot(sort(setNames(top25$avg_log2FC, top25$gene)[top25$cluster == i], F),
+        horiz = T, las = 1, main = paste0(i, " vs. rest"), border = "white", yaxs = "i"
+    )
+    abline(v = c(0, 0.25), lty = c(1, 2))
+}
+```
 
+We can visualize them as a heatmap. Here we are selecting the top 5.
 
-    We can visualize them as a heatmap. Here we are selecting the top 5.
+``` {r}
+#| label: heatmap-markers
+#| fig-height: 8
+#| fig-width: 8
 
-
-    ```{r}
-    #| label: heatmap-markers
-    #| fig-height: 8
-    #| fig-width: 8
-
-    markers_genes %>%
-        group_by(cluster) %>%
-        slice_min(p_val_adj, n = 5, with_ties = FALSE) -> top5
-    # create a scale.data slot for the selected genes
-    alldata <- ScaleData(alldata, features = as.character(unique(top5$gene)), assay = "RNA")
-    DoHeatmap(alldata, features = as.character(unique(top5$gene)), group.by = sel.clust, assay = "RNA")
+markers_genes %>%
+    group_by(cluster) %>%
+    slice_min(p_val_adj, n = 5, with_ties = FALSE) -> top5
+# create a scale.data slot for the selected genes
+alldata <- ScaleData(alldata, features = as.character(unique(top5$gene)), assay = "RNA")
+DoHeatmap(alldata, features = as.character(unique(top5$gene)), group.by = sel.clust, assay = "RNA")
+```
 
 Another way is by representing the overall group expression and
 detection rates in a dot-plot.
@@ -812,36 +817,40 @@ on a larger set of genes, so we will have to rerun the test with more
 lenient cutoffs. We will not use it now but this is how it should be
 run:
 
-\`\`\`{r, eval=FALSE} #\| label: gsea-rerun
+``` {r}
+#| eval: FALSE
+#| label: gsea-rerun
 
 ## OBS! No need to run
 
-sub_data \<- SetIdent(sub_data, value = "type")
+sub_data <- SetIdent(sub_data, value = "type")
 
-DGE_cell_selection2 \<- FindMarkers( sub_data, ident.1 = "Covid",
-logfc.threshold = -Inf, test.use = "wilcox", min.pct = 0.05,
-min.diff.pct = 0, only.pos = FALSE, max.cells.per.ident = 50, assay =
-"RNA" )
+DGE_cell_selection2 <- FindMarkers(
+    sub_data,
+    ident.1 = "Covid",
+    logfc.threshold = -Inf,
+    test.use = "wilcox",
+    min.pct = 0.05,
+    min.diff.pct = 0,
+    only.pos = FALSE,
+    max.cells.per.ident = 50,
+    assay = "RNA"
+)
 
 # Create a gene rank based on the gene expression fold change
+gene_rank <- setNames(DGE_cell_selection2$avg_log2FC, casefold(rownames(DGE_cell_selection2), upper = T))
+```
 
-gene_rank \<- setNames(DGE_cell_selection2\$avg_log2FC,
-casefold(rownames(DGE_cell_selection2), upper = T))
+In this case we will use the results from MAST with random effect to run
+GSEA, and we will use the Z-score from MAST to sort the genes.
 
-
-
-
-    In this case we will use the results from MAST with random effect to run GSEA, and we will use the Z-score from MAST to sort the genes.
-
-
-
-
-    ```{r}
-    #| label: rank-gsea
-    gene_rank <- setNames(fcHurdle2$z, casefold(fcHurdle2$primerid, upper = T))
-    # set infinite values to 100.
-    inf = is.infinite(gene_rank)
-    gene_rank[inf] = 100*sign(gene_rank[inf])
+``` {r}
+#| label: rank-gsea
+gene_rank <- setNames(fcHurdle2$z, casefold(fcHurdle2$primerid, upper = T))
+# set infinite values to 100.
+inf = is.infinite(gene_rank)
+gene_rank[inf] = 100*sign(gene_rank[inf])
+```
 
 Once our list of genes are sorted, we can proceed with the enrichment
 itself. We can use the package to get gene set from the Molecular
