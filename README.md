@@ -46,7 +46,7 @@ Open in browser: `http://localhost:8787/`
 - To run Python labs in JupyterLab
 
 ```
-docker run --rm --platform=linux/amd64 -p 8888:8888 -v ${PWD}:/home/jovyan/work ghcr.io/nbisweden/workshop-scrnaseq-scanpy:20250325-2256
+docker run --rm --platform=linux/amd64 -p 8888:8888 -v ${PWD}:/home/jovyan/work/work ghcr.io/nbisweden/workshop-scrnaseq-scanpy:20250325-2256
 ```
 
 Open in browser: `http://localhost:8888/lab` and use password `scrnaseq`
