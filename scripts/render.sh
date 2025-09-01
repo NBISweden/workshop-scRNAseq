@@ -129,7 +129,7 @@ then
     docker run --rm --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work $docker_site quarto render /work/other/containers-spatial.qmd
     docker run --rm --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work $docker_site quarto render /work/other/faq.qmd
     docker run --rm --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work $docker_site quarto render /work/other/data.qmd
-    #docker run --rm --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work $docker_site quarto render /work/404.md
+    docker run --rm --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work $docker_site quarto render /work/404.qmd
     docker run --rm --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work $docker_site quarto render /work/labs/index.qmd
 
     echo "All of site rendered."
