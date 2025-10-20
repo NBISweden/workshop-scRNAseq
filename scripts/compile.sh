@@ -1,64 +1,59 @@
-#!/bin/sh
+#!/bin/bash
+
+# fail on error and unset variables, encourage good scripting
+set -euo pipefail
 
 ## COMPILE QMD FILES
 ##
 ## Description
 ## Evaluates and replaces meta variable shortcuts
 ## .qmd files are converted to .qmd files
-## .qmd files with jupyter engine is converted to .ipynb
-## The following directories are exprected:
-## labs/seurat, labs/bioc, labs/scanpy
+## .qmd files with jupyter engine are converted to .ipynb
+## The following directories are expected:
+## docs/labs/seurat, docs/labs/bioc, docs/labs/scanpy
 ##
 ## Usage
 ## Run this script in the root of repo. It takes about 1 min to run.
-## bash ./scripts/compile.sh
+## bash ./scripts/compile.sh [all|seurat|bioc|scanpy]
+## Optionally: DOCKER_SITE=your/image:tag bash ./scripts/compile.sh [option]
 
-docker_site="ghcr.io/nbisweden/workshop-scrnaseq:2024-site-r4.3.0"
+DOCKER_SITE="${DOCKER_SITE:-ghcr.io/nbisweden/workshop-scrnaseq:2024-site-r4.3.0}"
+OUTPUT_DIR="compiled"
+LAB_DIR="docs/labs"
+TOOLKIT="${1:-}"
 
-# set output directory for compiled output
-output_dir="compiled"
-# set input directories with qmd files to compile
-input_dirs=("labs/seurat" "labs/bioc" "labs/scanpy")
-
-# fail on error
-set -e
-
-# check if in the root of the repo
-if [ ! -f "_quarto.yml" ]; then
-    echo "Error: Are you in the root of the repo? _quarto.yml is missing."
+usage() {
+    echo "Usage: $0 [seurat|bioc|scanpy|all]"
+    echo "Optionally: DOCKER_SITE=your/image:tag $0 [option]"
     exit 1
-fi
+}
 
-# check if these directories exist
-error=false
-for dir in "${input_dirs[@]}"; do
-    if [ ! -d "$dir" ]; then
-        echo "Error: Directory '$dir' does not exist."
-        error=true
+# check if input directory exists
+check_input_dir() {
+    if [ ! -d "$LAB_DIR/$1" ]; then
+        echo "Error: Directory $LAB_DIR/$1 does not exist."
+        exit 1
     fi
-done
+}
 
-if [ "$error" = true ]; then
-    exit 1  # Exit with an error code
-fi
+# remove output subdirectory if it exists
+check_output_dir() {
+    if [ -d "${OUTPUT_DIR}/labs/$1" ]; then
+        echo "Directory ${OUTPUT_DIR}/labs/$1 exists. Removing it"
+        rm -r "${OUTPUT_DIR}/labs/$1"
+    fi
+}
 
-# if output directory exists, remove it
-if [ -d "$output_dir" ]; then
-    echo "Directory '$output_dir' exists. Removing it ..."
-    rm -r "$output_dir"
-fi
+# create compiled versions of qmd using profile "compiled"
+quarto_compile() {
+    echo "Compiling $1 labs ..."
+    docker run --rm --platform=linux/amd64 -u 1000:1000 -v "${PWD}:/work" "$DOCKER_SITE" quarto render --profile compile "/work/$LAB_DIR/$1"/*.qmd --to markdown-header_attributes --metadata engine:markdown --log-level warning,error
+}
 
-# create compiled versions of qmd to using profile "compiled"
-echo "Compiling seurat labs ..."
-docker run --rm --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work $docker_site quarto render --profile compile /work/labs/seurat/*.qmd --to markdown-header_attributes --metadata engine:markdown --log-level warning,error
-echo "Compiling bioc labs ..."
-docker run --rm --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work $docker_site quarto render --profile compile /work/labs/bioc/*.qmd --to markdown-header_attributes --metadata engine:markdown --log-level warning,error
-echo "Compiling scanpy labs ..."
-docker run --rm --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work $docker_site quarto render --profile compile /work/labs/scanpy/*.qmd --to markdown-header_attributes --metadata engine:markdown --log-level warning,error
-
-# Read an md/qmd, remove unnecessary lines from yaml, and write to the original file
-echo "Slimming yaml across all .md files ..."
-slim_yaml() {
+# Read an md/qmd, remove unnecessary lines from yaml frontmatter
+_slim_md_frontmatter() {
+    local temp_file
+    temp_file=$(mktemp)
     awk '
         /^---$/ && !in_yaml {in_yaml=1; print; next} 
         /^---$/ && in_yaml {in_yaml=0; print; next} 
@@ -73,42 +68,69 @@ slim_yaml() {
                 continue_capture=0;
             }
         }
-    ' "$1" > "tmp"
-
-    mv "tmp" "$1"
+    ' "$1" > "$temp_file"
+    mv "$temp_file" "$1"
 }
 
-find "${output_dir}" -type f -name "*.md" -print0 | while IFS= read -r -d '' file; do
-    ## echo "Slimming yaml: $file ..."
-    slim_yaml "$file"
-done
+slim_md_frontmatter() {
+    echo "Slimming frontmatter yaml across all $1 .md files"
+    find "${OUTPUT_DIR}/labs/$1" -type f -name "*.md" -print0 | while IFS= read -r -d '' file; do
+        _slim_md_frontmatter "$file"
+    done
+}
 
-# converting md files to qmd
-echo "Converting seurat .md files to .qmd ..."
-for file in "${output_dir}"/labs/seurat/*.md; do
-    mv "$file" "${file%.md}.qmd"
-    rm -rf "$file"
-done
+md_to_qmd() {
+    echo "Converting $1 .md files to .qmd"
+    shopt -s nullglob
+    for file in "${OUTPUT_DIR}/labs/$1"/*.md; do
+        mv "$file" "${file%.md}.qmd"
+    done
+    shopt -u nullglob
+}
 
-echo "Converting bioc .md files to .qmd ..."
-for file in "${output_dir}"/labs/bioc/*.md; do
-    mv "$file" "${file%.md}.qmd"
-    rm -rf "$file"
-done
+qmd_to_ipynb() {
+    echo "Converting $1 .qmd files to .ipynb"
+    shopt -s nullglob
+    for file in "${OUTPUT_DIR}/labs/$1"/*.qmd; do
+        docker run --rm --platform=linux/amd64 -u 1000:1000 -v "${PWD}:/work" "$DOCKER_SITE" quarto convert "/work/${file}"
+        rm -f "$file"
+    done
+    shopt -u nullglob
+}
 
-echo "Converting scanpy .md files to .qmd ..."
-for file in "${output_dir}"/labs/scanpy/*.md; do
-    mv "$file" "${file%.md}.qmd"
-    rm -rf "$file"
-done
+# Compile one lab
+compile_labs() {
+    check_input_dir "$1"
+    check_output_dir "$1"
+    quarto_compile "$1"
+    slim_md_frontmatter "$1"
+    md_to_qmd "$1"
+    if [ "$1" = "scanpy" ]; then
+        qmd_to_ipynb "$1"
+    fi
+}
 
-# converting scanpy qmd files to ipynb
-echo "Converting scanpy .qmd files to .ipynb ..."
-for file in "${output_dir}"/labs/scanpy/*.qmd; do
-    fname=$(basename "$file")
-    docker run --rm --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work $docker_site quarto convert "/work/${file}"
-    rm -rf "$file"
-done
+# main logic, argument parsing
+main() {
+    if [ -z "${TOOLKIT}" ]; then
+        usage
+    fi
 
-echo "All files compiled successfully."
-exit 0
+    case "${TOOLKIT}" in
+        seurat|bioc|scanpy)
+            compile_labs "${TOOLKIT}"
+            ;;
+        all)
+            for lab in seurat bioc scanpy; do
+                compile_labs "$lab"
+            done
+            ;;
+        *)
+            echo "Unknown option '${TOOLKIT}'."
+            usage
+            ;;
+    esac
+    echo "All files compiled successfully."
+}
+
+main
