@@ -1,0 +1,1126 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.3.450">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Åsa Björklund">
+<meta name="author" content="Paulo Czarnewski">
+<meta name="author" content="Susanne Reinsbach">
+<meta name="author" content="Roy Francis">
+<meta name="description" content="Combining and harmonizing samples or datasets from different batches such as experiments or conditions to enable meaningful cross-sample comparisons.">
+
+<title> Data Integration</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../">
+<link href="../../assets/favicon.png" rel="icon" type="image/png">
+<script src="../../site_libs/quarto-html/quarto.js"></script>
+<script src="../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<script src="../../site_libs/quarto-contrib/glightbox/glightbox.min.js"></script>
+<link href="../../site_libs/quarto-contrib/glightbox/glightbox.min.css" rel="stylesheet">
+<link href="../../site_libs/quarto-contrib/glightbox/lightbox.css" rel="stylesheet">
+<link href="../../site_libs/quarto-contrib/fontawesome6-0.1.0/all.css" rel="stylesheet">
+<link href="../../site_libs/quarto-contrib/fontawesome6-0.1.0/latex-fontsize.css" rel="stylesheet">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 20,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<style>html{ scroll-behavior: smooth; }</style>
+<style>
+
+      .quarto-title-block .quarto-title-banner {
+        background-image: url(../../assets/images/banner.jpg);
+background-size: cover;
+      }
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Fira+Mono&amp;family=Nunito:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&amp;display=swap" rel="stylesheet">
+
+<link href="../../site_libs/pagedtable-1.1/css/pagedtable.css" rel="stylesheet">
+<script src="../../site_libs/pagedtable-1.1/js/pagedtable.js"></script>
+
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+</head>
+
+<body class="nav-fixed">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg navbar-dark ">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container">
+    <a href="../../index.html" class="navbar-brand navbar-brand-logo">
+    <img src="../../assets/logos/nbis-scilifelab.png" alt="nbis-scilifelab-logo" class="navbar-logo">
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="../../index.html" rel="" target="">
+ <span class="menu-text">Home</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../home_schedule.html" rel="" target="">
+ <span class="menu-text">Schedule</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../home_contents.html" rel="" target="">
+ <span class="menu-text">Contents</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../home_precourse.html" rel="" target="">
+ <span class="menu-text">Precourse</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../home_syllabus.html" rel="" target="">
+ <span class="menu-text">Syllabus</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../home_info.html" rel="" target="">
+ <span class="menu-text">Info</span></a>
+  </li>  
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-archive" role="button" data-bs-toggle="dropdown" aria-expanded="false" rel="" target="">
+ <span class="menu-text">Archive</span>
+    </a>
+    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="nav-menu-archive">    
+        <li>
+    <a class="dropdown-item" href="../../archive/2025/index.html" rel="" target="">
+ <span class="dropdown-text">2025</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../../archive/2024/index.html" rel="" target="">
+ <span class="dropdown-text">2024</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../../archive/2023/index.html" rel="" target="">
+ <span class="dropdown-text">2023</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/susrei/workshop-scRNAseq/" rel="" target=""><i class="bi bi-github" role="img">
+</i> 
+ <span class="menu-text"></span></a>
+  </li>  
+</ul>
+            <div class="quarto-navbar-tools">
+</div>
+          </div> <!-- /navcollapse -->
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<header id="title-block-header" class="quarto-title-block default page-columns page-full">
+  <div class="quarto-title-banner page-columns page-full">
+    <div class="quarto-title column-body">
+      <h1 class="title"><i class="fa-solid fa-diagram-project" aria-label="diagram-project"></i> Data Integration</h1>
+            <p class="subtitle lead"><i class="fa-brands fa-r-project" aria-label="r-project"></i> Seurat Toolkit</p>
+                  <div>
+        <div class="description">
+          Combining and harmonizing samples or datasets from different batches such as experiments or conditions to enable meaningful cross-sample comparisons.
+        </div>
+      </div>
+                </div>
+  </div>
+    
+  
+  <div class="quarto-title-meta">
+
+      <div>
+      <div class="quarto-title-meta-heading">Authors</div>
+      <div class="quarto-title-meta-contents">
+               <p>Åsa Björklund </p>
+               <p>Paulo Czarnewski </p>
+               <p>Susanne Reinsbach </p>
+               <p>Roy Francis </p>
+            </div>
+    </div>
+      
+      <div>
+      <div class="quarto-title-meta-heading">Published</div>
+      <div class="quarto-title-meta-contents">
+        <p class="date">19-Oct-2025</p>
+      </div>
+    </div>
+    
+      
+    </div>
+    
+  
+  </header><div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#meta-int_prep" id="toc-meta-int_prep" class="nav-link active" data-scroll-target="#meta-int_prep"><span class="header-section-number">1</span> Data preparation</a></li>
+  <li><a href="#cca" id="toc-cca" class="nav-link" data-scroll-target="#cca"><span class="header-section-number">2</span> CCA</a>
+  <ul>
+  <li><a href="#marker-genes" id="toc-marker-genes" class="nav-link" data-scroll-target="#marker-genes"><span class="header-section-number">2.1</span> Marker genes</a></li>
+  </ul></li>
+  <li><a href="#meta-dimred_harmony" id="toc-meta-dimred_harmony" class="nav-link" data-scroll-target="#meta-dimred_harmony"><span class="header-section-number">3</span> Harmony</a></li>
+  <li><a href="#meta-dimred_scanorama" id="toc-meta-dimred_scanorama" class="nav-link" data-scroll-target="#meta-dimred_scanorama"><span class="header-section-number">4</span> Scanorama</a></li>
+  <li><a href="#overview-all-methods" id="toc-overview-all-methods" class="nav-link" data-scroll-target="#overview-all-methods"><span class="header-section-number">5</span> Overview all methods</a></li>
+  <li><a href="#extra-task" id="toc-extra-task" class="nav-link" data-scroll-target="#extra-task"><span class="header-section-number">6</span> Extra task</a></li>
+  <li><a href="#meta-session" id="toc-meta-session" class="nav-link" data-scroll-target="#meta-session"><span class="header-section-number">7</span> Session info</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content quarto-banner-title-block" id="quarto-document-content">
+
+
+
+
+
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Note
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Code chunks run R commands unless otherwise specified.</p>
+</div>
+</div>
+<p>In this tutorial we will look at different ways of integrating multiple single cell RNA-seq datasets. We will explore a few different methods to correct for batch effects across datasets. Seurat uses the data integration method presented in Comprehensive Integration of Single Cell Data, while Scran and Scanpy use a mutual Nearest neighbour method (MNN). Below you can find a list of some methods for single data integration:</p>
+<table class="table">
+<thead>
+<tr class="header">
+<th style="text-align: left;">Markdown</th>
+<th style="text-align: left;">Language</th>
+<th style="text-align: left;">Library</th>
+<th style="text-align: left;">Ref</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">CCA</td>
+<td style="text-align: left;">R</td>
+<td style="text-align: left;">Seurat</td>
+<td style="text-align: left;"><a href="https://www.sciencedirect.com/science/article/pii/S0092867419305598?via%3Dihub">Cell</a></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">MNN</td>
+<td style="text-align: left;">R/Python</td>
+<td style="text-align: left;">Scater/Scanpy</td>
+<td style="text-align: left;"><a href="https://www.nature.com/articles/nbt.4091">Nat. Biotech.</a></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Conos</td>
+<td style="text-align: left;">R</td>
+<td style="text-align: left;">conos</td>
+<td style="text-align: left;"><a href="https://www.nature.com/articles/s41592-019-0466-z?error=cookies_not_supported&amp;code=5680289b-6edb-40ad-9934-415dac4fdb2f">Nat. Methods</a></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Harmony</td>
+<td style="text-align: left;">R</td>
+<td style="text-align: left;">Harmony</td>
+<td style="text-align: left;"><a href="https://www.nature.com/articles/s41592-019-0619-0">Nat. Methods</a></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Scanorama</td>
+<td style="text-align: left;">Python</td>
+<td style="text-align: left;">scanorama</td>
+<td style="text-align: left;"><a href="https://www.nature.com/articles/s41587-019-0113-3">Nat. Biotech.</a></td>
+</tr>
+</tbody>
+</table>
+<section id="meta-int_prep" class="level2" data-number="1">
+<h2 data-number="1" class="anchored" data-anchor-id="meta-int_prep"><span class="header-section-number">1</span> Data preparation</h2>
+<p>Let’s first load necessary libraries and the data saved in the previous lab.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">suppressPackageStartupMessages</span>({</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">library</span>(Seurat)</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">library</span>(ggplot2)</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">library</span>(patchwork)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">library</span>(basilisk)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>condapath <span class="ot">=</span> <span class="st">"/usr/local/conda/envs/seurat"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># download pre-computed data if missing or long compute</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>fetch_data <span class="ot">&lt;-</span> <span class="cn">TRUE</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co"># url for source and intermediate data</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>path_data <span class="ot">&lt;-</span> <span class="st">"https://nextcloud.dc.scilifelab.se/public.php/webdav"</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>curl_upass <span class="ot">&lt;-</span> <span class="st">"-u zbC5fr2LbEZ9rSE:scRNAseq2025"</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>path_file <span class="ot">&lt;-</span> <span class="st">"data/covid/results/seurat_covid_qc_dr.rds"</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">dir.exists</span>(<span class="fu">dirname</span>(path_file))) <span class="fu">dir.create</span>(<span class="fu">dirname</span>(path_file), <span class="at">recursive =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (fetch_data <span class="sc">&amp;&amp;</span> <span class="sc">!</span><span class="fu">file.exists</span>(path_file)) <span class="fu">download.file</span>(<span class="at">url =</span> <span class="fu">file.path</span>(path_data, <span class="st">"covid/results_seurat/seurat_covid_qc_dr.rds"</span>), <span class="at">destfile =</span> path_file, <span class="at">method =</span> <span class="st">"curl"</span>, <span class="at">extra =</span> curl_upass)</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>alldata <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(path_file)</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(<span class="fu">names</span>(alldata<span class="sc">@</span>reductions))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "pca"               "umap"              "tsne"             
+[4] "UMAP10_on_PCA"     "UMAP_on_ScaleData"</code></pre>
+</div>
+</div>
+<p>With Seurat5 we can split the <code>RNA</code> assay into multiple <code>Layers</code> with one count matrix and one data matrix per sample. When we then run <code>FindVariableFeatures</code> on the object it will run it for each of the samples separately, but also compute the overall variable features by combining their ranks.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># get the variable genes from all the datasets without batch information.</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>hvgs_old <span class="ot">=</span> <span class="fu">VariableFeatures</span>(alldata)</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="co"># now split the object into layers</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>alldata[[<span class="st">"RNA"</span>]] <span class="ot">&lt;-</span> <span class="fu">split</span>(alldata[[<span class="st">"RNA"</span>]], <span class="at">f =</span> alldata<span class="sc">$</span>orig.ident)</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="co"># detect HVGs</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>alldata <span class="ot">&lt;-</span> <span class="fu">FindVariableFeatures</span>(alldata, <span class="at">selection.method =</span> <span class="st">"vst"</span>, <span class="at">nfeatures =</span> <span class="dv">2000</span>, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="co"># to get the HVGs for each layer we have to fetch them individually</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>data.layers <span class="ot">&lt;-</span> <span class="fu">Layers</span>(alldata)[<span class="fu">grep</span>(<span class="st">"data."</span>,<span class="fu">Layers</span>(alldata))]</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(data.layers)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "data.covid_1"  "data.covid_15" "data.covid_16" "data.covid_17"
+[5] "data.ctrl_5"   "data.ctrl_13"  "data.ctrl_14"  "data.ctrl_19" </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>hvgs_per_dataset <span class="ot">&lt;-</span> <span class="fu">lapply</span>(data.layers, <span class="cf">function</span>(x) <span class="fu">VariableFeatures</span>(alldata, <span class="at">layer =</span> x) )</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="fu">names</span>(hvgs_per_dataset) <span class="ot">=</span> data.layers</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="co"># also add in the variable genes that was selected on the whole dataset and the old ones </span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>hvgs_per_dataset<span class="sc">$</span>all <span class="ot">&lt;-</span> <span class="fu">VariableFeatures</span>(alldata)</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>hvgs_per_dataset<span class="sc">$</span>old <span class="ot">&lt;-</span> hvgs_old</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>temp <span class="ot">&lt;-</span> <span class="fu">unique</span>(<span class="fu">unlist</span>(hvgs_per_dataset))</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>overlap <span class="ot">&lt;-</span> <span class="fu">sapply</span>( hvgs_per_dataset , <span class="cf">function</span>(x) { temp <span class="sc">%in%</span> x } )</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>pheatmap<span class="sc">::</span><span class="fu">pheatmap</span>(<span class="fu">t</span>(overlap<span class="sc">*</span><span class="dv">1</span>),<span class="at">cluster_rows =</span> F ,</span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>                   <span class="at">color =</span> <span class="fu">c</span>(<span class="st">"grey90"</span>,<span class="st">"grey20"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-left">
+<figure class="figure">
+<p><a href="seurat_03_integration_files/figure-html/hvg-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-2"><img src="seurat_03_integration_files/figure-html/hvg-1.png" class="img-fluid figure-img" width="768"></a></p>
+</figure>
+</div>
+</div>
+</div>
+<p>As you can see, there are a lot of genes that are variable in just one dataset. There are also some genes in the gene set that was selected using all the data that are not variable in any of the individual datasets. These are most likely genes driven by batch effects.</p>
+<p>A better way to select features for integration is to combine the information on variable genes across the dataset. This is what we have in the <code>all</code> section where the ranks of the variable features in the different datasets is combined.</p>
+<div class="callout callout-style-default callout-note callout-titled" title="Discuss">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Discuss
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Did you understand the difference between running variable gene selection per dataset and combining them vs running it on all samples together. Can you think of any situation where it would be best to run it on all samples and a situation where it should be done by batch?</p>
+</div>
+</div>
+<p>For all downstream integration we will use this set of genes so that it is comparable across the methods. Before doing anything else we need to rerun <code>ScaleData</code> and <code>PCA</code> with that set of genes.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>hvgs_all <span class="ot">=</span> hvgs_per_dataset<span class="sc">$</span>all</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>alldata <span class="ot">=</span> <span class="fu">ScaleData</span>(alldata, <span class="at">features =</span> hvgs_all, <span class="at">vars.to.regress =</span> <span class="fu">c</span>(<span class="st">"percent_mito"</span>, <span class="st">"nFeature_RNA"</span>))</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>alldata <span class="ot">=</span> <span class="fu">RunPCA</span>(alldata, <span class="at">features =</span> hvgs_all, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="cca" class="level2" data-number="2">
+<h2 data-number="2" class="anchored" data-anchor-id="cca"><span class="header-section-number">2</span> CCA</h2>
+<p>In Seurat v4 we run the integration in two steps, first finding anchors between datasets with <code>FindIntegrationAnchors()</code> and then running the actual integration with <code>IntegrateData()</code>. Since Seurat v5 this is done in a single command using the function <code>IntegrateLayers()</code>, we specify the name for the integration as <code>integrated_cca</code>.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>alldata <span class="ot">&lt;-</span> <span class="fu">IntegrateLayers</span>(<span class="at">object =</span> alldata, </span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>                           <span class="at">method =</span> CCAIntegration, <span class="at">orig.reduction =</span> <span class="st">"pca"</span>, </span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>                           <span class="at">new.reduction =</span> <span class="st">"integrated_cca"</span>, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>We should now have a new dimensionality reduction slot (<code>integrated_cca</code>) in the object:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">names</span>(alldata<span class="sc">@</span>reductions)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "pca"               "umap"              "tsne"             
+[4] "UMAP10_on_PCA"     "UMAP_on_ScaleData" "integrated_cca"   </code></pre>
+</div>
+</div>
+<p>Using this new integrated dimensionality reduction we can now run UMAP and tSNE on that object, and we again specify the names of the new reductions so that the old UMAP and tSNE are not overwritten.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>alldata <span class="ot">&lt;-</span> <span class="fu">RunUMAP</span>(alldata, <span class="at">reduction =</span> <span class="st">"integrated_cca"</span>, <span class="at">dims =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">30</span>, <span class="at">reduction.name =</span> <span class="st">"umap_cca"</span>)</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>alldata <span class="ot">&lt;-</span> <span class="fu">RunTSNE</span>(alldata, <span class="at">reduction =</span> <span class="st">"integrated_cca"</span>, <span class="at">dims =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">30</span>, <span class="at">reduction.name =</span> <span class="st">"tsne_cca"</span>)</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a><span class="fu">names</span>(alldata<span class="sc">@</span>reductions)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "pca"               "umap"              "tsne"             
+[4] "UMAP10_on_PCA"     "UMAP_on_ScaleData" "integrated_cca"   
+[7] "umap_cca"          "tsne_cca"         </code></pre>
+</div>
+</div>
+<p>We can now plot the unintegrated and the integrated space reduced dimensions.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">wrap_plots</span>(</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"pca"</span>, <span class="at">group.by =</span> <span class="st">"orig.ident"</span>)<span class="sc">+</span><span class="fu">NoAxes</span>()<span class="sc">+</span><span class="fu">ggtitle</span>(<span class="st">"PCA raw_data"</span>),</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"tsne"</span>, <span class="at">group.by =</span> <span class="st">"orig.ident"</span>)<span class="sc">+</span><span class="fu">NoAxes</span>()<span class="sc">+</span><span class="fu">ggtitle</span>(<span class="st">"tSNE raw_data"</span>),</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"umap"</span>, <span class="at">group.by =</span> <span class="st">"orig.ident"</span>)<span class="sc">+</span><span class="fu">NoAxes</span>()<span class="sc">+</span><span class="fu">ggtitle</span>(<span class="st">"UMAP raw_data"</span>),</span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"integrated_cca"</span>, <span class="at">group.by =</span> <span class="st">"orig.ident"</span>)<span class="sc">+</span><span class="fu">NoAxes</span>()<span class="sc">+</span><span class="fu">ggtitle</span>(<span class="st">"CCA integrated"</span>),</span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"tsne_cca"</span>, <span class="at">group.by =</span> <span class="st">"orig.ident"</span>)<span class="sc">+</span><span class="fu">NoAxes</span>()<span class="sc">+</span><span class="fu">ggtitle</span>(<span class="st">"tSNE integrated"</span>),</span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"umap_cca"</span>, <span class="at">group.by =</span> <span class="st">"orig.ident"</span>)<span class="sc">+</span><span class="fu">NoAxes</span>()<span class="sc">+</span><span class="fu">ggtitle</span>(<span class="st">"UMAP integrated"</span>),</span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">ncol =</span> <span class="dv">3</span></span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>) <span class="sc">+</span> <span class="fu">plot_layout</span>(<span class="at">guides =</span> <span class="st">"collect"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-left">
+<figure class="figure">
+<p><a href="seurat_03_integration_files/figure-html/plot-cca-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-3"><img src="seurat_03_integration_files/figure-html/plot-cca-1.png" class="img-fluid figure-img" width="960"></a></p>
+</figure>
+</div>
+</div>
+</div>
+<section id="marker-genes" class="level3" data-number="2.1">
+<h3 data-number="2.1" class="anchored" data-anchor-id="marker-genes"><span class="header-section-number">2.1</span> Marker genes</h3>
+<p>Let’s plot some marker genes for different cell types onto the embedding.</p>
+<table class="table">
+<thead>
+<tr class="header">
+<th style="text-align: left;">Markers</th>
+<th style="text-align: left;">Cell Type</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">CD3E</td>
+<td style="text-align: left;">T cells</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">CD3E CD4</td>
+<td style="text-align: left;">CD4+ T cells</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">CD3E CD8A</td>
+<td style="text-align: left;">CD8+ T cells</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">GNLY, NKG7</td>
+<td style="text-align: left;">NK cells</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">MS4A1</td>
+<td style="text-align: left;">B cells</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">CD14, LYZ, CST3, MS4A7</td>
+<td style="text-align: left;">CD14+ Monocytes</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">FCGR3A, LYZ, CST3, MS4A7</td>
+<td style="text-align: left;">FCGR3A+ Monocytes</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">FCER1A, CST3</td>
+<td style="text-align: left;">DCs</td>
+</tr>
+</tbody>
+</table>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>myfeatures <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"CD3E"</span>, <span class="st">"CD4"</span>, <span class="st">"CD8A"</span>, <span class="st">"NKG7"</span>, <span class="st">"GNLY"</span>, <span class="st">"MS4A1"</span>, <span class="st">"CD14"</span>, <span class="st">"LYZ"</span>, <span class="st">"MS4A7"</span>, <span class="st">"FCGR3A"</span>, <span class="st">"CST3"</span>, <span class="st">"FCER1A"</span>)</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="fu">FeaturePlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"umap_cca"</span>, <span class="at">dims =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">2</span>, <span class="at">features =</span> myfeatures, <span class="at">ncol =</span> <span class="dv">4</span>, <span class="at">order =</span> T) <span class="sc">+</span> <span class="fu">NoLegend</span>() <span class="sc">+</span> <span class="fu">NoAxes</span>() <span class="sc">+</span> <span class="fu">NoGrid</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-left">
+<figure class="figure">
+<p><a href="seurat_03_integration_files/figure-html/plot-markers-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-4"><img src="seurat_03_integration_files/figure-html/plot-markers-1.png" class="img-fluid figure-img" width="960"></a></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+</section>
+<section id="meta-dimred_harmony" class="level2" data-number="3">
+<h2 data-number="3" class="anchored" data-anchor-id="meta-dimred_harmony"><span class="header-section-number">3</span> Harmony</h2>
+<p>An alternative method for integration is Harmony, for more details on the method, please se their paper <a href="https://www.nature.com/articles/s41592-019-0619-0">Nat. Methods</a>. This method runs the integration on a dimensionality reduction, in most applications the PCA. So first, we prefer to have scaling and PCA with the same set of genes that were used for the CCA integration, which we ran earlier.</p>
+<p>We can use the same function <code>IntegrateLayers()</code> but intstead specify the method <code>HarmonyIntegration</code>. And as above, we run UMAP on the new reduction from Harmony.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>alldata <span class="ot">&lt;-</span> <span class="fu">IntegrateLayers</span>(</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">object =</span> alldata, <span class="at">method =</span> HarmonyIntegration,</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">orig.reduction =</span> <span class="st">"pca"</span>, <span class="at">new.reduction =</span> <span class="st">"harmony"</span>,</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">verbose =</span> <span class="cn">FALSE</span></span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>alldata <span class="ot">&lt;-</span> <span class="fu">RunUMAP</span>(alldata, <span class="at">dims =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">30</span>, <span class="at">reduction =</span> <span class="st">"harmony"</span>, <span class="at">reduction.name =</span> <span class="st">"umap_harmony"</span>)</span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a><span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"umap_harmony"</span>, <span class="at">group.by =</span> <span class="st">"orig.ident"</span>) <span class="sc">+</span> <span class="fu">NoAxes</span>() <span class="sc">+</span> <span class="fu">ggtitle</span>(<span class="st">"Harmony UMAP"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-left">
+<figure class="figure">
+<p><a href="seurat_03_integration_files/figure-html/harmony-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-5"><img src="seurat_03_integration_files/figure-html/harmony-1.png" class="img-fluid figure-img" width="1248"></a></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="meta-dimred_scanorama" class="level2" data-number="4">
+<h2 data-number="4" class="anchored" data-anchor-id="meta-dimred_scanorama"><span class="header-section-number">4</span> Scanorama</h2>
+<p>Another integration method is Scanorama (see <a href="https://www.nature.com/articles/s41587-019-0113-3">Nat. Biotech.</a>). This method is implemented in python, but we can run it through the Reticulate package.</p>
+<p>We will run it with the same set of variable genes, but first we have to create a list of all the objects per sample.</p>
+<p>Keep in mind that for most python tools that uses <code>AnnData</code> format the gene x cell matrix is transposed so that genes are rows and cells are columns.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="co"># get data matrices from all samples, with only the variable genes.</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>data.layers <span class="ot">&lt;-</span> <span class="fu">Layers</span>(alldata)[<span class="fu">grep</span>(<span class="st">"data."</span>,<span class="fu">Layers</span>(alldata))]</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(data.layers)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "data.covid_1"  "data.covid_15" "data.covid_16" "data.covid_17"
+[5] "data.ctrl_5"   "data.ctrl_13"  "data.ctrl_14"  "data.ctrl_19" </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>assaylist <span class="ot">&lt;-</span> <span class="fu">lapply</span>(data.layers, <span class="cf">function</span>(x) <span class="fu">t</span>(<span class="fu">as.matrix</span>(<span class="fu">LayerData</span>(alldata, <span class="at">layer =</span> x)[hvgs_all,])))</span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>genelist <span class="ot">=</span>  <span class="fu">rep</span>(<span class="fu">list</span>(hvgs_all),<span class="fu">length</span>(assaylist))</span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a><span class="fu">lapply</span>(assaylist,dim)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[[1]]
+[1]  875 2000
+
+[[2]]
+[1]  549 2000
+
+[[3]]
+[1]  357 2000
+
+[[4]]
+[1] 1057 2000
+
+[[5]]
+[1] 1033 2000
+
+[[6]]
+[1] 1126 2000
+
+[[7]]
+[1]  996 2000
+
+[[8]]
+[1] 1141 2000</code></pre>
+</div>
+</div>
+<p>Scanorama is implemented in python, but through reticulate we can load python packages and run python functions. In this case we also use the <code>basilisk</code> package for a more clean activation of python environment.</p>
+<p>At the top of this script, we set the variable <code>condapath</code> to point to the conda environment where scanorama is included.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="co"># run scanorama via basilisk with assaylis and genelist as input.</span></span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>integrated.data <span class="ot">=</span> <span class="fu">basiliskRun</span>(<span class="at">env=</span>condapath, <span class="at">fun=</span><span class="cf">function</span>(datas, genes) {</span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>  scanorama <span class="ot">&lt;-</span> reticulate<span class="sc">::</span><span class="fu">import</span>(<span class="st">"scanorama"</span>)</span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>  output <span class="ot">&lt;-</span> scanorama<span class="sc">$</span><span class="fu">integrate</span>(<span class="at">datasets_full =</span> datas,</span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>                                         <span class="at">genes_list =</span> genes )</span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(output)</span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a>}, <span class="at">datas =</span> assaylist, <span class="at">genes =</span> genelist, <span class="at">testload=</span><span class="st">"scanorama"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Found 2000 genes among all datasets
+[[0.         0.57741348 0.51540616 0.26206244 0.52274927 0.368
+  0.35085714 0.12      ]
+ [0.         0.         0.73041894 0.35883424 0.41335915 0.2295082
+  0.28051002 0.15846995]
+ [0.         0.         0.         0.24369748 0.47619048 0.50980392
+  0.3837535  0.28571429]
+ [0.         0.         0.         0.         0.23136496 0.08514664
+  0.15421003 0.18141981]
+ [0.         0.         0.         0.         0.         0.82768635
+  0.65343659 0.33829974]
+ [0.         0.         0.         0.         0.         0.
+  0.75843694 0.53198948]
+ [0.         0.         0.         0.         0.         0.
+  0.         0.69237511]
+ [0.         0.         0.         0.         0.         0.
+  0.         0.        ]]
+Processing datasets (4, 5)
+Processing datasets (5, 6)
+Processing datasets (1, 2)
+Processing datasets (6, 7)
+Processing datasets (4, 6)
+Processing datasets (0, 1)
+Processing datasets (5, 7)
+Processing datasets (0, 4)
+Processing datasets (0, 2)
+Processing datasets (2, 5)
+Processing datasets (2, 4)
+Processing datasets (1, 4)
+Processing datasets (2, 6)
+Processing datasets (0, 5)
+Processing datasets (1, 3)
+Processing datasets (0, 6)
+Processing datasets (4, 7)
+Processing datasets (2, 7)
+Processing datasets (1, 6)
+Processing datasets (0, 3)
+Processing datasets (2, 3)
+Processing datasets (3, 4)
+Processing datasets (1, 5)
+Processing datasets (3, 7)
+Processing datasets (1, 7)
+Processing datasets (3, 6)
+Processing datasets (0, 7)</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Now we create a new dim reduction object in the format that Seurat uses</span></span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>intdimred <span class="ot">&lt;-</span> <span class="fu">do.call</span>(rbind, integrated.data[[<span class="dv">1</span>]])</span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a><span class="fu">colnames</span>(intdimred) <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">"Scanorama_"</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">100</span>)</span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a><span class="fu">rownames</span>(intdimred) <span class="ot">&lt;-</span> <span class="fu">colnames</span>(alldata)</span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Add standard deviations in order to draw Elbow Plots in Seurat</span></span>
+<span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a>stdevs <span class="ot">&lt;-</span> <span class="fu">apply</span>(intdimred, <span class="at">MARGIN =</span> <span class="dv">2</span>, <span class="at">FUN =</span> sd)</span>
+<span id="cb22-8"><a href="#cb22-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-9"><a href="#cb22-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Create a new dim red object.</span></span>
+<span id="cb22-10"><a href="#cb22-10" aria-hidden="true" tabindex="-1"></a>alldata[[<span class="st">"scanorama"</span>]] <span class="ot">&lt;-</span> <span class="fu">CreateDimReducObject</span>(</span>
+<span id="cb22-11"><a href="#cb22-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">embeddings =</span> intdimred,</span>
+<span id="cb22-12"><a href="#cb22-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">stdev      =</span> stdevs,</span>
+<span id="cb22-13"><a href="#cb22-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">key        =</span> <span class="st">"Scanorama_"</span>,</span>
+<span id="cb22-14"><a href="#cb22-14" aria-hidden="true" tabindex="-1"></a>  <span class="at">assay      =</span> <span class="st">"RNA"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Try the same but using counts instead of data.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="co"># get count matrices from all samples, with only the variable genes.</span></span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>count.layers <span class="ot">&lt;-</span> <span class="fu">Layers</span>(alldata)[<span class="fu">grep</span>(<span class="st">"counts."</span>,<span class="fu">Layers</span>(alldata))]</span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(count.layers)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "counts.covid_1"  "counts.covid_15" "counts.covid_16" "counts.covid_17"
+[5] "counts.ctrl_5"   "counts.ctrl_13"  "counts.ctrl_14"  "counts.ctrl_19" </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>assaylist <span class="ot">&lt;-</span> <span class="fu">lapply</span>(count.layers, <span class="cf">function</span>(x) <span class="fu">t</span>(<span class="fu">as.matrix</span>(<span class="fu">LayerData</span>(alldata, <span class="at">layer =</span> x)[hvgs_all,])))</span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a><span class="co"># run scanorama via basilisk with assaylis and genelist as input.</span></span>
+<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a>integrated.data <span class="ot">=</span> <span class="fu">basiliskRun</span>(<span class="at">env=</span>condapath, <span class="at">fun=</span><span class="cf">function</span>(datas, genes) {</span>
+<span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a>  scanorama <span class="ot">&lt;-</span> reticulate<span class="sc">::</span><span class="fu">import</span>(<span class="st">"scanorama"</span>)</span>
+<span id="cb25-6"><a href="#cb25-6" aria-hidden="true" tabindex="-1"></a>  output <span class="ot">&lt;-</span> scanorama<span class="sc">$</span><span class="fu">integrate</span>(<span class="at">datasets_full =</span> datas,</span>
+<span id="cb25-7"><a href="#cb25-7" aria-hidden="true" tabindex="-1"></a>                                         <span class="at">genes_list =</span> genes )</span>
+<span id="cb25-8"><a href="#cb25-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(output)</span>
+<span id="cb25-9"><a href="#cb25-9" aria-hidden="true" tabindex="-1"></a>}, <span class="at">datas =</span> assaylist, <span class="at">genes =</span> genelist, <span class="at">testload=</span><span class="st">"scanorama"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Found 2000 genes among all datasets
+[[0.         0.45901639 0.50420168 0.26285714 0.51597289 0.54742857
+  0.44342857 0.21371429]
+ [0.         0.         0.72313297 0.55373406 0.30418944 0.19307832
+  0.21857923 0.29184926]
+ [0.         0.         0.         0.49019608 0.35014006 0.40336134
+  0.33053221 0.44817927]
+ [0.         0.         0.         0.         0.29912875 0.15988647
+  0.1371807  0.25591586]
+ [0.         0.         0.         0.         0.         0.73475315
+  0.64085189 0.40841367]
+ [0.         0.         0.         0.         0.         0.
+  0.79484902 0.66520596]
+ [0.         0.         0.         0.         0.         0.
+  0.         0.65907099]
+ [0.         0.         0.         0.         0.         0.
+  0.         0.        ]]
+Processing datasets (5, 6)
+Processing datasets (4, 5)
+Processing datasets (1, 2)
+Processing datasets (5, 7)
+Processing datasets (6, 7)
+Processing datasets (4, 6)
+Processing datasets (1, 3)
+Processing datasets (0, 5)
+Processing datasets (0, 4)
+Processing datasets (0, 2)
+Processing datasets (2, 3)
+Processing datasets (0, 1)
+Processing datasets (2, 7)
+Processing datasets (0, 6)
+Processing datasets (4, 7)
+Processing datasets (2, 5)
+Processing datasets (2, 4)
+Processing datasets (2, 6)
+Processing datasets (1, 4)
+Processing datasets (3, 4)
+Processing datasets (1, 7)
+Processing datasets (0, 3)
+Processing datasets (3, 7)
+Processing datasets (1, 6)
+Processing datasets (0, 7)
+Processing datasets (1, 5)
+Processing datasets (3, 5)
+Processing datasets (3, 6)</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Now we create a new dim reduction object in the format that Seurat uses</span></span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a><span class="co"># The scanorama output has 100 dimensions.</span></span>
+<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a>intdimred <span class="ot">&lt;-</span> <span class="fu">do.call</span>(rbind, integrated.data[[<span class="dv">1</span>]])</span>
+<span id="cb27-4"><a href="#cb27-4" aria-hidden="true" tabindex="-1"></a><span class="fu">colnames</span>(intdimred) <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">"Scanorama_"</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">100</span>)</span>
+<span id="cb27-5"><a href="#cb27-5" aria-hidden="true" tabindex="-1"></a><span class="fu">rownames</span>(intdimred) <span class="ot">&lt;-</span> <span class="fu">colnames</span>(alldata)</span>
+<span id="cb27-6"><a href="#cb27-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-7"><a href="#cb27-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Add standard deviations in order to draw Elbow Plots in Seurat</span></span>
+<span id="cb27-8"><a href="#cb27-8" aria-hidden="true" tabindex="-1"></a>stdevs <span class="ot">&lt;-</span> <span class="fu">apply</span>(intdimred, <span class="at">MARGIN =</span> <span class="dv">2</span>, <span class="at">FUN =</span> sd)</span>
+<span id="cb27-9"><a href="#cb27-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-10"><a href="#cb27-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Create a new dim red object.</span></span>
+<span id="cb27-11"><a href="#cb27-11" aria-hidden="true" tabindex="-1"></a>alldata[[<span class="st">"scanoramaC"</span>]] <span class="ot">&lt;-</span> <span class="fu">CreateDimReducObject</span>(</span>
+<span id="cb27-12"><a href="#cb27-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">embeddings =</span> intdimred,</span>
+<span id="cb27-13"><a href="#cb27-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">stdev      =</span> stdevs,</span>
+<span id="cb27-14"><a href="#cb27-14" aria-hidden="true" tabindex="-1"></a>  <span class="at">key        =</span> <span class="st">"Scanorama_"</span>,</span>
+<span id="cb27-15"><a href="#cb27-15" aria-hidden="true" tabindex="-1"></a>  <span class="at">assay      =</span> <span class="st">"RNA"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Here we use all PCs computed from Scanorama for UMAP calculation</span></span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>alldata <span class="ot">&lt;-</span> <span class="fu">RunUMAP</span>(alldata, <span class="at">dims =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">100</span>, <span class="at">reduction =</span> <span class="st">"scanorama"</span>,<span class="at">reduction.name =</span> <span class="st">"umap_scanorama"</span>)</span>
+<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a>alldata <span class="ot">&lt;-</span> <span class="fu">RunUMAP</span>(alldata, <span class="at">dims =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">100</span>, <span class="at">reduction =</span> <span class="st">"scanoramaC"</span>,<span class="at">reduction.name =</span> <span class="st">"umap_scanoramaC"</span>)</span>
+<span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb28-5"><a href="#cb28-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb28-6"><a href="#cb28-6" aria-hidden="true" tabindex="-1"></a>p1 <span class="ot">=</span> <span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"umap_scanorama"</span>, <span class="at">group.by =</span> <span class="st">"orig.ident"</span>) <span class="sc">+</span> <span class="fu">NoAxes</span>() <span class="sc">+</span> <span class="fu">ggtitle</span>(<span class="st">"Scanorama UMAP"</span>)</span>
+<span id="cb28-7"><a href="#cb28-7" aria-hidden="true" tabindex="-1"></a>p2 <span class="ot">=</span> <span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"umap_scanoramaC"</span>, <span class="at">group.by =</span> <span class="st">"orig.ident"</span>) <span class="sc">+</span> <span class="fu">NoAxes</span>() <span class="sc">+</span> <span class="fu">ggtitle</span>(<span class="st">"ScanoramaC UMAP"</span>)</span>
+<span id="cb28-8"><a href="#cb28-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb28-9"><a href="#cb28-9" aria-hidden="true" tabindex="-1"></a><span class="fu">wrap_plots</span>(p1,p2)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-left">
+<figure class="figure">
+<p><a href="seurat_03_integration_files/figure-html/plot-scanorama-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-6"><img src="seurat_03_integration_files/figure-html/plot-scanorama-1.png" class="img-fluid figure-img" width="1344"></a></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="overview-all-methods" class="level2" data-number="5">
+<h2 data-number="5" class="anchored" data-anchor-id="overview-all-methods"><span class="header-section-number">5</span> Overview all methods</h2>
+<p>Now we will plot UMAPS with all three integration methods side by side.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>p1 <span class="ot">&lt;-</span> <span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"umap"</span>, <span class="at">group.by =</span> <span class="st">"orig.ident"</span>) <span class="sc">+</span> <span class="fu">ggtitle</span>(<span class="st">"UMAP raw_data"</span>)</span>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>p2 <span class="ot">&lt;-</span> <span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"umap_cca"</span>, <span class="at">group.by =</span> <span class="st">"orig.ident"</span>) <span class="sc">+</span> <span class="fu">ggtitle</span>(<span class="st">"UMAP CCA"</span>)</span>
+<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a>p3 <span class="ot">&lt;-</span> <span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"umap_harmony"</span>, <span class="at">group.by =</span> <span class="st">"orig.ident"</span>) <span class="sc">+</span> <span class="fu">ggtitle</span>(<span class="st">"UMAP Harmony"</span>)</span>
+<span id="cb29-4"><a href="#cb29-4" aria-hidden="true" tabindex="-1"></a>p4 <span class="ot">&lt;-</span> <span class="fu">DimPlot</span>(alldata, <span class="at">reduction =</span> <span class="st">"umap_scanorama"</span>, <span class="at">group.by =</span> <span class="st">"orig.ident"</span>)<span class="sc">+</span><span class="fu">ggtitle</span>(<span class="st">"UMAP Scanorama"</span>)</span>
+<span id="cb29-5"><a href="#cb29-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb29-6"><a href="#cb29-6" aria-hidden="true" tabindex="-1"></a><span class="fu">wrap_plots</span>(p1, p2, p3, p4, <span class="at">nrow =</span> <span class="dv">2</span>) <span class="sc">+</span> <span class="fu">plot_layout</span>(<span class="at">guides =</span> <span class="st">"collect"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-left">
+<figure class="figure">
+<p><a href="seurat_03_integration_files/figure-html/plot-all-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-7"><img src="seurat_03_integration_files/figure-html/plot-all-1.png" class="img-fluid figure-img" width="864"></a></p>
+</figure>
+</div>
+</div>
+</div>
+<div class="callout callout-style-default callout-note callout-titled" title="Discuss">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Discuss
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Look at the different integration results, which one do you think looks the best? How would you motivate selecting one method over the other? How do you think you could best evaluate if the integration worked well?</p>
+</div>
+</div>
+<p>Let’s save the integrated data for further analysis.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb30"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(alldata,<span class="st">"data/covid/results/seurat_covid_qc_dr_int.rds"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="extra-task" class="level2" data-number="6">
+<h2 data-number="6" class="anchored" data-anchor-id="extra-task"><span class="header-section-number">6</span> Extra task</h2>
+<p>You have now done the Seurat integration with CCA which is quite slow. There are other options in the <code>IntegrateLayers()</code> function. Try rerunning the integration with <code>RPCAIntegration</code> and create a new UMAP. Compare the results.</p>
+</section>
+<section id="meta-session" class="level2" data-number="7">
+<h2 data-number="7" class="anchored" data-anchor-id="meta-session"><span class="header-section-number">7</span> Session info</h2>
+<details>
+<summary>
+Click here
+</summary>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb31"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>R version 4.3.3 (2024-02-29)
+Platform: x86_64-conda-linux-gnu (64-bit)
+Running under: Ubuntu 20.04.6 LTS
+
+Matrix products: default
+BLAS/LAPACK: /usr/local/conda/envs/seurat/lib/libopenblasp-r0.3.28.so;  LAPACK version 3.12.0
+
+locale:
+ [1] LC_CTYPE=en_US.UTF-8       LC_NUMERIC=C              
+ [3] LC_TIME=en_US.UTF-8        LC_COLLATE=en_US.UTF-8    
+ [5] LC_MONETARY=en_US.UTF-8    LC_MESSAGES=en_US.UTF-8   
+ [7] LC_PAPER=en_US.UTF-8       LC_NAME=C                 
+ [9] LC_ADDRESS=C               LC_TELEPHONE=C            
+[11] LC_MEASUREMENT=en_US.UTF-8 LC_IDENTIFICATION=C       
+
+time zone: Etc/UTC
+tzcode source: system (glibc)
+
+attached base packages:
+[1] stats     graphics  grDevices utils     datasets  methods   base     
+
+other attached packages:
+[1] basilisk_1.14.1    patchwork_1.3.0    ggplot2_3.5.1      Seurat_5.1.0      
+[5] SeuratObject_5.0.2 sp_2.2-0          
+
+loaded via a namespace (and not attached):
+  [1] deldir_2.0-4           pbapply_1.7-2          gridExtra_2.3         
+  [4] rlang_1.1.5            magrittr_2.0.3         RcppAnnoy_0.0.22      
+  [7] spatstat.geom_3.3-5    matrixStats_1.5.0      ggridges_0.5.6        
+ [10] compiler_4.3.3         dir.expiry_1.10.0      png_0.1-8             
+ [13] vctrs_0.6.5            reshape2_1.4.4         stringr_1.5.1         
+ [16] pkgconfig_2.0.3        fastmap_1.2.0          labeling_0.4.3        
+ [19] promises_1.3.2         rmarkdown_2.29         purrr_1.0.2           
+ [22] xfun_0.50              jsonlite_1.8.9         goftest_1.2-3         
+ [25] later_1.4.1            spatstat.utils_3.1-2   irlba_2.3.5.1         
+ [28] parallel_4.3.3         cluster_2.1.8          R6_2.6.1              
+ [31] ica_1.0-3              stringi_1.8.4          RColorBrewer_1.1-3    
+ [34] spatstat.data_3.1-4    reticulate_1.40.0      parallelly_1.42.0     
+ [37] spatstat.univar_3.1-1  lmtest_0.9-40          scattermore_1.2       
+ [40] Rcpp_1.0.14            knitr_1.49             tensor_1.5            
+ [43] future.apply_1.11.3    zoo_1.8-12             sctransform_0.4.1     
+ [46] httpuv_1.6.15          Matrix_1.6-5           splines_4.3.3         
+ [49] igraph_2.0.3           tidyselect_1.2.1       abind_1.4-5           
+ [52] yaml_2.3.10            spatstat.random_3.3-2  codetools_0.2-20      
+ [55] miniUI_0.1.1.1         spatstat.explore_3.3-4 listenv_0.9.1         
+ [58] lattice_0.22-6         tibble_3.2.1           plyr_1.8.9            
+ [61] basilisk.utils_1.14.1  withr_3.0.2            shiny_1.10.0          
+ [64] ROCR_1.0-11            evaluate_1.0.3         Rtsne_0.17            
+ [67] future_1.34.0          fastDummies_1.7.5      survival_3.8-3        
+ [70] polyclip_1.10-7        fitdistrplus_1.2-2     filelock_1.0.3        
+ [73] pillar_1.10.1          KernSmooth_2.23-26     plotly_4.10.4         
+ [76] generics_0.1.3         RcppHNSW_0.6.0         munsell_0.5.1         
+ [79] scales_1.3.0           globals_0.16.3         xtable_1.8-4          
+ [82] RhpcBLASctl_0.23-42    glue_1.8.0             pheatmap_1.0.12       
+ [85] lazyeval_0.2.2         tools_4.3.3            data.table_1.16.4     
+ [88] RSpectra_0.16-2        RANN_2.6.2             leiden_0.4.3.1        
+ [91] dotCall64_1.2          cowplot_1.1.3          grid_4.3.3            
+ [94] tidyr_1.3.1            colorspace_2.1-1       nlme_3.1-167          
+ [97] cli_3.6.4              spatstat.sparse_3.1-0  spam_2.11-1           
+[100] viridisLite_0.4.2      dplyr_1.1.4            uwot_0.2.2            
+[103] gtable_0.3.6           digest_0.6.37          progressr_0.15.1      
+[106] ggrepel_0.9.6          htmlwidgets_1.6.4      farver_2.1.2          
+[109] htmltools_0.5.8.1      lifecycle_1.0.4        httr_1.4.7            
+[112] mime_0.12              harmony_1.2.1          MASS_7.3-60.0.1       </code></pre>
+</div>
+</div>
+</details>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    text: function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  function tippyHover(el, contentFn) {
+    const config = {
+      allowHTML: true,
+      content: contentFn,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start'
+    };
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+<footer class="footer">
+  <div class="nav-footer">
+    <div class="nav-footer-left">2025 <a href="https://nbis.se">NBIS</a> | <a href="https://choosealicense.com/licenses/gpl-3.0/">GPL-3 License</a></div>   
+    <div class="nav-footer-center">
+      &nbsp;
+    </div>
+    <div class="nav-footer-right">Published with <a href="https://quarto.org/">Quarto</a> v1.3.450
+</div>
+  </div>
+</footer>
+<script>var lightboxQuarto = GLightbox({"selector":".lightbox","closeEffect":"zoom","descPosition":"bottom","loop":true,"openEffect":"zoom"});</script>
+
+
+
+<script src="../../site_libs/quarto-html/zenscroll-min.js"></script>
+</body></html>
