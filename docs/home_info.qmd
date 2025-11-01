@@ -1,0 +1,60 @@
+---
+title: "Practical Info"
+subtitle: "Venue, address, travel and contact information"
+date: ""
+author: ""
+toc: false
+number-sections: false
+sidebar: false
+code-tools: false
+format: html
+---
+
+```{r,eval=TRUE,include=FALSE}
+library(yaml)
+library(here)
+library(leaflet)
+library(readxl)
+
+# set location in _quarto.yml
+loc <- sapply(unlist(strsplit(yaml::read_yaml(here("docs/_quarto.yml"))$location,";|,")),trimws)
+dfr <- readxl::read_xlsx("info.xlsx")
+```
+
+## Location
+
+```{r,echo=FALSE,eval=TRUE,results="asis"}
+cat("\n::: {.panel-tabset}\n")
+
+for (i in seq_along(loc)) {
+    p <- loc[i]
+    cat(paste0("\n### ", tools::toTitleCase(p), "\n"))
+
+    if(p %in% dfr$location){
+      dfr1 <- dfr[dfr$location %in% p, , drop = FALSE]
+      dfr1$address <- gsub(",", "<br>", dfr1$address)
+      icons <- awesomeIcons(icon = dfr1$marker_icon, markerColor = dfr1$marker_colour, iconColor = "#FFFFFF", library = "fa")
+      if(p != "online") {
+        cat(knitr::knit_child(input = "assets/_child-info.qmd", envir = environment(), quiet = TRUE))
+        cat("\n")
+        cat("\n", dfr1$address[1], "\n")
+      }
+      cat("\n", dfr1$description[1])
+    }else{
+      cat("No additional information is provided.")
+    }
+    cat("\n")
+}
+
+cat(":::\n")
+```
+
+## Contact
+
+This workshop is run by the **National Bioinformatics Infrastructure Sweden (NBIS)**. NBIS is a platform at [SciLifeLab](https://www.scilifelab.se/) (Science For Life Laboratory) and the Swedish node of [Elixir](https://elixir-europe.org/).
+
+If you would like to get in touch with us regarding this workshop, please contact us at **edu.sc [at] nbis.se**.
+
+***
+
+![](assets/logos/nbis-scilifelab.svg){height="26px"}

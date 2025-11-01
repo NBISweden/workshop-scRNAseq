@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 ## RENDER QMD TO HTML
 ##
@@ -7,146 +7,236 @@
 ## 
 ## Usage
 ## Run this script in the root of the repo
-## bash ./scripts/render.sh option
+## bash ./scripts/render.sh [all|seurat|bioc|scanpy|spatial|site|compile]
+## Optionally: DOCKER_R=your/image:tag bash ./scripts/render.sh [option]
 
-## input argument can  be either of:
-## all - run all the steps
-## seurat - render all seurat labs
-## bioc - render all bioc labs
-## scanpy - render all scanpy labs
-## spatial - render all 3 spatial labs.
-## site - render all site stuff.
-## compile - compile labs into Rmd/ipynb
+set -euo pipefail
 
+# Docker image variables (can be overridden via env)
+DOCKER_R="${DOCKER_R:-ghcr.io/nbisweden/workshop-scrnaseq-seurat:20250320-2311}"
+DOCKER_SCANPY="${DOCKER_SCANPY:-ghcr.io/nbisweden/workshop-scrnaseq-scanpy:20250325-2256}"
+DOCKER_SEURAT_SPATIAL="${DOCKER_SEURAT_SPATIAL:-ghcr.io/nbisweden/workshop-scrnaseq:2024-seurat_spatial-r4.3.0}"
+DOCKER_BIOC_SPATIAL="${DOCKER_BIOC_SPATIAL:-ghcr.io/nbisweden/workshop-scrnaseq:2024-bioconductor_spatial-r4.3.0}"
+DOCKER_SITE="${DOCKER_SITE:-ghcr.io/nbisweden/workshop-scrnaseq:2024-site-r4.3.0}"
 
-## fail fast
-set -e
+# Entry points for conda envs
+ENTRYPOINT_R="/usr/local/conda/bin/conda"
+ENTRYPOINT_SCANPY="/opt/conda/bin/conda"
 
-## define docker images
-docker_r="ghcr.io/nbisweden/workshop-scrnaseq-seurat:20250320-2311"
-docker_scanpy="ghcr.io/nbisweden/workshop-scrnaseq-scanpy:20250325-2256"
+LAB_DIR="docs/labs"
+LECTURE_DIR="docs/lectures"
+SITE_DIR="docs"
+OTHER_DIR="docs/other"
 
-## old images for the r spatial labs.
-docker_seurat_spatial="ghcr.io/nbisweden/workshop-scrnaseq:2024-seurat_spatial-r4.3.0"
-docker_bioc_spatial="ghcr.io/nbisweden/workshop-scrnaseq:2024-bioconductor_spatial-r4.3.0"
+# Argument parsing
+TOOLKIT="${1:-}"
 
-# old site image still works
-docker_site="ghcr.io/nbisweden/workshop-scrnaseq:2024-site-r4.3.0"
-
-# check if in the root of the repo
-if [ ! -f "_quarto.yml" ]; then
-    echo "Error: Are you in the root of the repo? _quarto.yml is missing."
+usage() {
+    echo "Usage: $0 [seurat|bioc|scanpy|spatial|site|compile|all]"
+    echo "Optionally: DOCKER_<TOOLKIT>=your/image:tag $0 [option]"
     exit 1
-fi
+}
 
-# start time for whole script
-start=$(date +%s.%N)
+# Timer function
+timer_start() {
+    date +%s.%N
+}
 
-# -u 1000:1000 is useful on linux
+timer_report() {
+    local start=$1
+    local end
+    end=$(date +%s.%N)
+    duration=$(echo "$end - $start" | bc)
+    echo "Time elapsed: $duration seconds"
+}
 
-## seurat
-## OBS! now running the containers with the conda env as entrypoint, then run -n seurat = refers to the conda environment named "seurat"
-if [[ "$@" =~ 'seurat' ]] ||  [[ "$@" =~ 'all' ]]
-then
+# Render a list of files using docker/conda
+render_files_r() {
+    local files=("$@")
+    local start
+    start=$(timer_start)
+    for file in "${files[@]}"; do
+        echo "Rendering $file ..."
+        docker run --rm -it --platform=linux/amd64 -u root -v "${PWD}:/home/jovyan/work" \
+            --entrypoint "$ENTRYPOINT_R" "$DOCKER_R" run -n seurat quarto render "/home/jovyan/work/$file"
+    done
+    timer_report "$start"
+}
+
+render_files_scanpy() {
+    local files=("$@")
+    local start
+    start=$(timer_start)
+    for file in "${files[@]}"; do
+        echo "Rendering $file ..."
+        docker run --rm --platform=linux/amd64 -u 1000:1000 -v "${PWD}:/work" \
+            --entrypoint "$ENTRYPOINT_SCANPY" "$DOCKER_SCANPY" run -n scanpy quarto render "/work/$file"
+    done
+    timer_report "$start"
+}
+
+render_files_site() {
+    local files=("$@")
+    local start
+    start=$(timer_start)
+    for file in "${files[@]}"; do
+        echo "Rendering $file ..."
+        docker run --rm --platform=linux/amd64 -u 1000:1000 -v "${PWD}:/work" \
+            "$DOCKER_SITE" quarto render "/work/$file"
+    done
+    timer_report "$start"
+}
+
+render_files_spatial() {
+    echo ""
+    echo "NOTICE: Spatial labs are no longer included in the workshop!"
+    echo ""
+    # local seurat_file="$LAB_DIR/seurat/seurat_08_spatial.qmd"
+    # local bioc_file="$LAB_DIR/bioc/bioc_08_spatial.qmd"
+    # local scanpy_file="$LAB_DIR/scanpy/scanpy_08_spatial.qmd"
+    # local start
+    # start=$(timer_start)
+    # echo "Rendering $seurat_file ..."
+    # docker run --rm --platform=linux/amd64 -u 1000:1000 -v "${PWD}:/work" \
+    #     "$DOCKER_SEURAT_SPATIAL" quarto render "/work/$seurat_file"
+    # echo "Rendering $bioc_file ..."
+    # docker run --rm --platform=linux/amd64 -u 1000:1000 -v "${PWD}:/work" \
+    #     "$DOCKER_BIOC_SPATIAL" quarto render "/work/$bioc_file"
+    # echo "Rendering $scanpy_file ..."
+    # docker run --rm --platform=linux/amd64 -u 1000:1000 -v "${PWD}:/work" \
+    #     --entrypoint "$ENTRYPOINT_SCANPY" "$DOCKER_SCANPY" run -n scanpy quarto render "/work/$scanpy_file"
+    # timer_report "$start"
+}
+
+render_files_lectures() {
+    local lecture_files=("$LECTURE_DIR/gsa/index.qmd")
+    local start
+    start=$(timer_start)
+    for file in "${lecture_files[@]}"; do
+        echo "Rendering $file ..."
+        docker run --rm -it --platform=linux/amd64 -v "${PWD}:/home/jovyan/work" \
+            --entrypoint "$ENTRYPOINT_R" "$DOCKER_R" run -n seurat quarto render "/home/jovyan/work/$file"
+    done
+    timer_report "$start"
+}
+
+render_files_site_pages() {
+    local site_files=(
+        "$LAB_DIR/index.qmd"
+        "$OTHER_DIR/containers-spatial.qmd"
+        "$OTHER_DIR/containers.qmd"
+        "$OTHER_DIR/data.qmd"
+        "$OTHER_DIR/docker.qmd"
+        "$OTHER_DIR/faq.qmd"
+        "$OTHER_DIR/scilifelab-serve.qmd"
+        "$OTHER_DIR/uppmax.qmd"
+        "$SITE_DIR/404.qmd"
+        "$SITE_DIR/home_contents.qmd"
+        "$SITE_DIR/home_info.qmd"
+        "$SITE_DIR/home_precourse.qmd"
+        "$SITE_DIR/home_schedule.qmd"
+        "$SITE_DIR/home_syllabus.qmd"
+        "$SITE_DIR/index.qmd"
+    )
+    render_files_site "${site_files[@]}"
+}
+
+render_seurat() {
+    local files=(
+        "$LAB_DIR/seurat/seurat_01_qc.qmd"
+        "$LAB_DIR/seurat/seurat_02_dimred.qmd"
+        "$LAB_DIR/seurat/seurat_03_integration.qmd"
+        "$LAB_DIR/seurat/seurat_04_clustering.qmd"
+        # "$LAB_DIR/seurat/seurat_05_dge.qmd"
+        "$LAB_DIR/seurat/seurat_06_celltyping.qmd"
+        "$LAB_DIR/seurat/seurat_07_trajectory.qmd"
+    )
     echo "Rendering Seurat files..."
-    start_seurat=$(date +%s.%N)
-    docker run --rm -it -u root --platform=linux/amd64 -v ${PWD}:/home/jovyan/work --entrypoint "/usr/local/conda/bin/conda" $docker_r run -n seurat quarto render /home/jovyan/work/labs/seurat/seurat_01_qc.qmd
-    docker run --rm -it --platform=linux/amd64 -v ${PWD}:/home/jovyan/work --entrypoint "/usr/local/conda/bin/conda" $docker_r run -n seurat quarto render /home/jovyan/work/labs/seurat/seurat_02_dimred.qmd
-    docker run --rm -it --platform=linux/amd64 -v ${PWD}:/home/jovyan/work --entrypoint "/usr/local/conda/bin/conda" $docker_r run -n seurat quarto render /home/jovyan/work/labs/seurat/seurat_03_integration.qmd
-    docker run --rm -it --platform=linux/amd64 -v ${PWD}:/home/jovyan/work --entrypoint "/usr/local/conda/bin/conda" $docker_r run -n seurat quarto render /home/jovyan/work/labs/seurat/seurat_04_clustering.qmd
-    docker run --rm -it --platform=linux/amd64 -v ${PWD}:/home/jovyan/work --entrypoint "/usr/local/conda/bin/conda" $docker_r run -n seurat quarto render /home/jovyan/work/labs/seurat/seurat_05_dge.qmd
-    docker run --rm -it -u root --platform=linux/amd64 -v ${PWD}:/home/jovyan/work --entrypoint "/usr/local/conda/bin/conda" $docker_r run -n seurat quarto render /home/jovyan/work/labs/seurat/seurat_06_celltyping.qmd
-    docker run --rm -it --platform=linux/amd64 -v ${PWD}:/home/jovyan/work --entrypoint "/usr/local/conda/bin/conda" $docker_r run -n seurat quarto render /home/jovyan/work/labs/seurat/seurat_07_trajectory.qmd
-duration_seurat=$(echo "$(date +%s.%N) - $start_seurat" | bc) && echo "Seurat time elapsed: $duration_seurat seconds"
-echo "time elapsed: $duration_seurat seconds"
-fi 
+    render_files_r "${files[@]}"
+}
 
-if [[ "$@" =~ 'bioc' ]]  ||  [[ "$@" =~ 'all' ]]
-then
-	## bioconductor, same conda env as seurat.
-	echo "Rendering Bioconductor files..."
-	start_bioc=$(date +%s.%N)
-	docker run --rm -it --platform=linux/amd64 -v ${PWD}:/home/jovyan/work --entrypoint "/usr/local/conda/bin/conda" $docker_r run -n seurat quarto render /home/jovyan/work/labs/bioc/bioc_01_qc.qmd
-	docker run --rm -it --platform=linux/amd64 -v ${PWD}:/home/jovyan/work --entrypoint "/usr/local/conda/bin/conda" $docker_r run -n seurat quarto render /home/jovyan/work/labs/bioc/bioc_02_dimred.qmd
-	docker run --rm -it --platform=linux/amd64 -v ${PWD}:/home/jovyan/work --entrypoint "/usr/local/conda/bin/conda" $docker_r run -n seurat quarto render /home/jovyan/work/labs/bioc/bioc_03_integration.qmd
-	docker run --rm -it --platform=linux/amd64 -v ${PWD}:/home/jovyan/work --entrypoint "/usr/local/conda/bin/conda" $docker_r run -n seurat quarto render /home/jovyan/work/labs/bioc/bioc_04_clustering.qmd
-	docker run --rm -it --platform=linux/amd64 -v ${PWD}:/home/jovyan/work --entrypoint "/usr/local/conda/bin/conda" $docker_r run -n seurat quarto render /home/jovyan/work/labs/bioc/bioc_05_dge.qmd
-	docker run --rm -it --platform=linux/amd64 -v ${PWD}:/home/jovyan/work --entrypoint "/usr/local/conda/bin/conda" $docker_r run -n seurat quarto render /home/jovyan/work/labs/bioc/bioc_06_celltyping.qmd
-	duration_bioc=$(echo "$(date +%s.%N) - $start_bioc" | bc) && echo "Bioc time elapsed: $duration_bioc seconds"
-	echo "Bioc time elapsed: $duration_bioc seconds"
-fi
+render_bioc() {
+    local files=(
+        "$LAB_DIR/bioc/bioc_01_qc.qmd"
+        "$LAB_DIR/bioc/bioc_02_dimred.qmd"
+        "$LAB_DIR/bioc/bioc_03_integration.qmd"
+        "$LAB_DIR/bioc/bioc_04_clustering.qmd"
+        # "$LAB_DIR/bioc/bioc_05_dge.qmd"
+        "$LAB_DIR/bioc/bioc_06_celltyping.qmd"
+    )
+    echo "Rendering Bioconductor files..."
+    render_files_r "${files[@]}"
+}
 
-## scanpy
-if [[ "$@" =~ 'scanpy' ]]  ||  [[ "$@" =~ 'all' ]]
-then    
+render_scanpy() {
+    local files=(
+        "$LAB_DIR/scanpy/scanpy_01_qc.qmd"
+        "$LAB_DIR/scanpy/scanpy_02_dimred.qmd"
+        "$LAB_DIR/scanpy/scanpy_03_integration.qmd"
+        "$LAB_DIR/scanpy/scanpy_04_clustering.qmd"
+        # "$LAB_DIR/scanpy/scanpy_05_dge.qmd"
+        "$LAB_DIR/scanpy/scanpy_06_celltyping.qmd"
+        "$LAB_DIR/scanpy/scanpy_07_trajectory.qmd"
+    )
     echo "Rendering Scanpy files..."
-    start_scanpy=$(date +%s.%N)
-    docker run --rm --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work --entrypoint "/opt/conda/bin/conda" $docker_scanpy  run -n scanpy quarto render /work/labs/scanpy/scanpy_01_qc.qmd
-    docker run --rm --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work --entrypoint "/opt/conda/bin/conda" $docker_scanpy  run -n scanpy quarto render /work/labs/scanpy/scanpy_02_dimred.qmd
-    docker run --rm --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work --entrypoint "/opt/conda/bin/conda" $docker_scanpy  run -n scanpy quarto render /work/labs/scanpy/scanpy_03_integration.qmd
-    docker run --rm --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work --entrypoint "/opt/conda/bin/conda" $docker_scanpy  run -n scanpy quarto render /work/labs/scanpy/scanpy_04_clustering.qmd
-    docker run --rm --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work --entrypoint "/opt/conda/bin/conda" $docker_scanpy  run -n scanpy quarto render /work/labs/scanpy/scanpy_05_dge.qmd
-    docker run --rm --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work --entrypoint "/opt/conda/bin/conda" $docker_scanpy  run -n scanpy quarto render /work/labs/scanpy/scanpy_06_celltyping.qmd
-    docker run --rm --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work --entrypoint "/opt/conda/bin/conda" $docker_scanpy  run -n scanpy quarto render /work/labs/scanpy/scanpy_07_trajectory.qmd
-    duration_scanpy=$(echo "$(date +%s.%N) - $start_scanpy" | bc) && echo "Scanpy time elapsed: $duration_scanpy seconds"
-    echo "Scanpy time elapsed: $duration_scanpy seconds"
-fi
+    render_files_scanpy "${files[@]}"
+}
 
-
-if [[ "$@" =~ 'spatial' ]]  ||  [[ "$@" =~ 'all' ]]
-then
-    echo "Rendering Spatial files..."
-    docker run --rm --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work $docker_seurat_spatial quarto render /work/labs/seurat/seurat_08_spatial.qmd
-    duration_seurat=$(echo "$(date +%s.%N) - $start_seurat" | bc) && echo "Seurat time elapsed: $duration_seurat seconds"
-    docker run --rm --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work $docker_bioc_spatial quarto render /work/labs/bioc/bioc_08_spatial.qmd    
-    docker run --rm --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work --entrypoint "/opt/conda/bin/conda" $docker_scanpy  run -n scanpy quarto render /work/labs/scanpy/scanpy_08_spatial.qmd
-fi
-
-
-if [[ "$@" =~ 'site' ]]  ||  [[ "$@" =~ 'all' ]]
-then
-    echo "Rendering lectures.."
-
-    
-    ## lectures, only 2 that are created with qmd.
-
-    # dge requires ggpubr so this is currently being rendered interactively. ggpubr should be added to the container for next year
-    # docker run --rm -it --platform=linux/amd64 -v ${PWD}:/home/jovyan/work --entrypoint "/usr/local/conda/bin/conda" $docker_r run -n seurat quarto render /home/jovyan/work/lectures/dge/index.qmd
-    docker run --rm -it --platform=linux/amd64 -v ${PWD}:/home/jovyan/work --entrypoint "/usr/local/conda/bin/conda" $docker_r run -n seurat quarto render /home/jovyan/work/lectures/gsa/index.qmd    
-
-    ## site
-    echo "Rendering site files..."
-    docker run --rm --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work $docker_site quarto render /work/index.qmd
-    docker run --rm --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work $docker_site quarto render /work/home_contents.qmd
-    docker run --rm --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work $docker_site quarto render /work/home_info.qmd
-    docker run --rm --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work $docker_site quarto render /work/home_precourse.qmd
-    docker run --rm --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work $docker_site quarto render /work/home_schedule.qmd
-    docker run --rm --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work $docker_site quarto render /work/home_syllabus.qmd
-    docker run --rm --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work $docker_site quarto render /work/other/uppmax.qmd
-    docker run --rm --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work $docker_site quarto render /work/other/scilifelab-serve.qmd    
-    docker run --rm --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work $docker_site quarto render /work/other/docker.qmd
-    docker run --rm --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work $docker_site quarto render /work/other/containers.qmd
-    docker run --rm --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work $docker_site quarto render /work/other/containers-spatial.qmd
-    docker run --rm --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work $docker_site quarto render /work/other/faq.qmd
-    docker run --rm --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work $docker_site quarto render /work/other/data.qmd
-    #docker run --rm --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work $docker_site quarto render /work/404.md
-    docker run --rm --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work $docker_site quarto render /work/labs/index.qmd
-
-    echo "All of site rendered."
-fi
-
-
-
-
-# build compiled files
-if [[ "$@" =~ 'compile' ]]  ||  [[ "$@" =~ 'all' ]]
-then
-    bash ./scripts/compile.sh
+compile_all() {
+    if [ ! -f "./scripts/compile.sh" ]; then
+        echo "Error: Cannot find ./scripts/compile.sh for compile step."
+        exit 1
+    fi
+    echo "Compiling labs ..."
+    bash ./scripts/compile.sh "all"
     echo "All labs compiled successfully."
-fi    
+}
 
+main() {
+    local start
+    start=$(timer_start)
 
-duration=$(echo "$(date +%s.%N) - $start" | bc) && echo "Total time elapsed: $duration seconds"
+    if [ -z "${TOOLKIT}" ]; then
+        usage
+    fi
 
-echo "All files rendered successfully."
-exit 0
+    case "${TOOLKIT}" in
+        seurat)
+            render_seurat
+            ;;
+        bioc)
+            render_bioc
+            ;;
+        scanpy)
+            render_scanpy
+            ;;
+        spatial)
+            render_files_spatial
+            ;;
+        site)
+            render_files_lectures
+            render_files_site_pages
+            ;;
+        compile)
+            compile_all
+            ;;
+        all)
+            compile_all
+            render_seurat
+            render_bioc
+            render_scanpy
+            render_files_spatial
+            render_files_lectures
+            render_files_site_pages
+            ;;
+        *)
+            echo "Unknown option '${TOOLKIT}'."
+            usage
+            ;;
+    esac
+
+    timer_report "$start"
+    echo "All files rendered successfully."
+}
+
+main
