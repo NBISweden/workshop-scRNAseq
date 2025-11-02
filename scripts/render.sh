@@ -57,7 +57,7 @@ render_files_r() {
     start=$(timer_start)
     for file in "${files[@]}"; do
         echo "Rendering $file ..."
-        docker run --rm -it --platform=linux/amd64 -u root -v "${PWD}:/home/jovyan/work" \
+        docker run --rm -it --platform=linux/amd64 -u 1000:1000 -v "${PWD}:/home/jovyan/work" \
             --entrypoint "$ENTRYPOINT_R" "$DOCKER_R" run -n seurat quarto render "/home/jovyan/work/$file"
     done
     timer_report "$start"
