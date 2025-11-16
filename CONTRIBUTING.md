@@ -1,4 +1,4 @@
-## Contributing
+# Contributing
 
 To add or update contents of this repo, first clone the repo, create a new branch, make changes/updates as needed, stage the changes, commit it and push the new branch to GitHub. Then, on GitHub, send a pull request to master.
 
@@ -22,9 +22,50 @@ To make changes to the labs, the workflow is as follows:
 - Compile labs.
 - Test your changes.
 
-Once all changes are tested, you need to render the site. This step takes `.qmd` files and renders `.html` files for the site. The site is located in `docs/_site`.
+Once all changes are tested, you need to [render the site](#render-site). This step takes `.qmd` files and renders `.html` files for the site. The site is located in `docs/_site`.
 
-## Compile labs
+> **IMPORTANT:** Before rendering any files, make sure `docs/_site` is synced with the contents of `gh-pages` branch. See [site](#site) section for more details.
+
+## Site
+
+This section contains guidelines on how to make changes to site-related files (_i.e._ `compiled/` and `docs/` folders). Read first the [suggested workflow](#suggested-workflow) section.
+
+> **IMPORTANT:** If you made changes to the labs (`docs/labs`) you need to [compile the labs](#compile-labs) first.
+
+### Suggested workflow
+
+- Make sure your feature branch is clean (no uncommited changes).
+- Switch to `gh-pages` branch and run `git pull` to make sure it is up to date.
+- Switch back to the feature branch.
+- If you don't have a folder `docs/_site` you should create one.
+  ```sh
+  mkdir docs/_site
+  ```
+- If you already have a folder `docs/_site`, remove all its content (but not the folder itself).
+  ```sh
+  rm -rf docs/_site/*
+  ```
+- Update the folder `docs/_site` with the content of `gh-pages` branch.
+  ```sh
+  git archive gh-pages | tar -x -C docs/_site
+  ```
+- Verify that `docs/_site` on your feature branch is now up to date.
+- [Render](#render-site) any code files that were changed.
+- Serve the site locally and check the changes
+  ```sh
+  cd docs/_site
+  python3 -m http.server 8000
+  ```
+- To serve the site from the feature branch (make sure the content is what you intend)
+  ```sh
+  cd docs
+  quarto publish gh-pages --no-render
+  ```
+- You can follow the same procedure from `master` after you merged your feature branch.
+
+- **IMPORTANT:** This workflow works with `archive` as well, since we tar the `gh-pages` branch content, and as long as `gh-pages:archive` folder exists, it will be included in the tar, and copied to `docs/_site`. Rendering will not interfere with this folder.
+
+### Compile labs
 
 To compile all `.qmd` into `compiled/labs` as `.qmd` and `.ipynb` with evaluated meta variables, can be run directly with the compile script using:
 
@@ -32,7 +73,7 @@ To compile all `.qmd` into `compiled/labs` as `.qmd` and `.ipynb` with evaluated
 bash scripts/compile.sh [seurat|bioc|scanpy|all]
 ```
 
-## Render site
+### Render site
 
 To render all `.qmd` files (site files and labs) in the repo to `docs/_site` as `.html` output, run the command below, choosing the corresponding argument, depending on your changes.
 
@@ -57,7 +98,19 @@ docker run --rm -ti --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work --entryp
 
 Successfully rendered outputs are moved to `docs/_site` folder and chunks are cached under `docs/_freeze`. These folders are gitignored.
 
-## Publish site
+### Publish site
 
-TBA
+The site content to be published is in `docs/_site`. Verify the content locally by running
+  ```sh
+  cd docs/_site
+  python3 -m http.server 8000
+  ```
+
+> **IMPORTANT:** `quarto publish` _erases_ the content of `gh-pages` branch and it replaces with the content of `docs/_site` folder. Make sure you updated it as described in the [suggested workflow](#suggested-workflow). In particular, double-check that the `archive/` folder is synced.
+
+To serve the site from the feature branch, run
+  ```sh
+  cd docs
+  quarto publish gh-pages --no-render
+  ```
 
