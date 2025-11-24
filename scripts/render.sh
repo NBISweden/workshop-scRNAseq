@@ -57,7 +57,7 @@ render_files_r() {
     start=$(timer_start)
     for file in "${files[@]}"; do
         echo "Rendering $file ..."
-        docker run --rm -it --platform=linux/amd64 -u root -v "${PWD}:/home/jovyan/work" \
+        docker run --rm -it --platform=linux/amd64 -u 1000:1000 -v "${PWD}:/home/jovyan/work" \
             --entrypoint "$ENTRYPOINT_R" "$DOCKER_R" run -n seurat quarto render "/home/jovyan/work/$file"
     done
     timer_report "$start"
@@ -109,7 +109,11 @@ render_files_spatial() {
 }
 
 render_files_lectures() {
-    local lecture_files=("$LECTURE_DIR/gsa/index.qmd")
+    local lecture_files=(
+        # dge requires ggpubr so this is currently being rendered interactively. ggpubr should be added to the container for next year
+        # "$LECTURE_DIR/dge/index.qmd"
+        "$LECTURE_DIR/gsa/index.qmd"
+    )
     local start
     start=$(timer_start)
     for file in "${lecture_files[@]}"; do
