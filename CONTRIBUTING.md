@@ -1,9 +1,9 @@
 # Contributing
 
-To add or update contents of this repo, first clone the repo, create a new branch (name the branch according to the changes you are going to introduce), make changes/updates as needed, stage the changes, commit and push the new branch to GitHub. Then, on GitHub, open a pull request towards `master`.
+To add or update contents of this repo, first clone the repo, create a new branch (name the branch according to the changes you are going to introduce), make changes/updates as needed, stage the changes, commit and push the new branch to GitHub. Then, on GitHub, open a pull request towards `main`.
 
 ```
-git clone --depth 1 --single-branch --branch master https://github.com/nbisweden/workshop-scrnaseq.git
+git clone --depth 1 --single-branch --branch main https://github.com/nbisweden/workshop-scrnaseq.git
 git checkout -b <branch-name>
 
 # make your changes
