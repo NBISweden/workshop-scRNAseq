@@ -480,14 +480,57 @@ Then we run doubletFinder, selecting first 10 PCs and a `pK` value of 0.9. To op
 suppressMessages(library(DoubletFinder))
 # Can run parameter optimization with paramSweep
 
-# sweep.res <- paramSweep_v3(data.filt)
+# sweep.res <- paramSweep(data.filt)
 # sweep.stats <- summarizeSweep(sweep.res, GT = FALSE)
 # bcmvn <- find.pK(sweep.stats)
 # barplot(bcmvn$BCmetric, names.arg = bcmvn$pK, las=2)
 
+
+bcmvn_list = lapply(SplitObject(data.filt, "orig.ident"), function(data.filt){
+  data.filt <- FindVariableFeatures(data.filt, verbose = F)
+  data.filt <- ScaleData(data.filt, vars.to.regress = c("nFeature_RNA", "percent_mito"), verbose = F)
+  data.filt <- RunPCA(data.filt, verbose = F, npcs = 20)
+  data.filt <- RunUMAP(data.filt, dims = 1:10, verbose = F)
+  
+  sweep.res <- paramSweep(data.filt)
+  sweep.stats <- summarizeSweep(sweep.res, GT = FALSE)
+  bcmvn <- find.pK(sweep.stats)
+  bcmvn
+})
+
+df_list = lapply(SplitObject(data.filt, "orig.ident"), function(sub.data.filt){
+  sub.data.filt <- FindVariableFeatures(sub.data.filt, verbose = F)
+  sub.data.filt <- ScaleData(sub.data.filt, vars.to.regress = c("nFeature_RNA", "percent_mito"), verbose = F)
+  sub.data.filt <- RunPCA(sub.data.filt, verbose = F, npcs = 20)
+  sub.data.filt <- RunUMAP(sub.data.filt, dims = 1:10, verbose = F)
+  
+  sweep.res <- paramSweep(sub.data.filt)
+  sweep.stats <- summarizeSweep(sweep.res, GT = FALSE)
+  bcmvn <- find.pK(sweep.stats)
+  bcmvn$pK = as.numeric(as.character(bcmvn$pK))
+  
+  
+  nExp <- round(ncol(sub.data.filt) * 0.04) # expect 4% doublets
+  sub.data.filt <- doubletFinder(sub.data.filt, pN = 0.25, pK = bcmvn$pK[which.max(bcmvn$BCmetric)], nExp = nExp, PCs = 1:10)
+  
+  sub.data.filt
+})
+
+df = bind_rows(lapply(df_list, function(x){y = x@meta.data[,14, drop = FALSE];colnames(y) = "DF_sep"; y}))
+data.filt = AddMetaData(data.filt, df)
+
+barplot(bcmvn$BCmetric, names.arg = bcmvn$pK, las=2)
+
 # define the expected number of doublet cellscells.
 nExp <- round(ncol(data.filt) * 0.04) # expect 4% doublets
 data.filt <- doubletFinder(data.filt, pN = 0.25, pK = 0.09, nExp = nExp, PCs = 1:10)
+
+
+
+table(data.filt$DF_sep, data.filt$DF.classifications_0.25_0.09_297)
+DimPlot(data.filt, group.by = c("DF_sep", "DF.classifications_0.25_0.09_297"))
+DimPlot(data.filt, group.by = c("DF_sep", "DF.classifications_0.25_0.09_297"), split.by = "orig.ident")
+
 ```
 
 ```{r}
