@@ -16,7 +16,7 @@ title:  Quality Control
 
 ## Get data
 
-In this tutorial, we will run all tutorials with a set of 8 PBMC 10x
+In this tutorial, we will run all steps with a set of 8 PBMC 10x
 datasets from 4 covid-19 patients and 4 healthy controls, the samples
 have been subsampled to 1500 cells per sample. We can start by defining
 our paths.
@@ -46,6 +46,13 @@ file_list <- c(
     "ncov_pbmc_15.h5", "ncov_pbmc_16.h5", "ncov_pbmc_17.h5", "ncov_pbmc_1.h5"
 )
 
+sample_names <- c(
+  ncov_pbmc_1.h5 = "covid_1", ncov_pbmc_15.h5 = "covid_15",
+  ncov_pbmc_17.h5 = "covid_17", ncov_pbmc_16.h5 = "covid_16",
+  normal_pbmc_5.h5 = "ctrl_5", normal_pbmc_13.h5 = "ctrl_13",
+  normal_pbmc_14.h5 = "ctrl_14", normal_pbmc_19.h5 = "ctrl_19")
+
+
 for (i in file_list) {
     path_file <- file.path(path_covid, i)
     if (!file.exists(path_file)) {
@@ -67,6 +74,7 @@ suppressPackageStartupMessages({
     library(Matrix)
     library(ggplot2)
     library(patchwork)
+    library(dplyr)
     if (! "DoubletFinder" %in% installed.packages()){
        remotes::install_github(
         "https://github.com/chris-mcginnis-ucsf/DoubletFinder@3b420df68b8e2a0cc6ebd4c5c1c7ea170464c97f",
@@ -80,42 +88,30 @@ suppressPackageStartupMessages({
 We can first load the data individually by reading directly from HDF5
 file format (.h5).
 
+We will loop through all file names using `lapply` to create a list of
+Seurat objects. We use two functions: Read10X_h5, which reads the
+.h5-file as a count matrix, and CreateSeuratObject, which creates a
+Seurat class object using the count matrix. In the latter function, we
+define each sample in the `project` slot, so in each object, the sample
+id can be found in the metadata slot `orig.ident`.
+
 ``` {r}
 #| label: read
 
-cov.15 <- Seurat::Read10X_h5(
-    filename = file.path(path_covid, "ncov_pbmc_15.h5"),
-    use.names = T
-)
-cov.1 <- Seurat::Read10X_h5(
-    filename = file.path(path_covid, "ncov_pbmc_1.h5"),
-    use.names = T
-)
-cov.16 <- Seurat::Read10X_h5(
-    filename = file.path(path_covid, "ncov_pbmc_16.h5"),
-    use.names = T
-)
-cov.17 <- Seurat::Read10X_h5(
-    filename = file.path(path_covid, "ncov_pbmc_17.h5"),
-    use.names = T
-)
+all_objects = lapply(file_list, function(file_name){
+  seurat_object = 
+    # Load count matrix
+    Seurat::Read10X_h5(
+      filename = file.path(path_covid, file_name),
+      use.names = T
+    ) %>%
+      # Create Seurat object, including sample name as the project
+      Seurat::CreateSeuratObject(project = sample_names[file_name])
+  
+  
+  return(seurat_object)
+})
 
-ctrl.5 <- Seurat::Read10X_h5(
-    filename = file.path(path_covid, "normal_pbmc_5.h5"),
-    use.names = T
-)
-ctrl.13 <- Seurat::Read10X_h5(
-    filename = file.path(path_covid, "normal_pbmc_13.h5"),
-    use.names = T
-)
-ctrl.14 <- Seurat::Read10X_h5(
-    filename = file.path(path_covid, "normal_pbmc_14.h5"),
-    use.names = T
-)
-ctrl.19 <- Seurat::Read10X_h5(
-    filename = file.path(path_covid, "normal_pbmc_19.h5"),
-    use.names = T
-)
 ```
 
 ## Collate
@@ -134,29 +130,21 @@ each object, the sample id can be found in the metadata slot
 ``` {r}
 #| label: create-seurat
 
-sdata.cov1 <- CreateSeuratObject(cov.1, project = "covid_1")
-sdata.cov15 <- CreateSeuratObject(cov.15, project = "covid_15")
-sdata.cov17 <- CreateSeuratObject(cov.17, project = "covid_17")
-sdata.cov16 <- CreateSeuratObject(cov.16, project = "covid_16")
-sdata.ctrl5 <- CreateSeuratObject(ctrl.5, project = "ctrl_5")
-sdata.ctrl13 <- CreateSeuratObject(ctrl.13, project = "ctrl_13")
-sdata.ctrl14 <- CreateSeuratObject(ctrl.14, project = "ctrl_14")
-sdata.ctrl19 <- CreateSeuratObject(ctrl.19, project = "ctrl_19")
-
-
-# add metadata
-sdata.cov1$type <- "Covid"
-sdata.cov15$type <- "Covid"
-sdata.cov16$type <- "Covid"
-sdata.cov17$type <- "Covid"
-
-sdata.ctrl5$type <- "Ctrl"
-sdata.ctrl13$type <- "Ctrl"
-sdata.ctrl14$type <- "Ctrl"
-sdata.ctrl19$type <- "Ctrl"
 
 # Merge datasets into one single seurat object
-alldata <- merge(sdata.cov1, c(sdata.cov15, sdata.cov16, sdata.cov17, sdata.ctrl5, sdata.ctrl13, sdata.ctrl14, sdata.ctrl19), add.cell.ids = c("covid_1", "covid_15", "covid_16", "covid_17", "ctrl_5", "ctrl_13", "ctrl_14", "ctrl_19"))
+alldata <- merge(all_objects[[1]], all_objects[-1], 
+                 add.cell.ids = TRUE)
+
+
+# Define sample type per sample
+sample_types <- c(
+  covid_1 = "Covid", covid_15 = "Covid",
+  covid_17 = "Covid", covid_16 = "Covid",
+  ctrl_5 = "Ctrl", ctrl_13 = "Ctrl",
+  ctrl_14 = "Ctrl", ctrl_19 = "Ctrl")
+
+# Add sample type as metadata
+alldata$type = as.character(sample_types[alldata$orig.ident])
 ```
 
 In Seurat v5, merging creates a single object, but keeps the expression
@@ -170,20 +158,20 @@ alldata <- JoinLayers(alldata)
 alldata
 ```
 
-Once you have created the merged Seurat object, the count matrices and
-individual count matrices and objects are not needed anymore. It is a
-good idea to remove them and run garbage collect to free up some memory.
+Once you have created the merged object, the individual sample objects
+are not needed anymore. It is a good idea to remove them and run garbage
+collect to free up some memory.
 
 ``` {r}
 #| label: gc
 
 # remove all objects that will not be used.
-rm(cov.1, cov.15, cov.16, cov.17, ctrl.5, ctrl.13, ctrl.14, ctrl.19, sdata.cov1, sdata.cov15, sdata.cov16, sdata.cov17, sdata.ctrl5, sdata.ctrl13, sdata.ctrl14, sdata.ctrl19)
+rm(all_objects)
 # run garbage collect to free up memory
 gc()
 ```
 
-Here is how the count matrix and the metadata look like for every cell.
+Here is what the count matrix and the metadata look like for every cell.
 
 ``` {r}
 #| label: show-object
@@ -700,10 +688,10 @@ table(data.filt$orig.ident)
 
 > **Discuss**
 >
-> "In this case we ran doublet detection with all samples together since
+> In this case we ran doublet detection with all samples together since
 > we have very small subsampled datasets. But in a real scenario it
 > should be run one sample at a time. Why is this important do you
-> think?"
+> think?
 
 </div>
 
