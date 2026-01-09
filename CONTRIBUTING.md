@@ -90,13 +90,13 @@ If you made changes to only selected labs, you can render them individually as s
 
 ```
 # r/seurat
-docker run --rm -ti --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/home/jovyan/work --entrypoint /usr/local/conda/bin/conda ghcr.io/nbisweden/workshop-scrnaseq-seurat:20250320-2311 run -n seurat quarto render /home/jovyan/work/docs/labs/seurat/seurat_<lab_name>.qmd
+docker run --rm -ti --platform=linux/amd64 -u root -v ${PWD}:/home/jovyan/work --entrypoint /usr/local/conda/bin/conda ghcr.io/nbisweden/workshop-scrnaseq-seurat:20250320-2311 run -n seurat quarto render /home/jovyan/work/docs/labs/seurat/seurat_<lab_name>.qmd
 
 # r/bioc
-docker run --rm -ti --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/home/jovyan/work --entrypoint /usr/local/conda/bin/conda ghcr.io/nbisweden/workshop-scrnaseq-seurat:20250320-2311 run -n seurat quarto render /home/jovyan/work/docs/labs/bioc/bioc_<lab_name>.qmd
+docker run --rm -ti --platform=linux/amd64 -u root -v ${PWD}:/home/jovyan/work --entrypoint /usr/local/conda/bin/conda ghcr.io/nbisweden/workshop-scrnaseq-seurat:20250320-2311 run -n seurat quarto render /home/jovyan/work/docs/labs/bioc/bioc_<lab_name>.qmd
 
 # python/scanpy
-docker run --rm -ti --platform=linux/amd64 -u 1000:1000 -v ${PWD}:/work --entrypoint /opt/conda/bin/conda ghcr.io/nbisweden/workshop-scrnaseq-scanpy:20250325-2256 run -u scanpy quarto render /work/labs/scanpy/scanpy_<lab_name>.qmd
+docker run --rm -ti --platform=linux/amd64 -u jovyan -v ${PWD}:/work --entrypoint /opt/conda/bin/conda ghcr.io/nbisweden/workshop-scrnaseq-scanpy:20250325-2256 run -u scanpy quarto render /work/labs/scanpy/scanpy_<lab_name>.qmd
 ```
 
 Successfully rendered outputs are moved to the `docs/_site` folder and chunks are cached under `docs/_freeze`. These folders are gitignored.
