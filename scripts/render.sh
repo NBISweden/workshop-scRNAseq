@@ -57,7 +57,7 @@ render_files_r() {
     start=$(timer_start)
     for file in "${files[@]}"; do
         echo "Rendering $file ..."
-        docker run --rm -it --platform=linux/amd64 -u 1000:1000 -v "${PWD}:/home/jovyan/work" \
+        docker run --rm -it --platform=linux/amd64 -u root -v "${PWD}:/home/jovyan/work" \
             --entrypoint "$ENTRYPOINT_R" "$DOCKER_R" run -n seurat quarto render "/home/jovyan/work/$file"
     done
     timer_report "$start"
@@ -69,7 +69,7 @@ render_files_scanpy() {
     start=$(timer_start)
     for file in "${files[@]}"; do
         echo "Rendering $file ..."
-        docker run --rm --platform=linux/amd64 -u 1000:1000 -v "${PWD}:/work" \
+        docker run --rm --platform=linux/amd64 -u jovyan -v "${PWD}:/work" \
             --entrypoint "$ENTRYPOINT_SCANPY" "$DOCKER_SCANPY" run -n scanpy quarto render "/work/$file"
     done
     timer_report "$start"
@@ -81,7 +81,7 @@ render_files_site() {
     start=$(timer_start)
     for file in "${files[@]}"; do
         echo "Rendering $file ..."
-        docker run --rm --platform=linux/amd64 -u 1000:1000 -v "${PWD}:/work" \
+        docker run --rm --platform=linux/amd64 -u docker -v "${PWD}:/work" \
             "$DOCKER_SITE" quarto render "/work/$file"
     done
     timer_report "$start"
@@ -97,13 +97,13 @@ render_files_spatial() {
     # local start
     # start=$(timer_start)
     # echo "Rendering $seurat_file ..."
-    # docker run --rm --platform=linux/amd64 -u 1000:1000 -v "${PWD}:/work" \
+    # docker run --rm --platform=linux/amd64 -u jovyan -v "${PWD}:/work" \
     #     "$DOCKER_SEURAT_SPATIAL" quarto render "/work/$seurat_file"
     # echo "Rendering $bioc_file ..."
-    # docker run --rm --platform=linux/amd64 -u 1000:1000 -v "${PWD}:/work" \
+    # docker run --rm --platform=linux/amd64 -u jovyan -v "${PWD}:/work" \
     #     "$DOCKER_BIOC_SPATIAL" quarto render "/work/$bioc_file"
     # echo "Rendering $scanpy_file ..."
-    # docker run --rm --platform=linux/amd64 -u 1000:1000 -v "${PWD}:/work" \
+    # docker run --rm --platform=linux/amd64 -u jovyan -v "${PWD}:/work" \
     #     --entrypoint "$ENTRYPOINT_SCANPY" "$DOCKER_SCANPY" run -n scanpy quarto render "/work/$scanpy_file"
     # timer_report "$start"
 }
@@ -118,7 +118,7 @@ render_files_lectures() {
     start=$(timer_start)
     for file in "${lecture_files[@]}"; do
         echo "Rendering $file ..."
-        docker run --rm -it --platform=linux/amd64 -v "${PWD}:/home/jovyan/work" \
+        docker run --rm -it --platform=linux/amd64 -u jovyan -v "${PWD}:/home/jovyan/work" \
             --entrypoint "$ENTRYPOINT_R" "$DOCKER_R" run -n seurat quarto render "/home/jovyan/work/$file"
     done
     timer_report "$start"
