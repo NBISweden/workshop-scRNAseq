@@ -47,7 +47,7 @@ check_output_dir() {
 # create compiled versions of qmd using profile "compiled"
 quarto_compile() {
     echo "Compiling $1 labs ..."
-    docker run --rm --platform=linux/amd64 -u 1000:1000 -v "${PWD}:/work" "$DOCKER_SITE" quarto render --profile compile "/work/$LAB_DIR/$1"/*.qmd --to markdown-header_attributes --metadata engine:markdown --log-level warning,error
+    docker run --rm --platform=linux/amd64 -u docker -v "${PWD}:/work" "$DOCKER_SITE" quarto render --profile compile "/work/$LAB_DIR/$1"/*.qmd --to markdown-header_attributes --metadata engine:markdown --log-level warning,error
 }
 
 # Read an md/qmd, remove unnecessary lines from yaml frontmatter
@@ -92,7 +92,7 @@ qmd_to_ipynb() {
     echo "Converting $1 .qmd files to .ipynb"
     shopt -s nullglob
     for file in "${OUTPUT_DIR}/labs/$1"/*.qmd; do
-        docker run --rm --platform=linux/amd64 -u 1000:1000 -v "${PWD}:/work" "$DOCKER_SITE" quarto convert "/work/${file}"
+        docker run --rm --platform=linux/amd64 -u docker -v "${PWD}:/work" "$DOCKER_SITE" quarto convert "/work/${file}"
         rm -f "$file"
     done
     shopt -u nullglob
