@@ -479,8 +479,9 @@ Then we run doubletFinder, selecting first 10 PCs and a `pK` value of 0.9. To op
 ```{r}
 #| label: doubletfinder
 
-# Can run parameter optimization with paramSweep
+## Can run parameter optimization with paramSweep
 
+## One sample:
 # sweep.res <- paramSweep(data.filt)
 # sweep.stats <- summarizeSweep(sweep.res, GT = FALSE)
 # bcmvn <- find.pK(sweep.stats)
@@ -488,7 +489,7 @@ Then we run doubletFinder, selecting first 10 PCs and a `pK` value of 0.9. To op
 
 
 
-
+## Multiple samples:
 # bcmvn_list = lapply(SplitObject(data.filt, "orig.ident"), function(data.filt){
 #   data.filt <- FindVariableFeatures(data.filt, verbose = F)
 #   data.filt <- ScaleData(data.filt, vars.to.regress = c("nFeature_RNA", "percent_mito"), verbose = F)
@@ -528,7 +529,8 @@ df_list = lapply(SplitObject(data.filt, "orig.ident"), function(sub.data.filt){
 
   # define the expected number of doublet cells.
   nExp <- round(ncol(sub.data.filt) * 0.04) # expect 4% doublets
-  sub.data.filt <- doubletFinder(sub.data.filt, pN = 0.25, pK = 0.09, #pK = pK[sub.data.filt$orig.ident[1]],
+  sub.data.filt <- doubletFinder(sub.data.filt, pN = 0.25, #pK = 0.09,
+                                 pK = pK[sub.data.filt$orig.ident[1]],
                                  nExp = nExp, PCs = 1:10)
   
   sub.data.filt@meta.data
@@ -537,8 +539,8 @@ df_list = lapply(SplitObject(data.filt, "orig.ident"), function(sub.data.filt){
 
 
 df = bind_rows(lapply(df_list, function(x){
-  # name of the DF prediction can change, so extract the correct column name.
-  y = x[, c(grep("^DF\\.class", colnames(x)),grep("^pANN", colnames(x))), drop = FALSE]
+  # name of the DF prediction can change, so extract the correct column names.
+  y = x[, c(grep("^DF\\.class", colnames(x)),grep("^pANN_", colnames(x))), drop = FALSE]
   colnames(y) = c("DF","pANN")
   y}))
 data.filt = AddMetaData(data.filt, df)
