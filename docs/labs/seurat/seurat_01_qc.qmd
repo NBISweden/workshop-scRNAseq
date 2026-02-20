@@ -470,6 +470,8 @@ data.filt <- FindVariableFeatures(data.filt, verbose = F)
 data.filt <- ScaleData(data.filt, vars.to.regress = c("nFeature_RNA", "percent_mito"), verbose = F)
 data.filt <- RunPCA(data.filt, verbose = F, npcs = 20)
 data.filt <- RunUMAP(data.filt, dims = 1:10, verbose = F)
+
+
 ```
 
 Then we run doubletFinder, selecting first 10 PCs and a `pK` value of 0.9. To optimize the parameters, you can run the `paramSweep` function in the package.
@@ -477,7 +479,6 @@ Then we run doubletFinder, selecting first 10 PCs and a `pK` value of 0.9. To op
 ```{r}
 #| label: doubletfinder
 
-suppressMessages(library(DoubletFinder))
 # Can run parameter optimization with paramSweep
 
 # sweep.res <- paramSweep(data.filt)
@@ -486,50 +487,65 @@ suppressMessages(library(DoubletFinder))
 # barplot(bcmvn$BCmetric, names.arg = bcmvn$pK, las=2)
 
 
-bcmvn_list = lapply(SplitObject(data.filt, "orig.ident"), function(data.filt){
-  data.filt <- FindVariableFeatures(data.filt, verbose = F)
-  data.filt <- ScaleData(data.filt, vars.to.regress = c("nFeature_RNA", "percent_mito"), verbose = F)
-  data.filt <- RunPCA(data.filt, verbose = F, npcs = 20)
-  data.filt <- RunUMAP(data.filt, dims = 1:10, verbose = F)
-  
-  sweep.res <- paramSweep(data.filt)
-  sweep.stats <- summarizeSweep(sweep.res, GT = FALSE)
-  bcmvn <- find.pK(sweep.stats)
-  bcmvn
-})
+
+
+# bcmvn_list = lapply(SplitObject(data.filt, "orig.ident"), function(data.filt){
+#   data.filt <- FindVariableFeatures(data.filt, verbose = F)
+#   data.filt <- ScaleData(data.filt, vars.to.regress = c("nFeature_RNA", "percent_mito"), verbose = F)
+#   data.filt <- RunPCA(data.filt, verbose = F, npcs = 20)
+#   
+#   sweep.res <- paramSweep(data.filt)
+#   sweep.stats <- summarizeSweep(sweep.res, GT = FALSE)
+#   bcmvn <- find.pK(sweep.stats)
+#   bcmvn
+# })
+# 
+# pK = sapply(bcmvn_list, 
+#             function(x){
+#               as.numeric(as.character(x$pK[which.max(x$BCmetric)]))
+#             })
+# 
+
+
+pK = c(ctrl_13 = 0.04,
+  ctrl_14 = 0.03,
+  ctrl_19 = 0.17,
+  ctrl_5 = 0.01,
+  covid_15 = 0.16,
+  covid_16 = 0.15,
+  covid_17 = 0.03,
+  covid_1 = 0.04)
+
+
 
 df_list = lapply(SplitObject(data.filt, "orig.ident"), function(sub.data.filt){
+  
+  
   sub.data.filt <- FindVariableFeatures(sub.data.filt, verbose = F)
   sub.data.filt <- ScaleData(sub.data.filt, vars.to.regress = c("nFeature_RNA", "percent_mito"), verbose = F)
   sub.data.filt <- RunPCA(sub.data.filt, verbose = F, npcs = 20)
-  sub.data.filt <- RunUMAP(sub.data.filt, dims = 1:10, verbose = F)
   
-  sweep.res <- paramSweep(sub.data.filt)
-  sweep.stats <- summarizeSweep(sweep.res, GT = FALSE)
-  bcmvn <- find.pK(sweep.stats)
-  bcmvn$pK = as.numeric(as.character(bcmvn$pK))
-  
-  
+
+  # define the expected number of doublet cells.
   nExp <- round(ncol(sub.data.filt) * 0.04) # expect 4% doublets
-  sub.data.filt <- doubletFinder(sub.data.filt, pN = 0.25, pK = bcmvn$pK[which.max(bcmvn$BCmetric)], nExp = nExp, PCs = 1:10)
+  sub.data.filt <- doubletFinder(sub.data.filt, pN = 0.25, pK = 0.09, #pK = pK[sub.data.filt$orig.ident[1]],
+                                 nExp = nExp, PCs = 1:10)
   
-  sub.data.filt
+  sub.data.filt@meta.data
 })
 
-df = bind_rows(lapply(df_list, function(x){y = x@meta.data[,14, drop = FALSE];colnames(y) = "DF_sep"; y}))
+
+
+df = bind_rows(lapply(df_list, function(x){
+  # name of the DF prediction can change, so extract the correct column name.
+  y = x[, c(grep("^DF\\.class", colnames(x)),grep("^pANN", colnames(x))), drop = FALSE]
+  colnames(y) = c("DF","pANN")
+  y}))
 data.filt = AddMetaData(data.filt, df)
 
-barplot(bcmvn$BCmetric, names.arg = bcmvn$pK, las=2)
-
-# define the expected number of doublet cellscells.
-nExp <- round(ncol(data.filt) * 0.04) # expect 4% doublets
-data.filt <- doubletFinder(data.filt, pN = 0.25, pK = 0.09, nExp = nExp, PCs = 1:10)
 
 
 
-table(data.filt$DF_sep, data.filt$DF.classifications_0.25_0.09_297)
-DimPlot(data.filt, group.by = c("DF_sep", "DF.classifications_0.25_0.09_297"))
-DimPlot(data.filt, group.by = c("DF_sep", "DF.classifications_0.25_0.09_297"), split.by = "orig.ident")
 
 ```
 
@@ -538,22 +554,35 @@ DimPlot(data.filt, group.by = c("DF_sep", "DF.classifications_0.25_0.09_297"), s
 #| fig-height: 4
 #| fig-width: 10
 
-# name of the DF prediction can change, so extract the correct column name.
-DF.name <- colnames(data.filt@meta.data)[grepl("DF.classification", colnames(data.filt@meta.data))]
-
 wrap_plots(
     DimPlot(data.filt, group.by = "orig.ident") + NoAxes(),
-    DimPlot(data.filt, group.by = DF.name) + NoAxes(),
+    DimPlot(data.filt, group.by = "DF") + NoAxes(),
     ncol = 2
 )
 ```
+ 
+ 
+```{r}
+#| label: doublet-plot-split
+#| fig-height: 4
+#| fig-width: 10
+
+DimPlot(data.filt, group.by = "DF", split.by = "orig.ident", ncol = 4) & NoAxes()
+```
+
 
 {{< meta qc_doublet_3 >}}
 
 ```{r}
 #| label: doublet-vln
 
-VlnPlot(data.filt, features = "nFeature_RNA", group.by = DF.name, pt.size = .1)
+VlnPlot(data.filt, features = "nFeature_RNA", group.by = "DF", pt.size = .1)
+```
+
+```{r}
+#| label: doublet-vln-split
+
+VlnPlot(data.filt, features = "nFeature_RNA", group.by = "orig.ident", split.by = "DF", pt.size = .1)
 ```
 
 {{< meta qc_doublet_4 >}}
@@ -561,7 +590,7 @@ VlnPlot(data.filt, features = "nFeature_RNA", group.by = DF.name, pt.size = .1)
 ```{r}
 #| label: doublet-filt
 
-data.filt <- data.filt[, data.filt@meta.data[, DF.name] == "Singlet"]
+data.filt <- data.filt[, data.filt@meta.data[, "DF"] == "Singlet"]
 dim(data.filt)
 ```
 
