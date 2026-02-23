@@ -108,7 +108,7 @@ all_objects = lapply(file_list, function(file_name){
 
 {{< meta qc_collate_1 >}}
 
-But first, we need to create Seurat objects using each of the expression matrices we loaded. We define each sample in the `project` slot, so in each object, the sample id can be found in the metadata slot `orig.ident`.
+
 
 ```{r}
 #| label: create-seurat
@@ -130,6 +130,7 @@ sample_types <- c(
 alldata$type = as.character(sample_types[alldata$orig.ident])
 
 ```
+
 In Seurat v5, merging creates a single object, but keeps the expression information split into different layers for integration. If not proceeding with integration, rejoin the layers after merging.
 
 ``` {r}
@@ -188,9 +189,11 @@ Alternatively, percentage expression can be calculated manually. Here is an exam
 ```{r}
 #| eval: false
 # Do not run now!
-total_counts_per_cell <- colSums(alldata@assays$RNA@counts)
+counts = GetAssayData(alldata, assay = "RNA", layer = "counts")
+total_counts_per_cell <- colSums(counts)
 mito_genes <- rownames(alldata)[grep("^MT-", rownames(alldata))]
-alldata$percent_mito2 <- colSums(alldata@assays$RNA@counts[mito_genes, ]) / total_counts_per_cell
+alldata$percent_mito2 <- colSums(counts[mito_genes, ]) / total_counts_per_cell
+rm(counts)
 ```
 
 :::
@@ -237,7 +240,7 @@ FeatureScatter(alldata, "nCount_RNA", "nFeature_RNA", group.by = "orig.ident", p
 
 ### {{< meta qc_filter_detect >}}
 
-{{< meta qc_filter_detect_1 >}}
+{{< meta qc_filter_detect_1_R >}}
 
 ```{r}
 #| label: filt1
@@ -305,6 +308,9 @@ table(data.filt$orig.ident)
 feats <- c("nFeature_RNA", "nCount_RNA", "percent_mito", "percent_ribo", "percent_hb")
 VlnPlot(data.filt, group.by = "orig.ident", features = feats, pt.size = 0.1, ncol = 3) + NoLegend()
 ```
+
+{{< meta qc_filter_mr_3 >}}
+
 
 ### {{< meta qc_filter_genes >}}
 
@@ -398,7 +404,7 @@ data.filt <- PercentageFeatureSet(data.filt, features = chrY.gene, col.name = "p
 
 ```{r}
 #| label: sex-scatter
-FeatureScatter(data.filt, feature1 = "XIST", feature2 = "pct_chrY", slot = "counts")
+FeatureScatter(data.filt, feature1 = "XIST", feature2 = "pct_chrY", slot = "counts", shuffle = TRUE)
 ```
 
 {{< meta qc_sex_5 >}}
@@ -458,26 +464,19 @@ FeatureScatter(data.filt, "S.Score", "G2M.Score", group.by = "Phase")
 
 {{< meta qc_doublet_1 >}}
 
-:::{.callout-caution}
-{{< meta qc_doublet_2 >}}
-:::
+Here, we will use `DoubletFinder` to predict doublet cells. As the samples were prepared separately, the dataset cannot contain doublets across samples. We will therefore run the `DoubletFinder` method on each sample separately.
 
-Here, we will use `DoubletFinder` to predict doublet cells. But before doing doublet detection we need to run scaling, variable gene selection and PCA, as well as UMAP for visualization. These steps will be explored in more detail in coming exercises.
+In order to perform the prediction, the data must first be pre-processed through variable gene selection, scaling and PCA. We will explore these methods further in the next exercise (Dimensionality reduction). 
+
+For more information on how DoubletFinder works, see the [repository](https://github.com/chris-mcginnis-ucsf/DoubletFinder). In short, artificial doublets are produced, and real cells are scored according to how similar they are to the most similar doublets. The top X% cells are predicted to be doublets, where X is the expected percentage of doublets as provided by the user.
+
+In addition to providing the expected number of doublets (`nExp`), the user must also provide the parameter `pK`, which determines the size of the neighborhoods considered when evaluating the similarities between sample data and artificical doublets. It is recommended to use the function `paramSweep()` to find the optimal `pK` for each sample. As this function takes quite some time, we have provided the result directly in the code.
+
+Finally, we can run doubletFinder. In this case, we are using the first 10 PCs per sample.
+
 
 ```{r}
-#| label: doublet-norm
-data.filt <- FindVariableFeatures(data.filt, verbose = F)
-data.filt <- ScaleData(data.filt, vars.to.regress = c("nFeature_RNA", "percent_mito"), verbose = F)
-data.filt <- RunPCA(data.filt, verbose = F, npcs = 20)
-data.filt <- RunUMAP(data.filt, dims = 1:10, verbose = F)
-
-
-```
-
-Then we run doubletFinder, selecting first 10 PCs and a `pK` value of 0.9. To optimize the parameters, you can run the `paramSweep` function in the package.
-
-```{r}
-#| label: doubletfinder
+#| label: doubletfinder_params
 
 ## Can run parameter optimization with paramSweep
 
@@ -486,8 +485,6 @@ Then we run doubletFinder, selecting first 10 PCs and a `pK` value of 0.9. To op
 # sweep.stats <- summarizeSweep(sweep.res, GT = FALSE)
 # bcmvn <- find.pK(sweep.stats)
 # barplot(bcmvn$BCmetric, names.arg = bcmvn$pK, las=2)
-
-
 
 ## Multiple samples:
 # bcmvn_list = lapply(SplitObject(data.filt, "orig.ident"), function(data.filt){
@@ -505,9 +502,13 @@ Then we run doubletFinder, selecting first 10 PCs and a `pK` value of 0.9. To op
 #             function(x){
 #               as.numeric(as.character(x$pK[which.max(x$BCmetric)]))
 #             })
-# 
 
+```
 
+```{r}
+#| label: doubletfinder
+
+# Pre-calculated optimal pK
 pK = c(ctrl_13 = 0.04,
   ctrl_14 = 0.03,
   ctrl_19 = 0.17,
@@ -517,11 +518,10 @@ pK = c(ctrl_13 = 0.04,
   covid_17 = 0.03,
   covid_1 = 0.04)
 
-
-
+# For each sample (using SplitObject), run pre-processing steps and doubletFinder(). doubletFinder() will produce a Seurat object containing the doublet information in the metadata - save this metadata to the list "df_list".
 df_list = lapply(SplitObject(data.filt, "orig.ident"), function(sub.data.filt){
   
-  
+  # Pre-process data
   sub.data.filt <- FindVariableFeatures(sub.data.filt, verbose = F)
   sub.data.filt <- ScaleData(sub.data.filt, vars.to.regress = c("nFeature_RNA", "percent_mito"), verbose = F)
   sub.data.filt <- RunPCA(sub.data.filt, verbose = F, npcs = 20)
@@ -529,27 +529,43 @@ df_list = lapply(SplitObject(data.filt, "orig.ident"), function(sub.data.filt){
 
   # define the expected number of doublet cells.
   nExp <- round(ncol(sub.data.filt) * 0.04) # expect 4% doublets
-  sub.data.filt <- doubletFinder(sub.data.filt, pN = 0.25, #pK = 0.09,
+  
+  # Run doubletFinder
+  sub.data.filt <- doubletFinder(sub.data.filt, pN = 0.25, 
                                  pK = pK[sub.data.filt$orig.ident[1]],
                                  nExp = nExp, PCs = 1:10)
-  
+  # Return metadata
   sub.data.filt@meta.data
 })
 
 
-
+# Combine the results from the different samples into one matrix
 df = bind_rows(lapply(df_list, function(x){
   # name of the DF prediction can change, so extract the correct column names.
   y = x[, c(grep("^DF\\.class", colnames(x)),grep("^pANN_", colnames(x))), drop = FALSE]
   colnames(y) = c("DF","pANN")
   y}))
+
+# Add the doubletFinder metadata to the full Seurat object
 data.filt = AddMetaData(data.filt, df)
 
 
+```
 
+
+In order to visualize the predictions, we will run the same steps as above (find variable features, scale data, PCA) as well as UMAP on the whole dataset.
+
+
+```{r}
+#| label: doublet-norm
+data.filt <- FindVariableFeatures(data.filt, verbose = F)
+data.filt <- ScaleData(data.filt, vars.to.regress = c("nFeature_RNA", "percent_mito"), verbose = F)
+data.filt <- RunPCA(data.filt, verbose = F, npcs = 20)
+data.filt <- RunUMAP(data.filt, dims = 1:10, verbose = F)
 
 
 ```
+
 
 ```{r}
 #| label: doublet-plot

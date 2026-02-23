@@ -37,7 +37,10 @@ file_list <- c(
     "normal_pbmc_13.h5", "normal_pbmc_14.h5", "normal_pbmc_19.h5", "normal_pbmc_5.h5",
     "ncov_pbmc_15.h5", "ncov_pbmc_16.h5", "ncov_pbmc_17.h5", "ncov_pbmc_1.h5"
 )
-names(file_list) = gsub("\\.h5", "", file_list)
+names(file_list) = gsub("normal","ctrl.",
+                        gsub("ncov","covid.",
+                             gsub("_pbmc_","",
+                                  gsub("\\.h5", "", file_list))))
 
 for (i in file_list) {
     path_file <- file.path(path_covid, i)
@@ -138,7 +141,7 @@ First, let Scran calculate some general qc-stats for genes and cells with the fu
 sce <- addPerCellQC(sce, flatten = T, subsets = list(mt = mito_genes, hb = hb_genes, ribo = ribo_genes))
 
 # Way2: Doing it manually
-sce@colData$percent_mito <- Matrix::colSums(counts(sce)[mito_genes, ]) / sce@colData$total * 100
+# sce@colData$percent_mito <- Matrix::colSums(counts(sce)[mito_genes, ]) / sce@colData$total * 100
 ```
 
 {{< meta qc_calqc_3 >}}
@@ -159,8 +162,8 @@ head(colData(sce))
 #| fig-width: 10
 
 # total is total UMIs per cell
-# detected is number of detected genes.
-# the different gene subset percentages are listed as subsets_mt_percent etc.
+# detected is number of unique detected genes
+# the different gene subset percentages are listed as subsets_mt_percent etc
 
 wrap_plots(
     plotColData(sce, y = "detected", x = "sample", colour_by = "sample"),
@@ -169,7 +172,10 @@ wrap_plots(
     plotColData(sce, y = "subsets_ribo_percent", x = "sample", colour_by = "sample"),
     plotColData(sce, y = "subsets_hb_percent", x = "sample", colour_by = "sample"),
     ncol = 3
-) + plot_layout(guides = "collect")
+) &
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "none") &
+  plot_layout(guides = "collect")
 ```
 
 :::{.callout-note title="Discuss"}
@@ -183,7 +189,7 @@ wrap_plots(
 #| label: qc-scatter
 #| fig-height: 5
 #| fig-width: 6
-plotColData(sce, x = "total", y = "detected", colour_by = "sample")
+plotColData(sce, x = "total", y = "detected", colour_by = "sample", order_by = "total")
 ```
 
 :::{.callout-note title="Discuss"}
@@ -194,7 +200,7 @@ plotColData(sce, x = "total", y = "detected", colour_by = "sample")
 
 ### {{< meta qc_filter_detect >}}
 
-{{< meta qc_filter_detect_1 >}}
+{{< meta qc_filter_detect_1_R >}}
 
 In Scran, we can use the function `quickPerCellQC` to filter out outliers from distributions of qc stats, such as detected genes, gene subsets etc. But in this case, we will take one setting at a time and run through the steps of filtering cells.
 
@@ -226,7 +232,7 @@ dim(sce.filt)
 
 {{< meta qc_filter_detect_4 >}}
 
-In Scater, you can also use the function `plotHighestExprs()` to plot the gene contribution, but the function is quite slow, so we will do it on our own instead..
+In Scater, you can also use the function `plotHighestExprs()` to plot the gene contribution, but the function is quite slow, so we will do it on our own instead.
 
 ```{r}
 #| label: top-genes
@@ -241,7 +247,6 @@ boxplot(as.matrix(t(C[most_expressed, ])), cex = .1, las = 1, xlab = "% total co
 
 rm(C)
 
-# also, there is the option of running the function "plotHighestExprs" in the scater package, however, this function takes very long to execute.
 ```
 
 {{< meta qc_filter_detect_5 >}}
@@ -258,6 +263,7 @@ selected_ribo <- sce.filt$subsets_ribo_percent > 5
 # and subset the object to only keep those cells
 sce.filt <- sce.filt[, selected_mito & selected_ribo]
 dim(sce.filt)
+table(sce.filt$sample)
 ```
 
 {{< meta qc_filter_mr_2 >}}
@@ -272,14 +278,19 @@ dim(sce.filt)
 #| fig-width: 10
 
 wrap_plots(
-    plotColData(sce, y = "detected", x = "sample", colour_by = "sample"),
-    plotColData(sce, y = "total", x = "sample", colour_by = "sample"),
-    plotColData(sce, y = "subsets_mt_percent", x = "sample", colour_by = "sample"),
-    plotColData(sce, y = "subsets_ribo_percent", x = "sample", colour_by = "sample"),
-    plotColData(sce, y = "subsets_hb_percent", x = "sample", colour_by = "sample"),
+    plotColData(sce.filt, y = "detected", x = "sample", colour_by = "sample"),
+    plotColData(sce.filt, y = "total", x = "sample", colour_by = "sample"),
+    plotColData(sce.filt, y = "subsets_mt_percent", x = "sample", colour_by = "sample"),
+    plotColData(sce.filt, y = "subsets_ribo_percent", x = "sample", colour_by = "sample"),
+    plotColData(sce.filt, y = "subsets_hb_percent", x = "sample", colour_by = "sample"),
     ncol = 3
-) + plot_layout(guides = "collect")
+) &
+    theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "none") &
+  plot_layout(guides = "collect")
 ```
+
+{{< meta qc_filter_mr_3 >}}
 
 ### {{< meta qc_filter_genes >}}
 
@@ -383,7 +394,7 @@ sce.filt@colData$pct_chrY <- Matrix::colSums(counts(sce.filt)[chrY.gene, ]) / co
 
 # as plotColData cannot take an expression vs metadata, we need to add in XIST expression to colData
 sce.filt@colData$XIST <- counts(sce.filt)["XIST", ] / colSums(counts(sce.filt)) * 10000
-plotColData(sce.filt, "XIST", "pct_chrY")
+plotColData(sce.filt, "XIST", "pct_chrY", colour_by = "sample", order_by = "total")
 ```
 
 {{< meta qc_sex_5 >}}
@@ -397,7 +408,10 @@ wrap_plots(
     plotColData(sce.filt, y = "XIST", x = "sample", colour_by = "sample"),
     plotColData(sce.filt, y = "pct_chrY", x = "sample", colour_by = "sample"),
     ncol = 2
-) + plot_layout(guides = "collect")
+) &
+    theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "none") &
+  plot_layout(guides = "collect")
 ```
 
 ::: {.callout-note}
@@ -448,11 +462,15 @@ table(sce.filt$phase)
 
 wrap_plots(
     plotColData(sce.filt, y = "G2M.score", x = "G1.score", colour_by = "phase"),
-    plotColData(sce.filt, y = "G2M.score", x = "sample", colour_by = "sample"),
-    plotColData(sce.filt, y = "G1.score", x = "sample", colour_by = "sample"),
-    plotColData(sce.filt, y = "S.score", x = "sample", colour_by = "sample"),
+    plotColData(sce.filt, y = "G2M.score", x = "sample", colour_by = "sample") &
+      theme(axis.text.x = element_text(angle = 45, hjust = 1)),
+    plotColData(sce.filt, y = "G1.score", x = "sample", colour_by = "sample") &
+      theme(axis.text.x = element_text(angle = 45, hjust = 1)),
+    plotColData(sce.filt, y = "S.score", x = "sample", colour_by = "sample") &
+      theme(axis.text.x = element_text(angle = 45, hjust = 1)),
     ncol = 4
-) + plot_layout(guides = "collect")
+) &
+  plot_layout(guides = "collect")
 ```
 
 Cyclone predicts most cells as G1, but also quite a lot of cells with high S-Phase scores. Compare to results with Seurat and Scanpy and see how different predictors will give clearly different results.
@@ -463,9 +481,6 @@ Cyclone does an automatic prediction of cell cycle phase with a default cutoff o
 
 {{< meta qc_doublet_1 >}}
 
-:::{.callout-caution}
-{{< meta qc_doublet_2 >}}
-:::
 
 There is a method to predict if a cluster consists of mainly doublets `findDoubletClusters()`, but we can also predict individual cells based on simulations using the function `computeDoubletDensity()` which we will do here. Doublet detection will be performed using PCA, so we need to first normalize the data and run variable gene detection, as well as UMAP for visualization. These steps will be explored in more detail in coming exercises.
 
