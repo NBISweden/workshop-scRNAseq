@@ -37,6 +37,7 @@ file_list <- c(
     "normal_pbmc_13.h5", "normal_pbmc_14.h5", "normal_pbmc_19.h5", "normal_pbmc_5.h5",
     "ncov_pbmc_15.h5", "ncov_pbmc_16.h5", "ncov_pbmc_17.h5", "ncov_pbmc_1.h5"
 )
+names(file_list) = gsub("\\.h5", "", file_list)
 
 for (i in file_list) {
     path_file <- file.path(path_covid, i)
@@ -65,39 +66,18 @@ suppressPackageStartupMessages({
 
 ```{r}
 #| label: read-data
-cov.15 <- Seurat::Read10X_h5(
-    filename = file.path(path_covid, "ncov_pbmc_15.h5"),
-    use.names = T
-)
-cov.1 <- Seurat::Read10X_h5(
-    filename = file.path(path_covid, "ncov_pbmc_1.h5"),
-    use.names = T
-)
-cov.16 <- Seurat::Read10X_h5(
-    filename = file.path(path_covid, "ncov_pbmc_16.h5"),
-    use.names = T
-)
-cov.17 <- Seurat::Read10X_h5(
-    filename = file.path(path_covid, "ncov_pbmc_17.h5"),
-    use.names = T
-)
 
-ctrl.5 <- Seurat::Read10X_h5(
-    filename = file.path(path_covid, "normal_pbmc_5.h5"),
+
+samples = lapply(file_list, function(x){
+  Seurat::Read10X_h5(
+    filename = file.path(path_covid, x),
     use.names = T
+  )
+}
 )
-ctrl.13 <- Seurat::Read10X_h5(
-    filename = file.path(path_covid, "normal_pbmc_13.h5"),
-    use.names = T
-)
-ctrl.14 <- Seurat::Read10X_h5(
-    filename = file.path(path_covid, "normal_pbmc_14.h5"),
-    use.names = T
-)
-ctrl.19 <- Seurat::Read10X_h5(
-    filename = file.path(path_covid, "normal_pbmc_19.h5"),
-    use.names = T
-)
+names(samples) = names(file_list)
+
+
 ```
 
 ## {{< meta qc_collate >}}
@@ -107,10 +87,10 @@ ctrl.19 <- Seurat::Read10X_h5(
 ```{r}
 #| label: create-sce
 
-sce <- SingleCellExperiment(assays = list(counts = cbind(cov.1, cov.15, cov.16, cov.17, ctrl.5, ctrl.13, ctrl.14,ctrl.19)))
+sce <- SingleCellExperiment(assays = list(counts = do.call("cbind", samples)))
 dim(sce)
 # Adding metadata
-sce@colData$sample <- unlist(sapply(c("cov.1", "cov.15", "cov.16", "cov.17", "ctrl.5", "ctrl.13", "ctrl.14","ctrl.19"), function(x) rep(x, ncol(get(x)))))
+sce@colData$sample <- unlist(sapply(names(samples), function(x) rep(x, ncol(samples[[x]]))))
 sce@colData$type <- ifelse(grepl("cov", sce@colData$sample), "Covid", "Control")
 ```
 
@@ -120,7 +100,7 @@ sce@colData$type <- ifelse(grepl("cov", sce@colData$sample), "Covid", "Control")
 #| label: gc
 
 # remove all objects that will not be used.
-rm(cov.15, cov.1, cov.17, cov.16, ctrl.5, ctrl.13, ctrl.14, ctrl.19)
+rm(samples)
 # run garbage collect to free up memory
 gc()
 ```
