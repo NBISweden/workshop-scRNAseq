@@ -54,7 +54,7 @@ alldata <- readRDS(path_file)
 
 ```{r}
 #| label: subset
-ctrl.sce <- alldata[, alldata$sample == "ctrl.13"]
+ctrl.sce <- alldata[, alldata$sample == "normal_pbmc_13"]
 
 # remove all old dimensionality reductions as they will mess up the analysis further down
 reducedDims(ctrl.sce) <- NULL
@@ -446,7 +446,7 @@ wrap_plots(
 #| fig-height: 3.5
 #| fig-width: 12
 
-ctrl.sce$ref_gsea <- alldata$ref_gsea[alldata$sample == "ctrl.13"]
+ctrl.sce$ref_gsea <- alldata$ref_gsea[alldata$sample == "normal_pbmc_13"]
 
 wrap_plots(
     plotReducedDim(ctrl.sce, dimred = "UMAP", colour_by = "ref_gsea"),
@@ -471,8 +471,8 @@ if (!file.exists(path_file)) download.file(file.path(path_data, "misc/cell_marke
 #| label: prep-markers
 
 markers <- read.delim("data/human_cell_markers.txt", sep = ";")
-markers <- markers[markers$speciesType == "Human", ]
-markers <- markers[markers$cancerType == "Normal", ]
+markers <- markers[markers$species == "Human", ]
+markers <- markers[markers$cancer_type == "Normal", ]
 
 # Filter by tissue (to reduce computational time and have tissue-specific classification)
 # sort(unique(markers$tissueType))
@@ -483,14 +483,14 @@ markers <- markers[markers$cancerType == "Normal", ]
 
 
 # remove strange characters etc.
-celltype_list <- lapply(unique(markers$cellName), function(x) {
-    x <- paste(markers$geneSymbol[markers$cellName == x], sep = ",")
+celltype_list <- lapply(unique(markers$cell_name), function(x) {
+    x <- paste(markers$Symbol[markers$cell_name == x], sep = ",")
     x <- gsub("[[]|[]]| |-", ",", x)
     x <- unlist(strsplit(x, split = ","))
     x <- unique(x[!x %in% c("", "NA", "family")])
     x <- casefold(x, upper = T)
 })
-names(celltype_list) <- unique(markers$cellName)
+names(celltype_list) <- unique(markers$cell_name)
 # celltype_list <- lapply(celltype_list , function(x) {x[1:min(length(x),50)]} )
 celltype_list <- celltype_list[unlist(lapply(celltype_list, length)) < 100]
 celltype_list <- celltype_list[unlist(lapply(celltype_list, length)) > 5]
