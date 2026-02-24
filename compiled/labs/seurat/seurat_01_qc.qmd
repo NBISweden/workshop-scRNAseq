@@ -122,11 +122,6 @@ We will add dataset labels as **cell.ids** just in case you have
 overlapping barcodes between the datasets. After that we add a column
 **type** in the metadata to define covid and ctrl samples.
 
-But first, we need to create Seurat objects using each of the expression
-matrices we loaded. We define each sample in the `project` slot, so in
-each object, the sample id can be found in the metadata slot
-`orig.ident`.
-
 ``` {r}
 #| label: create-seurat
 
@@ -192,12 +187,12 @@ visualize them across different metadata parameters (i.e. datasetID and
 chemistry version). There are several ways of doing this. The QC metrics
 are finally added to the metadata table.
 
-Citing from Simple Single Cell workflows (Lun, McCarthy & Marioni,
-2017): High proportions are indicative of poor-quality cells (Islam et
-al. 2014; Ilicic et al. 2016), possibly because of loss of cytoplasmic
-RNA from perforated cells. The reasoning is that mitochondria are larger
-than individual transcript molecules and less likely to escape through
-tears in the cell membrane.
+Citing from Simple Single Cell workflows (Lun, McCarthy & Marioni, 2017)
+about mitochondrial reads: High proportions are indicative of
+poor-quality cells (Islam et al. 2014; Ilicic et al. 2016), possibly
+because of loss of cytoplasmic RNA from perforated cells. The reasoning
+is that mitochondria are larger than individual transcript molecules and
+less likely to escape through tears in the cell membrane.
 
 ``` {r}
 #| label: qc-calc
@@ -225,9 +220,11 @@ alldata <- PercentageFeatureSet(alldata, "PECAM1|PF4", col.name = "percent_plat"
 > ``` {r}
 > #| eval: false
 > # Do not run now!
-> total_counts_per_cell <- colSums(alldata@assays$RNA@counts)
+> counts = GetAssayData(alldata, assay = "RNA", layer = "counts")
+> total_counts_per_cell <- colSums(counts)
 > mito_genes <- rownames(alldata)[grep("^MT-", rownames(alldata))]
-> alldata$percent_mito2 <- colSums(alldata@assays$RNA@counts[mito_genes, ]) / total_counts_per_cell
+> alldata$percent_mito2 <- colSums(counts[mito_genes, ]) / total_counts_per_cell
+> rm(counts)
 > ```
 
 </div>
@@ -257,17 +254,14 @@ VlnPlot(alldata, group.by = "orig.ident", split.by = "type", features = feats, p
 > **Discuss**
 >
 > Looking at the violin plots, what do you think are appropriate cutoffs
-> for filtering these samples
+> for filtering these samples?
 
 </div>
 
 As you can see, there is quite some difference in quality for these
 samples, with for instance the covid_15 and covid_16 samples having
-cells with fewer detected genes and more mitochondrial content. As the
-ribosomal proteins are highly expressed they will make up a larger
-proportion of the transcriptional landscape when fewer of the lowly
-expressed genes are detected. We can also plot the different QC-measures
-as scatter plots.
+cells with fewer detected genes and more mitochondrial content. We can
+also plot the different QC-measures as scatter plots.
 
 ``` {r}
 #| label: qc-scatter
@@ -292,9 +286,9 @@ FeatureScatter(alldata, "nCount_RNA", "nFeature_RNA", group.by = "orig.ident", p
 
 A standard approach is to filter cells with low number of reads as well
 as genes that are present in at least a given number of cells. Here we
-will only consider cells with at least 200 detected genes and genes need
-to be expressed in at least 3 cells. Please note that those values are
-highly dependent on the library preparation method used.
+will only consider cells with more than 200 detected genes and genes
+that are expressed in more than 3 cells. Please note that those values
+are highly dependent on the library preparation method used.
 
 ``` {r}
 #| label: filt1
@@ -370,15 +364,10 @@ table(data.filt$orig.ident)
 ```
 
 As you can see, a large proportion of sample covid_15 is filtered out.
-Also, there is still quite a lot of variation in `percent_mito`, so it
-will have to be dealt with in the data analysis step. We can also notice
-that the `percent_ribo` are also highly variable, but that is expected
-since different cell types have different proportions of ribosomal
-content, according to their function.
 
 ### Plot filtered QC
 
-Lets plot the same QC-stats once more.
+Lets plot the same QC stats once more.
 
 ``` {r}
 #| label: qc-vln2
@@ -388,6 +377,12 @@ Lets plot the same QC-stats once more.
 feats <- c("nFeature_RNA", "nCount_RNA", "percent_mito", "percent_ribo", "percent_hb")
 VlnPlot(data.filt, group.by = "orig.ident", features = feats, pt.size = 0.1, ncol = 3) + NoLegend()
 ```
+
+There is still quite a lot of variation in `percent_mito`, so it will
+have to be dealt with in the data analysis step. The `percent_ribo`
+values are also highly variable, but that is expected since different
+cell types have different proportions of ribosomal content, according to
+their function.
 
 ### Filter genes
 
@@ -423,8 +418,8 @@ conclusions. However this may not always be possible. By looking at
 reads from chromosomeY (males) and XIST (X-inactive specific transcript)
 expression (mainly female) it is quite easy to determine per sample
 which sex it is. It can also be a good way to detect if there has been
-any mislabelling in which case, the sample metadata sex does not agree
-with the computational predictions.
+any mislabelling leading to the sample metadata sex not agreeing with
+the computational predictions.
 
 To get chromosome information for all genes, you should ideally parse
 the information from the gtf file that you used in the mapping pipeline
@@ -472,7 +467,7 @@ Download precomputed data.
 # fetch_annotation is defined at the top of this document
 if (fetch_annotation) {
   genes_file <- file.path(path_results, "genes_table.csv")
-  if (!file.exists(genes_file)) download.file(file.path(path_data, "covid/results_seurat/genes_table.csv"), destfile = genes_file,
+  if (!file.exists(genes_file)) download.file(file.path(path_data, "covid/results_seurat_2026/genes_table.csv"), destfile = genes_file,
                                               method = "curl", extra = curl_upass)
 }
 ```
@@ -509,7 +504,7 @@ detection of either.
 
 ``` {r}
 #| label: sex-scatter
-FeatureScatter(data.filt, feature1 = "XIST", feature2 = "pct_chrY", slot = "counts")
+FeatureScatter(data.filt, feature1 = "XIST", feature2 = "pct_chrY", slot = "counts", shuffle = TRUE)
 ```
 
 Plot as violins.
@@ -595,22 +590,132 @@ using is subsampled, but the original datasets contained about 5 000
 cells per sample, hence we can assume that they loaded about 9 000 cells
 and should have a doublet rate at about 4%.
 
+Here, we will use `DoubletFinder` to predict doublet cells. As the
+samples were prepared separately, the dataset cannot contain doublets
+across samples. We will therefore run the `DoubletFinder` method on each
+sample separately.
+
+In order to perform the prediction, the data must first be pre-processed
+through variable gene selection, scaling and PCA. We will explore these
+methods further in the next exercise (Dimensionality reduction).
+
+For more information on how DoubletFinder works, see the
+[repository](https://github.com/chris-mcginnis-ucsf/DoubletFinder). In
+short, artificial doublets are produced, and real cells are scored
+according to how similar they are to the most similar doublets. The top
+X% cells are predicted to be doublets, where X is the expected
+percentage of doublets as provided by the user.
+
+In addition to providing the expected number of doublets (`nExp`), the
+user must also provide the parameter `pK`, which determines the size of
+the neighborhoods considered when evaluating the similarities between
+sample data and artificical doublets. It is recommended to use the
+function `paramSweep()` to find the optimal `pK` for each sample. As
+this function takes quite some time for each sample, we have provided
+the result directly in the code.
+
+Finally, we can run doubletFinder. In this case, we are using the first
+10 PCs per sample.
+
 <div>
 
-> **Caution**
+> **Tip**
 >
-> Ideally doublet prediction should be run on each sample separately,
-> especially if your samples have different proportions of cell types.
-> In this case, the data is subsampled so we have very few cells per
-> sample and all samples are sorted PBMCs, so it is okay to run them
-> together.
+> This step can also take some time. If it is taking too long, you can
+> use the following code to download the results:
+>
+> ``` {r}
+> #| label: download-doublets
+> #| eval: false
+>
+> path_file <- "data/covid/results/seurat_covid_qc_doublets.rds"
+>
+> if (!file.exists(path_file)) download.file(url = file.path(path_data, "covid/results_seurat_2026/seurat_covid_qc_doublets.rds"), destfile = path_file, method = "curl", extra = curl_upass)
+>
+> df <- readRDS(path_file)
+> data.filt = AddMetaData(data.filt, df)
+> ```
 
 </div>
 
-Here, we will use `DoubletFinder` to predict doublet cells. But before
-doing doublet detection we need to run scaling, variable gene selection
-and PCA, as well as UMAP for visualization. These steps will be explored
-in more detail in coming exercises.
+``` {r}
+#| label: doubletfinder_params
+
+## Can run parameter optimization with paramSweep
+
+## One sample:
+# sweep.res <- paramSweep(data.filt)
+# sweep.stats <- summarizeSweep(sweep.res, GT = FALSE)
+# bcmvn <- find.pK(sweep.stats)
+# barplot(bcmvn$BCmetric, names.arg = bcmvn$pK, las=2)
+
+## Multiple samples:
+# bcmvn_list = lapply(SplitObject(data.filt, "orig.ident"), function(data.filt){
+#   data.filt <- FindVariableFeatures(data.filt, verbose = F)
+#   data.filt <- ScaleData(data.filt, vars.to.regress = c("nFeature_RNA", "percent_mito"), verbose = F)
+#   data.filt <- RunPCA(data.filt, verbose = F, npcs = 20)
+#   
+#   sweep.res <- paramSweep(data.filt)
+#   sweep.stats <- summarizeSweep(sweep.res, GT = FALSE)
+#   bcmvn <- find.pK(sweep.stats)
+#   bcmvn
+# })
+# 
+# pK = sapply(bcmvn_list, 
+#             function(x){
+#               as.numeric(as.character(x$pK[which.max(x$BCmetric)]))
+#             })
+```
+
+``` {r}
+#| label: doubletfinder
+
+# Pre-calculated optimal pK
+pK = c(ctrl_13 = 0.04,
+  ctrl_14 = 0.03,
+  ctrl_19 = 0.17,
+  ctrl_5 = 0.01,
+  covid_15 = 0.16,
+  covid_16 = 0.15,
+  covid_17 = 0.03,
+  covid_1 = 0.04)
+
+# For each sample (using SplitObject), run pre-processing steps and doubletFinder(). doubletFinder() will produce a Seurat object containing the doublet information in the metadata - save this metadata to the list "df_list".
+df_list = lapply(SplitObject(data.filt, "orig.ident"), function(sub.data.filt){
+  
+  # Pre-process data
+  sub.data.filt <- FindVariableFeatures(sub.data.filt, verbose = F)
+  sub.data.filt <- ScaleData(sub.data.filt, vars.to.regress = c("nFeature_RNA", "percent_mito"), verbose = F)
+  sub.data.filt <- RunPCA(sub.data.filt, verbose = F, npcs = 20)
+  
+
+  # define the expected number of doublet cells.
+  nExp <- round(ncol(sub.data.filt) * 0.04) # expect 4% doublets
+  
+  # Run doubletFinder
+  sub.data.filt <- doubletFinder(sub.data.filt, pN = 0.25, 
+                                 pK = pK[sub.data.filt$orig.ident[1]],
+                                 nExp = nExp, PCs = 1:10)
+  # Return metadata
+  sub.data.filt@meta.data
+})
+
+
+# Combine the results from the different samples into one matrix
+df = bind_rows(lapply(df_list, function(x){
+  # name of the DF prediction can change, so extract the correct column names.
+  y = x[, c(grep("^DF\\.class", colnames(x)),grep("^pANN_", colnames(x))), drop = FALSE]
+  colnames(y) = c("DF","pANN")
+  y}))
+
+# Add the doubletFinder metadata to the full Seurat object
+data.filt = AddMetaData(data.filt, df)
+
+```
+
+In order to visualize the predictions, we will run the same steps as
+above (find variable features, scale data, PCA) as well as UMAP on the
+whole dataset.
 
 ``` {r}
 #| label: doublet-norm
@@ -618,26 +723,7 @@ data.filt <- FindVariableFeatures(data.filt, verbose = F)
 data.filt <- ScaleData(data.filt, vars.to.regress = c("nFeature_RNA", "percent_mito"), verbose = F)
 data.filt <- RunPCA(data.filt, verbose = F, npcs = 20)
 data.filt <- RunUMAP(data.filt, dims = 1:10, verbose = F)
-```
 
-Then we run doubletFinder, selecting first 10 PCs and a `pK` value of
-0.9. To optimize the parameters, you can run the `paramSweep` function
-in the package.
-
-``` {r}
-#| label: doubletfinder
-
-suppressMessages(library(DoubletFinder))
-# Can run parameter optimization with paramSweep
-
-# sweep.res <- paramSweep_v3(data.filt)
-# sweep.stats <- summarizeSweep(sweep.res, GT = FALSE)
-# bcmvn <- find.pK(sweep.stats)
-# barplot(bcmvn$BCmetric, names.arg = bcmvn$pK, las=2)
-
-# define the expected number of doublet cellscells.
-nExp <- round(ncol(data.filt) * 0.04) # expect 4% doublets
-data.filt <- doubletFinder(data.filt, pN = 0.25, pK = 0.09, nExp = nExp, PCs = 1:10)
 ```
 
 ``` {r}
@@ -645,14 +731,19 @@ data.filt <- doubletFinder(data.filt, pN = 0.25, pK = 0.09, nExp = nExp, PCs = 1
 #| fig-height: 4
 #| fig-width: 10
 
-# name of the DF prediction can change, so extract the correct column name.
-DF.name <- colnames(data.filt@meta.data)[grepl("DF.classification", colnames(data.filt@meta.data))]
-
 wrap_plots(
     DimPlot(data.filt, group.by = "orig.ident") + NoAxes(),
-    DimPlot(data.filt, group.by = DF.name) + NoAxes(),
+    DimPlot(data.filt, group.by = "DF") + NoAxes(),
     ncol = 2
 )
+```
+
+``` {r}
+#| label: doublet-plot-split
+#| fig-height: 4
+#| fig-width: 10
+
+DimPlot(data.filt, group.by = "DF", split.by = "orig.ident", ncol = 4) & NoAxes()
 ```
 
 We should expect that two cells have more detected genes than a single
@@ -662,7 +753,13 @@ in general.
 ``` {r}
 #| label: doublet-vln
 
-VlnPlot(data.filt, features = "nFeature_RNA", group.by = DF.name, pt.size = .1)
+VlnPlot(data.filt, features = "nFeature_RNA", group.by = "DF", pt.size = .1)
+```
+
+``` {r}
+#| label: doublet-vln-split
+
+VlnPlot(data.filt, features = "nFeature_RNA", group.by = "orig.ident", split.by = "DF", pt.size = .1)
 ```
 
 Now, lets remove all predicted doublets from our data.
@@ -670,7 +767,7 @@ Now, lets remove all predicted doublets from our data.
 ``` {r}
 #| label: doublet-filt
 
-data.filt <- data.filt[, data.filt@meta.data[, DF.name] == "Singlet"]
+data.filt <- data.filt[, data.filt@meta.data[, "DF"] == "Singlet"]
 dim(data.filt)
 ```
 
@@ -688,10 +785,8 @@ table(data.filt$orig.ident)
 
 > **Discuss**
 >
-> In this case we ran doublet detection with all samples together since
-> we have very small subsampled datasets. But in a real scenario it
-> should be run one sample at a time. Why is this important do you
-> think?
+> Why is it important to predict doublets in the different samples
+> separately? In which situations would this be more/less important?
 
 </div>
 

@@ -65,7 +65,7 @@ curl_upass <- "-u zbC5fr2LbEZ9rSE:scRNAseq2025"
 
 path_file <- "data/covid/results/bioc_covid_qc_dr_int_cl.rds"
 if (!dir.exists(dirname(path_file))) dir.create(dirname(path_file), recursive = TRUE)
-if (fetch_data && !file.exists(path_file)) download.file(url = file.path(path_data, "covid/results_bioc/bioc_covid_qc_dr_int_cl.rds"), destfile = path_file, method = "curl", extra = curl_upass)
+if (fetch_data && !file.exists(path_file)) download.file(url = file.path(path_data, "covid/results_bioc_2026/bioc_covid_qc_dr_int_cl.rds"), destfile = path_file, method = "curl", extra = curl_upass)
 
 alldata <- readRDS(path_file)
 ```
@@ -536,8 +536,8 @@ if (!file.exists(path_file)) download.file(file.path(path_data, "misc/cell_marke
 #| label: prep-markers
 
 markers <- read.delim("data/human_cell_markers.txt", sep = ";")
-markers <- markers[markers$speciesType == "Human", ]
-markers <- markers[markers$cancerType == "Normal", ]
+markers <- markers[markers$species == "Human", ]
+markers <- markers[markers$cancer_type == "Normal", ]
 
 # Filter by tissue (to reduce computational time and have tissue-specific classification)
 # sort(unique(markers$tissueType))
@@ -548,14 +548,14 @@ markers <- markers[markers$cancerType == "Normal", ]
 
 
 # remove strange characters etc.
-celltype_list <- lapply(unique(markers$cellName), function(x) {
-    x <- paste(markers$geneSymbol[markers$cellName == x], sep = ",")
+celltype_list <- lapply(unique(markers$cell_name), function(x) {
+    x <- paste(markers$Symbol[markers$cell_name == x], sep = ",")
     x <- gsub("[[]|[]]| |-", ",", x)
     x <- unlist(strsplit(x, split = ","))
     x <- unique(x[!x %in% c("", "NA", "family")])
     x <- casefold(x, upper = T)
 })
-names(celltype_list) <- unique(markers$cellName)
+names(celltype_list) <- unique(markers$cell_name)
 # celltype_list <- lapply(celltype_list , function(x) {x[1:min(length(x),50)]} )
 celltype_list <- celltype_list[unlist(lapply(celltype_list, length)) < 100]
 celltype_list <- celltype_list[unlist(lapply(celltype_list, length)) > 5]
