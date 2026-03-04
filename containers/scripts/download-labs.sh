@@ -14,6 +14,28 @@ HOME="/home/jovyan"
 WORK="${HOME}/work"
 KERNEL="scanpy"
 
+## Jupyter functions
+function make_kernel() (
+    mkdir -p ${HOME}/.local/share/jupyter/kernels/${KERNEL}
+    cat <<EOF > ${HOME}/.local/share/jupyter/kernels/${KERNEL}/kernel.json
+{
+  "argv": [
+    "pixi", "run", "--frozen", "--manifest-path", "${WORK}/pixi.toml", "python",
+    "-Xfrozen_modules=off",
+    "-m",
+    "ipykernel_launcher",
+    "-f",
+    "{connection_file}"
+  ],
+  "display_name": "${KERNEL}",
+  "language": "python",
+  "metadata": {
+    "debugger": true
+  },
+  "kernel_protocol_version": "5.5"
+}
+EOF
+)
 
 function select_kernel() (
     for nb in $(find $1 -name "*.ipynb"); do
@@ -34,6 +56,8 @@ function main() (
     then
         echo "processing .ipynb"
         find ${REPO_NAME} -type f -name "*.ipynb" -exec mv -n {} ./${LOCAL_DIR}/ \;
+        echo "define '${KERNEL}' kernel..."
+        make_kernel
         echo "making '${KERNEL}' default kernel..."
         select_kernel ${LOCAL_DIR}
     else
