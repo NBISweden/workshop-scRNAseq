@@ -14,14 +14,16 @@ set -euo pipefail
 
 # Docker image variables (can be overridden via env)
 DOCKER_R="${DOCKER_R:-ghcr.io/nbisweden/workshop-scrnaseq-seurat:20250320-2311}"
-DOCKER_SCANPY="${DOCKER_SCANPY:-ghcr.io/nbisweden/workshop-scrnaseq-scanpy:20250325-2256}"
+# DOCKER_SCANPY="${DOCKER_SCANPY:-ghcr.io/nbisweden/workshop-scrnaseq-scanpy:20250325-2256}"
+DOCKER_SCANPY="${DOCKER_SCANPY:-scanpy-pixi-noenv}"
 DOCKER_SEURAT_SPATIAL="${DOCKER_SEURAT_SPATIAL:-ghcr.io/nbisweden/workshop-scrnaseq:2024-seurat_spatial-r4.3.0}"
 DOCKER_BIOC_SPATIAL="${DOCKER_BIOC_SPATIAL:-ghcr.io/nbisweden/workshop-scrnaseq:2024-bioconductor_spatial-r4.3.0}"
 DOCKER_SITE="${DOCKER_SITE:-ghcr.io/nbisweden/workshop-scrnaseq:2024-site-r4.3.0}"
 
 # Entry points for conda envs
 ENTRYPOINT_R="/usr/local/conda/bin/conda"
-ENTRYPOINT_SCANPY="/opt/conda/bin/conda"
+# ENTRYPOINT_SCANPY="/opt/conda/bin/conda"
+ENTRYPOINT_SCANPY="pixi"
 
 LAB_DIR="docs/labs"
 LECTURE_DIR="docs/lectures"
@@ -63,15 +65,41 @@ render_files_r() {
     timer_report "$start"
 }
 
-render_files_scanpy() {
+render_files_scanpy_old() {
     local files=("$@")
     local start
     start=$(timer_start)
     for file in "${files[@]}"; do
         echo "Rendering $file ..."
+        # docker run --rm --platform=linux/amd64 -u jovyan -v "${PWD}:/work" \
+        #     --entrypoint "$ENTRYPOINT_SCANPY" "$DOCKER_SCANPY" run -n scanpy quarto render "/work/$file"
         docker run --rm --platform=linux/amd64 -u jovyan -v "${PWD}:/work" \
-            --entrypoint "$ENTRYPOINT_SCANPY" "$DOCKER_SCANPY" run -n scanpy quarto render "/work/$file"
+            --entrypoint "$ENTRYPOINT_SCANPY" "$DOCKER_SCANPY" \
+            run --frozen --manifest-path "/home/jovyan/work/pixi.toml" \
+            quarto render "/work/$file"
     done
+    timer_report "$start"
+}
+
+render_files_scanpy() {
+    local files=("$@")
+    local start
+    start=$(timer_start)
+    docker run --rm \
+        --platform=linux/amd64 \
+        -u root \
+        -v "${PWD}:/work" \
+        --entrypoint "/bin/bash" \
+        "$DOCKER_SCANPY" -c "
+            set -e
+            echo 'Setting up Pixi environment...'
+            $ENTRYPOINT_SCANPY run --frozen --manifest-path '/home/jovyan/work/pixi.toml' bash -c '
+                for file in ${files[*]}; do
+                    echo \"--- Rendering: \$file ---\"
+                    quarto render \"/work/\$file\"
+                done
+            '
+        "
     timer_report "$start"
 }
 
