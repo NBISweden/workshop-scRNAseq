@@ -40,6 +40,7 @@ EOF
 function select_kernel() (
     for nb in $(find $1 -name "*.ipynb"); do
         jq --arg k "$KERNEL" '.metadata.kernelspec = {"display_name": $k, "language": "python", "name": $k}' ${nb} > tmp.$$.json && mv tmp.$$.json ${nb}
+        jupyter trust ${nb} > /dev/null 2>&1
     done
 )
 
