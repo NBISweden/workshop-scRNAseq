@@ -4,7 +4,7 @@ set -e
 
 ## Build ARGs
 NCPUS=${NCPUS:--1}
-QUARTO_VERSION="1.3.450"
+QUARTO_VERSION="1.8.27"
 
 ## Function to install apt packages only if they are not installed
 function apt_install() {
@@ -21,6 +21,7 @@ apt_install \
     g++ \
     gcc \
     gdebi \
+	jq \
     libfmt-dev
 
 ## Install quarto cli
@@ -30,6 +31,9 @@ rm -rf quarto-linux-${TARGETARCH}.deb
 
 ## Install Quarto Jupyter extension
 python3 -m pip install jupyterlab-quarto
+
+## Install Pixi
+curl -fsSL https://pixi.sh/install.sh | bash
 
 ## Clean up
 apt-get clean
