@@ -1,7 +1,5 @@
 #!/bin/bash
 
-source /opt/conda/bin/activate scanpy
-
 exec jupyter lab \
     --no-browser \
     --ip=0.0.0.0 \
