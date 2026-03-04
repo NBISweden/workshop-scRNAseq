@@ -52,6 +52,12 @@ function main() (
     git checkout > /dev/null 2>&1
     cd - > /dev/null 2>&1
     
+    if [ -d "${REPO_NAME}/${REPO_DIR}/figs" ]; then
+        echo "moving figs directory..."
+        cp -r "${REPO_NAME}/${REPO_DIR}/figs" "./"
+    fi
+    
+    
     if [[ "${TOOLKIT}" == "scanpy" ]]
     then
         echo "processing .ipynb"
