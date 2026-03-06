@@ -66,7 +66,7 @@ curl_upass <- "-u zbC5fr2LbEZ9rSE:scRNAseq2025"
 
 path_file <- "data/covid/results/seurat_covid_qc_dr.rds"
 if (!dir.exists(dirname(path_file))) dir.create(dirname(path_file), recursive = TRUE)
-if (fetch_data && !file.exists(path_file)) download.file(url = file.path(path_data, "covid/results_seurat/seurat_covid_qc_dr.rds"), destfile = path_file, method = "curl", extra = curl_upass)
+if (fetch_data && !file.exists(path_file)) download.file(url = file.path(path_data, "covid/results_seurat_2026/seurat_covid_qc_dr.rds"), destfile = path_file, method = "curl", extra = curl_upass)
 
 alldata <- readRDS(path_file)
 print(names(alldata@reductions))
@@ -186,13 +186,19 @@ dimensions.
 #| fig-width: 10
 
 wrap_plots(
-  DimPlot(alldata, reduction = "pca", group.by = "orig.ident")+NoAxes()+ggtitle("PCA raw_data"),
-  DimPlot(alldata, reduction = "tsne", group.by = "orig.ident")+NoAxes()+ggtitle("tSNE raw_data"),
-  DimPlot(alldata, reduction = "umap", group.by = "orig.ident")+NoAxes()+ggtitle("UMAP raw_data"),
+  DimPlot(alldata, reduction = "pca", group.by = "orig.ident", 
+          shuffle = TRUE)+NoAxes()+ggtitle("PCA raw_data"),
+  DimPlot(alldata, reduction = "tsne", group.by = "orig.ident", 
+          shuffle = TRUE)+NoAxes()+ggtitle("tSNE raw_data"),
+  DimPlot(alldata, reduction = "umap", group.by = "orig.ident",
+          shuffle = TRUE)+NoAxes()+ggtitle("UMAP raw_data"),
   
-  DimPlot(alldata, reduction = "integrated_cca", group.by = "orig.ident")+NoAxes()+ggtitle("CCA integrated"),
-  DimPlot(alldata, reduction = "tsne_cca", group.by = "orig.ident")+NoAxes()+ggtitle("tSNE integrated"),
-  DimPlot(alldata, reduction = "umap_cca", group.by = "orig.ident")+NoAxes()+ggtitle("UMAP integrated"),
+  DimPlot(alldata, reduction = "integrated_cca", group.by = "orig.ident", 
+          shuffle = TRUE)+NoAxes()+ggtitle("CCA integrated"),
+  DimPlot(alldata, reduction = "tsne_cca", group.by = "orig.ident", 
+          shuffle = TRUE)+NoAxes()+ggtitle("tSNE integrated"),
+  DimPlot(alldata, reduction = "umap_cca", group.by = "orig.ident", 
+          shuffle = TRUE)+NoAxes()+ggtitle("UMAP integrated"),
   ncol = 3
 ) + plot_layout(guides = "collect")
 ```
@@ -219,7 +225,7 @@ embedding.
 #| fig-width: 10
 
 myfeatures <- c("CD3E", "CD4", "CD8A", "NKG7", "GNLY", "MS4A1", "CD14", "LYZ", "MS4A7", "FCGR3A", "CST3", "FCER1A")
-FeaturePlot(alldata, reduction = "umap_cca", dims = 1:2, features = myfeatures, ncol = 4, order = T) + NoLegend() + NoAxes() + NoGrid()
+FeaturePlot(alldata, reduction = "umap_cca", dims = 1:2, features = myfeatures, ncol = 4, order = T) & NoLegend() & NoAxes() & NoGrid()
 ```
 
 ## Harmony
@@ -237,8 +243,8 @@ reduction from Harmony.
 
 ``` {r}
 #| label: harmony
-#| fig-height: 10
-#| fig-width: 13
+#| fig-height: 5
+#| fig-width: 7
 
 alldata <- IntegrateLayers(
   object = alldata, method = HarmonyIntegration,
@@ -371,10 +377,14 @@ Now we will plot UMAPS with all three integration methods side by side.
 #| fig-height: 8
 #| fig-width: 9
 
-p1 <- DimPlot(alldata, reduction = "umap", group.by = "orig.ident") + ggtitle("UMAP raw_data")
-p2 <- DimPlot(alldata, reduction = "umap_cca", group.by = "orig.ident") + ggtitle("UMAP CCA")
-p3 <- DimPlot(alldata, reduction = "umap_harmony", group.by = "orig.ident") + ggtitle("UMAP Harmony")
-p4 <- DimPlot(alldata, reduction = "umap_scanorama", group.by = "orig.ident")+ggtitle("UMAP Scanorama")
+p1 <- DimPlot(alldata, reduction = "umap", group.by = "orig.ident", 
+              shuffle = TRUE) + ggtitle("UMAP raw_data")
+p2 <- DimPlot(alldata, reduction = "umap_cca", group.by = "orig.ident",
+              shuffle = TRUE) + ggtitle("UMAP CCA")
+p3 <- DimPlot(alldata, reduction = "umap_harmony", group.by = "orig.ident", 
+              shuffle = TRUE) + ggtitle("UMAP Harmony")
+p4 <- DimPlot(alldata, reduction = "umap_scanorama", group.by = "orig.ident",
+              shuffle = TRUE)+ggtitle("UMAP Scanorama")
 
 wrap_plots(p1, p2, p3, p4, nrow = 2) + plot_layout(guides = "collect")
 ```

@@ -30,6 +30,9 @@ path_results <- "./data/covid/results"
 if (!dir.exists(path_results)) dir.create(path_results, recursive = T)
 ```
 
+
+
+
 ```{r}
 #| label: fetch-data
 
@@ -37,6 +40,13 @@ file_list <- c(
     "normal_pbmc_13.h5", "normal_pbmc_14.h5", "normal_pbmc_19.h5", "normal_pbmc_5.h5",
     "ncov_pbmc_15.h5", "ncov_pbmc_16.h5", "ncov_pbmc_17.h5", "ncov_pbmc_1.h5"
 )
+
+sample_names <- c(
+  ncov_pbmc_1.h5 = "covid_1", ncov_pbmc_15.h5 = "covid_15",
+  ncov_pbmc_17.h5 = "covid_17", ncov_pbmc_16.h5 = "covid_16",
+  normal_pbmc_5.h5 = "ctrl_5", normal_pbmc_13.h5 = "ctrl_13",
+  normal_pbmc_14.h5 = "ctrl_14", normal_pbmc_19.h5 = "ctrl_19")
+
 
 for (i in file_list) {
     path_file <- file.path(path_covid, i)
@@ -58,6 +68,7 @@ suppressPackageStartupMessages({
     library(Matrix)
     library(ggplot2)
     library(patchwork)
+    library(dplyr)
     if (! "DoubletFinder" %in% installed.packages()){
        remotes::install_github(
         "https://github.com/chris-mcginnis-ucsf/DoubletFinder@3b420df68b8e2a0cc6ebd4c5c1c7ea170464c97f",
@@ -70,77 +81,56 @@ suppressPackageStartupMessages({
 
 {{< meta qc_data_3 >}}
 
+We will loop through all file names using `lapply` to create a list of Seurat objects. We use two functions: `Read10X_h5`, which reads the .h5-file as a count matrix, and `CreateSeuratObject`, which creates a Seurat class object using the count matrix. In the latter function, we define each sample in the `project` slot, so in each object, the sample id can be found in the metadata slot `orig.ident`.
+
+
 ```{r}
 #| label: read
 
-cov.15 <- Seurat::Read10X_h5(
-    filename = file.path(path_covid, "ncov_pbmc_15.h5"),
-    use.names = T
-)
-cov.1 <- Seurat::Read10X_h5(
-    filename = file.path(path_covid, "ncov_pbmc_1.h5"),
-    use.names = T
-)
-cov.16 <- Seurat::Read10X_h5(
-    filename = file.path(path_covid, "ncov_pbmc_16.h5"),
-    use.names = T
-)
-cov.17 <- Seurat::Read10X_h5(
-    filename = file.path(path_covid, "ncov_pbmc_17.h5"),
-    use.names = T
-)
+all_objects = lapply(file_list, function(file_name){
+  seurat_object = 
+    # Load count matrix
+    Seurat::Read10X_h5(
+      filename = file.path(path_covid, file_name),
+      use.names = T
+    ) %>%
+      # Create Seurat object, including sample name as the project
+      Seurat::CreateSeuratObject(project = sample_names[file_name])
+  
+  
+  return(seurat_object)
+})
 
-ctrl.5 <- Seurat::Read10X_h5(
-    filename = file.path(path_covid, "normal_pbmc_5.h5"),
-    use.names = T
-)
-ctrl.13 <- Seurat::Read10X_h5(
-    filename = file.path(path_covid, "normal_pbmc_13.h5"),
-    use.names = T
-)
-ctrl.14 <- Seurat::Read10X_h5(
-    filename = file.path(path_covid, "normal_pbmc_14.h5"),
-    use.names = T
-)
-ctrl.19 <- Seurat::Read10X_h5(
-    filename = file.path(path_covid, "normal_pbmc_19.h5"),
-    use.names = T
-)
+
 ```
 
 ## {{< meta qc_collate >}}
 
 {{< meta qc_collate_1 >}}
 
-But first, we need to create Seurat objects using each of the expression matrices we loaded. We define each sample in the `project` slot, so in each object, the sample id can be found in the metadata slot `orig.ident`.
+
 
 ```{r}
 #| label: create-seurat
 
-sdata.cov1 <- CreateSeuratObject(cov.1, project = "covid_1")
-sdata.cov15 <- CreateSeuratObject(cov.15, project = "covid_15")
-sdata.cov17 <- CreateSeuratObject(cov.17, project = "covid_17")
-sdata.cov16 <- CreateSeuratObject(cov.16, project = "covid_16")
-sdata.ctrl5 <- CreateSeuratObject(ctrl.5, project = "ctrl_5")
-sdata.ctrl13 <- CreateSeuratObject(ctrl.13, project = "ctrl_13")
-sdata.ctrl14 <- CreateSeuratObject(ctrl.14, project = "ctrl_14")
-sdata.ctrl19 <- CreateSeuratObject(ctrl.19, project = "ctrl_19")
-
-
-# add metadata
-sdata.cov1$type <- "Covid"
-sdata.cov15$type <- "Covid"
-sdata.cov16$type <- "Covid"
-sdata.cov17$type <- "Covid"
-
-sdata.ctrl5$type <- "Ctrl"
-sdata.ctrl13$type <- "Ctrl"
-sdata.ctrl14$type <- "Ctrl"
-sdata.ctrl19$type <- "Ctrl"
 
 # Merge datasets into one single seurat object
-alldata <- merge(sdata.cov1, c(sdata.cov15, sdata.cov16, sdata.cov17, sdata.ctrl5, sdata.ctrl13, sdata.ctrl14, sdata.ctrl19), add.cell.ids = c("covid_1", "covid_15", "covid_16", "covid_17", "ctrl_5", "ctrl_13", "ctrl_14", "ctrl_19"))
+alldata <- merge(all_objects[[1]], all_objects[-1], 
+                 add.cell.ids = TRUE)
+
+
+# Define sample type per sample
+sample_types <- c(
+  covid_1 = "Covid", covid_15 = "Covid",
+  covid_17 = "Covid", covid_16 = "Covid",
+  ctrl_5 = "Ctrl", ctrl_13 = "Ctrl",
+  ctrl_14 = "Ctrl", ctrl_19 = "Ctrl")
+
+# Add sample type as metadata
+alldata$type = as.character(sample_types[alldata$orig.ident])
+
 ```
+
 In Seurat v5, merging creates a single object, but keeps the expression information split into different layers for integration. If not proceeding with integration, rejoin the layers after merging.
 
 ``` {r}
@@ -156,7 +146,7 @@ alldata
 #| label: gc
 
 # remove all objects that will not be used.
-rm(cov.1, cov.15, cov.16, cov.17, ctrl.5, ctrl.13, ctrl.14, ctrl.19, sdata.cov1, sdata.cov15, sdata.cov16, sdata.cov17, sdata.ctrl5, sdata.ctrl13, sdata.ctrl14, sdata.ctrl19)
+rm(all_objects)
 # run garbage collect to free up memory
 gc()
 ```
@@ -199,9 +189,11 @@ Alternatively, percentage expression can be calculated manually. Here is an exam
 ```{r}
 #| eval: false
 # Do not run now!
-total_counts_per_cell <- colSums(alldata@assays$RNA@counts)
+counts = GetAssayData(alldata, assay = "RNA", layer = "counts")
+total_counts_per_cell <- colSums(counts)
 mito_genes <- rownames(alldata)[grep("^MT-", rownames(alldata))]
-alldata$percent_mito2 <- colSums(alldata@assays$RNA@counts[mito_genes, ]) / total_counts_per_cell
+alldata$percent_mito2 <- colSums(counts[mito_genes, ]) / total_counts_per_cell
+rm(counts)
 ```
 
 :::
@@ -248,7 +240,7 @@ FeatureScatter(alldata, "nCount_RNA", "nFeature_RNA", group.by = "orig.ident", p
 
 ### {{< meta qc_filter_detect >}}
 
-{{< meta qc_filter_detect_1 >}}
+{{< meta qc_filter_detect_1_R >}}
 
 ```{r}
 #| label: filt1
@@ -317,6 +309,9 @@ feats <- c("nFeature_RNA", "nCount_RNA", "percent_mito", "percent_ribo", "percen
 VlnPlot(data.filt, group.by = "orig.ident", features = feats, pt.size = 0.1, ncol = 3) + NoLegend()
 ```
 
+{{< meta qc_filter_mr_3 >}}
+
+
 ### {{< meta qc_filter_genes >}}
 
 {{< meta qc_filter_genes_1 >}}
@@ -379,7 +374,7 @@ Download precomputed data.
 # fetch_annotation is defined at the top of this document
 if (fetch_annotation) {
   genes_file <- file.path(path_results, "genes_table.csv")
-  if (!file.exists(genes_file)) download.file(file.path(path_data, "covid/results_seurat/genes_table.csv"), destfile = genes_file,
+  if (!file.exists(genes_file)) download.file(file.path(path_data, "covid/results_seurat_2026/genes_table.csv"), destfile = genes_file,
                                               method = "curl", extra = curl_upass)
 }
 ```
@@ -409,7 +404,7 @@ data.filt <- PercentageFeatureSet(data.filt, features = chrY.gene, col.name = "p
 
 ```{r}
 #| label: sex-scatter
-FeatureScatter(data.filt, feature1 = "XIST", feature2 = "pct_chrY", slot = "counts")
+FeatureScatter(data.filt, feature1 = "XIST", feature2 = "pct_chrY", slot = "counts", shuffle = TRUE)
 ```
 
 {{< meta qc_sex_5 >}}
@@ -469,11 +464,116 @@ FeatureScatter(data.filt, "S.Score", "G2M.Score", group.by = "Phase")
 
 {{< meta qc_doublet_1 >}}
 
-:::{.callout-caution}
-{{< meta qc_doublet_2 >}}
+Here, we will use `DoubletFinder` to predict doublet cells. As the samples were prepared separately, the dataset cannot contain doublets across samples. We will therefore run the `DoubletFinder` method on each sample separately.
+
+In order to perform the prediction, the data must first be pre-processed through variable gene selection, scaling and PCA. We will explore these methods further in the next exercise (Dimensionality reduction). 
+
+For more information on how DoubletFinder works, see the [repository](https://github.com/chris-mcginnis-ucsf/DoubletFinder). In short, artificial doublets are produced, and real cells are scored according to how similar they are to the most similar doublets. The top X% cells are predicted to be doublets, where X is the expected percentage of doublets as provided by the user.
+
+In addition to providing the expected number of doublets (`nExp`), the user must also provide the parameter `pK`, which determines the size of the neighborhoods considered when evaluating the similarities between sample data and artificical doublets. It is recommended to use the function `paramSweep()` to find the optimal `pK` for each sample. As this function takes quite some time for each sample, we have provided the result directly in the code.
+
+Finally, we can run `doubletFinder()`. In this case, we are using the first 10 PCs per sample.
+
+::: {.callout-tip collapse="true"}
+This step can also take some time. If it is taking too long, you can use the following code to download the results:
+
+
+
+```{r}
+#| label: download-doublets
+#| eval: false
+
+path_file <- "data/covid/results/seurat_covid_qc_doublets.rds"
+
+if (!file.exists(path_file)) download.file(url = file.path(path_data, "covid/results_seurat_2026/seurat_covid_qc_doublets.rds"), destfile = path_file, method = "curl", extra = curl_upass)
+
+df <- readRDS(path_file)
+data.filt = AddMetaData(data.filt, df)
+
+```
+
 :::
 
-Here, we will use `DoubletFinder` to predict doublet cells. But before doing doublet detection we need to run scaling, variable gene selection and PCA, as well as UMAP for visualization. These steps will be explored in more detail in coming exercises.
+```{r}
+#| label: doubletfinder_params
+
+## Can run parameter optimization with paramSweep
+
+## One sample:
+# sweep.res <- paramSweep(data.filt)
+# sweep.stats <- summarizeSweep(sweep.res, GT = FALSE)
+# bcmvn <- find.pK(sweep.stats)
+# barplot(bcmvn$BCmetric, names.arg = bcmvn$pK, las=2)
+
+## Multiple samples:
+# bcmvn_list = lapply(SplitObject(data.filt, "orig.ident"), function(data.filt){
+#   data.filt <- FindVariableFeatures(data.filt, verbose = F)
+#   data.filt <- ScaleData(data.filt, vars.to.regress = c("nFeature_RNA", "percent_mito"), verbose = F)
+#   data.filt <- RunPCA(data.filt, verbose = F, npcs = 20)
+#   
+#   sweep.res <- paramSweep(data.filt)
+#   sweep.stats <- summarizeSweep(sweep.res, GT = FALSE)
+#   bcmvn <- find.pK(sweep.stats)
+#   bcmvn
+# })
+# 
+# pK = sapply(bcmvn_list, 
+#             function(x){
+#               as.numeric(as.character(x$pK[which.max(x$BCmetric)]))
+#             })
+
+```
+
+```{r}
+#| label: doubletfinder
+
+# Pre-calculated optimal pK
+pK = c(ctrl_13 = 0.04,
+  ctrl_14 = 0.03,
+  ctrl_19 = 0.17,
+  ctrl_5 = 0.01,
+  covid_15 = 0.16,
+  covid_16 = 0.15,
+  covid_17 = 0.03,
+  covid_1 = 0.04)
+
+# For each sample (using SplitObject), run pre-processing steps and doubletFinder(). doubletFinder() will produce a Seurat object containing the doublet information in the metadata - save this metadata to the list "df_list".
+df_list = lapply(SplitObject(data.filt, "orig.ident"), function(sub.data.filt){
+  
+  # Pre-process data
+  sub.data.filt <- FindVariableFeatures(sub.data.filt, verbose = F)
+  sub.data.filt <- ScaleData(sub.data.filt, vars.to.regress = c("nFeature_RNA", "percent_mito"), verbose = F)
+  sub.data.filt <- RunPCA(sub.data.filt, verbose = F, npcs = 20)
+  
+
+  # define the expected number of doublet cells.
+  nExp <- round(ncol(sub.data.filt) * 0.04) # expect 4% doublets
+  
+  # Run doubletFinder
+  sub.data.filt <- doubletFinder(sub.data.filt, pN = 0.25, 
+                                 pK = pK[sub.data.filt$orig.ident[1]],
+                                 nExp = nExp, PCs = 1:10)
+  # Return metadata
+  sub.data.filt@meta.data
+})
+
+
+# Combine the results from the different samples into one matrix
+df = bind_rows(lapply(df_list, function(x){
+  # name of the DF prediction can change, so extract the correct column names.
+  y = x[, c(grep("^DF\\.class", colnames(x)),grep("^pANN_", colnames(x))), drop = FALSE]
+  colnames(y) = c("DF","pANN")
+  y}))
+
+# Add the doubletFinder metadata to the full Seurat object
+data.filt = AddMetaData(data.filt, df)
+
+
+```
+
+
+In order to visualize the predictions, we will run the same steps as above (find variable features, scale data, PCA) as well as UMAP on the whole dataset.
+
 
 ```{r}
 #| label: doublet-norm
@@ -481,47 +581,45 @@ data.filt <- FindVariableFeatures(data.filt, verbose = F)
 data.filt <- ScaleData(data.filt, vars.to.regress = c("nFeature_RNA", "percent_mito"), verbose = F)
 data.filt <- RunPCA(data.filt, verbose = F, npcs = 20)
 data.filt <- RunUMAP(data.filt, dims = 1:10, verbose = F)
+
+
 ```
 
-Then we run doubletFinder, selecting first 10 PCs and a `pK` value of 0.9. To optimize the parameters, you can run the `paramSweep` function in the package.
-
-```{r}
-#| label: doubletfinder
-
-suppressMessages(library(DoubletFinder))
-# Can run parameter optimization with paramSweep
-
-# sweep.res <- paramSweep_v3(data.filt)
-# sweep.stats <- summarizeSweep(sweep.res, GT = FALSE)
-# bcmvn <- find.pK(sweep.stats)
-# barplot(bcmvn$BCmetric, names.arg = bcmvn$pK, las=2)
-
-# define the expected number of doublet cellscells.
-nExp <- round(ncol(data.filt) * 0.04) # expect 4% doublets
-data.filt <- doubletFinder(data.filt, pN = 0.25, pK = 0.09, nExp = nExp, PCs = 1:10)
-```
 
 ```{r}
 #| label: doublet-plot
 #| fig-height: 4
 #| fig-width: 10
 
-# name of the DF prediction can change, so extract the correct column name.
-DF.name <- colnames(data.filt@meta.data)[grepl("DF.classification", colnames(data.filt@meta.data))]
-
 wrap_plots(
     DimPlot(data.filt, group.by = "orig.ident") + NoAxes(),
-    DimPlot(data.filt, group.by = DF.name) + NoAxes(),
+    DimPlot(data.filt, group.by = "DF") + NoAxes(),
     ncol = 2
 )
 ```
+ 
+ 
+```{r}
+#| label: doublet-plot-split
+#| fig-height: 4
+#| fig-width: 10
+
+DimPlot(data.filt, group.by = "DF", split.by = "orig.ident", ncol = 4) & NoAxes()
+```
+
 
 {{< meta qc_doublet_3 >}}
 
 ```{r}
 #| label: doublet-vln
 
-VlnPlot(data.filt, features = "nFeature_RNA", group.by = DF.name, pt.size = .1)
+VlnPlot(data.filt, features = "nFeature_RNA", group.by = "DF", pt.size = .1)
+```
+
+```{r}
+#| label: doublet-vln-split
+
+VlnPlot(data.filt, features = "nFeature_RNA", group.by = "orig.ident", split.by = "DF", pt.size = .1)
 ```
 
 {{< meta qc_doublet_4 >}}
@@ -529,7 +627,7 @@ VlnPlot(data.filt, features = "nFeature_RNA", group.by = DF.name, pt.size = .1)
 ```{r}
 #| label: doublet-filt
 
-data.filt <- data.filt[, data.filt@meta.data[, DF.name] == "Singlet"]
+data.filt <- data.filt[, data.filt@meta.data[, "DF"] == "Singlet"]
 dim(data.filt)
 ```
 

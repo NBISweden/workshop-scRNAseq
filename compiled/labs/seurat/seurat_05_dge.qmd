@@ -38,6 +38,12 @@ suppressPackageStartupMessages({
     library(Matrix)
     library(edgeR)
     library(MAST)
+  
+  remotes::install_github(
+        "https://github.com/immunogenomics/presto@7636b3d0465c468c35853f82f1717d3a64b3c8f6",
+        upgrade = FALSE,
+        dependencies = FALSE
+    )
 })
 ```
 
@@ -53,7 +59,7 @@ curl_upass <- "-u zbC5fr2LbEZ9rSE:scRNAseq2025"
 path_file <- "data/covid/results/seurat_covid_qc_dr_int_cl.rds"
 
 if (!dir.exists(dirname(path_file))) dir.create(dirname(path_file), recursive = TRUE)
-if (fetch_data && !file.exists(path_file)) download.file(url = file.path(path_data, "covid/results_seurat/seurat_covid_qc_dr_int_cl.rds"), destfile = path_file, method = "curl", extra = curl_upass)
+if (fetch_data && !file.exists(path_file)) download.file(url = file.path(path_data, "covid/results_seurat_2026/seurat_covid_qc_dr_int_cl.rds"), destfile = path_file, method = "curl", extra = curl_upass)
 
 alldata <- readRDS(path_file)
 ```
@@ -76,8 +82,8 @@ table(alldata@active.ident)
 # plot this clustering
 wrap_plots(
     DimPlot(alldata, reduction = "umap_cca", label = T) + NoAxes(),
-    DimPlot(alldata, reduction = "umap_cca", group.by = "orig.ident") + NoAxes(),
-    DimPlot(alldata, reduction = "umap_cca", group.by = "type") + NoAxes(),
+    DimPlot(alldata, reduction = "umap_cca", group.by = "orig.ident", shuffle = TRUE) + NoAxes(),
+    DimPlot(alldata, reduction = "umap_cca", group.by = "type", shuffle = TRUE) + NoAxes(),
     ncol = 3
 )
 ```
@@ -350,7 +356,7 @@ remove the sex chromosome related genes.
 ``` {r}
 #| label: fetch-annot
 genes_file <- file.path("data/covid/results/genes_table.csv")
-if (!file.exists(genes_file)) download.file(file.path(path_data, "covid/results_seurat/genes_table.csv"), destfile = genes_file,method = "curl", extra = curl_upass)
+if (!file.exists(genes_file)) download.file(file.path(path_data, "covid/results_seurat_2026/genes_table.csv"), destfile = genes_file,method = "curl", extra = curl_upass)
 ```
 
 ``` {r}
@@ -652,7 +658,7 @@ First, run the regular MAST analysis without random effects
 tmpdir <- "data/covid/results/tmp_dge"
 dir.create(tmpdir, showWarnings = F)
 
-tmpfile1 <- file.path(tmpdir, "mast_bayesglm_cl3.Rds")
+tmpfile1 <- file.path(tmpdir, "mast_bayesglm_cl4.Rds")
 if (file.exists(tmpfile1)) {
     fcHurdle1 <- readRDS(tmpfile1)
 } else {
@@ -675,7 +681,7 @@ Then run MAST with glmer and random effect.
 
 library(lme4)
 
-tmpfile2 <- file.path(tmpdir, "mast_glme_cl3.Rds")
+tmpfile2 <- file.path(tmpdir, "mast_glme_cl4.Rds")
 if (file.exists(tmpfile2)) {
     fcHurdle2 <- readRDS(tmpfile2)
 } else {
@@ -780,7 +786,7 @@ enrichR::listEnrichrDbs()
 # Perform enrichment
 enrich_results <- enrichr(
     genes     = fcHurdle2$primerid[fcHurdle2$z < 0 & fcHurdle2$pval < 0.05],
-    databases = "GO_Biological_Process_2017b"
+    databases = "GO_Biological_Process_2025"
 )[[1]]
 ```
 
