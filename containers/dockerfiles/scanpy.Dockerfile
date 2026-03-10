@@ -1,4 +1,4 @@
-FROM ghcr.io/scilifelabdatacentre/serve-jupyterlab:231124-1427
+FROM ghcr.io/scilifelabdatacentre/serve-jupyterlab-minimal:250213-1113
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
@@ -11,33 +11,28 @@ USER root
 
 COPY scripts/install_scanpy.sh /tmp/scripts/
 
-RUN /tmp/scripts/install_scanpy.sh && \
-    mamba install --yes --channel conda-forge conda-lock
+RUN /tmp/scripts/install_scanpy.sh
 
-COPY conda/scanpy-environment-2025.yaml conda/scanpy-conda-lock.yaml /tmp/conda/
+ENV PATH="${HOME}/.pixi/bin:$PATH"
 
-RUN conda-lock install --name scanpy /tmp/conda/scanpy-conda-lock.yaml && \
-    mamba run -n scanpy python -m ipykernel install --name scanpy --display-name "scanpy" && \
-    mamba clean --all -f -y && \
-    chown -R ${NB_UID}:${NB_GID} ${CONDA_DIR} && \
-    chown -R ${NB_UID}:${NB_GID} ${CONDA_DIR}/envs && \
-    chown -R ${NB_UID}:${NB_GID} ${HOME}
-
-RUN mkdir -p ${HOME}/work \
-    && chown -R ${NB_UID}:${NB_GID} ${HOME} \
-    && cp ~/.bashrc ~/.bash_profile
+COPY envs/scanpy/pixi.toml envs/scanpy/pixi.lock /home/jovyan/
 
 # Configure container start
-COPY scripts/scanpy-start-script.sh ${HOME}/work/start-script.sh
-COPY scripts/download-labs.sh ${HOME}/work/download-labs.sh
+COPY scripts/scanpy-start-script.sh ${HOME}/start-script.sh
+COPY scripts/download-labs.sh ${HOME}/download-labs.sh
 
-RUN chown -R ${NB_UID}:${NB_GID} ${HOME} \
-    && chmod a+x ${HOME}/work/start-script.sh \
-    && chmod a+x ${HOME}/work/download-labs.sh
+RUN chmod a+x ${HOME}/start-script.sh && \
+    chmod a+x ${HOME}/download-labs.sh
+
+RUN mkdir -p /home/jovyan/.local/share/jupyter && \
+    chown -R jovyan:users /home/jovyan
+
+ENV PIXI_LOCKED=true
+ENV PIXI_CACHE_DIR=$HOME/work/.cache/rattler/cache
 
 USER ${NB_USER}
 
-WORKDIR ${HOME}/work
+WORKDIR ${HOME}
 
 EXPOSE 8888
 
