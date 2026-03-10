@@ -20,7 +20,7 @@ function make_kernel() (
     cat <<EOF > ${HOME}/.local/share/jupyter/kernels/${KERNEL}/kernel.json
 {
   "argv": [
-    "pixi", "run", "--frozen", "--manifest-path", "${WORK}/pixi.toml", "python",
+    "pixi", "run", "--frozen", "--manifest-path", "${HOME}/pixi.toml", "python",
     "-Xfrozen_modules=off",
     "-m",
     "ipykernel_launcher",

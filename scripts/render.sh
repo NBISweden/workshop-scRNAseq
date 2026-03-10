@@ -75,7 +75,7 @@ render_files_scanpy() {
         "$DOCKER_SCANPY" -c "
             set -e
             echo 'Setting up Pixi environment...'
-            $ENTRYPOINT_SCANPY run --frozen --manifest-path '/home/jovyan/work/pixi.toml' bash -c '
+            $ENTRYPOINT_SCANPY run --frozen --manifest-path '/home/jovyan/pixi.toml' bash -c '
                 for file in ${files[*]}; do
                     echo \"--- Rendering: \$file ---\"
                     quarto render \"/work/\$file\"
