@@ -42,7 +42,7 @@ curl_upass <- "-u zbC5fr2LbEZ9rSE:scRNAseq2025"
 
 path_file <- "data/covid/results/seurat_covid_qc.rds"
 if (!dir.exists(dirname(path_file))) dir.create(dirname(path_file), recursive = TRUE)
-if (fetch_data && !file.exists(path_file)) download.file(url = file.path(path_data, "covid/results_seurat/seurat_covid_qc.rds"), destfile = path_file, method = "curl", extra = curl_upass)
+if (fetch_data && !file.exists(path_file)) download.file(url = file.path(path_data, "covid/results_seurat_2026/seurat_covid_qc.rds"), destfile = path_file, method = "curl", extra = curl_upass)
 
 alldata <- readRDS(path_file)
 ```
@@ -65,7 +65,7 @@ LabelPoints(plot = VariableFeaturePlot(alldata), points = top20, repel = TRUE)
 
 ## Z-score transformation
 
-Now that the genes have been selected, we now proceed with PCA. Since
+Now that the genes have been selected, we can proceed with PCA. Since
 each gene has a different expression level, it means that genes with
 higher expression values will naturally have higher variation that will
 be captured by PCA. This means that we need to somehow give each gene a
@@ -78,9 +78,7 @@ unwanted sources of variation from the dataset, such as `cell cycle`,
 doing a generalized linear regression using these parameters as
 co-variates in the model. Then the residuals of the model are taken as
 the *regressed data*. Although perhaps not in the best way, batch effect
-regression can also be done here. By default, variables are scaled in
-the PCA step and is not done separately. But it could be achieved by
-running the commands below:
+regression can also be done here.
 
 ``` {r}
 #| label: scale
@@ -90,9 +88,9 @@ alldata <- ScaleData(alldata, vars.to.regress = c("percent_mito", "nFeature_RNA"
 
 ## PCA
 
-Performing PCA has many useful applications and interpretations, which
-much depends on the data used. In the case of single-cell data, we want
-to segregate samples based on gene expression patterns in the data.
+Performing PCA has many useful applications and interpretations
+depending on the data used. In the case of single-cell data, we want to
+segregate samples based on gene expression patterns in the data.
 
 To run PCA, you can use the function `RunPCA()`.
 
@@ -110,17 +108,15 @@ We then plot the first principal components.
 #| fig-width: 12
 
 wrap_plots(
-    DimPlot(alldata, reduction = "pca", group.by = "orig.ident", dims = 1:2),
-    DimPlot(alldata, reduction = "pca", group.by = "orig.ident", dims = 3:4),
-    DimPlot(alldata, reduction = "pca", group.by = "orig.ident", dims = 5:6),
+    DimPlot(alldata, reduction = "pca", group.by = "orig.ident", dims = 1:2, shuffle = TRUE),
+    DimPlot(alldata, reduction = "pca", group.by = "orig.ident", dims = 3:4, shuffle = TRUE),
+    DimPlot(alldata, reduction = "pca", group.by = "orig.ident", dims = 5:6, shuffle = TRUE),
     ncol = 3
 ) + plot_layout(guides = "collect")
 ```
 
-To identify which genes (Seurat) or metadata parameters (Scater/Scran)
-contribute the most to each PC, one can retrieve the loading matrix
-information. Unfortunately, this is not implemented in Scater/Scran, so
-you will need to compute PCA using `logcounts`.
+To identify which genes contribute the most to each PC, one can retrieve
+the loading matrix information.
 
 ``` {r}
 #| label: pca-loadings
@@ -163,7 +159,7 @@ scater::plotExplanatoryPCs(as.SingleCellExperiment(alldata), nvars_to_plot = 15,
 >
 > Have a look at the plot from `plotExplanatoryPCs` and the gene
 > loadings plots. Do you think the top components are biologically
-> relevant or more driven by technical noise
+> relevant or more driven by technical noise?
 
 </div>
 
@@ -256,9 +252,12 @@ tSNE, we still see quite an effect of the different batches in the data.
 #| fig-width: 12
 
 wrap_plots(
-    DimPlot(alldata, reduction = "umap", group.by = "orig.ident") + ggplot2::ggtitle(label = "UMAP_on_PCA"),
-    DimPlot(alldata, reduction = "UMAP10_on_PCA", group.by = "orig.ident", dims = 1:2) + ggplot2::ggtitle(label = "UMAP10_on_PCA"),
-    DimPlot(alldata, reduction = "UMAP10_on_PCA", group.by = "orig.ident", dims = 3:4) + ggplot2::ggtitle(label = "UMAP10_on_PCA"),
+    DimPlot(alldata, reduction = "umap", group.by = "orig.ident",
+            shuffle = TRUE) + ggplot2::ggtitle(label = "UMAP_on_PCA"),
+    DimPlot(alldata, reduction = "UMAP10_on_PCA", group.by = "orig.ident", 
+            dims = 1:2, shuffle = TRUE) + ggplot2::ggtitle(label = "UMAP10_on_PCA"),
+    DimPlot(alldata, reduction = "UMAP10_on_PCA", group.by = "orig.ident", 
+            dims = 3:4, shuffle = TRUE) + ggplot2::ggtitle(label = "UMAP10_on_PCA"),
     ncol = 3
 ) + plot_layout(guides = "collect")
 ```
@@ -276,9 +275,9 @@ proceeding to clustering and differential gene expression analysis.
 #| fig-width: 12
 
 wrap_plots(
-    DimPlot(alldata, reduction = "pca", group.by = "orig.ident"),
-    DimPlot(alldata, reduction = "tsne", group.by = "orig.ident"),
-    DimPlot(alldata, reduction = "umap", group.by = "orig.ident"),
+    DimPlot(alldata, reduction = "pca", group.by = "orig.ident", shuffle = TRUE),
+    DimPlot(alldata, reduction = "tsne", group.by = "orig.ident", shuffle = TRUE),
+    DimPlot(alldata, reduction = "umap", group.by = "orig.ident", shuffle = TRUE),
     ncol = 3
 ) + plot_layout(guides = "collect")
 ```

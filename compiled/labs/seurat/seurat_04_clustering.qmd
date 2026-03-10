@@ -47,7 +47,7 @@ curl_upass <- "-u zbC5fr2LbEZ9rSE:scRNAseq2025"
 
 path_file <- "data/covid/results/seurat_covid_qc_dr_int.rds"
 if (!dir.exists(dirname(path_file))) dir.create(dirname(path_file), recursive = TRUE)
-if (fetch_data && !file.exists(path_file)) download.file(url = file.path(path_data, "covid/results_seurat/seurat_covid_qc_dr_int.rds"), destfile = path_file, method = "curl", extra = curl_upass)
+if (fetch_data && !file.exists(path_file)) download.file(url = file.path(path_data, "covid/results_seurat_2026/seurat_covid_qc_dr_int.rds"), destfile = path_file, method = "curl", extra = curl_upass)
 
 alldata <- readRDS(path_file)
 print(names(alldata@reductions))
@@ -425,7 +425,7 @@ data for those cells
 
 ``` {r}
 #| label: select-tcells
-tcells = alldata[,alldata$RNA_snn_res.0.1 %in% c(0,3)]
+tcells = alldata[,alldata$RNA_snn_res.0.1 %in% c(1,3)]
 
 table(tcells$orig.ident)
 ```
@@ -463,7 +463,7 @@ tcells <- IntegrateLayers(object = tcells,
 tcells <- RunUMAP(tcells, reduction = "integrated_tcells", dims = 1:30, reduction.name = "umap_tcells")
 
 tcells <- FindNeighbors(tcells, reduction = "integrated_tcells", dims = 1:30)
-tcells <- FindClusters(tcells, graph.name = "RNA_snn", resolution = 0.5, algorithm = 1, cluster.name = "tcell_0.5")
+tcells <- FindClusters(tcells, graph.name = "RNA_snn", resolution = 0.25, algorithm = 1, cluster.name = "tcell_0.25")
 ```
 
 ``` {r}
@@ -474,16 +474,16 @@ tcells <- FindClusters(tcells, graph.name = "RNA_snn", resolution = 0.5, algorit
 wrap_plots(
   DimPlot(tcells, reduction = "umap_cca", group.by = "orig.ident")+NoAxes()+ggtitle("Full umap"),
   DimPlot(tcells, reduction = "umap_cca", group.by = "RNA_snn_res.0.5", label = T)+NoAxes()+ggtitle("Full umap, full clust"),
-  DimPlot(tcells, reduction = "umap_cca", group.by = "tcell_0.5", label = T)+NoAxes()+ggtitle("Full umap, T-cell clust"),
-  DimPlot(tcells, reduction = "umap_tcells", group.by = "orig.ident")+NoAxes()+ggtitle("T-cell umap, T-cell clust"),
+  DimPlot(tcells, reduction = "umap_cca", group.by = "tcell_0.25", label = T)+NoAxes()+ggtitle("Full umap, T-cell clust"),
+  DimPlot(tcells, reduction = "umap_tcells", group.by = "orig.ident")+NoAxes()+ggtitle("T-cell umap"),
   DimPlot(tcells, reduction = "umap_tcells", group.by = "RNA_snn_res.0.5", label=T)+NoAxes()+ggtitle("T-cell umap, full clust"),
-  DimPlot(tcells, reduction = "umap_tcells", group.by = "tcell_0.5", label = T)+NoAxes()+ggtitle("T-cell umap"),  
+  DimPlot(tcells, reduction = "umap_tcells", group.by = "tcell_0.25", label = T)+NoAxes()+ggtitle("T-cell umap, T-cell clust"),  
   ncol = 3
 ) + plot_layout(guides = "collect")
 ```
 
-As you can see, we do have some new clusters that did not stand out
-before (clusters 6,7). But in general the separation looks very similar.
+As you can see, we do have a new cluster that did not stand out before
+(cluster 5). But in general the separation looks very similar.
 
 Lets also have a look at some genes in the new umap:
 

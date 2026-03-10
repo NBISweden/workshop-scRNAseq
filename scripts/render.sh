@@ -151,7 +151,7 @@ render_seurat() {
         "$LAB_DIR/seurat/seurat_02_dimred.qmd"
         "$LAB_DIR/seurat/seurat_03_integration.qmd"
         "$LAB_DIR/seurat/seurat_04_clustering.qmd"
-        # "$LAB_DIR/seurat/seurat_05_dge.qmd"
+        "$LAB_DIR/seurat/seurat_05_dge.qmd"
         "$LAB_DIR/seurat/seurat_06_celltyping.qmd"
         "$LAB_DIR/seurat/seurat_07_trajectory.qmd"
     )

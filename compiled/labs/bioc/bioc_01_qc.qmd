@@ -16,7 +16,7 @@ title:  Quality Control
 
 ## Get data
 
-In this tutorial, we will run all tutorials with a set of 8 PBMC 10x
+In this tutorial, we will run all steps with a set of 8 PBMC 10x
 datasets from 4 covid-19 patients and 4 healthy controls, the samples
 have been subsampled to 1500 cells per sample. We can start by defining
 our paths.
@@ -43,6 +43,10 @@ file_list <- c(
     "normal_pbmc_13.h5", "normal_pbmc_14.h5", "normal_pbmc_19.h5", "normal_pbmc_5.h5",
     "ncov_pbmc_15.h5", "ncov_pbmc_16.h5", "ncov_pbmc_17.h5", "ncov_pbmc_1.h5"
 )
+names(file_list) = gsub("normal","ctrl.",
+                        gsub("ncov","covid.",
+                             gsub("_pbmc_","",
+                                  gsub("\\.h5", "", file_list))))
 
 for (i in file_list) {
     path_file <- file.path(path_covid, i)
@@ -73,39 +77,17 @@ file format (.h5).
 
 ``` {r}
 #| label: read-data
-cov.15 <- Seurat::Read10X_h5(
-    filename = file.path(path_covid, "ncov_pbmc_15.h5"),
-    use.names = T
-)
-cov.1 <- Seurat::Read10X_h5(
-    filename = file.path(path_covid, "ncov_pbmc_1.h5"),
-    use.names = T
-)
-cov.16 <- Seurat::Read10X_h5(
-    filename = file.path(path_covid, "ncov_pbmc_16.h5"),
-    use.names = T
-)
-cov.17 <- Seurat::Read10X_h5(
-    filename = file.path(path_covid, "ncov_pbmc_17.h5"),
-    use.names = T
-)
 
-ctrl.5 <- Seurat::Read10X_h5(
-    filename = file.path(path_covid, "normal_pbmc_5.h5"),
+
+samples = lapply(file_list, function(x){
+  Seurat::Read10X_h5(
+    filename = file.path(path_covid, x),
     use.names = T
+  )
+}
 )
-ctrl.13 <- Seurat::Read10X_h5(
-    filename = file.path(path_covid, "normal_pbmc_13.h5"),
-    use.names = T
-)
-ctrl.14 <- Seurat::Read10X_h5(
-    filename = file.path(path_covid, "normal_pbmc_14.h5"),
-    use.names = T
-)
-ctrl.19 <- Seurat::Read10X_h5(
-    filename = file.path(path_covid, "normal_pbmc_19.h5"),
-    use.names = T
-)
+names(samples) = names(file_list)
+
 ```
 
 ## Collate
@@ -119,27 +101,27 @@ overlapping barcodes between the datasets. After that we add a column
 ``` {r}
 #| label: create-sce
 
-sce <- SingleCellExperiment(assays = list(counts = cbind(cov.1, cov.15, cov.16, cov.17, ctrl.5, ctrl.13, ctrl.14,ctrl.19)))
+sce <- SingleCellExperiment(assays = list(counts = do.call("cbind", samples)))
 dim(sce)
 # Adding metadata
-sce@colData$sample <- unlist(sapply(c("cov.1", "cov.15", "cov.16", "cov.17", "ctrl.5", "ctrl.13", "ctrl.14","ctrl.19"), function(x) rep(x, ncol(get(x)))))
+sce@colData$sample <- unlist(sapply(names(samples), function(x) rep(x, ncol(samples[[x]]))))
 sce@colData$type <- ifelse(grepl("cov", sce@colData$sample), "Covid", "Control")
 ```
 
-Once you have created the merged Seurat object, the count matrices and
-individual count matrices and objects are not needed anymore. It is a
-good idea to remove them and run garbage collect to free up some memory.
+Once you have created the merged object, the individual sample objects
+are not needed anymore. It is a good idea to remove them and run garbage
+collect to free up some memory.
 
 ``` {r}
 #| label: gc
 
 # remove all objects that will not be used.
-rm(cov.15, cov.1, cov.17, cov.16, ctrl.5, ctrl.13, ctrl.14, ctrl.19)
+rm(samples)
 # run garbage collect to free up memory
 gc()
 ```
 
-Here is how the count matrix and the metadata look like for every cell.
+Here is what the count matrix and the metadata look like for every cell.
 
 ``` {r }
 #| label: show-object
@@ -160,12 +142,12 @@ visualize them across different metadata parameters (i.e. datasetID and
 chemistry version). There are several ways of doing this. The QC metrics
 are finally added to the metadata table.
 
-Citing from Simple Single Cell workflows (Lun, McCarthy & Marioni,
-2017): High proportions are indicative of poor-quality cells (Islam et
-al. 2014; Ilicic et al. 2016), possibly because of loss of cytoplasmic
-RNA from perforated cells. The reasoning is that mitochondria are larger
-than individual transcript molecules and less likely to escape through
-tears in the cell membrane.
+Citing from Simple Single Cell workflows (Lun, McCarthy & Marioni, 2017)
+about mitochondrial reads: High proportions are indicative of
+poor-quality cells (Islam et al. 2014; Ilicic et al. 2016), possibly
+because of loss of cytoplasmic RNA from perforated cells. The reasoning
+is that mitochondria are larger than individual transcript molecules and
+less likely to escape through tears in the cell membrane.
 
 ``` {r}
 #| label: qc-genes
@@ -188,7 +170,7 @@ genes are mitochondrial, ribosomal and hemoglobin.
 sce <- addPerCellQC(sce, flatten = T, subsets = list(mt = mito_genes, hb = hb_genes, ribo = ribo_genes))
 
 # Way2: Doing it manually
-sce@colData$percent_mito <- Matrix::colSums(counts(sce)[mito_genes, ]) / sce@colData$total * 100
+# sce@colData$percent_mito <- Matrix::colSums(counts(sce)[mito_genes, ]) / sce@colData$total * 100
 ```
 
 Now you can see that we have additional data in the metadata slot.
@@ -209,8 +191,8 @@ Now we can plot some of the QC variables as violin plots.
 #| fig-width: 10
 
 # total is total UMIs per cell
-# detected is number of detected genes.
-# the different gene subset percentages are listed as subsets_mt_percent etc.
+# detected is number of unique detected genes
+# the different gene subset percentages are listed as subsets_mt_percent etc
 
 wrap_plots(
     plotColData(sce, y = "detected", x = "sample", colour_by = "sample"),
@@ -219,7 +201,10 @@ wrap_plots(
     plotColData(sce, y = "subsets_ribo_percent", x = "sample", colour_by = "sample"),
     plotColData(sce, y = "subsets_hb_percent", x = "sample", colour_by = "sample"),
     ncol = 3
-) + plot_layout(guides = "collect")
+) &
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "none") &
+  plot_layout(guides = "collect")
 ```
 
 <div>
@@ -227,23 +212,20 @@ wrap_plots(
 > **Discuss**
 >
 > Looking at the violin plots, what do you think are appropriate cutoffs
-> for filtering these samples
+> for filtering these samples?
 
 </div>
 
 As you can see, there is quite some difference in quality for these
 samples, with for instance the covid_15 and covid_16 samples having
-cells with fewer detected genes and more mitochondrial content. As the
-ribosomal proteins are highly expressed they will make up a larger
-proportion of the transcriptional landscape when fewer of the lowly
-expressed genes are detected. We can also plot the different QC-measures
-as scatter plots.
+cells with fewer detected genes and more mitochondrial content. We can
+also plot the different QC-measures as scatter plots.
 
 ``` {r}
 #| label: qc-scatter
 #| fig-height: 5
 #| fig-width: 6
-plotColData(sce, x = "total", y = "detected", colour_by = "sample")
+plotColData(sce, x = "total", y = "detected", colour_by = "sample", order_by = "total")
 ```
 
 <div>
@@ -261,9 +243,9 @@ plotColData(sce, x = "total", y = "detected", colour_by = "sample")
 
 A standard approach is to filter cells with low number of reads as well
 as genes that are present in at least a given number of cells. Here we
-will only consider cells with at least 200 detected genes and genes need
-to be expressed in at least 3 cells. Please note that those values are
-highly dependent on the library preparation method used.
+will only consider cells with more than 200 detected genes and genes
+that are expressed in more than 3 cells. Please note that those values
+are highly dependent on the library preparation method used.
 
 In Scran, we can use the function `quickPerCellQC` to filter out
 outliers from distributions of qc stats, such as detected genes, gene
@@ -306,7 +288,7 @@ reads. We can for instance plot the percentage of counts per gene.
 
 In Scater, you can also use the function `plotHighestExprs()` to plot
 the gene contribution, but the function is quite slow, so we will do it
-on our own instead..
+on our own instead.
 
 ``` {r}
 #| label: top-genes
@@ -320,8 +302,6 @@ most_expressed <- order(Matrix::rowSums(C), decreasing = T)[20:1]
 boxplot(as.matrix(t(C[most_expressed, ])), cex = .1, las = 1, xlab = "% total count per cell", col = scales::hue_pal()(20)[20:1], horizontal = TRUE)
 
 rm(C)
-
-# also, there is the option of running the function "plotHighestExprs" in the scater package, however, this function takes very long to execute.
 ```
 
 As you can see, MALAT1 constitutes up to 30% of the UMIs from a single
@@ -354,18 +334,14 @@ selected_ribo <- sce.filt$subsets_ribo_percent > 5
 # and subset the object to only keep those cells
 sce.filt <- sce.filt[, selected_mito & selected_ribo]
 dim(sce.filt)
+table(sce.filt$sample)
 ```
 
 As you can see, a large proportion of sample covid_15 is filtered out.
-Also, there is still quite a lot of variation in `percent_mito`, so it
-will have to be dealt with in the data analysis step. We can also notice
-that the `percent_ribo` are also highly variable, but that is expected
-since different cell types have different proportions of ribosomal
-content, according to their function.
 
 ### Plot filtered QC
 
-Lets plot the same QC-stats once more.
+Lets plot the same QC stats once more.
 
 ``` {r}
 #| label: qc-vln-filt
@@ -373,14 +349,23 @@ Lets plot the same QC-stats once more.
 #| fig-width: 10
 
 wrap_plots(
-    plotColData(sce, y = "detected", x = "sample", colour_by = "sample"),
-    plotColData(sce, y = "total", x = "sample", colour_by = "sample"),
-    plotColData(sce, y = "subsets_mt_percent", x = "sample", colour_by = "sample"),
-    plotColData(sce, y = "subsets_ribo_percent", x = "sample", colour_by = "sample"),
-    plotColData(sce, y = "subsets_hb_percent", x = "sample", colour_by = "sample"),
+    plotColData(sce.filt, y = "detected", x = "sample", colour_by = "sample"),
+    plotColData(sce.filt, y = "total", x = "sample", colour_by = "sample"),
+    plotColData(sce.filt, y = "subsets_mt_percent", x = "sample", colour_by = "sample"),
+    plotColData(sce.filt, y = "subsets_ribo_percent", x = "sample", colour_by = "sample"),
+    plotColData(sce.filt, y = "subsets_hb_percent", x = "sample", colour_by = "sample"),
     ncol = 3
-) + plot_layout(guides = "collect")
+) &
+    theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "none") &
+  plot_layout(guides = "collect")
 ```
+
+There is still quite a lot of variation in `percent_mito`, so it will
+have to be dealt with in the data analysis step. The `percent_ribo`
+values are also highly variable, but that is expected since different
+cell types have different proportions of ribosomal content, according to
+their function.
 
 ### Filter genes
 
@@ -417,8 +402,8 @@ conclusions. However this may not always be possible. By looking at
 reads from chromosomeY (males) and XIST (X-inactive specific transcript)
 expression (mainly female) it is quite easy to determine per sample
 which sex it is. It can also be a good way to detect if there has been
-any mislabelling in which case, the sample metadata sex does not agree
-with the computational predictions.
+any mislabelling leading to the sample metadata sex not agreeing with
+the computational predictions.
 
 To get chromosome information for all genes, you should ideally parse
 the information from the gtf file that you used in the mapping pipeline
@@ -466,7 +451,7 @@ Download precomputed data.
 # fetch_annotation is defined at the top of this document
 if (fetch_annotation) {
   genes_file <- file.path(path_results, "genes_table.csv")
-  if (!file.exists(genes_file)) download.file(file.path(path_data, "covid/results_bioc/genes_table.csv"), destfile = genes_file,
+  if (!file.exists(genes_file)) download.file(file.path(path_data, "covid/results_bioc_2026/genes_table.csv"), destfile = genes_file,
                                               method = "curl", extra = curl_upass)
 }
 ```
@@ -510,7 +495,7 @@ detection of either.
 
 # as plotColData cannot take an expression vs metadata, we need to add in XIST expression to colData
 sce.filt@colData$XIST <- counts(sce.filt)["XIST", ] / colSums(counts(sce.filt)) * 10000
-plotColData(sce.filt, "XIST", "pct_chrY")
+plotColData(sce.filt, "XIST", "pct_chrY", colour_by = "sample", order_by = "total")
 ```
 
 Plot as violins.
@@ -524,7 +509,10 @@ wrap_plots(
     plotColData(sce.filt, y = "XIST", x = "sample", colour_by = "sample"),
     plotColData(sce.filt, y = "pct_chrY", x = "sample", colour_by = "sample"),
     ncol = 2
-) + plot_layout(guides = "collect")
+) &
+    theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "none") &
+  plot_layout(guides = "collect")
 ```
 
 <div>
@@ -584,11 +572,15 @@ We can now create a violin plot for the cell cycle scores as well.
 
 wrap_plots(
     plotColData(sce.filt, y = "G2M.score", x = "G1.score", colour_by = "phase"),
-    plotColData(sce.filt, y = "G2M.score", x = "sample", colour_by = "sample"),
-    plotColData(sce.filt, y = "G1.score", x = "sample", colour_by = "sample"),
-    plotColData(sce.filt, y = "S.score", x = "sample", colour_by = "sample"),
+    plotColData(sce.filt, y = "G2M.score", x = "sample", colour_by = "sample") &
+      theme(axis.text.x = element_text(angle = 45, hjust = 1)),
+    plotColData(sce.filt, y = "G1.score", x = "sample", colour_by = "sample") &
+      theme(axis.text.x = element_text(angle = 45, hjust = 1)),
+    plotColData(sce.filt, y = "S.score", x = "sample", colour_by = "sample") &
+      theme(axis.text.x = element_text(angle = 45, hjust = 1)),
     ncol = 4
-) + plot_layout(guides = "collect")
+) &
+  plot_layout(guides = "collect")
 ```
 
 Cyclone predicts most cells as G1, but also quite a lot of cells with
@@ -617,25 +609,18 @@ using is subsampled, but the original datasets contained about 5 000
 cells per sample, hence we can assume that they loaded about 9 000 cells
 and should have a doublet rate at about 4%.
 
-<div>
-
-> **Caution**
->
-> Ideally doublet prediction should be run on each sample separately,
-> especially if your samples have different proportions of cell types.
-> In this case, the data is subsampled so we have very few cells per
-> sample and all samples are sorted PBMCs, so it is okay to run them
-> together.
-
-</div>
-
 There is a method to predict if a cluster consists of mainly doublets
 `findDoubletClusters()`, but we can also predict individual cells based
 on simulations using the function `computeDoubletDensity()` which we
-will do here. Doublet detection will be performed using PCA, so we need
-to first normalize the data and run variable gene detection, as well as
-UMAP for visualization. These steps will be explored in more detail in
-coming exercises.
+will do here. This function allows us to specify the original sample of
+each cell using the parameter `samples`. We will use this because the
+samples were prepared separately, and the dataset therefore cannot
+contain doublets across samples.
+
+Doublet detection will be performed using PCA, so we need to first
+normalize the data and run variable gene detection, as well as UMAP for
+visualization. These steps will be explored in more detail in coming
+exercises.
 
 ``` {r}
 #| label: doublet-norm
@@ -652,7 +637,8 @@ sce.filt <- runUMAP(sce.filt, pca = 10)
 ``` {r}
 #| label: doublet
 # run computeDoubletDensity with 10 principal components.
-sce.filt <- scDblFinder(sce.filt, dims = 10)
+
+sce.filt <- scDblFinder(sce.filt, dims = 10, samples = sce.filt$sample)
 ```
 
 ``` {r}
@@ -698,10 +684,8 @@ table(sce.filt$sample)
 
 > **Discuss**
 >
-> "In this case we ran doublet detection with all samples together since
-> we have very small subsampled datasets. But in a real scenario it
-> should be run one sample at a time. Why is this important do you
-> think?"
+> Why is it important to predict doublets in the different samples
+> separately? In which situations would this be more/less important?
 
 </div>
 
