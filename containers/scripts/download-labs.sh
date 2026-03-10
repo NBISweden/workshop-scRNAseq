@@ -55,7 +55,7 @@ function main() (
     
     if [ -d "${REPO_NAME}/${REPO_DIR}/figs" ]; then
         echo "moving figs directory..."
-        cp -r "${REPO_NAME}/${REPO_DIR}/figs" "./"
+		cp -r "${REPO_NAME}/${REPO_DIR}/figs" "$(dirname ${LOCAL_DIR})/"
     fi
     
     
