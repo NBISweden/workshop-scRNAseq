@@ -113,6 +113,7 @@ render_files_lectures() {
         # dge requires ggpubr so this is currently being rendered interactively. ggpubr should be added to the container for next year
         # "$LECTURE_DIR/dge/index.qmd"
         "$LECTURE_DIR/gsa/index.qmd"
+        "$LECTURE_DIR/integration/index.qmd"
     )
     local start
     start=$(timer_start)
