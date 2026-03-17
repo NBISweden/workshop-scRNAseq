@@ -11,7 +11,7 @@ This repo contains the course material for NBIS workshop **Single Cell RNA-Seq D
 docker pull --platform=linux/amd64 ghcr.io/nbisweden/workshop-scrnaseq-seurat:20250320-2311`
 
 # for scanpy labs
-docker pull --platform=linux/amd64 ghcr.io/nbisweden/workshop-scrnaseq-scanpy:20250325-2256
+docker pull --platform=linux/amd64 ghcr.io/nbisweden/workshop-scrnaseq-scanpy:20260312-2133
 
 # for optional spatial labs
 docker pull --platform=linux/amd64 ghcr.io/nbisweden/workshop-scrnaseq:2024-seurat_spatial-r4.3.0
@@ -34,19 +34,22 @@ Open in browser: `http://localhost:8787/`
 - To run Python labs in JupyterLab
 
 ```
-docker run --rm --platform=linux/amd64 -p 8888:8888 -v ${PWD}:/home/jovyan/work/work ghcr.io/nbisweden/workshop-scrnaseq-scanpy:20250325-2256
+docker run --rm --platform=linux/amd64 -p 8888:8888 -v ${PWD}:/home/jovyan/work/work ghcr.io/nbisweden/workshop-scrnaseq-scanpy:20260312-2133
 ```
 
 Open in browser: `http://localhost:8888/lab` and use password `scrnaseq`
 
-- In the container, start a terminal and run the command below to activate the respective conda environment.
+- In the container, start a terminal and run the command below to activate the respective environment.
 
 ```
 # for seurat/bioconductor
 conda activate seurat
+```
 
-# for scanpy
-conda activate scanpy
+For Scanpy we are using Pixi as environment manager and you do not need to activate the environment. If you are running a command from `/home/jovyan` you just need to prepend any command with `pixi run <CMD>`. In any other directory, you need to tell Pixi which manifest to use as shown below.
+
+```
+pixi run --frozen --manifest-path /home/jovyan/pixi.toml <CMD>
 ```
 
 - To download the compiled labs for the respective toolkit, run the `download-labs.sh` command below provided in the container.

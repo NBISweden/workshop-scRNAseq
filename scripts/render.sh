@@ -14,7 +14,7 @@ set -euo pipefail
 
 # Docker image variables (can be overridden via env)
 DOCKER_R="${DOCKER_R:-ghcr.io/nbisweden/workshop-scrnaseq-seurat:20250320-2311}"
-DOCKER_SCANPY="${DOCKER_SCANPY:-ghcr.io/nbisweden/workshop-scrnaseq-scanpy:20250325-2256}"
+DOCKER_SCANPY="${DOCKER_SCANPY:-ghcr.io/nbisweden/workshop-scrnaseq-scanpy:20260312-2133}"
 DOCKER_SEURAT_SPATIAL="${DOCKER_SEURAT_SPATIAL:-ghcr.io/nbisweden/workshop-scrnaseq:2024-seurat_spatial-r4.3.0}"
 DOCKER_BIOC_SPATIAL="${DOCKER_BIOC_SPATIAL:-ghcr.io/nbisweden/workshop-scrnaseq:2024-bioconductor_spatial-r4.3.0}"
 DOCKER_SITE="${DOCKER_SITE:-ghcr.io/nbisweden/workshop-scrnaseq:2024-site-r4.3.0}"
