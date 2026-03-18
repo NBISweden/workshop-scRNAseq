@@ -11,6 +11,74 @@ format:
         hero: "assets/tsne_integ.png"
 
 ---
+
+## Overview: Why Integration?
+
+::: columns
+::: {.column width="50%"}
+The Challenge:
+
+- Comparing cells across individuals/conditions
+- Multiple scRNA-seq experiments from different batches
+- Technical variations overshadow biological signals
+- Need unified analysis across samples
+
+Batch Effects Include:
+
+- Multiple seq runs
+- Library preparation protocols
+- Platform variations
+- Sample handling differences
+- And (sadly) many more!
+:::
+
+::: {.column width="50%"}
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+library(ggplot2)
+library(gridExtra)
+
+set.seed(42)
+uncorrected <- data.frame(
+  UMAP1 = c(rnorm(200, mean=-3, sd=1), rnorm(200, mean=3, sd=1)),
+  UMAP2 = c(rnorm(200, mean=2, sd=1), rnorm(200, mean=-2, sd=1)),
+  Batch = rep(c("Batch A", "Batch B"), each=200),
+  CellType = rep(c("TypeX", "TypeX"), each=200)
+)
+
+corrected <- data.frame(
+  UMAP1 = c(rnorm(200, mean=-0.5, sd=0.8), rnorm(200, mean=0.5, sd=0.8)),
+  UMAP2 = c(rnorm(200, mean=-0.5, sd=0.8), rnorm(200, mean=0.5, sd=0.8)),
+  Batch = rep(c("Batch A", "Batch B"), each=200),
+  CellType = rep(c("TypeX", "TypeX"), each=200)
+)
+
+p1 <- ggplot(uncorrected, aes(x=UMAP1, y=UMAP2, color=Batch)) +
+  geom_point(size=3, alpha=0.6) +
+  ggtitle("Before Integration") +
+  theme_minimal() + 
+  theme(legend.position="bottom", plot.title=element_text(hjust=0.5, size=14, face="bold"))
+
+p2 <- ggplot(corrected, aes(x=UMAP1, y=UMAP2, color=Batch)) +
+  geom_point(size=3, alpha=0.6) +
+  ggtitle("After Integration") +
+  theme_minimal() + 
+  theme(legend.position="bottom", plot.title=element_text(hjust=0.5, size=14, face="bold"))
+
+gridExtra::grid.arrange(p1, p2, ncol=2)
+```
+:::
+:::
+
+:::{.fragment}
+**Key challenge**: Distinguish biological variation from batch effects
+:::
+
+:::{.fragment}
+**Key Assumption**: Batches are uncorrelated (orthogonal) to the variable of interest.
+:::
+
+---
+
 ## Integration vs Batch Correction
 
 ```{mermaid, echo = FALSE, message=FALSE, warning=FALSE}
@@ -77,73 +145,6 @@ flowchart LR
   - Good to know and not to confuse
 
 :::
-:::
-
----
-
-## Overview: Why Integration?
-
-::: columns
-::: {.column width="50%"}
-The Challenge:
-
-- Comparing cells across individuals/conditions
-- Multiple scRNA-seq experiments from different batches
-- Technical variations overshadow biological signals
-- Need unified analysis across samples
-
-Batch Effects Include:
-
-- Multiple seq runs
-- Library preparation protocols
-- Platform variations
-- Sample handling differences
-- And (sadly) many more!
-:::
-
-::: {.column width="50%"}
-```{r, echo=FALSE, message=FALSE, warning=FALSE}
-library(ggplot2)
-library(gridExtra)
-
-set.seed(42)
-uncorrected <- data.frame(
-  UMAP1 = c(rnorm(200, mean=-3, sd=1), rnorm(200, mean=3, sd=1)),
-  UMAP2 = c(rnorm(200, mean=2, sd=1), rnorm(200, mean=-2, sd=1)),
-  Batch = rep(c("Batch A", "Batch B"), each=200),
-  CellType = rep(c("TypeX", "TypeX"), each=200)
-)
-
-corrected <- data.frame(
-  UMAP1 = c(rnorm(200, mean=-0.5, sd=0.8), rnorm(200, mean=0.5, sd=0.8)),
-  UMAP2 = c(rnorm(200, mean=-0.5, sd=0.8), rnorm(200, mean=0.5, sd=0.8)),
-  Batch = rep(c("Batch A", "Batch B"), each=200),
-  CellType = rep(c("TypeX", "TypeX"), each=200)
-)
-
-p1 <- ggplot(uncorrected, aes(x=UMAP1, y=UMAP2, color=Batch)) +
-  geom_point(size=3, alpha=0.6) +
-  ggtitle("Before Integration") +
-  theme_minimal() + 
-  theme(legend.position="bottom", plot.title=element_text(hjust=0.5, size=14, face="bold"))
-
-p2 <- ggplot(corrected, aes(x=UMAP1, y=UMAP2, color=Batch)) +
-  geom_point(size=3, alpha=0.6) +
-  ggtitle("After Integration") +
-  theme_minimal() + 
-  theme(legend.position="bottom", plot.title=element_text(hjust=0.5, size=14, face="bold"))
-
-gridExtra::grid.arrange(p1, p2, ncol=2)
-```
-:::
-:::
-
-:::{.fragment}
-**Key challenge**: Distinguish biological variation from batch effects
-:::
-
-:::{.fragment}
-**Key Assumption**: Batches are uncorrelated (orthogonal) to the variable of interest.
 :::
 
 ---
@@ -499,7 +500,7 @@ A: Each sample is its own social network; Conos adds edges between similar peopl
 
 ::: {.callout-note}
 ### Q18. How can you spot “over-integration” ?
-A: UMAP: If biologically distinct groups are **integrated** (eg. disease and control where separation is expected)
+A: Marker genes lose specificity across clusters, known biology is obscured, and distinct cell types merge together.
 :::
 
 ::: {.callout-note}
