@@ -1,4 +1,31 @@
 #!/bin/bash
+set -e
+
+HOME="/home/jovyan"
+
+function make_scanpy_kernel() (
+    mkdir -p ${HOME}/.local/share/jupyter/kernels/scanpy
+    cat <<EOF > ${HOME}/.local/share/jupyter/kernels/scanpy/kernel.json
+{
+  "argv": [
+    "pixi", "run", "--frozen", "--manifest-path", "${HOME}/pixi.toml", "python",
+    "-Xfrozen_modules=off",
+    "-m",
+    "ipykernel_launcher",
+    "-f",
+    "{connection_file}"
+  ],
+  "display_name": "scanpy",
+  "language": "python",
+  "metadata": {
+    "debugger": true
+  },
+  "kernel_protocol_version": "5.5"
+}
+EOF
+)
+
+make_scanpy_kernel
 
 exec jupyter lab \
     --no-browser \
