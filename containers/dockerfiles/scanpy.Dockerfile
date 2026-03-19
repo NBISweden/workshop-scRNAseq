@@ -20,9 +20,13 @@ COPY envs/scanpy/pixi.toml envs/scanpy/pixi.lock /home/jovyan/
 # Configure container start
 COPY scripts/scanpy-start-script.sh ${HOME}/start-script.sh
 COPY scripts/download-labs.sh ${HOME}/download-labs.sh
+COPY scripts/wait-for-env.sh /usr/local/bin/wait-for-env
 
 RUN chmod a+x ${HOME}/start-script.sh && \
-    chmod a+x ${HOME}/download-labs.sh
+    chmod a+x ${HOME}/download-labs.sh && \
+    chmod +x /usr/local/bin/wait-for-env && \
+	mkdir -p /var/log/pixi && \
+	chown -R jovyan:users /var/log/pixi
 
 RUN mkdir -p /home/jovyan/.local/share/jupyter && \
     chown -R jovyan:users /home/jovyan
