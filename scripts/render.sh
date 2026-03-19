@@ -14,14 +14,14 @@ set -euo pipefail
 
 # Docker image variables (can be overridden via env)
 DOCKER_R="${DOCKER_R:-ghcr.io/nbisweden/workshop-scrnaseq-seurat:20250320-2311}"
-DOCKER_SCANPY="${DOCKER_SCANPY:-ghcr.io/nbisweden/workshop-scrnaseq-scanpy:20250325-2256}"
+DOCKER_SCANPY="${DOCKER_SCANPY:-ghcr.io/nbisweden/workshop-scrnaseq-scanpy:20260312-2133}"
 DOCKER_SEURAT_SPATIAL="${DOCKER_SEURAT_SPATIAL:-ghcr.io/nbisweden/workshop-scrnaseq:2024-seurat_spatial-r4.3.0}"
 DOCKER_BIOC_SPATIAL="${DOCKER_BIOC_SPATIAL:-ghcr.io/nbisweden/workshop-scrnaseq:2024-bioconductor_spatial-r4.3.0}"
 DOCKER_SITE="${DOCKER_SITE:-ghcr.io/nbisweden/workshop-scrnaseq:2024-site-r4.3.0}"
 
 # Entry points for conda envs
 ENTRYPOINT_R="/usr/local/conda/bin/conda"
-ENTRYPOINT_SCANPY="/opt/conda/bin/conda"
+ENTRYPOINT_SCANPY="pixi"
 
 LAB_DIR="docs/labs"
 LECTURE_DIR="docs/lectures"
@@ -67,11 +67,21 @@ render_files_scanpy() {
     local files=("$@")
     local start
     start=$(timer_start)
-    for file in "${files[@]}"; do
-        echo "Rendering $file ..."
-        docker run --rm --platform=linux/amd64 -u jovyan -v "${PWD}:/work" \
-            --entrypoint "$ENTRYPOINT_SCANPY" "$DOCKER_SCANPY" run -n scanpy quarto render "/work/$file"
-    done
+    docker run --rm \
+        --platform=linux/amd64 \
+        -u root \
+        -v "${PWD}:/work" \
+        --entrypoint "/bin/bash" \
+        "$DOCKER_SCANPY" -c "
+            set -e
+            echo 'Setting up Pixi environment...'
+            $ENTRYPOINT_SCANPY run --frozen --manifest-path '/home/jovyan/pixi.toml' bash -c '
+                for file in ${files[*]}; do
+                    echo \"--- Rendering: \$file ---\"
+                    quarto render \"/work/\$file\"
+                done
+            '
+        "
     timer_report "$start"
 }
 
@@ -166,7 +176,7 @@ render_bioc() {
         "$LAB_DIR/bioc/bioc_02_dimred.qmd"
         "$LAB_DIR/bioc/bioc_03_integration.qmd"
         "$LAB_DIR/bioc/bioc_04_clustering.qmd"
-        # "$LAB_DIR/bioc/bioc_05_dge.qmd"
+        "$LAB_DIR/bioc/bioc_05_dge.qmd"
         "$LAB_DIR/bioc/bioc_06_celltyping.qmd"
     )
     echo "Rendering Bioconductor files..."
@@ -179,7 +189,7 @@ render_scanpy() {
         "$LAB_DIR/scanpy/scanpy_02_dimred.qmd"
         "$LAB_DIR/scanpy/scanpy_03_integration.qmd"
         "$LAB_DIR/scanpy/scanpy_04_clustering.qmd"
-        # "$LAB_DIR/scanpy/scanpy_05_dge.qmd"
+        "$LAB_DIR/scanpy/scanpy_05_dge.qmd"
         "$LAB_DIR/scanpy/scanpy_06_celltyping.qmd"
         "$LAB_DIR/scanpy/scanpy_07_trajectory.qmd"
     )
