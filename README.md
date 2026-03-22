@@ -21,6 +21,8 @@ docker pull --platform=linux/amd64 ghcr.io/nbisweden/workshop-scrnaseq:2024-scan
 
 ## Run labs interactively (locally)
 
+> To run the labs locally follow these [instructions](https://nbisweden.github.io/workshop-scRNAseq/other/docker.html) to install Docker Desktop / Colima, depending on your operating system.
+
 - Create a new directory and `cd` into it. You will mount this directory to `/home/jovyan/work` in your container so that you can save your work locally.
 
 - To run Seurat or Bioconductor labs in RStudio
