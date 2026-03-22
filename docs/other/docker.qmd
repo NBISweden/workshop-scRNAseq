@@ -34,6 +34,57 @@ After Docker Desktop starts, open the Dashboard and go to *Settings ({{< fa gear
 On Macs with Apple Silicon, in Docker Settings > General, check **Use Rosetta for x86/amd64 emulation on Apple Silicon**.
 :::
 
+#### Running Linux x86_64 Containers on Apple Silicon
+
+Apple Silicon (M-series chips) uses the ARM64 architecture. Many Linux images are built for x86_64 (Intel/AMD). While Docker Desktop has built-in emulation, it can be unstable or fail for specific system calls.
+
+Colima provides a more robust virtualization layer for macOS, allowing you to run a dedicated x86_64 guest environment that handles these containers more reliably.
+
+**Installation**
+
+Ensure you have Homebrew installed, then run the following to install Colima and its required virtualization dependencies:
+
+```sh
+brew install colima qemu lima-additional-guestagents
+```
+
+**Start the x86_64 Environment**
+
+> IMPORTANT: Docker Desktop and Colima should not run at the same time. You must stop Docker Desktop before starting Colima.
+
+```sh
+# Stop Docker Desktop via CLI (or quit the app manually from the UI)
+docker desktop stop
+```
+
+**Initialize Colima with x86_64 emulation**
+
+```sh
+colima start --arch x86_64 --cpu 4 --memory 16 --disk 50
+```
+
+**File Permissions & Mounting**
+
+When mounting local macOS directories into an x86_64 container via Colima, you may encounter Permission Denied errors. This happens because the file ownership mapping between the macOS host and the Linux VM can be problematic. To bypass these ownership issues during local development, run your container as the root user.
+
+**Switching Docker Contexts**
+
+> Run `docker context ls` to verify which engine is currently active. The entry marked with an asterisk (*) is your current target.
+
+You can toggle between the Colima (x86) environment and the native Docker Desktop (ARM) environment using these commands:
+
+To use Colima (x86_64):
+```sh
+docker desktop stop  # Or quit manually from the UI
+colima start
+```
+
+To switch back to Docker Desktop (Native):
+```sh
+colima stop
+docker desktop start # Or open the app manually from Applications
+```
+
 ### {{< fa brands windows >}} Windows
 
 Visit [this page](https://docs.docker.com/desktop/install/windows-install/) to ensure you have the requirements necessary.
