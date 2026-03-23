@@ -36,7 +36,7 @@ Open in browser: `http://localhost:8787/`
 - To run Python labs in JupyterLab
 
 ```
-docker run --rm --platform=linux/amd64 -p 8888:8888 -v ${PWD}:/home/jovyan/work/work ghcr.io/nbisweden/workshop-scrnaseq-scanpy:20260312-2133
+docker run --rm --platform=linux/amd64 -p 8888:8888 -v ${PWD}:/home/jovyan/work ghcr.io/nbisweden/workshop-scrnaseq-scanpy:20260312-2133
 ```
 
 Open in browser: `http://localhost:8888/lab` and use password `scrnaseq`
@@ -69,5 +69,5 @@ pixi run --frozen --manifest-path /home/jovyan/pixi.toml <CMD>
 
 ---
 
-**2025** • NBIS • SciLifeLab
+**2026** • NBIS • SciLifeLab
 
