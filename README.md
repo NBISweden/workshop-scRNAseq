@@ -11,7 +11,7 @@ This repo contains the course material for NBIS workshop **Single Cell RNA-Seq D
 docker pull --platform=linux/amd64 ghcr.io/nbisweden/workshop-scrnaseq-seurat:20250320-2311`
 
 # for scanpy labs
-docker pull --platform=linux/amd64 ghcr.io/nbisweden/workshop-scrnaseq-scanpy:20260312-2133
+docker pull --platform=linux/amd64 ghcr.io/nbisweden/workshop-scrnaseq-scanpy:20260323-2301
 
 # for optional spatial labs
 docker pull --platform=linux/amd64 ghcr.io/nbisweden/workshop-scrnaseq:2024-seurat_spatial-r4.3.0
@@ -22,6 +22,8 @@ docker pull --platform=linux/amd64 ghcr.io/nbisweden/workshop-scrnaseq:2024-scan
 ## Run labs interactively (locally)
 
 > To run the labs locally follow these [instructions](https://nbisweden.github.io/workshop-scRNAseq/other/docker.html) to install Docker Desktop / Colima, depending on your operating system.
+
+> **IMPORTANT:** If you are using an Apple Silicon (M-chip) you need to follow the Colima [instructions](https://nbisweden.github.io/workshop-scRNAseq/other/docker.html)!
 
 - Create a new directory and `cd` into it. You will mount this directory to `/home/jovyan/work` in your container so that you can save your work locally.
 
@@ -36,7 +38,10 @@ Open in browser: `http://localhost:8787/`
 - To run Python labs in JupyterLab
 
 ```
-docker run --rm --platform=linux/amd64 -p 8888:8888 -v ${PWD}:/home/jovyan/work ghcr.io/nbisweden/workshop-scrnaseq-scanpy:20260312-2133
+docker run --rm --platform=linux/amd64 -p 8888:8888 -v ${PWD}:/home/jovyan/work ghcr.io/nbisweden/workshop-scrnaseq-scanpy:20260323-2301
+
+# Apple Silicon with Colima
+docker run --rm --platform=linux/amd64 -p 8888:8888 -v scanpy-labs:/home/jovyan/work ghcr.io/nbisweden/workshop-scrnaseq-scanpy:20260323-2301
 ```
 
 Open in browser: `http://localhost:8888/lab` and use password `scrnaseq`

@@ -96,7 +96,7 @@ docker run --rm -ti --platform=linux/amd64 -u root -v ${PWD}:/home/jovyan/work -
 docker run --rm -ti --platform=linux/amd64 -u root -v ${PWD}:/home/jovyan/work --entrypoint /usr/local/conda/bin/conda ghcr.io/nbisweden/workshop-scrnaseq-seurat:20250320-2311 run -n seurat quarto render /home/jovyan/work/docs/labs/bioc/bioc_<lab_name>.qmd
 
 # python/scanpy
-docker run --rm -ti --platform=linux/amd64 -u jovyan -v ${PWD}:/work --entrypoint pixi ghcr.io/nbisweden/workshop-scrnaseq-scanpy:20260312-2133 run --frozen --manifest-path /home/jovyan/pixi.toml quarto render /work/labs/scanpy/scanpy_<lab_name>.qmd
+docker run --rm -ti --platform=linux/amd64 -u root -v ${PWD}:/work --entrypoint pixi ghcr.io/nbisweden/workshop-scrnaseq-scanpy:20260323-2301 run --frozen --manifest-path /home/jovyan/pixi.toml quarto render /work/labs/scanpy/scanpy_<lab_name>.qmd
 ```
 
 Successfully rendered outputs are moved to the `docs/_site` folder and chunks are cached under `docs/_freeze`. These folders are gitignored.
