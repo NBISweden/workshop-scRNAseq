@@ -271,7 +271,24 @@ tcells = tcells[:, tcells.var.highly_variable]
 sc.pp.regress_out(tcells, ['total_counts', 'pct_counts_mt'])
 sc.pp.scale(tcells, max_value=10)
 sc.tl.pca(tcells, svd_solver='arpack')
-sce.pp.harmony_integrate(tcells, 'sample')
+
+## KNOWN BUG:
+# harmonypy==0.2.0 has a known bug described in https://github.com/slowkow/harmonypy/issues/49
+
+## Actual function call to run harmony:
+# sce.pp.harmony_integrate(tcells, 'sample')
+
+## Fix to get 'X_pca_harmony' of the correct shape:
+
+# Extract PCs
+_pcs = tcells.obsm['X_pca'] # (n_cells, n_pcs)
+
+# Run Harmony
+_harmony_out = hm.run_harmony(_pcs, tcells.obs, 'sample')
+
+# Z_corr is already a numpy array with shape (n_cells, n_pcs)
+tcells.obsm['X_pca_harmony'] = _harmony_out.Z_corr
+
 sc.pp.neighbors(tcells, n_neighbors=10, n_pcs=30, use_rep='X_pca_harmony')
 sc.tl.leiden(tcells, resolution = 0.6, key_added = "tcells_0.6")
 sc.tl.umap(tcells)

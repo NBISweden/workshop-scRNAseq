@@ -206,7 +206,22 @@ An alternative method for integration is Harmony, for more details on the method
 import scanpy.external as sce 
 import harmonypy as hm 
 
-sce.pp.harmony_integrate(adata, 'sample')
+## KNOWN BUG:
+# harmonypy==0.2.0 has a known bug described in https://github.com/slowkow/harmonypy/issues/49
+
+## Actual function call to run harmony:
+# sce.pp.harmony_integrate(adata, 'sample')
+
+## Fix to get 'X_pca_harmony' of the correct shape:
+
+# Extract PCs
+_pcs = adata.obsm['X_pca'] # (n_cells, n_pcs)
+
+# Run Harmony
+_harmony_out = hm.run_harmony(_pcs, adata.obs, 'sample')
+
+# Z_corr is already a numpy array with shape (n_cells, n_pcs)
+adata.obsm['X_pca_harmony'] = _harmony_out.Z_corr
 
 # Then we calculate a new umap and tsne.
 sc.pp.neighbors(adata, n_neighbors=10, n_pcs=30, use_rep='X_pca_harmony')
