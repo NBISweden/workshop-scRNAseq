@@ -12,11 +12,6 @@ docker pull --platform=linux/amd64 ghcr.io/nbisweden/workshop-scrnaseq-seurat:20
 
 # for scanpy labs
 docker pull --platform=linux/amd64 ghcr.io/nbisweden/workshop-scrnaseq-scanpy:20260323-2301
-
-# for optional spatial labs
-docker pull --platform=linux/amd64 ghcr.io/nbisweden/workshop-scrnaseq:2024-seurat_spatial-r4.3.0
-docker pull --platform=linux/amd64 ghcr.io/nbisweden/workshop-scrnaseq:2024-bioconductor_spatial-r4.3.0
-docker pull --platform=linux/amd64 ghcr.io/nbisweden/workshop-scrnaseq:2024-scanpy_spatial-py3.10
 ```
 
 ## Run labs interactively (locally)
