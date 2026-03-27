@@ -69,7 +69,7 @@ pixi run --frozen --manifest-path /home/jovyan/pixi.toml <CMD>
 ~/download-labs.sh "https://github.com/NBISweden" "workshop-scRNAseq" "compiled/labs" "bioc" "work/labs"
 
 # for scanpy
-~/work/download-labs.sh "https://github.com/NBISweden" "workshop-scRNAseq" "compiled/labs" "scanpy" "work/labs"
+~/download-labs.sh "https://github.com/NBISweden" "workshop-scRNAseq" "compiled/labs" "scanpy" "work/labs"
 ```
 
 ---
