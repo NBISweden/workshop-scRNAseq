@@ -162,10 +162,6 @@ background-size: cover;
     </a>
     <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="nav-menu-archive">    
         <li>
-    <a class="dropdown-item" href="https://nbisweden.github.io/workshop-scRNAseq/archive/2025/" rel="" target="">
- <span class="dropdown-text">2025</span></a>
-  </li>  
-        <li>
     <a class="dropdown-item" href="https://nbisweden.github.io/workshop-scRNAseq/archive/2024/" rel="" target="">
  <span class="dropdown-text">2024</span></a>
   </li>  
@@ -228,7 +224,10 @@ background-size: cover;
   <li><a href="#install-docker" id="toc-install-docker" class="nav-link active" data-scroll-target="#install-docker"><span class="header-section-number">1</span> Install Docker</a>
   <ul>
   <li><a href="#fa-brands-ubuntu-linux" id="toc-fa-brands-ubuntu-linux" class="nav-link" data-scroll-target="#fa-brands-ubuntu-linux"><span class="header-section-number">1.1</span> <i class="fa-brands fa-ubuntu" aria-label="ubuntu"></i> Linux</a></li>
-  <li><a href="#fa-brands-apple-mac" id="toc-fa-brands-apple-mac" class="nav-link" data-scroll-target="#fa-brands-apple-mac"><span class="header-section-number">1.2</span> <i class="fa-brands fa-apple" aria-label="apple"></i> Mac</a></li>
+  <li><a href="#fa-brands-apple-mac" id="toc-fa-brands-apple-mac" class="nav-link" data-scroll-target="#fa-brands-apple-mac"><span class="header-section-number">1.2</span> <i class="fa-brands fa-apple" aria-label="apple"></i> Mac</a>
+  <ul class="collapse">
+  <li><a href="#running-linux-x86_64-containers-on-apple-silicon" id="toc-running-linux-x86_64-containers-on-apple-silicon" class="nav-link" data-scroll-target="#running-linux-x86_64-containers-on-apple-silicon"><span class="header-section-number">1.2.1</span> Running Linux x86_64 Containers on Apple Silicon</a></li>
+  </ul></li>
   <li><a href="#fa-brands-windows-windows" id="toc-fa-brands-windows-windows" class="nav-link" data-scroll-target="#fa-brands-windows-windows"><span class="header-section-number">1.3</span> <i class="fa-brands fa-windows" aria-label="windows"></i> Windows</a></li>
   </ul></li>
   <li><a href="#test-installation" id="toc-test-installation" class="nav-link" data-scroll-target="#test-installation"><span class="header-section-number">2</span> Test installation</a></li>
@@ -274,6 +273,35 @@ Important
 <p>On Macs with Apple Silicon, in Docker Settings &gt; General, check <strong>Use Rosetta for x86/amd64 emulation on Apple Silicon</strong>.</p>
 </div>
 </div>
+<section id="running-linux-x86_64-containers-on-apple-silicon" class="level4" data-number="1.2.1">
+<h4 data-number="1.2.1" class="anchored" data-anchor-id="running-linux-x86_64-containers-on-apple-silicon"><span class="header-section-number">1.2.1</span> Running Linux x86_64 Containers on Apple Silicon</h4>
+<p>Apple Silicon (M-series chips) uses the ARM64 architecture. Many Linux images are built for x86_64 (Intel/AMD). While Docker Desktop has built-in emulation, it can be unstable or fail for specific system calls.</p>
+<p>Colima provides a more robust virtualization layer for macOS, allowing you to run a dedicated x86_64 guest environment that handles these containers more reliably.</p>
+<p><strong>Installation</strong></p>
+<p>Ensure you have Homebrew installed, then run the following to install Colima and its required virtualization dependencies:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">brew</span> install colima qemu lima-additional-guestagents</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p><strong>Start the x86_64 Environment</strong></p>
+<blockquote class="blockquote">
+<p>IMPORTANT: Docker Desktop and Colima should not run at the same time. You must stop Docker Desktop before starting Colima.</p>
+</blockquote>
+<div class="sourceCode" id="cb2"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Stop Docker Desktop via CLI (or quit the app manually from the UI)</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> desktop stop</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p><strong>Initialize Colima with x86_64 emulation</strong></p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">colima</span> start <span class="at">--arch</span> x86_64 <span class="at">--cpu</span> 4 <span class="at">--memory</span> 16 <span class="at">--disk</span> 50</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p><strong>File Permissions &amp; Mounting</strong></p>
+<p>When mounting local macOS directories into an x86_64 container via Colima, you may encounter Permission Denied errors. This happens because the file ownership mapping between the macOS host and the Linux VM can be problematic. To bypass these issues, it is recommended to mount a Docker native volume (<em>e.g.</em> <code>-v scanpy-labs:/home/jovyan/work</code>) instead of mounting a local directory.</p>
+<p><strong>Switching Docker Contexts</strong></p>
+<blockquote class="blockquote">
+<p>Run <code>docker context ls</code> to verify which engine is currently active. The entry marked with an asterisk (*) is your current target.</p>
+</blockquote>
+<p>You can toggle between the Colima (x86) environment and the native Docker Desktop (ARM) environment using these commands:</p>
+<p>To use Colima (x86_64):</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> desktop stop  <span class="co"># Or quit manually from the UI</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="ex">colima</span> start</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>To switch back to Docker Desktop (Native):</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="ex">colima</span> stop</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> desktop start <span class="co"># Or open the app manually from Applications</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
 </section>
 <section id="fa-brands-windows-windows" class="level3" data-number="1.3">
 <h3 data-number="1.3" class="anchored" data-anchor-id="fa-brands-windows-windows"><span class="header-section-number">1.3</span> <i class="fa-brands fa-windows" aria-label="windows"></i> Windows</h3>
@@ -286,9 +314,9 @@ Important
 <section id="test-installation" class="level2" data-number="2">
 <h2 data-number="2" class="anchored" data-anchor-id="test-installation"><span class="header-section-number">2</span> Test installation</h2>
 <p>From the terminal, type:</p>
-<div class="sourceCode" id="cb1"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> <span class="at">--version</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb6"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> <span class="at">--version</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>and then run your first image by typing:</p>
-<div class="sourceCode" id="cb2"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> run hello-world</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb7"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> run hello-world</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>If both work as expected, you successfully installed Docker Desktop!</p>
 </section>
 <section id="allocate-resources" class="level2" data-number="3">
