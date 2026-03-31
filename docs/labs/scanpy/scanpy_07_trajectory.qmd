@@ -113,18 +113,18 @@ sc.pl.umap(adata, color = ['clusters','dataset','batches','Phase'],legend_loc = 
 
 It is crucial that you performing analysis of a dataset understands what is going on, what are the clusters you see in your data and most importantly How are the clusters related to each other?. Well, let’s explore the data a bit. With the help of this table, write down which cluster numbers in your dataset express these key markers.
 
-|Marker  |Cell Type|
-|--------|----------------------------|
-|Cd34    |HSC progenitor|
-|Ms4a1   |B cell lineage|
-|Cd3e    |T cell lineage|
-|Ltf     |Granulocyte lineage|
-|Cst3    |Monocyte lineage|
-|Mcpt8   |Mast Cell lineage|
-|Alas2   |RBC lineage|
-|Siglech |Dendritic cell lineage|
-|C1qc    |Macrophage cell lineage|
-|Pf4     |Megakaryocyte cell lineage|
+|Marker|Cell Type|
+|:---|:---|
+|Cd34|HSC progenitor|
+|Ms4a1|B cell lineage|
+|Cd3e|T cell lineage|
+|Ltf|Granulocyte lineage|
+|Cst3|Monocyte lineage|
+|Mcpt8|Mast Cell lineage|
+|Alas2|RBC lineage|
+|Siglech|Dendritic cell lineage|
+|C1qc|Macrophage cell lineage|
+|Pf4|Megakaryocyte cell lineage|
 
 ```{python}
 #| label: plot-markers
@@ -200,8 +200,8 @@ sc.pl.embedding(adata, basis='X_umap_old', color = 'annot',legend_loc = 'on data
 
 ## Run PAGA
 
-Use the clusters from leiden clustering with leiden_1.4 and run PAGA. PAGA is very good at revealing global topologies of the data that might be distorted in a umap. 
-First we create the graph and initialize the positions using the umap.
+Use the clusters from leiden clustering with `leiden_1.4` and run PAGA. PAGA is very good at revealing global topologies of the data that might be distorted in a UMAP. 
+First we create the graph and initialize the positions using the UMAP.
 
 ```{python}
 #| label: paga
@@ -295,7 +295,7 @@ The pseudotime represents the distance of every cell to the starting cluster. Ha
 
 ## Using Cellrank to investigate gene expression changes along specific trajectories
 
-Now that we have calculated pseudotime, we are interested in what genes might change during a certain lineages differentiation trajectory. To analyse this, we use cellrank - a python library that computes probablistic cell fate mappings. It basically models the probabilities for each cell to end up in a specific terminal state (in our case, fully differentiated cell types). 
+Now that we have calculated pseudotime, we are interested in what genes might change during a certain lineages differentiation trajectory. To analyse this, we use Cellrank - a Python library that computes probablistic cell fate mappings. It basically models the probabilities for each cell to end up in a specific terminal state (in our case, fully differentiated cell types). 
 
 Cellrank can use different metrics to calculate a transition matrix, such as RNA velocity or pseudotime. As we have calculated pseudotime for our dataset above, we will use that for the calculation of our transition matrix.
 
@@ -305,7 +305,7 @@ pt_kernel = cr.kernels.PseudotimeKernel(adata, time_key='dpt_pseudotime')
 pt_kernel.compute_transition_matrix()
 ```
 
-In order to calculate terminal fates and lineage commitment, cellrank uses estimators like GPCCA. We set up an estimator from our PseudotimeKernel (pt_kernel) and compute macrostates in our dataset (groups of cells with similar transition dynamics).
+In order to calculate terminal fates and lineage commitment, cellrank uses estimators like GPCCA. We set up an estimator from our PseudotimeKernel (`pt_kernel`) and compute macrostates in our dataset (groups of cells with similar transition dynamics).
 
 ```{python}
 #Set up an estimator to analyse the kernel
@@ -315,7 +315,7 @@ pt_est =  cr.estimators.GPCCA(pt_kernel)
 pt_est.fit(cluster_key='annot', n_states=[10,15], n_cells=50)
 ```
 
-Now that we have created an estimator and computed macrostates, we can either automatically compute our initial and terminal cell states using , or we can set them manually. In this case, we will set the initial state manually to '2_progen', but let cellrank predict the terminal states.
+Now that we have created an estimator and computed macrostates, we can either automatically compute our initial and terminal cell states using , or we can set them manually. In this case, we will set the initial state manually to `0_progen`, but let cellrank predict the terminal states.
 
 ```{python}
 #Predict initial and terminal states
@@ -368,7 +368,7 @@ plt.show()
 :::{.callout-note title="Discuss"}
 Are the initial and terminal states predicted as you expected? What deviates from your expectation? 
 
-The results are influenced by a multitude of parameters, such as the PAGA graph connections (mediated by the n_neighbors parameter in sc.pp.neighbors) and the n_states parameter in pt_est.fit. Feel free to play with these parameters and see how the results change.
+The results are influenced by a multitude of parameters, such as the PAGA graph connections (mediated by the n_neighbors parameter in sc.pp.neighbors) and the `n_states` parameter in `pt_est.fit`. Feel free to play with these parameters and see how the results change.
 :::
 
 Now that we have calculated our initial and terminal states, we will calculate fate probabilities. Cellrank does this by using Markov Chains, which calculates the probability for each cell to end up at a given terminal state. Later on we will be able to use this information to investigate which genes drive differentiation from a progenitor towards a certain fully differentiated cell type.
@@ -381,7 +381,7 @@ pt_est.plot_fate_probabilities(legend_loc='right', basis='X_draw_graph_fa')
 
 Now that we have computed the fate probabilities of every cell, we can compute **driver genes** - Cellrank does this by correlating fate probabilities with gene expression, under the assumption that genes that have a strong correlation with the fate probabilities of a certain lineage might drive differentiatin processes towards the lineages terminal state.
 
-Below we will calculate driver genes for the erythrocyte lineage ('11_eryth') and the megakaryocyte lineage ('9_megakaryo').
+Below we will calculate driver genes for the erythrocyte lineage (`12_eryth`) and the megakaryocyte lineage (`10_megakaryo`).
 
 ```{python}
 #Calculate lineage drivers
@@ -396,7 +396,7 @@ drivers_mega_sort = drivers_mega.sort_values(by='10_megakaryo_corr', ascending=F
 drivers_ery_sort.head(n=10)
 ```
 
-Now we plot the top 10 previously calculated driver genes for the erythrocyte and granulocyte lineages. 
+Now we plot the top 10 previously calculated driver genes for the erythrocyte and megakaryocyte lineages. 
 
 ```{python}
 sc.pl.draw_graph(adata, color=drivers_ery_sort.index.tolist()[1:10], legend_loc='on data', legend_fontsize= 'x-small', use_raw=False, ncols=3)
@@ -411,14 +411,14 @@ sc.pl.draw_graph(adata, color=drivers_mega_sort.index.tolist()[1:10], legend_loc
 Discuss amongst yourselves which genes appear to be good markers for the respective lineages and why!
 :::
 
-Now we want to look at the expression trends for some of the genes we just identified as potential drivers over pseudotime. Cellrank uses Generalized additive models (GAMs) to fit smooth expression curves, so we start by creating such models for our data.
+Now we want to look at the expression trends for some of the genes we just identified as potential drivers over pseudotime. Cellrank uses Generalized Additive Models (GAMs) to fit smooth expression curves, so we start by creating such models for our data.
 
 ```{python}
 #Fit GAMs
 model = cr.models.GAM(adata, n_knots=6)
 ```
 
-Now we plot some of the interesting genes of the erythrocyte lineage, Car1, Atpif1, Vamp5. We only plot the genes for their respective lineage, in order to compare their expression at different pseudotime points during the lineages developmental trajectory.
+Next, we plot some of the interesting genes of the erythrocyte (Car1, Atpif1, Vamp5) and megakaryocyte (Cavin2, Pbx1, Ctla2a) lineages. We only plot the genes for their respective lineage, in order to compare their expression at different pseudotime points during the lineages developmental trajectory.
 
 ```{python}
 cr.pl.gene_trends(adata, 
@@ -495,7 +495,7 @@ cr.pl.heatmap(
 
 Now that we have visualized expression trends for several genes associated with the our lineages, we could be interested in identifying **other genes that follow a specific expression pattern** along the trajectory. Let's say we are interested in genes from the erythrocyte lineage that increase with pseudotime (like Car1) and genes whose expression peaks and then falls off again before the maximum pseudotime value is reached (like Vamp5). 
 
-Cellrank provides a way for us to identify genes that have a similar expression along the trajectory, using the .cluster_trends function. You can modify the number of clusters by modifying the resolution parameter until you find the clustering to be appropriate.
+Cellrank provides a way for us to identify genes that have a similar expression along the trajectory, using the `cr.pl.cluster_trends` function. You can modify the number of clusters by modifying the resolution parameter until you find the clustering to be appropriate.
 
 ```{python}
 #Then we cluster trends based on the erythrocyte driver genes
@@ -513,7 +513,7 @@ cr.pl.cluster_trends(
 )
 ```
 
-The results of the clustering trend are saved as an anndata object in adata.uns['lineage_11_eryth_trend']. We will now use this to extract genes that follow a specific trend and plot them.
+The results of the clustering trend are saved as an anndata object in `adata.uns['lineage_12_eryth_trend']`. We will now use this to extract genes that follow a specific trend and plot them.
 
 ```{python}
 #Save trends as new anndata object
@@ -572,7 +572,7 @@ You can visaulize any number of genes in this manner in order to see which ones 
 :::{.callout-note title="Discuss"}
 As you can see, we can manipulate the trajectory quite a bit by selecting different number of neighbors, components etc. to fit with our assumptions on the development of these celltypes.
 
-Please explore further how you can tweak the trajectory. For instance, can you create a PAGA trajectory using the orignial umap from Seurat instead? Hint, you first need to compute the neighbors on the umap.
+Please explore further how you can tweak the trajectory. For instance, can you create a PAGA trajectory using the orignial UMAP from Seurat instead? Hint, you first need to compute the neighbors on the UMAP.
 :::
 
 ## Session info
