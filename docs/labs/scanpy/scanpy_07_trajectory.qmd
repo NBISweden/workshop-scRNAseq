@@ -16,6 +16,12 @@ Partly following this PAGA [tutorial](https://scanpy-tutorials.readthedocs.io/en
 
 ```{python}
 #| label: libraries
+import sys
+import petsc4py
+
+# Tell PETSc to ignore harmless system signals and let Python handle them
+petsc4py.init(sys.argv + ['-no_signal_handler'])
+
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as pl
@@ -132,6 +138,10 @@ Redo clustering and umap using the basic Scanpy pipeline. Use the provided "X_ha
 
 ```{python}
 #| label: process
+
+#calculate highly variable genes to get mean expression and dispersion for every gene - we will need this later
+sc.pp.highly_variable_genes(adata, n_top_genes=2000)
+
 # first, store the old umap with a new name so it is not overwritten
 adata.obsm['X_umap_old'] = adata.obsm['X_umap']
 
@@ -159,18 +169,18 @@ sc.pl.umap(adata, color = ['leiden_1.0', 'leiden_1.2', 'leiden_1.4','clusters'],
 #Rename clusters with really clear markers, the rest are left unlabelled.
 
 annot = pd.DataFrame(adata.obs['leiden_1.4'].astype('string'))
-annot[annot['leiden_1.4'] == '9'] = '9_megakaryo' #Pf4
+annot[annot['leiden_1.4'] == '10'] = '10_megakaryo' #Pf4
 annot[annot['leiden_1.4'] == '16'] = '16_macro'  #C1qc
-annot[annot['leiden_1.4'] == '11'] = '11_eryth' #Alas2
+annot[annot['leiden_1.4'] == '12'] = '12_eryth' #Alas2
 annot[annot['leiden_1.4'] == '17'] = '17_dend' #Siglech
 annot[annot['leiden_1.4'] == '13'] = '13_mast' #Mcpt8
 annot[annot['leiden_1.4'] == '6'] = '6_mono' #Cts3
-annot[annot['leiden_1.4'] == '3'] = '3_gran' #Ltf
+annot[annot['leiden_1.4'] == '2'] = '2_gran' #Ltf
 annot[annot['leiden_1.4'] == '14'] = '14_TC' #Cd3e
 annot[annot['leiden_1.4'] == '15'] = '15_BC' #Ms4a1
-annot[annot['leiden_1.4'] == '2'] = '2_progen'  # Cd34
-annot[annot['leiden_1.4'] == '10'] = '10_progen' 
-annot[annot['leiden_1.4'] == '5'] = '5_progen'
+annot[annot['leiden_1.4'] == '0'] = '0_progen'  # Cd34
+annot[annot['leiden_1.4'] == '9'] = '9_progen' 
+annot[annot['leiden_1.4'] == '7'] = '7_progen'
 
 adata.obs['annot']=annot['leiden_1.4'].astype('category')
 
@@ -217,7 +227,7 @@ We have many edges in the graph between unrelated clusters, so lets try recalcul
 
 ```{python}
 #| label: redo-graph
-sc.pp.neighbors(adata, n_neighbors=8,  use_rep = 'X_harmony_Phase', n_pcs = 30)
+sc.pp.neighbors(adata, n_neighbors=8,  use_rep = 'X_harmony_Phase', n_pcs = 30, random_state=159)
 sc.pl.umap(adata, edges=True, color = 'annot', legend_loc= 'on data', legend_fontsize= 'xx-small')
 ```
 
@@ -268,7 +278,7 @@ Choose a root cell for diffusion pseudotime. We have 3 progenitor clusters, but 
 
 ```{python}
 #| label: pseudotime
-adata.uns['iroot'] = np.flatnonzero(adata.obs['annot']  == '2_progen')[0]
+adata.uns['iroot'] = np.flatnonzero(adata.obs['annot']  == '0_progen')[0]
 
 sc.tl.dpt(adata)
 ```
@@ -309,7 +319,7 @@ Now that we have created an estimator and computed macrostates, we can either au
 
 ```{python}
 #Predict initial and terminal states
-pt_est.set_initial_states({'5_progen': adata.obs_names[adata.obs['annot'] == '2_progen']}, 
+pt_est.set_initial_states({'0_progen': adata.obs_names[adata.obs['annot'] == '0_progen']}, 
                          cluster_key='annot', n_cells=30)
 
 pt_est.predict_terminal_states(n_states=10, method='top_n', allow_overlap=True)
@@ -365,7 +375,7 @@ Now that we have calculated our initial and terminal states, we will calculate f
 
 ```{python}
 #Compute and plot cell fate probabilities
-pt_est.compute_fate_probabilities()
+pt_est.compute_fate_probabilities(use_petsc=False, solver="direct")
 pt_est.plot_fate_probabilities(legend_loc='right', basis='X_draw_graph_fa')
 ```
 
@@ -375,12 +385,12 @@ Below we will calculate driver genes for the erythrocyte lineage ('11_eryth') an
 
 ```{python}
 #Calculate lineage drivers
-drivers_ery = pt_est.compute_lineage_drivers(lineages=['11_eryth'], cluster_key='annot')
+drivers_ery = pt_est.compute_lineage_drivers(lineages=['12_eryth'], cluster_key='annot')
 #Sort
-drivers_ery_sort = drivers_ery.sort_values(by='11_eryth_corr', ascending=False)
+drivers_ery_sort = drivers_ery.sort_values(by='12_eryth_corr', ascending=False)
 
-drivers_mega = pt_est.compute_lineage_drivers(lineages=['9_megakaryo'], cluster_key='annot')
-drivers_mega_sort = drivers_mega.sort_values(by='9_megakaryo_corr', ascending=False)
+drivers_mega = pt_est.compute_lineage_drivers(lineages=['10_megakaryo'], cluster_key='annot')
+drivers_mega_sort = drivers_mega.sort_values(by='10_megakaryo_corr', ascending=False)
 
 #Get top 10 eruythrocyte driver genes
 drivers_ery_sort.head(n=10)
@@ -416,32 +426,38 @@ cr.pl.gene_trends(adata,
                   genes = ['Car1', 'Atpif1', 'Vamp5'],
                   same_plot=True,
                   time_key = 'dpt_pseudotime',
-                  lineages = ['11_eryth'],
+                  lineages = ['12_eryth'],
                   hide_cells=True,
-                  ncols=3)
+                  ncols=3,
+                  n_jobs=1,
+                  backend='threading')
 
 cr.pl.gene_trends(adata, 
                   model = model,
                   genes = ['Cavin2', 'Pbx1', 'Rab27b'],
                   same_plot=True,
                   time_key = 'dpt_pseudotime',
-                  lineages = ['9_megakaryo'],
+                  lineages = ['10_megakaryo'],
                   hide_cells=True,
-                  ncols=3)
+                  ncols=3,
+                  n_jobs=1,
+                  backend='threading')
 ```
 
 What would this look like if we were to try and compare the gene expression between the two lineages?
 
 ```{python}
-#Plot gene trends for erythrocyte and granulocyte lineages
+#Plot gene trends for erythrocyte and megakaryo lineages
 cr.pl.gene_trends(adata, 
                   model = model,
                   genes = ['Cavin2', 'Pbx1', 'Car1'],
                   same_plot=True,
                   time_key = 'dpt_pseudotime',
-                  lineages = ['9_megakaryo', '11_eryth'],
+                  lineages = ['10_megakaryo', '12_eryth'],
                   hide_cells=True,
-                  ncols=3)
+                  ncols=3,
+                  n_jobs=1,
+                  backend='threading')
 ```
 
 :::{.callout-note title="Discuss"}
@@ -455,7 +471,7 @@ We can also visualize the expression of several genes over pseudotime in a singl
 cr.pl.heatmap(
     adata,
     model=model,
-    lineages='11_eryth',
+    lineages='12_eryth',
     cluster_key='annot',
     show_fate_probabilities=True,
     genes=drivers_ery_sort.index.tolist()[1:30],
@@ -467,7 +483,7 @@ cr.pl.heatmap(
 cr.pl.heatmap(
     adata,
     model=model,
-    lineages='9_megakaryo',
+    lineages='10_megakaryo',
     cluster_key='annot',
     show_fate_probabilities=True,
     genes=drivers_mega_sort.index.tolist()[1:30],
@@ -486,7 +502,7 @@ Cellrank provides a way for us to identify genes that have a similar expression 
 cr.pl.cluster_trends(
     adata,
     model=model,  # use the model from before
-    lineage="11_eryth",
+    lineage="12_eryth",
     genes=drivers_ery_sort.index.tolist(),
     time_key="dpt_pseudotime",
     n_jobs=8,
@@ -501,7 +517,7 @@ The results of the clustering trend are saved as an anndata object in adata.uns[
 
 ```{python}
 #Save trends as new anndata object
-ery_trends = adata.uns['lineage_11_eryth_trend'].copy()
+ery_trends = adata.uns['lineage_12_eryth_trend'].copy()
 
 #Add means and dispersions from original data to the object
 cols = ["means", "dispersions"]
@@ -541,7 +557,7 @@ high_genes_filt = [str(x) for x in high_genes if not x.lower().startswith(('rpl'
 cr.pl.gene_trends(
     adata,
     model=model,
-    lineages="11_eryth",
+    lineages="12_eryth",
     cell_color="annot",
     genes=high_genes_filt[0:3]+mid_genes_filt[0:3]+low_genes_filt[0:3],
     same_plot=True,
