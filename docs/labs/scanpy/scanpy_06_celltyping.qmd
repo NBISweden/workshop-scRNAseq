@@ -503,28 +503,61 @@ sc.tl.rank_genes_groups(adata, 'leiden_0.6', method='wilcoxon', key_added = "wil
 ```{python}
 #| label: gsea
 # do gene set overlap to the groups in the gene list and top 300 DEGs.
+
 import gseapy
 
 gsea_res = dict()
 pred = dict()
 
-for cl in adata.obs['leiden_0.6'].cat.categories.tolist():
-    print(cl)
-    glist = sc.get.rank_genes_groups_df(adata, group=cl, key='wilcoxon')[
-        'names'].squeeze().str.strip().tolist()
-    enr_res = gseapy.enrichr(gene_list=glist[:300],
-                             organism='Human',
-                             gene_sets=gene_dict,
-                             background=adata.shape[1],
-                             cutoff=1)
-    if enr_res.results.shape[0] == 0:
+for cl in adata.obs['leiden_0.6'].cat.categories:
+    print(f"Processing cluster: {cl}")
+
+    df_group = sc.get.rank_genes_groups_df(adata, group=cl, key='wilcoxon')
+
+    if df_group.empty:
         pred[cl] = "Unass"
-    else:
-        enr_res.results.sort_values(
-            by="P-value", axis=0, ascending=True, inplace=True)
-        print(enr_res.results.head(2))
+        continue
+
+    glist = df_group['names'].squeeze().str.strip().tolist()
+    top_genes = glist[:300]
+
+    if not top_genes:
+        pred[cl] = "Unass"
+        continue
+
+    enr_res = gseapy.enrichr(
+        gene_list=top_genes,
+        organism='Human',
+        gene_sets=gene_dict,
+        background=adata.shape[1],
+        cutoff=1
+    )
+
+    results = enr_res.results
+
+    if isinstance(results, pd.DataFrame) and not results.empty:
+        # Sort by P-value, then Combined Score
+        results.sort_values(
+            by=["P-value", "Combined Score"], 
+            ascending=[True, False], 
+            inplace=True
+        )
         gsea_res[cl] = enr_res
-        pred[cl] = enr_res.results["Term"][0]
+
+        best_p_val = results["P-value"].iloc[0]
+        best_c_score = results["Combined Score"].iloc[0]
+
+        top_hits = results[
+            (results["P-value"] == best_p_val) & 
+            (results["Combined Score"] == best_c_score)
+        ]
+
+        # Concatenate top hits labels
+        pred[cl] = " / ".join(top_hits["Term"].tolist())
+        print(f"Assigned: {pred[cl]}")
+
+    else:
+        pred[cl] = "Unass"
 ```
 
 
