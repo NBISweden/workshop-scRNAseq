@@ -7,7 +7,7 @@
 ## 
 ## Usage
 ## Run this script in the root of the repo
-## bash ./scripts/render.sh [all|seurat|bioc|scanpy|spatial|site|compile]
+## bash ./scripts/render.sh [all|seurat|bioc|scanpy|site|compile]
 ## Optionally: DOCKER_R=your/image:tag bash ./scripts/render.sh [option]
 
 set -euo pipefail
@@ -15,8 +15,6 @@ set -euo pipefail
 # Docker image variables (can be overridden via env)
 DOCKER_R="${DOCKER_R:-ghcr.io/nbisweden/workshop-scrnaseq-seurat:20250320-2311}"
 DOCKER_SCANPY="${DOCKER_SCANPY:-ghcr.io/nbisweden/workshop-scrnaseq-scanpy:20260323-2301}"
-DOCKER_SEURAT_SPATIAL="${DOCKER_SEURAT_SPATIAL:-ghcr.io/nbisweden/workshop-scrnaseq:2024-seurat_spatial-r4.3.0}"
-DOCKER_BIOC_SPATIAL="${DOCKER_BIOC_SPATIAL:-ghcr.io/nbisweden/workshop-scrnaseq:2024-bioconductor_spatial-r4.3.0}"
 DOCKER_SITE="${DOCKER_SITE:-ghcr.io/nbisweden/workshop-scrnaseq:2024-site-r4.3.0}"
 
 # Entry points for conda envs
@@ -32,7 +30,7 @@ OTHER_DIR="docs/other"
 TOOLKIT="${1:-}"
 
 usage() {
-    echo "Usage: $0 [seurat|bioc|scanpy|spatial|site|compile|all]"
+    echo "Usage: $0 [seurat|bioc|scanpy|site|compile|all]"
     echo "Optionally: DOCKER_<TOOLKIT>=your/image:tag $0 [option]"
     exit 1
 }
@@ -97,27 +95,6 @@ render_files_site() {
     timer_report "$start"
 }
 
-render_files_spatial() {
-    echo ""
-    echo "NOTICE: Spatial labs are no longer included in the workshop!"
-    echo ""
-    # local seurat_file="$LAB_DIR/seurat/seurat_08_spatial.qmd"
-    # local bioc_file="$LAB_DIR/bioc/bioc_08_spatial.qmd"
-    # local scanpy_file="$LAB_DIR/scanpy/scanpy_08_spatial.qmd"
-    # local start
-    # start=$(timer_start)
-    # echo "Rendering $seurat_file ..."
-    # docker run --rm --platform=linux/amd64 -u jovyan -v "${PWD}:/work" \
-    #     "$DOCKER_SEURAT_SPATIAL" quarto render "/work/$seurat_file"
-    # echo "Rendering $bioc_file ..."
-    # docker run --rm --platform=linux/amd64 -u jovyan -v "${PWD}:/work" \
-    #     "$DOCKER_BIOC_SPATIAL" quarto render "/work/$bioc_file"
-    # echo "Rendering $scanpy_file ..."
-    # docker run --rm --platform=linux/amd64 -u jovyan -v "${PWD}:/work" \
-    #     --entrypoint "$ENTRYPOINT_SCANPY" "$DOCKER_SCANPY" run -n scanpy quarto render "/work/$scanpy_file"
-    # timer_report "$start"
-}
-
 render_files_lectures() {
     local lecture_files=(
         # dge requires ggpubr so this is currently being rendered interactively. ggpubr should be added to the container for next year
@@ -138,7 +115,6 @@ render_files_lectures() {
 render_files_site_pages() {
     local site_files=(
         "$LAB_DIR/index.qmd"
-        "$OTHER_DIR/containers-spatial.qmd"
         "$OTHER_DIR/containers.qmd"
         "$OTHER_DIR/data.qmd"
         "$OTHER_DIR/docker.qmd"
@@ -225,9 +201,6 @@ main() {
         scanpy)
             render_scanpy
             ;;
-        spatial)
-            render_files_spatial
-            ;;
         site)
             render_files_lectures
             render_files_site_pages
@@ -240,7 +213,6 @@ main() {
             render_seurat
             render_bioc
             render_scanpy
-            render_files_spatial
             render_files_lectures
             render_files_site_pages
             ;;

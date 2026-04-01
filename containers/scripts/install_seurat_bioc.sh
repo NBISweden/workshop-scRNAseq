@@ -47,6 +47,9 @@ curl -o ${HOME}/miniconda.sh -sL https://repo.anaconda.com/miniconda/Miniconda3-
 bash ${HOME}/miniconda.sh -bfp /usr/local/conda
 rm -rf ${HOME}/miniconda.sh
 
+/usr/local/conda/bin/conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main
+/usr/local/conda/bin/conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
+
 ## Init conda for root and jovyan users
 /usr/local/conda/bin/conda init bash
 su - ${USER} -c "/usr/local/conda/bin/conda init bash"

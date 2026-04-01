@@ -12,18 +12,13 @@ docker pull --platform=linux/amd64 ghcr.io/nbisweden/workshop-scrnaseq-seurat:20
 
 # for scanpy labs
 docker pull --platform=linux/amd64 ghcr.io/nbisweden/workshop-scrnaseq-scanpy:20260323-2301
-
-# for optional spatial labs
-docker pull --platform=linux/amd64 ghcr.io/nbisweden/workshop-scrnaseq:2024-seurat_spatial-r4.3.0
-docker pull --platform=linux/amd64 ghcr.io/nbisweden/workshop-scrnaseq:2024-bioconductor_spatial-r4.3.0
-docker pull --platform=linux/amd64 ghcr.io/nbisweden/workshop-scrnaseq:2024-scanpy_spatial-py3.10
 ```
 
 ## Run labs interactively (locally)
 
 > To run the labs locally follow these [instructions](https://nbisweden.github.io/workshop-scRNAseq/other/docker.html) to install Docker Desktop / Colima, depending on your operating system.
 
-> **IMPORTANT:** If you are using an Apple Silicon (M-chip) you need to follow the Colima [instructions](https://nbisweden.github.io/workshop-scRNAseq/other/docker.html)!
+> **IMPORTANT:** If you are using an Apple Silicon (M-chip) you need to follow the Colima [instructions](https://nbisweden.github.io/workshop-scRNAseq/other/docker.html#running-linux-x86_64-containers-on-apple-silicon)!
 
 - Create a new directory and `cd` into it. You will mount this directory to `/home/jovyan/work` in your container so that you can save your work locally.
 
@@ -69,7 +64,7 @@ pixi run --frozen --manifest-path /home/jovyan/pixi.toml <CMD>
 ~/download-labs.sh "https://github.com/NBISweden" "workshop-scRNAseq" "compiled/labs" "bioc" "work/labs"
 
 # for scanpy
-~/work/download-labs.sh "https://github.com/NBISweden" "workshop-scRNAseq" "compiled/labs" "scanpy" "work/labs"
+~/download-labs.sh "https://github.com/NBISweden" "workshop-scRNAseq" "compiled/labs" "scanpy" "work/labs"
 ```
 
 ---

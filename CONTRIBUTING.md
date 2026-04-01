@@ -83,7 +83,7 @@ To render `.qmd` files (site files as well as labs) in the repo to `docs/_site` 
 > **WARNING:** Rendering the _labs_ takes several minutes because it executes all the code cells.
 
 ```
-bash scripts/render.sh [seurat|bioc|scanpy|spatial|site|compile|all]
+bash scripts/render.sh [seurat|bioc|scanpy|site|compile|all]
 ```
 
 If you made changes to only selected labs, you can render them individually as shwon below:
