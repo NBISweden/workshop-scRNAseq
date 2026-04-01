@@ -81,7 +81,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <link href="../../site_libs/quarto-html/quarto-syntax-highlighting-aec88596c843aa604b7a2b1d77120af7.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="../../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../../site_libs/bootstrap/bootstrap-a3db7b1326fc10bb3a3ede0a9d8cb162.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="../../site_libs/bootstrap/bootstrap-4858a3892797fa47c228ee91edfa3460.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <link href="../../site_libs/quarto-contrib/fontawesome6-0.1.0/all.css" rel="stylesheet">
 <link href="../../site_libs/quarto-contrib/fontawesome6-0.1.0/latex-fontsize.css" rel="stylesheet">
 <script src="../../site_libs/quarto-contrib/glightbox/glightbox.min.js"></script>
@@ -209,6 +209,10 @@ window.Quarto = {
     </a>
     <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="nav-menu-archive">    
         <li>
+    <a class="dropdown-item" href="https://nbisweden.github.io/workshop-scRNAseq/archive/2025/">
+ <span class="dropdown-text">2025</span></a>
+  </li>  
+        <li>
     <a class="dropdown-item" href="https://nbisweden.github.io/workshop-scRNAseq/archive/2024/">
  <span class="dropdown-text">2024</span></a>
   </li>  
@@ -272,7 +276,7 @@ window.Quarto = {
       <div>
       <div class="quarto-title-meta-heading">Published</div>
       <div class="quarto-title-meta-contents">
-        <p class="date">30-Mar-2026</p>
+        <p class="date">31-Mar-2026</p>
       </div>
     </div>
     
@@ -299,8 +303,9 @@ window.Quarto = {
   <li><a href="#rerun-paga-again-on-the-data" id="toc-rerun-paga-again-on-the-data" class="nav-link" data-scroll-target="#rerun-paga-again-on-the-data"><span class="header-section-number">7.1</span> Rerun PAGA again on the data</a></li>
   </ul></li>
   <li><a href="#embedding-using-paga-initialization" id="toc-embedding-using-paga-initialization" class="nav-link" data-scroll-target="#embedding-using-paga-initialization"><span class="header-section-number">8</span> Embedding using PAGA-initialization</a></li>
-  <li><a href="#gene-changes" id="toc-gene-changes" class="nav-link" data-scroll-target="#gene-changes"><span class="header-section-number">9</span> Gene changes</a></li>
-  <li><a href="#session-info" id="toc-session-info" class="nav-link" data-scroll-target="#session-info"><span class="header-section-number">10</span> Session info</a></li>
+  <li><a href="#detecting-gene-changes-along-trajectories" id="toc-detecting-gene-changes-along-trajectories" class="nav-link" data-scroll-target="#detecting-gene-changes-along-trajectories"><span class="header-section-number">9</span> Detecting gene changes along trajectories</a></li>
+  <li><a href="#using-cellrank-to-investigate-gene-expression-changes-along-specific-trajectories" id="toc-using-cellrank-to-investigate-gene-expression-changes-along-specific-trajectories" class="nav-link" data-scroll-target="#using-cellrank-to-investigate-gene-expression-changes-along-specific-trajectories"><span class="header-section-number">10</span> Using Cellrank to investigate gene expression changes along specific trajectories</a></li>
+  <li><a href="#session-info" id="toc-session-info" class="nav-link" data-scroll-target="#session-info"><span class="header-section-number">11</span> Session info</a></li>
   </ul>
 </nav>
     </div>
@@ -329,22 +334,30 @@ Note
 <section id="loading-libraries" class="level2" data-number="1">
 <h2 data-number="1" class="anchored" data-anchor-id="loading-libraries"><span class="header-section-number">1</span> Loading libraries</h2>
 <div id="libraries" class="cell" data-execution_count="1">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> pl</span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> matplotlib <span class="im">import</span> rcParams</span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> scanpy <span class="im">as</span> sc</span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> sys</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> petsc4py</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Tell PETSc to ignore harmless system signals and let Python handle them</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>petsc4py.init(sys.argv <span class="op">+</span> [<span class="st">'-no_signal_handler'</span>])</span>
 <span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> scipy</span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> warnings</span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>warnings.simplefilter(action<span class="op">=</span><span class="st">"ignore"</span>, category<span class="op">=</span><span class="pp">Warning</span>)</span>
-<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="co"># verbosity: errors (0), warnings (1), info (2), hints (3)</span></span>
-<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>sc.settings.verbosity <span class="op">=</span> <span class="dv">3</span></span>
-<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>sc.settings.set_figure_params(dpi<span class="op">=</span><span class="dv">100</span>, frameon<span class="op">=</span><span class="va">False</span>, figsize<span class="op">=</span>(<span class="dv">5</span>, <span class="dv">5</span>), facecolor<span class="op">=</span><span class="st">'white'</span>, color_map <span class="op">=</span> <span class="st">'viridis_r'</span>) </span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> pl</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> matplotlib <span class="im">import</span> rcParams</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> scanpy <span class="im">as</span> sc</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> scipy</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> warnings</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> cellrank <span class="im">as</span> cr</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> scvelo <span class="im">as</span> scv</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>warnings.simplefilter(action<span class="op">=</span><span class="st">"ignore"</span>, category<span class="op">=</span><span class="pp">Warning</span>)</span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a><span class="co"># verbosity: errors (0), warnings (1), info (2), hints (3)</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>sc.settings.verbosity <span class="op">=</span> <span class="dv">3</span></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>sc.settings.set_figure_params(dpi<span class="op">=</span><span class="dv">100</span>, frameon<span class="op">=</span><span class="va">False</span>, figsize<span class="op">=</span>(<span class="dv">5</span>, <span class="dv">5</span>), facecolor<span class="op">=</span><span class="st">'white'</span>, color_map <span class="op">=</span> <span class="st">'viridis_r'</span>) </span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="preparing-data" class="level2" data-number="2">
@@ -502,50 +515,50 @@ Note
 <table class="caption-top table">
 <thead>
 <tr class="header">
-<th>Marker</th>
-<th>Cell Type</th>
+<th style="text-align: left;">Marker</th>
+<th style="text-align: left;">Cell Type</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td>Cd34</td>
-<td>HSC progenitor</td>
+<td style="text-align: left;">Cd34</td>
+<td style="text-align: left;">HSC progenitor</td>
 </tr>
 <tr class="even">
-<td>Ms4a1</td>
-<td>B cell lineage</td>
+<td style="text-align: left;">Ms4a1</td>
+<td style="text-align: left;">B cell lineage</td>
 </tr>
 <tr class="odd">
-<td>Cd3e</td>
-<td>T cell lineage</td>
+<td style="text-align: left;">Cd3e</td>
+<td style="text-align: left;">T cell lineage</td>
 </tr>
 <tr class="even">
-<td>Ltf</td>
-<td>Granulocyte lineage</td>
+<td style="text-align: left;">Ltf</td>
+<td style="text-align: left;">Granulocyte lineage</td>
 </tr>
 <tr class="odd">
-<td>Cst3</td>
-<td>Monocyte lineage</td>
+<td style="text-align: left;">Cst3</td>
+<td style="text-align: left;">Monocyte lineage</td>
 </tr>
 <tr class="even">
-<td>Mcpt8</td>
-<td>Mast Cell lineage</td>
+<td style="text-align: left;">Mcpt8</td>
+<td style="text-align: left;">Mast Cell lineage</td>
 </tr>
 <tr class="odd">
-<td>Alas2</td>
-<td>RBC lineage</td>
+<td style="text-align: left;">Alas2</td>
+<td style="text-align: left;">RBC lineage</td>
 </tr>
 <tr class="even">
-<td>Siglech</td>
-<td>Dendritic cell lineage</td>
+<td style="text-align: left;">Siglech</td>
+<td style="text-align: left;">Dendritic cell lineage</td>
 </tr>
 <tr class="odd">
-<td>C1qc</td>
-<td>Macrophage cell lineage</td>
+<td style="text-align: left;">C1qc</td>
+<td style="text-align: left;">Macrophage cell lineage</td>
 </tr>
 <tr class="even">
-<td>Pf4</td>
-<td>Megakaryocyte cell lineage</td>
+<td style="text-align: left;">Pf4</td>
+<td style="text-align: left;">Megakaryocyte cell lineage</td>
 </tr>
 </tbody>
 </table>
@@ -563,22 +576,32 @@ Note
 </section>
 <section id="rerun-analysis-in-scanpy" class="level2" data-number="5">
 <h2 data-number="5" class="anchored" data-anchor-id="rerun-analysis-in-scanpy"><span class="header-section-number">5</span> Rerun analysis in Scanpy</h2>
-<p>Redo clustering and umap using the basic Scanpy pipeline. Use the provided “X_harmony_Phase” dimensionality reduction as the staring point.</p>
+<p>Redo clustering and umap using the basic Scanpy pipeline. Use the provided “X_harmony_Phase” dimensionality reduction as the starting point.</p>
 <div id="process" class="cell" data-execution_count="7">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co"># first, store the old umap with a new name so it is not overwritten</span></span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>adata.obsm[<span class="st">'X_umap_old'</span>] <span class="op">=</span> adata.obsm[<span class="st">'X_umap'</span>]</span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co">#calculate highly variable genes to get mean expression and dispersion for every gene - we will need this later</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>sc.pp.highly_variable_genes(adata, n_top_genes<span class="op">=</span><span class="dv">2000</span>)</span>
 <span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>sc.pp.neighbors(adata, n_pcs <span class="op">=</span> <span class="dv">30</span>, n_neighbors <span class="op">=</span> <span class="dv">20</span>, use_rep<span class="op">=</span><span class="st">"X_harmony_Phase"</span>)</span>
-<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>sc.tl.umap(adata, min_dist<span class="op">=</span><span class="fl">0.4</span>, spread<span class="op">=</span><span class="dv">3</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="co"># first, store the old umap with a new name so it is not overwritten</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>adata.obsm[<span class="st">'X_umap_old'</span>] <span class="op">=</span> adata.obsm[<span class="st">'X_umap'</span>]</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>sc.pp.neighbors(adata, n_pcs <span class="op">=</span> <span class="dv">30</span>, n_neighbors <span class="op">=</span> <span class="dv">20</span>, use_rep<span class="op">=</span><span class="st">"X_harmony_Phase"</span>, random_state<span class="op">=</span><span class="dv">159</span>)</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>sc.tl.umap(adata, min_dist<span class="op">=</span><span class="fl">0.4</span>, spread<span class="op">=</span><span class="dv">3</span>, random_state<span class="op">=</span><span class="dv">331</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>computing neighbors
+<pre><code>extracting highly variable genes
+    finished (0:00:08)
+--&gt; added
+    'highly_variable', boolean vector (adata.var)
+    'means', float vector (adata.var)
+    'dispersions', float vector (adata.var)
+    'dispersions_norm', float vector (adata.var)
+computing neighbors
     finished: added to `.uns['neighbors']`
     `.obsp['distances']`, distances for each pair of neighbors
-    `.obsp['connectivities']`, weighted adjacency matrix (0:00:04)
+    `.obsp['connectivities']`, weighted adjacency matrix (0:00:29)
 computing UMAP
     finished: added
     'X_umap', UMAP coordinates (adata.obsm)
-    'umap', UMAP parameters (adata.uns) (0:00:12)</code></pre>
+    'umap', UMAP parameters (adata.uns) (0:01:56)</code></pre>
 </div>
 </div>
 <div id="cluster" class="cell" data-execution_count="8">
@@ -587,9 +610,9 @@ computing UMAP
 <span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, color <span class="op">=</span> markers, use_raw <span class="op">=</span> <span class="va">False</span>, ncols <span class="op">=</span> <span class="dv">4</span>)</span>
 <span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Redo clustering as well</span></span>
-<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>sc.tl.leiden(adata, key_added <span class="op">=</span> <span class="st">"leiden_1.0"</span>, resolution <span class="op">=</span> <span class="fl">1.0</span>) <span class="co"># default resolution in 1.0</span></span>
-<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>sc.tl.leiden(adata, key_added <span class="op">=</span> <span class="st">"leiden_1.2"</span>, resolution <span class="op">=</span> <span class="fl">1.2</span>) <span class="co"># default resolution in 1.0</span></span>
-<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>sc.tl.leiden(adata, key_added <span class="op">=</span> <span class="st">"leiden_1.4"</span>, resolution <span class="op">=</span> <span class="fl">1.4</span>) <span class="co"># default resolution in 1.0</span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>sc.tl.leiden(adata, key_added <span class="op">=</span> <span class="st">"leiden_1.0"</span>, resolution <span class="op">=</span> <span class="fl">1.0</span>, random_state<span class="op">=</span><span class="dv">137</span>) <span class="co"># default resolution is 1.0</span></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>sc.tl.leiden(adata, key_added <span class="op">=</span> <span class="st">"leiden_1.2"</span>, resolution <span class="op">=</span> <span class="fl">1.2</span>, random_state<span class="op">=</span><span class="dv">137</span>) <span class="co"># default resolution is 1.0</span></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>sc.tl.leiden(adata, key_added <span class="op">=</span> <span class="st">"leiden_1.4"</span>, resolution <span class="op">=</span> <span class="fl">1.4</span>, random_state<span class="op">=</span><span class="dv">137</span>) <span class="co"># default resolution is 1.0</span></span>
 <span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a><span class="co">#sc.tl.louvain(adata, key_added = "leiden_1.0") # default resolution in 1.0</span></span>
 <span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, color <span class="op">=</span> [<span class="st">'leiden_1.0'</span>, <span class="st">'leiden_1.2'</span>, <span class="st">'leiden_1.4'</span>,<span class="st">'clusters'</span>],legend_loc <span class="op">=</span> <span class="st">'on data'</span>, legend_fontsize <span class="op">=</span> <span class="st">'xx-small'</span>, ncols <span class="op">=</span><span class="dv">2</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
@@ -609,14 +632,14 @@ computing UMAP
 </div>
 <div class="cell-output cell-output-stdout">
 <pre><code>running Leiden clustering
-    finished: found 15 clusters and added
-    'leiden_1.0', the cluster labels (adata.obs, categorical) (0:00:00)
+    finished: found 14 clusters and added
+    'leiden_1.0', the cluster labels (adata.obs, categorical) (0:00:02)
 running Leiden clustering
     finished: found 16 clusters and added
-    'leiden_1.2', the cluster labels (adata.obs, categorical) (0:00:00)
+    'leiden_1.2', the cluster labels (adata.obs, categorical) (0:00:01)
 running Leiden clustering
     finished: found 18 clusters and added
-    'leiden_1.4', the cluster labels (adata.obs, categorical) (0:00:00)</code></pre>
+    'leiden_1.4', the cluster labels (adata.obs, categorical) (0:00:02)</code></pre>
 </div>
 <div class="cell-output cell-output-display">
 <div>
@@ -631,54 +654,53 @@ running Leiden clustering
 <span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>annot <span class="op">=</span> pd.DataFrame(adata.obs[<span class="st">'leiden_1.4'</span>].astype(<span class="st">'string'</span>))</span>
 <span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>annot[annot[<span class="st">'leiden_1.4'</span>] <span class="op">==</span> <span class="st">'10'</span>] <span class="op">=</span> <span class="st">'10_megakaryo'</span> <span class="co">#Pf4</span></span>
-<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>annot[annot[<span class="st">'leiden_1.4'</span>] <span class="op">==</span> <span class="st">'17'</span>] <span class="op">=</span> <span class="st">'17_macro'</span>  <span class="co">#C1qc</span></span>
-<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>annot[annot[<span class="st">'leiden_1.4'</span>] <span class="op">==</span> <span class="st">'11'</span>] <span class="op">=</span> <span class="st">'11_eryth'</span> <span class="co">#Alas2</span></span>
-<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>annot[annot[<span class="st">'leiden_1.4'</span>] <span class="op">==</span> <span class="st">'18'</span>] <span class="op">=</span> <span class="st">'18_dend'</span> <span class="co">#Siglech</span></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>annot[annot[<span class="st">'leiden_1.4'</span>] <span class="op">==</span> <span class="st">'16'</span>] <span class="op">=</span> <span class="st">'16_macro'</span>  <span class="co">#C1qc</span></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>annot[annot[<span class="st">'leiden_1.4'</span>] <span class="op">==</span> <span class="st">'12'</span>] <span class="op">=</span> <span class="st">'12_eryth'</span> <span class="co">#Alas2</span></span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>annot[annot[<span class="st">'leiden_1.4'</span>] <span class="op">==</span> <span class="st">'17'</span>] <span class="op">=</span> <span class="st">'17_dend'</span> <span class="co">#Siglech</span></span>
 <span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>annot[annot[<span class="st">'leiden_1.4'</span>] <span class="op">==</span> <span class="st">'13'</span>] <span class="op">=</span> <span class="st">'13_mast'</span> <span class="co">#Mcpt8</span></span>
-<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>annot[annot[<span class="st">'leiden_1.4'</span>] <span class="op">==</span> <span class="st">'0'</span>] <span class="op">=</span> <span class="st">'0_mono'</span> <span class="co">#Cts3</span></span>
-<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>annot[annot[<span class="st">'leiden_1.4'</span>] <span class="op">==</span> <span class="st">'1'</span>] <span class="op">=</span> <span class="st">'1_gran'</span> <span class="co">#Ltf</span></span>
-<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>annot[annot[<span class="st">'leiden_1.4'</span>] <span class="op">==</span> <span class="st">'9'</span>] <span class="op">=</span> <span class="st">'9_gran'</span></span>
-<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>annot[annot[<span class="st">'leiden_1.4'</span>] <span class="op">==</span> <span class="st">'14'</span>] <span class="op">=</span> <span class="st">'14_TC'</span> <span class="co">#Cd3e</span></span>
-<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>annot[annot[<span class="st">'leiden_1.4'</span>] <span class="op">==</span> <span class="st">'16'</span>] <span class="op">=</span> <span class="st">'16_BC'</span> <span class="co">#Ms4a1</span></span>
-<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a>annot[annot[<span class="st">'leiden_1.4'</span>] <span class="op">==</span> <span class="st">'8'</span>] <span class="op">=</span> <span class="st">'8_progen'</span>  <span class="co"># Cd34</span></span>
-<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a>annot[annot[<span class="st">'leiden_1.4'</span>] <span class="op">==</span> <span class="st">'4'</span>] <span class="op">=</span> <span class="st">'4_progen'</span> </span>
-<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a>annot[annot[<span class="st">'leiden_1.4'</span>] <span class="op">==</span> <span class="st">'5'</span>] <span class="op">=</span> <span class="st">'5_progen'</span></span>
-<span id="cb12-17"><a href="#cb12-17" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb12-18"><a href="#cb12-18" aria-hidden="true" tabindex="-1"></a>adata.obs[<span class="st">'annot'</span>]<span class="op">=</span>annot[<span class="st">'leiden_1.4'</span>].astype(<span class="st">'category'</span>)</span>
-<span id="cb12-19"><a href="#cb12-19" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb12-20"><a href="#cb12-20" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, color <span class="op">=</span> <span class="st">'annot'</span>,legend_loc <span class="op">=</span> <span class="st">'on data'</span>, legend_fontsize <span class="op">=</span> <span class="st">'xx-small'</span>, ncols <span class="op">=</span><span class="dv">2</span>)</span>
-<span id="cb12-21"><a href="#cb12-21" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb12-22"><a href="#cb12-22" aria-hidden="true" tabindex="-1"></a>annot.value_counts()</span>
-<span id="cb12-23"><a href="#cb12-23" aria-hidden="true" tabindex="-1"></a><span class="co">#type(annot)</span></span>
-<span id="cb12-24"><a href="#cb12-24" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb12-25"><a href="#cb12-25" aria-hidden="true" tabindex="-1"></a><span class="co"># astype('category')</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>annot[annot[<span class="st">'leiden_1.4'</span>] <span class="op">==</span> <span class="st">'6'</span>] <span class="op">=</span> <span class="st">'6_mono'</span> <span class="co">#Cts3</span></span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>annot[annot[<span class="st">'leiden_1.4'</span>] <span class="op">==</span> <span class="st">'2'</span>] <span class="op">=</span> <span class="st">'2_gran'</span> <span class="co">#Ltf</span></span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>annot[annot[<span class="st">'leiden_1.4'</span>] <span class="op">==</span> <span class="st">'14'</span>] <span class="op">=</span> <span class="st">'14_TC'</span> <span class="co">#Cd3e</span></span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>annot[annot[<span class="st">'leiden_1.4'</span>] <span class="op">==</span> <span class="st">'15'</span>] <span class="op">=</span> <span class="st">'15_BC'</span> <span class="co">#Ms4a1</span></span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>annot[annot[<span class="st">'leiden_1.4'</span>] <span class="op">==</span> <span class="st">'0'</span>] <span class="op">=</span> <span class="st">'0_progen'</span>  <span class="co"># Cd34</span></span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a>annot[annot[<span class="st">'leiden_1.4'</span>] <span class="op">==</span> <span class="st">'9'</span>] <span class="op">=</span> <span class="st">'9_progen'</span> </span>
+<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a>annot[annot[<span class="st">'leiden_1.4'</span>] <span class="op">==</span> <span class="st">'7'</span>] <span class="op">=</span> <span class="st">'7_progen'</span></span>
+<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-17"><a href="#cb12-17" aria-hidden="true" tabindex="-1"></a>adata.obs[<span class="st">'annot'</span>]<span class="op">=</span>annot[<span class="st">'leiden_1.4'</span>].astype(<span class="st">'category'</span>)</span>
+<span id="cb12-18"><a href="#cb12-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-19"><a href="#cb12-19" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, color <span class="op">=</span> <span class="st">'annot'</span>,legend_loc <span class="op">=</span> <span class="st">'on data'</span>, legend_fontsize <span class="op">=</span> <span class="st">'xx-small'</span>, ncols <span class="op">=</span><span class="dv">2</span>)</span>
+<span id="cb12-20"><a href="#cb12-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-21"><a href="#cb12-21" aria-hidden="true" tabindex="-1"></a>annot.value_counts()</span>
+<span id="cb12-22"><a href="#cb12-22" aria-hidden="true" tabindex="-1"></a><span class="co">#type(annot)</span></span>
+<span id="cb12-23"><a href="#cb12-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-24"><a href="#cb12-24" aria-hidden="true" tabindex="-1"></a><span class="co"># astype('category')</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><a href="scanpy_07_trajectory_files/figure-html/annotate-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-8"><img src="scanpy_07_trajectory_files/figure-html/annotate-output-1.png" id="annotate-1" width="417" height="423" class="figure-img"></a></p>
+<p><a href="scanpy_07_trajectory_files/figure-html/annotate-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-8"><img src="scanpy_07_trajectory_files/figure-html/annotate-output-1.png" id="annotate-1" width="409" height="423" class="figure-img"></a></p>
 </figure>
 </div>
 </div>
 <div id="annotate-2" class="cell-output cell-output-display" data-execution_count="9">
 <pre><code>leiden_1.4  
-0_mono          484
-1_gran          481
-2               477
-3               473
-4_progen        472
-5_progen        451
-6               430
-7               409
-8_progen        364
-9_gran          328
-10_megakaryo    263
-11_eryth        260
-12              253
-13_mast         157
+0_progen        546
+1               518
+2_gran          491
+3               472
+4               464
+5               416
+6_mono          409
+7_progen        405
+8               312
+9_progen        308
+10_megakaryo    294
+11              268
+12_eryth        257
+13_mast         161
 14_TC           152
-15              147
-16_BC           115
-17_macro        112
+15_BC           129
+16_macro        115
+17_dend         111
 Name: count, dtype: int64</code></pre>
 </div>
 </div>
@@ -688,7 +710,7 @@ Name: count, dtype: int64</code></pre>
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><a href="scanpy_07_trajectory_files/figure-html/plot-annot-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-9"><img src="scanpy_07_trajectory_files/figure-html/plot-annot-output-1.png" id="plot-annot" width="409" height="423" class="figure-img"></a></p>
+<p><a href="scanpy_07_trajectory_files/figure-html/plot-annot-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-9"><img src="scanpy_07_trajectory_files/figure-html/plot-annot-output-1.png" id="plot-annot" width="411" height="423" class="figure-img"></a></p>
 </figure>
 </div>
 </div>
@@ -696,7 +718,7 @@ Name: count, dtype: int64</code></pre>
 </section>
 <section id="run-paga" class="level2" data-number="6">
 <h2 data-number="6" class="anchored" data-anchor-id="run-paga"><span class="header-section-number">6</span> Run PAGA</h2>
-<p>Use the clusters from leiden clustering with leiden_1.4 and run PAGA. First we create the graph and initialize the positions using the umap.</p>
+<p>Use the clusters from leiden clustering with <code>leiden_1.4</code> and run PAGA. PAGA is very good at revealing global topologies of the data that might be distorted in a UMAP. First we create the graph and initialize the positions using the UMAP.</p>
 <div id="paga" class="cell" data-execution_count="11">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="co"># use the umap to initialize the graph layout.</span></span>
 <span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>sc.tl.draw_graph(adata, init_pos<span class="op">=</span><span class="st">'X_umap'</span>)</span>
@@ -706,12 +728,12 @@ Name: count, dtype: int64</code></pre>
 <div class="cell-output cell-output-stdout">
 <pre><code>drawing single-cell graph using layout 'fa'
     finished: added
-    'X_draw_graph_fa', graph_drawing coordinates (adata.obsm) (0:00:37)</code></pre>
+    'X_draw_graph_fa', graph_drawing coordinates (adata.obsm) (0:05:32)</code></pre>
 </div>
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><a href="scanpy_07_trajectory_files/figure-html/paga-output-2.png" class="lightbox" data-gallery="quarto-lightbox-gallery-10"><img src="scanpy_07_trajectory_files/figure-html/paga-output-2.png" id="paga-1" width="409" height="423" class="figure-img"></a></p>
+<p><a href="scanpy_07_trajectory_files/figure-html/paga-output-2.png" class="lightbox" data-gallery="quarto-lightbox-gallery-10"><img src="scanpy_07_trajectory_files/figure-html/paga-output-2.png" id="paga-1" width="418" height="423" class="figure-img"></a></p>
 </figure>
 </div>
 </div>
@@ -725,7 +747,7 @@ Name: count, dtype: int64</code></pre>
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><a href="scanpy_07_trajectory_files/figure-html/paga-output-4.png" class="lightbox" data-gallery="quarto-lightbox-gallery-11"><img src="scanpy_07_trajectory_files/figure-html/paga-output-4.png" id="paga-2" width="431" height="434" class="figure-img"></a></p>
+<p><a href="scanpy_07_trajectory_files/figure-html/paga-output-4.png" class="lightbox" data-gallery="quarto-lightbox-gallery-11"><img src="scanpy_07_trajectory_files/figure-html/paga-output-4.png" id="paga-2" width="439" height="434" class="figure-img"></a></p>
 </figure>
 </div>
 </div>
@@ -734,7 +756,7 @@ Name: count, dtype: int64</code></pre>
 </section>
 <section id="filtering-graph-edges" class="level2" data-number="7">
 <h2 data-number="7" class="anchored" data-anchor-id="filtering-graph-edges"><span class="header-section-number">7</span> Filtering graph edges</h2>
-<p>First, lets explore the graph a bit. So we plot the umap with the graph connections on top.</p>
+<p>First, lets explore the graph a bit. We plot the umap with the graph edges on top. The edges signify neighborhood between cells in the KNN-graph.</p>
 <div id="cell-plot-graph" class="cell" data-execution_count="12">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, edges<span class="op">=</span><span class="va">True</span>, color <span class="op">=</span> <span class="st">'annot'</span>, legend_loc<span class="op">=</span> <span class="st">'on data'</span>, legend_fontsize<span class="op">=</span> <span class="st">'xx-small'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
@@ -745,15 +767,15 @@ Name: count, dtype: int64</code></pre>
 </div>
 </div>
 </div>
-<p>We have many edges in the graph between unrelated clusters, so lets try with fewer neighbors.</p>
+<p>We have many edges in the graph between unrelated clusters, so lets try recalculating the graph with fewer neighbors. You can experiment with calculating different numbers of neighbors to see how it affects the graph and the connection between cells and nodes. Choosing too few neighbors however (&lt;=5) will lead to problems with the downstream analysis for this dataset, as the graph becomes too sparse.</p>
 <div id="cell-redo-graph" class="cell" data-execution_count="13">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>sc.pp.neighbors(adata, n_neighbors<span class="op">=</span><span class="dv">5</span>,  use_rep <span class="op">=</span> <span class="st">'X_harmony_Phase'</span>, n_pcs <span class="op">=</span> <span class="dv">30</span>)</span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>sc.pp.neighbors(adata, n_neighbors<span class="op">=</span><span class="dv">8</span>,  use_rep <span class="op">=</span> <span class="st">'X_harmony_Phase'</span>, n_pcs <span class="op">=</span> <span class="dv">30</span>, random_state<span class="op">=</span><span class="dv">159</span>)</span>
 <span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>sc.pl.umap(adata, edges<span class="op">=</span><span class="va">True</span>, color <span class="op">=</span> <span class="st">'annot'</span>, legend_loc<span class="op">=</span> <span class="st">'on data'</span>, legend_fontsize<span class="op">=</span> <span class="st">'xx-small'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>computing neighbors
     finished: added to `.uns['neighbors']`
     `.obsp['distances']`, distances for each pair of neighbors
-    `.obsp['connectivities']`, weighted adjacency matrix (0:00:00)</code></pre>
+    `.obsp['connectivities']`, weighted adjacency matrix (0:00:01)</code></pre>
 </div>
 <div class="cell-output cell-output-display">
 <div>
@@ -771,12 +793,12 @@ Name: count, dtype: int64</code></pre>
 <div class="cell-output cell-output-stdout">
 <pre><code>drawing single-cell graph using layout 'fa'
     finished: added
-    'X_draw_graph_fa', graph_drawing coordinates (adata.obsm) (0:00:36)</code></pre>
+    'X_draw_graph_fa', graph_drawing coordinates (adata.obsm) (0:05:19)</code></pre>
 </div>
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><a href="scanpy_07_trajectory_files/figure-html/draw-graph-output-2.png" class="lightbox" data-gallery="quarto-lightbox-gallery-14"><img src="scanpy_07_trajectory_files/figure-html/draw-graph-output-2.png" id="draw-graph" width="409" height="423" class="figure-img"></a></p>
+<p><a href="scanpy_07_trajectory_files/figure-html/draw-graph-output-2.png" class="lightbox" data-gallery="quarto-lightbox-gallery-14"><img src="scanpy_07_trajectory_files/figure-html/draw-graph-output-2.png" id="draw-graph" width="416" height="423" class="figure-img"></a></p>
 </figure>
 </div>
 </div>
@@ -794,7 +816,7 @@ Name: count, dtype: int64</code></pre>
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><a href="scanpy_07_trajectory_files/figure-html/paga2-output-2.png" class="lightbox" data-gallery="quarto-lightbox-gallery-15"><img src="scanpy_07_trajectory_files/figure-html/paga2-output-2.png" id="paga2" width="431" height="434" class="figure-img"></a></p>
+<p><a href="scanpy_07_trajectory_files/figure-html/paga2-output-2.png" class="lightbox" data-gallery="quarto-lightbox-gallery-15"><img src="scanpy_07_trajectory_files/figure-html/paga2-output-2.png" id="paga2" width="439" height="434" class="figure-img"></a></p>
 </figure>
 </div>
 </div>
@@ -804,30 +826,27 @@ Name: count, dtype: int64</code></pre>
 <section id="embedding-using-paga-initialization" class="level2" data-number="8">
 <h2 data-number="8" class="anchored" data-anchor-id="embedding-using-paga-initialization"><span class="header-section-number">8</span> Embedding using PAGA-initialization</h2>
 <p>We can now redraw the graph using another starting position from the paga layout. The following is just as well possible for a UMAP.</p>
-<div id="draw-graph-paga" class="cell" data-execution_count="16">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb25"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>sc.tl.draw_graph(adata, init_pos<span class="op">=</span><span class="st">'paga'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div id="cell-draw-graph-paga" class="cell" data-execution_count="16">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb25"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>sc.tl.draw_graph(adata, init_pos<span class="op">=</span><span class="st">'paga'</span>)</span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>sc.pl.draw_graph(adata, color<span class="op">=</span>[<span class="st">'annot'</span>], legend_loc<span class="op">=</span><span class="st">'on data'</span>, legend_fontsize<span class="op">=</span>  <span class="st">'xx-small'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>drawing single-cell graph using layout 'fa'
     finished: added
-    'X_draw_graph_fa', graph_drawing coordinates (adata.obsm) (0:00:33)</code></pre>
+    'X_draw_graph_fa', graph_drawing coordinates (adata.obsm) (0:05:59)</code></pre>
 </div>
-</div>
-<p>Now we can see all marker genes also at single-cell resolution in a meaningful layout.</p>
-<div id="cell-plot-graph-paga" class="cell" data-execution_count="17">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb27"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>sc.pl.draw_graph(adata, color<span class="op">=</span>[<span class="st">'annot'</span>], legend_loc<span class="op">=</span><span class="st">'on data'</span>, legend_fontsize<span class="op">=</span>  <span class="st">'xx-small'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><a href="scanpy_07_trajectory_files/figure-html/plot-graph-paga-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-16"><img src="scanpy_07_trajectory_files/figure-html/plot-graph-paga-output-1.png" id="plot-graph-paga" width="409" height="423" class="figure-img"></a></p>
+<p><a href="scanpy_07_trajectory_files/figure-html/draw-graph-paga-output-2.png" class="lightbox" data-gallery="quarto-lightbox-gallery-16"><img src="scanpy_07_trajectory_files/figure-html/draw-graph-paga-output-2.png" id="draw-graph-paga" width="413" height="423" class="figure-img"></a></p>
 </figure>
 </div>
 </div>
 </div>
-<p>Compare the 2 graphs</p>
-<div id="cell-paga-compare" class="cell" data-execution_count="18">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb28"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>sc.pl.paga_compare(</span>
-<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>    adata, threshold<span class="op">=</span><span class="fl">0.03</span>, title<span class="op">=</span><span class="st">''</span>, right_margin<span class="op">=</span><span class="fl">0.2</span>, size<span class="op">=</span><span class="dv">10</span>, edge_width_scale<span class="op">=</span><span class="fl">0.5</span>,</span>
-<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a>    legend_fontsize<span class="op">=</span><span class="dv">12</span>, fontsize<span class="op">=</span><span class="dv">12</span>, frameon<span class="op">=</span><span class="va">False</span>, edges<span class="op">=</span><span class="va">True</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>We can now compare the two graphs. On the left, each cell is embedded on our PAGA graph, whereas on the right, each cluster of cells is represented as a node in the graph and each edge represents the connectivity between two clusters.</p>
+<div id="cell-paga-compare" class="cell" data-execution_count="17">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb27"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>sc.pl.paga_compare(</span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>    adata, threshold<span class="op">=</span><span class="fl">0.03</span>, title<span class="op">=</span><span class="st">''</span>, right_margin<span class="op">=</span><span class="fl">0.2</span>, size<span class="op">=</span><span class="dv">10</span>, edge_width_scale<span class="op">=</span><span class="fl">0.5</span>,</span>
+<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a>    legend_fontsize<span class="op">=</span><span class="dv">12</span>, fontsize<span class="op">=</span><span class="dv">12</span>, frameon<span class="op">=</span><span class="va">False</span>, edges<span class="op">=</span><span class="va">True</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>--&gt; added 'pos', the PAGA positions (adata.uns['paga'])</code></pre>
 </div>
@@ -853,34 +872,34 @@ Name: count, dtype: int64</code></pre>
 </div>
 </div>
 </section>
-<section id="gene-changes" class="level2" data-number="9">
-<h2 data-number="9" class="anchored" data-anchor-id="gene-changes"><span class="header-section-number">9</span> Gene changes</h2>
-<p>We can reconstruct gene changes along PAGA paths for a given set of genes</p>
-<p>Choose a root cell for diffusion pseudotime. We have 3 progenitor clusters, but cluster 5 seems the most clear.</p>
-<div id="pseudotime" class="cell" data-execution_count="19">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb30"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>adata.uns[<span class="st">'iroot'</span>] <span class="op">=</span> np.flatnonzero(adata.obs[<span class="st">'annot'</span>]  <span class="op">==</span> <span class="st">'5_progen'</span>)[<span class="dv">0</span>]</span>
-<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a>sc.tl.dpt(adata)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<section id="detecting-gene-changes-along-trajectories" class="level2" data-number="9">
+<h2 data-number="9" class="anchored" data-anchor-id="detecting-gene-changes-along-trajectories"><span class="header-section-number">9</span> Detecting gene changes along trajectories</h2>
+<p>We can reconstruct gene changes along PAGA paths for a given set of genes. For this we calculate the diffusion pseudotime, which orders cells on a pseudotemporal axis based on their expression profile.</p>
+<p>Choose a root cell for diffusion pseudotime. We have 3 progenitor clusters, but cluster 2 seems the most clear based on the Cd34 Marker, so we chose that cluster as starting timepoint for our pseudotime.</p>
+<div id="pseudotime" class="cell" data-execution_count="18">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb29"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>adata.uns[<span class="st">'iroot'</span>] <span class="op">=</span> np.flatnonzero(adata.obs[<span class="st">'annot'</span>]  <span class="op">==</span> <span class="st">'0_progen'</span>)[<span class="dv">0</span>]</span>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a>sc.tl.dpt(adata)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>WARNING: Trying to run `tl.dpt` without prior call of `tl.diffmap`. Falling back to `tl.diffmap` with default parameters.
 computing Diffusion Maps using n_comps=15(=n_dcs)
 computing transitions
     finished (0:00:00)
     eigenvalues of transition matrix
-    [1.         0.99894077 0.9974371  0.9966685  0.9950619  0.99306864
-     0.99136186 0.9910332  0.9891696  0.9862055  0.9851458  0.9845361
-     0.98400605 0.9837855  0.98250484]
+    [1.         0.99812466 0.9953231  0.99262905 0.9893628  0.98886466
+     0.9860919  0.98588663 0.98264486 0.97911924 0.9788514  0.9765192
+     0.9742489  0.96989715 0.9587746 ]
     finished: added
     'X_diffmap', diffmap coordinates (adata.obsm)
-    'diffmap_evals', eigenvalues of transition matrix (adata.uns) (0:00:00)
+    'diffmap_evals', eigenvalues of transition matrix (adata.uns) (0:00:01)
 computing Diffusion Pseudotime using n_dcs=10
     finished: added
     'dpt_pseudotime', the pseudotime (adata.obs) (0:00:00)</code></pre>
 </div>
 </div>
 <p>Use the full raw data for visualization.</p>
-<div id="cell-plot-pt" class="cell" data-execution_count="20">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb32"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>sc.pl.draw_graph(adata, color<span class="op">=</span>[<span class="st">'annot'</span>, <span class="st">'dpt_pseudotime'</span>], legend_loc<span class="op">=</span><span class="st">'on data'</span>, legend_fontsize<span class="op">=</span> <span class="st">'x-small'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div id="cell-plot-pt" class="cell" data-execution_count="19">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb31"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>sc.pl.draw_graph(adata, color<span class="op">=</span>[<span class="st">'annot'</span>, <span class="st">'dpt_pseudotime'</span>], legend_loc<span class="op">=</span><span class="st">'on data'</span>, legend_fontsize<span class="op">=</span> <span class="st">'x-small'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
@@ -902,56 +921,122 @@ computing Diffusion Pseudotime using n_dcs=10
 <p>The pseudotime represents the distance of every cell to the starting cluster. Have a look at the pseudotime plot, how well do you think it represents actual developmental time? What does it represent?</p>
 </div>
 </div>
-<p>By looking at the different know lineages and the layout of the graph we define manually some paths to the graph that corresponds to specific lineages.</p>
-<div id="paths" class="cell" data-execution_count="21">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb33"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Define paths</span></span>
-<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a>paths <span class="op">=</span> [(<span class="st">'erythrocytes'</span>, [<span class="st">'5_progen'</span>, <span class="st">'8_progen'</span>, <span class="st">'6'</span>, <span class="st">'3'</span>, <span class="st">'7'</span>, <span class="st">'11_eryth'</span>]),</span>
-<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a>         (<span class="st">'lympoid'</span>, [<span class="st">'5_progen'</span>, <span class="st">'12'</span>, <span class="st">'16_BC'</span>, <span class="st">'14_TC'</span>]),</span>
-<span id="cb33-5"><a href="#cb33-5" aria-hidden="true" tabindex="-1"></a>         (<span class="st">'granulo'</span>, [<span class="st">'5_progen'</span>, <span class="st">'4_progen'</span>, <span class="st">'2'</span>, <span class="st">'9_gran'</span>, <span class="st">'1_gran'</span>]),</span>
-<span id="cb33-6"><a href="#cb33-6" aria-hidden="true" tabindex="-1"></a>         (<span class="st">'mono'</span>, [<span class="st">'5_progen'</span>, <span class="st">'4_progen'</span>, <span class="st">'0_mono'</span>, <span class="st">'17_macro'</span>])</span>
-<span id="cb33-7"><a href="#cb33-7" aria-hidden="true" tabindex="-1"></a>         ]</span>
-<span id="cb33-8"><a href="#cb33-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb33-9"><a href="#cb33-9" aria-hidden="true" tabindex="-1"></a>adata.obs[<span class="st">'distance'</span>] <span class="op">=</span> adata.obs[<span class="st">'dpt_pseudotime'</span>]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="using-cellrank-to-investigate-gene-expression-changes-along-specific-trajectories" class="level2" data-number="10">
+<h2 data-number="10" class="anchored" data-anchor-id="using-cellrank-to-investigate-gene-expression-changes-along-specific-trajectories"><span class="header-section-number">10</span> Using Cellrank to investigate gene expression changes along specific trajectories</h2>
+<p>Now that we have calculated pseudotime, we are interested in what genes might change during a certain lineages differentiation trajectory. To analyse this, we use Cellrank - a Python library that computes probablistic cell fate mappings. It basically models the probabilities for each cell to end up in a specific terminal state (in our case, fully differentiated cell types).</p>
+<p>Cellrank can use different metrics to calculate a transition matrix, such as RNA velocity or pseudotime. As we have calculated pseudotime for our dataset above, we will use that for the calculation of our transition matrix.</p>
+<div id="ff9399ce" class="cell" data-execution_count="20">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb32"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Set up a cellrank kernel </span></span>
+<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a>pt_kernel <span class="op">=</span> cr.kernels.PseudotimeKernel(adata, time_key<span class="op">=</span><span class="st">'dpt_pseudotime'</span>)</span>
+<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a>pt_kernel.compute_transition_matrix()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Computing transition matrix based on pseudotime</code></pre>
 </div>
-<p>Then we select some genes that can vary in the lineages and plot onto the paths.</p>
-<div id="select-genes" class="cell" data-execution_count="22">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb34"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a>gene_names <span class="op">=</span> [<span class="st">'Gata2'</span>, <span class="st">'Gata1'</span>, <span class="st">'Klf1'</span>, <span class="st">'Epor'</span>, <span class="st">'Hba-a2'</span>,  <span class="co"># erythroid</span></span>
-<span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a>              <span class="st">'Elane'</span>, <span class="st">'Cebpe'</span>, <span class="st">'Gfi1'</span>,                    <span class="co"># neutrophil</span></span>
-<span id="cb34-3"><a href="#cb34-3" aria-hidden="true" tabindex="-1"></a>              <span class="st">'Irf8'</span>, <span class="st">'Csf1r'</span>, <span class="st">'Ctsg'</span>,                     <span class="co"># monocyte</span></span>
-<span id="cb34-4"><a href="#cb34-4" aria-hidden="true" tabindex="-1"></a>              <span class="st">'Itga2b'</span>,<span class="st">'Prss34'</span>,<span class="st">'Cma1'</span>,<span class="st">'Procr'</span>,            <span class="co"># Megakaryo,Basophil,Mast,HPC</span></span>
-<span id="cb34-5"><a href="#cb34-5" aria-hidden="true" tabindex="-1"></a>              <span class="st">'C1qc'</span>,<span class="st">'Siglech'</span>,<span class="st">'Ms4a1'</span>,<span class="st">'Cd3e'</span>,<span class="st">'Cd34'</span>]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>    Finish (0:00:07)</code></pre>
 </div>
-<div id="cell-plot-genes" class="cell" data-execution_count="23">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb35"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>_, axs <span class="op">=</span> pl.subplots(ncols<span class="op">=</span><span class="dv">4</span>, figsize<span class="op">=</span>(<span class="dv">10</span>, <span class="dv">4</span>), gridspec_kw<span class="op">=</span>{</span>
-<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a>                     <span class="st">'wspace'</span>: <span class="fl">0.05</span>, <span class="st">'left'</span>: <span class="fl">0.12</span>})</span>
-<span id="cb35-3"><a href="#cb35-3" aria-hidden="true" tabindex="-1"></a>pl.subplots_adjust(left<span class="op">=</span><span class="fl">0.05</span>, right<span class="op">=</span><span class="fl">0.98</span>, top<span class="op">=</span><span class="fl">0.82</span>, bottom<span class="op">=</span><span class="fl">0.2</span>)</span>
-<span id="cb35-4"><a href="#cb35-4" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> ipath, (descr, path) <span class="kw">in</span> <span class="bu">enumerate</span>(paths):</span>
-<span id="cb35-5"><a href="#cb35-5" aria-hidden="true" tabindex="-1"></a>    sc.pl.paga_path(</span>
-<span id="cb35-6"><a href="#cb35-6" aria-hidden="true" tabindex="-1"></a>        adata<span class="op">=</span>adata, </span>
-<span id="cb35-7"><a href="#cb35-7" aria-hidden="true" tabindex="-1"></a>        nodes<span class="op">=</span>path, </span>
-<span id="cb35-8"><a href="#cb35-8" aria-hidden="true" tabindex="-1"></a>        keys<span class="op">=</span>gene_names,</span>
-<span id="cb35-9"><a href="#cb35-9" aria-hidden="true" tabindex="-1"></a>        show_node_names<span class="op">=</span><span class="va">False</span>,</span>
-<span id="cb35-10"><a href="#cb35-10" aria-hidden="true" tabindex="-1"></a>        ax<span class="op">=</span>axs[ipath],</span>
-<span id="cb35-11"><a href="#cb35-11" aria-hidden="true" tabindex="-1"></a>        ytick_fontsize<span class="op">=</span><span class="dv">12</span>,</span>
-<span id="cb35-12"><a href="#cb35-12" aria-hidden="true" tabindex="-1"></a>        left_margin<span class="op">=</span><span class="fl">0.15</span>,</span>
-<span id="cb35-13"><a href="#cb35-13" aria-hidden="true" tabindex="-1"></a>        n_avg<span class="op">=</span><span class="dv">50</span>,</span>
-<span id="cb35-14"><a href="#cb35-14" aria-hidden="true" tabindex="-1"></a>        annotations<span class="op">=</span>[<span class="st">'distance'</span>],</span>
-<span id="cb35-15"><a href="#cb35-15" aria-hidden="true" tabindex="-1"></a>        show_yticks<span class="op">=</span><span class="va">True</span> <span class="cf">if</span> ipath <span class="op">==</span> <span class="dv">0</span> <span class="cf">else</span> <span class="va">False</span>,</span>
-<span id="cb35-16"><a href="#cb35-16" aria-hidden="true" tabindex="-1"></a>        show_colorbar<span class="op">=</span><span class="va">False</span>,</span>
-<span id="cb35-17"><a href="#cb35-17" aria-hidden="true" tabindex="-1"></a>        color_map<span class="op">=</span><span class="st">'Greys'</span>,</span>
-<span id="cb35-18"><a href="#cb35-18" aria-hidden="true" tabindex="-1"></a>        groups_key<span class="op">=</span><span class="st">'annot'</span>,</span>
-<span id="cb35-19"><a href="#cb35-19" aria-hidden="true" tabindex="-1"></a>        color_maps_annotations<span class="op">=</span>{<span class="st">'distance'</span>: <span class="st">'viridis'</span>},</span>
-<span id="cb35-20"><a href="#cb35-20" aria-hidden="true" tabindex="-1"></a>        title<span class="op">=</span><span class="st">'</span><span class="sc">{}</span><span class="st"> path'</span>.<span class="bu">format</span>(descr),</span>
-<span id="cb35-21"><a href="#cb35-21" aria-hidden="true" tabindex="-1"></a>        return_data<span class="op">=</span><span class="va">True</span>,</span>
-<span id="cb35-22"><a href="#cb35-22" aria-hidden="true" tabindex="-1"></a>        use_raw<span class="op">=</span><span class="va">False</span>,</span>
-<span id="cb35-23"><a href="#cb35-23" aria-hidden="true" tabindex="-1"></a>        show<span class="op">=</span><span class="va">False</span>)</span>
-<span id="cb35-24"><a href="#cb35-24" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb35-25"><a href="#cb35-25" aria-hidden="true" tabindex="-1"></a>pl.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="20">
+<pre><code>PseudotimeKernel[n=5828, dnorm=False, scheme='hard', frac_to_keep=0.3]</code></pre>
+</div>
+</div>
+<p>In order to calculate terminal fates and lineage commitment, cellrank uses estimators like GPCCA. We set up an estimator from our PseudotimeKernel (<code>pt_kernel</code>) and compute macrostates in our dataset (groups of cells with similar transition dynamics).</p>
+<div id="e162b383" class="cell" data-execution_count="21">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb36"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Set up an estimator to analyse the kernel</span></span>
+<span id="cb36-2"><a href="#cb36-2" aria-hidden="true" tabindex="-1"></a>pt_est <span class="op">=</span>  cr.estimators.GPCCA(pt_kernel)</span>
+<span id="cb36-3"><a href="#cb36-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb36-4"><a href="#cb36-4" aria-hidden="true" tabindex="-1"></a><span class="co">#Compute macrostates</span></span>
+<span id="cb36-5"><a href="#cb36-5" aria-hidden="true" tabindex="-1"></a>pt_est.fit(cluster_key<span class="op">=</span><span class="st">'annot'</span>, n_states<span class="op">=</span>[<span class="dv">10</span>,<span class="dv">15</span>], n_cells<span class="op">=</span><span class="dv">50</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Computing Schur decomposition
+When computing macrostates, choose a number of states NOT in `[np.int64(13)]`
+Adding `adata.uns['eigendecomposition_fwd']`
+       `.schur_vectors`
+       `.schur_matrix`
+       `.eigendecomposition`
+    Finish (0:00:01)
+Calculating minChi criterion in interval `[10, 15]`
+Computing `10` macrostates
+Adding `.macrostates`
+       `.macrostates_memberships`
+       `.coarse_T`
+       `.coarse_initial_distribution
+       `.coarse_stationary_distribution`
+       `.schur_vectors`
+       `.schur_matrix`
+       `.eigendecomposition`
+    Finish (0:00:46)</code></pre>
+</div>
+<div class="cell-output cell-output-display" data-execution_count="21">
+<pre><code>GPCCA[kernel=PseudotimeKernel[n=5828], initial_states=None, terminal_states=None]</code></pre>
+</div>
+</div>
+<p>Now that we have created an estimator and computed macrostates, we can either automatically compute our initial and terminal cell states using , or we can set them manually. In this case, we will set the initial state manually to <code>0_progen</code>, but let cellrank predict the terminal states.</p>
+<div id="96f7673b" class="cell" data-execution_count="22">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb39"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Predict initial and terminal states</span></span>
+<span id="cb39-2"><a href="#cb39-2" aria-hidden="true" tabindex="-1"></a>pt_est.set_initial_states({<span class="st">'0_progen'</span>: adata.obs_names[adata.obs[<span class="st">'annot'</span>] <span class="op">==</span> <span class="st">'0_progen'</span>]}, </span>
+<span id="cb39-3"><a href="#cb39-3" aria-hidden="true" tabindex="-1"></a>                         cluster_key<span class="op">=</span><span class="st">'annot'</span>, n_cells<span class="op">=</span><span class="dv">30</span>)</span>
+<span id="cb39-4"><a href="#cb39-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb39-5"><a href="#cb39-5" aria-hidden="true" tabindex="-1"></a>pt_est.predict_terminal_states(n_states<span class="op">=</span><span class="dv">10</span>, method<span class="op">=</span><span class="st">'top_n'</span>, allow_overlap<span class="op">=</span><span class="va">True</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Adding `adata.obs['init_states_fwd']`
+       `adata.obs['init_states_fwd_probs']`
+       `.initial_states`
+       `.initial_states_probabilities`
+       `.initial_states_memberships
+    Finish`
+Adding `adata.obs['term_states_fwd']`
+       `adata.obs['term_states_fwd_probs']`
+       `.terminal_states`
+       `.terminal_states_probabilities`
+       `.terminal_states_memberships
+    Finish`</code></pre>
+</div>
+<div class="cell-output cell-output-display" data-execution_count="22">
+<pre><code>GPCCA[kernel=PseudotimeKernel[n=5828], initial_states=['0_progen'], terminal_states=[np.str_('10_megakaryo'), np.str_('11'), np.str_('12_eryth'), np.str_('13_mast'), np.str_('14_TC'), np.str_('15_BC'), np.str_('17_dend'), np.str_('2_gran'), np.str_('3'), np.str_('5')]]</code></pre>
+</div>
+</div>
+<p>Let’s plot the initial and terminal states on our single cell graph to see how well they correspond to what we would expect.</p>
+<div id="baf2d377" class="cell" data-execution_count="23">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb42"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Create figure with 1 row, 2 columns</span></span>
+<span id="cb42-2"><a href="#cb42-2" aria-hidden="true" tabindex="-1"></a>fig, (ax1, ax2) <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">2</span>, figsize<span class="op">=</span>(<span class="dv">15</span>, <span class="dv">6</span>))</span>
+<span id="cb42-3"><a href="#cb42-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb42-4"><a href="#cb42-4" aria-hidden="true" tabindex="-1"></a><span class="co"># First plot: macrostates (left subplot)</span></span>
+<span id="cb42-5"><a href="#cb42-5" aria-hidden="true" tabindex="-1"></a>scv.pl.scatter(</span>
+<span id="cb42-6"><a href="#cb42-6" aria-hidden="true" tabindex="-1"></a>    adata,</span>
+<span id="cb42-7"><a href="#cb42-7" aria-hidden="true" tabindex="-1"></a>    color<span class="op">=</span><span class="st">'init_states_fwd'</span>,</span>
+<span id="cb42-8"><a href="#cb42-8" aria-hidden="true" tabindex="-1"></a>    basis<span class="op">=</span><span class="st">'X_draw_graph_fa'</span>,</span>
+<span id="cb42-9"><a href="#cb42-9" aria-hidden="true" tabindex="-1"></a>    legend_loc<span class="op">=</span><span class="st">'right'</span>,</span>
+<span id="cb42-10"><a href="#cb42-10" aria-hidden="true" tabindex="-1"></a>    frameon<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb42-11"><a href="#cb42-11" aria-hidden="true" tabindex="-1"></a>    size<span class="op">=</span><span class="dv">10</span>,</span>
+<span id="cb42-12"><a href="#cb42-12" aria-hidden="true" tabindex="-1"></a>    linewidth<span class="op">=</span><span class="dv">0</span>,</span>
+<span id="cb42-13"><a href="#cb42-13" aria-hidden="true" tabindex="-1"></a>    ax<span class="op">=</span>ax1,  <span class="co"># Pass the axis</span></span>
+<span id="cb42-14"><a href="#cb42-14" aria-hidden="true" tabindex="-1"></a>    show<span class="op">=</span><span class="va">False</span>  <span class="co"># Don't show yet</span></span>
+<span id="cb42-15"><a href="#cb42-15" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb42-16"><a href="#cb42-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb42-17"><a href="#cb42-17" aria-hidden="true" tabindex="-1"></a><span class="co"># Second plot: terminal states (right subplot)  </span></span>
+<span id="cb42-18"><a href="#cb42-18" aria-hidden="true" tabindex="-1"></a>scv.pl.scatter(</span>
+<span id="cb42-19"><a href="#cb42-19" aria-hidden="true" tabindex="-1"></a>    adata,</span>
+<span id="cb42-20"><a href="#cb42-20" aria-hidden="true" tabindex="-1"></a>    color<span class="op">=</span><span class="st">'term_states_fwd'</span>, </span>
+<span id="cb42-21"><a href="#cb42-21" aria-hidden="true" tabindex="-1"></a>    basis<span class="op">=</span><span class="st">'X_draw_graph_fa'</span>,</span>
+<span id="cb42-22"><a href="#cb42-22" aria-hidden="true" tabindex="-1"></a>    legend_loc<span class="op">=</span><span class="st">'right'</span>,</span>
+<span id="cb42-23"><a href="#cb42-23" aria-hidden="true" tabindex="-1"></a>    frameon<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb42-24"><a href="#cb42-24" aria-hidden="true" tabindex="-1"></a>    size<span class="op">=</span><span class="dv">10</span>,</span>
+<span id="cb42-25"><a href="#cb42-25" aria-hidden="true" tabindex="-1"></a>    linewidth<span class="op">=</span><span class="dv">0</span>,</span>
+<span id="cb42-26"><a href="#cb42-26" aria-hidden="true" tabindex="-1"></a>    ax<span class="op">=</span>ax2,  <span class="co"># Pass the axis</span></span>
+<span id="cb42-27"><a href="#cb42-27" aria-hidden="true" tabindex="-1"></a>    show<span class="op">=</span><span class="va">False</span>  <span class="co"># Don't show yet</span></span>
+<span id="cb42-28"><a href="#cb42-28" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb42-29"><a href="#cb42-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb42-30"><a href="#cb42-30" aria-hidden="true" tabindex="-1"></a><span class="co"># Add titles</span></span>
+<span id="cb42-31"><a href="#cb42-31" aria-hidden="true" tabindex="-1"></a>ax1.set_title(<span class="st">'Macrostates (Forward)'</span>)</span>
+<span id="cb42-32"><a href="#cb42-32" aria-hidden="true" tabindex="-1"></a>ax2.set_title(<span class="st">'Terminal States (Forward)'</span>)</span>
+<span id="cb42-33"><a href="#cb42-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb42-34"><a href="#cb42-34" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span>
+<span id="cb42-35"><a href="#cb42-35" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><a href="scanpy_07_trajectory_files/figure-html/plot-genes-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-19"><img src="scanpy_07_trajectory_files/figure-html/plot-genes-output-1.png" id="plot-genes" width="955" height="316" class="figure-img"></a></p>
+<p><a href="scanpy_07_trajectory_files/figure-html/cell-24-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-19"><img src="scanpy_07_trajectory_files/figure-html/cell-24-output-1.png" width="1477" height="577" class="figure-img"></a></p>
 </figure>
 </div>
 </div>
@@ -966,20 +1051,484 @@ computing Diffusion Pseudotime using n_dcs=10
 </div>
 </div>
 <div class="callout-body-container callout-body">
+<p>Are the initial and terminal states predicted as you expected? What deviates from your expectation?</p>
+<p>The results are influenced by a multitude of parameters, such as the PAGA graph connections (mediated by the n_neighbors parameter in sc.pp.neighbors) and the <code>n_states</code> parameter in <code>pt_est.fit</code>. Feel free to play with these parameters and see how the results change.</p>
+</div>
+</div>
+<p>Now that we have calculated our initial and terminal states, we will calculate fate probabilities. Cellrank does this by using Markov Chains, which calculates the probability for each cell to end up at a given terminal state. Later on we will be able to use this information to investigate which genes drive differentiation from a progenitor towards a certain fully differentiated cell type.</p>
+<div id="e2ff6bb4" class="cell" data-execution_count="24">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb43"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Compute and plot cell fate probabilities</span></span>
+<span id="cb43-2"><a href="#cb43-2" aria-hidden="true" tabindex="-1"></a>pt_est.compute_fate_probabilities(use_petsc<span class="op">=</span><span class="va">False</span>, solver<span class="op">=</span><span class="st">"direct"</span>)</span>
+<span id="cb43-3"><a href="#cb43-3" aria-hidden="true" tabindex="-1"></a>pt_est.plot_fate_probabilities(legend_loc<span class="op">=</span><span class="st">'right'</span>, basis<span class="op">=</span><span class="st">'X_draw_graph_fa'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Computing fate probabilities
+Adding `adata.obsm['lineages_fwd']`
+       `.fate_probabilities`
+    Finish (0:00:54)</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><a href="scanpy_07_trajectory_files/figure-html/cell-25-output-2.png" class="lightbox" data-gallery="quarto-lightbox-gallery-20"><img src="scanpy_07_trajectory_files/figure-html/cell-25-output-2.png" width="578" height="423" class="figure-img"></a></p>
+</figure>
+</div>
+</div>
+</div>
+<p>Now that we have computed the fate probabilities of every cell, we can compute <strong>driver genes</strong> - Cellrank does this by correlating fate probabilities with gene expression, under the assumption that genes that have a strong correlation with the fate probabilities of a certain lineage might drive differentiatin processes towards the lineages terminal state.</p>
+<p>Below we will calculate driver genes for the erythrocyte lineage (<code>12_eryth</code>) and the megakaryocyte lineage (<code>10_megakaryo</code>).</p>
+<div id="de4bc3c7" class="cell" data-execution_count="25">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb45"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Calculate lineage drivers</span></span>
+<span id="cb45-2"><a href="#cb45-2" aria-hidden="true" tabindex="-1"></a>drivers_ery <span class="op">=</span> pt_est.compute_lineage_drivers(lineages<span class="op">=</span>[<span class="st">'12_eryth'</span>], cluster_key<span class="op">=</span><span class="st">'annot'</span>)</span>
+<span id="cb45-3"><a href="#cb45-3" aria-hidden="true" tabindex="-1"></a><span class="co">#Sort</span></span>
+<span id="cb45-4"><a href="#cb45-4" aria-hidden="true" tabindex="-1"></a>drivers_ery_sort <span class="op">=</span> drivers_ery.sort_values(by<span class="op">=</span><span class="st">'12_eryth_corr'</span>, ascending<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb45-5"><a href="#cb45-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-6"><a href="#cb45-6" aria-hidden="true" tabindex="-1"></a>drivers_mega <span class="op">=</span> pt_est.compute_lineage_drivers(lineages<span class="op">=</span>[<span class="st">'10_megakaryo'</span>], cluster_key<span class="op">=</span><span class="st">'annot'</span>)</span>
+<span id="cb45-7"><a href="#cb45-7" aria-hidden="true" tabindex="-1"></a>drivers_mega_sort <span class="op">=</span> drivers_mega.sort_values(by<span class="op">=</span><span class="st">'10_megakaryo_corr'</span>, ascending<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb45-8"><a href="#cb45-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-9"><a href="#cb45-9" aria-hidden="true" tabindex="-1"></a><span class="co">#Get top 10 eruythrocyte driver genes</span></span>
+<span id="cb45-10"><a href="#cb45-10" aria-hidden="true" tabindex="-1"></a>drivers_ery_sort.head(n<span class="op">=</span><span class="dv">10</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Adding `adata.varm['terminal_lineage_drivers']`
+       `.lineage_drivers`
+    Finish (0:00:00)
+Adding `adata.varm['terminal_lineage_drivers']`
+       `.lineage_drivers`
+    Finish (0:00:00)</code></pre>
+</div>
+<div class="cell-output cell-output-display" data-execution_count="25">
+<div>
+
+
+<table class="dataframe caption-top table table-sm table-striped small" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">12_eryth_corr</th>
+<th data-quarto-table-cell-role="th">12_eryth_pval</th>
+<th data-quarto-table-cell-role="th">12_eryth_qval</th>
+<th data-quarto-table-cell-role="th">12_eryth_ci_low</th>
+<th data-quarto-table-cell-role="th">12_eryth_ci_high</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">Car2</th>
+<td>0.707321</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.694255</td>
+<td>0.719922</td>
+</tr>
+<tr class="even">
+<th data-quarto-table-cell-role="th">Car1</th>
+<td>0.692465</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.678860</td>
+<td>0.705595</td>
+</tr>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">Blvrb</th>
+<td>0.574689</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.557237</td>
+<td>0.591634</td>
+</tr>
+<tr class="even">
+<th data-quarto-table-cell-role="th">Aqp1</th>
+<td>0.565254</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.547525</td>
+<td>0.582475</td>
+</tr>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">Klf1</th>
+<td>0.556387</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.538403</td>
+<td>0.573864</td>
+</tr>
+<tr class="even">
+<th data-quarto-table-cell-role="th">Atpif1</th>
+<td>0.535636</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.517072</td>
+<td>0.553696</td>
+</tr>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">Vamp5</th>
+<td>0.497376</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.477803</td>
+<td>0.516455</td>
+</tr>
+<tr class="even">
+<th data-quarto-table-cell-role="th">Prdx2</th>
+<td>0.495552</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.475933</td>
+<td>0.514678</td>
+</tr>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">Gstm5</th>
+<td>0.489022</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.469239</td>
+<td>0.508315</td>
+</tr>
+<tr class="even">
+<th data-quarto-table-cell-role="th">Mt2</th>
+<td>0.487639</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.467822</td>
+<td>0.506967</td>
+</tr>
+</tbody>
+</table>
+
+</div>
+</div>
+</div>
+<p>Now we plot the top 10 previously calculated driver genes for the erythrocyte and megakaryocyte lineages.</p>
+<div id="6e83bed4" class="cell" data-execution_count="26">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb47"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb47-1"><a href="#cb47-1" aria-hidden="true" tabindex="-1"></a>sc.pl.draw_graph(adata, color<span class="op">=</span>drivers_ery_sort.index.tolist()[<span class="dv">1</span>:<span class="dv">10</span>], legend_loc<span class="op">=</span><span class="st">'on data'</span>, legend_fontsize<span class="op">=</span> <span class="st">'x-small'</span>, use_raw<span class="op">=</span><span class="va">False</span>, ncols<span class="op">=</span><span class="dv">3</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><a href="scanpy_07_trajectory_files/figure-html/cell-27-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-21"><img src="scanpy_07_trajectory_files/figure-html/cell-27-output-1.png" width="1449" height="1309" class="figure-img"></a></p>
+</figure>
+</div>
+</div>
+</div>
+<div id="5be42d2a" class="cell" data-execution_count="27">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb48"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb48-1"><a href="#cb48-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Also plot the lineage drivers for the granulocyte lineage</span></span>
+<span id="cb48-2"><a href="#cb48-2" aria-hidden="true" tabindex="-1"></a>sc.pl.draw_graph(adata, color<span class="op">=</span>drivers_mega_sort.index.tolist()[<span class="dv">1</span>:<span class="dv">10</span>], legend_loc<span class="op">=</span><span class="st">'on data'</span>, legend_fontsize<span class="op">=</span> <span class="st">'x-small'</span>, use_raw<span class="op">=</span><span class="va">False</span>, ncols<span class="op">=</span><span class="dv">3</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><a href="scanpy_07_trajectory_files/figure-html/cell-28-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-22"><img src="scanpy_07_trajectory_files/figure-html/cell-28-output-1.png" width="1437" height="1309" class="figure-img"></a></p>
+</figure>
+</div>
+</div>
+</div>
+<div class="callout callout-style-default callout-note callout-titled" title="Discuss">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>Discuss
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Discuss amongst yourselves which genes appear to be good markers for the respective lineages and why!</p>
+</div>
+</div>
+<p>Now we want to look at the expression trends for some of the genes we just identified as potential drivers over pseudotime. Cellrank uses Generalized Additive Models (GAMs) to fit smooth expression curves, so we start by creating such models for our data.</p>
+<div id="6338645f" class="cell" data-execution_count="28">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb49"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb49-1"><a href="#cb49-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Fit GAMs</span></span>
+<span id="cb49-2"><a href="#cb49-2" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> cr.models.GAM(adata, n_knots<span class="op">=</span><span class="dv">6</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>Next, we plot some of the interesting genes of the erythrocyte (Car1, Atpif1, Vamp5) and megakaryocyte (Cavin2, Pbx1, Ctla2a) lineages. We only plot the genes for their respective lineage, in order to compare their expression at different pseudotime points during the lineages developmental trajectory.</p>
+<div id="c0afcf76" class="cell" data-execution_count="29">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb50"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb50-1"><a href="#cb50-1" aria-hidden="true" tabindex="-1"></a>cr.pl.gene_trends(adata, </span>
+<span id="cb50-2"><a href="#cb50-2" aria-hidden="true" tabindex="-1"></a>                  model <span class="op">=</span> model,</span>
+<span id="cb50-3"><a href="#cb50-3" aria-hidden="true" tabindex="-1"></a>                  genes <span class="op">=</span> [<span class="st">'Car1'</span>, <span class="st">'Atpif1'</span>, <span class="st">'Vamp5'</span>],</span>
+<span id="cb50-4"><a href="#cb50-4" aria-hidden="true" tabindex="-1"></a>                  same_plot<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb50-5"><a href="#cb50-5" aria-hidden="true" tabindex="-1"></a>                  time_key <span class="op">=</span> <span class="st">'dpt_pseudotime'</span>,</span>
+<span id="cb50-6"><a href="#cb50-6" aria-hidden="true" tabindex="-1"></a>                  lineages <span class="op">=</span> [<span class="st">'12_eryth'</span>],</span>
+<span id="cb50-7"><a href="#cb50-7" aria-hidden="true" tabindex="-1"></a>                  hide_cells<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb50-8"><a href="#cb50-8" aria-hidden="true" tabindex="-1"></a>                  ncols<span class="op">=</span><span class="dv">3</span>,</span>
+<span id="cb50-9"><a href="#cb50-9" aria-hidden="true" tabindex="-1"></a>                  n_jobs<span class="op">=</span><span class="dv">1</span>,</span>
+<span id="cb50-10"><a href="#cb50-10" aria-hidden="true" tabindex="-1"></a>                  backend<span class="op">=</span><span class="st">'threading'</span>)</span>
+<span id="cb50-11"><a href="#cb50-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb50-12"><a href="#cb50-12" aria-hidden="true" tabindex="-1"></a>cr.pl.gene_trends(adata, </span>
+<span id="cb50-13"><a href="#cb50-13" aria-hidden="true" tabindex="-1"></a>                  model <span class="op">=</span> model,</span>
+<span id="cb50-14"><a href="#cb50-14" aria-hidden="true" tabindex="-1"></a>                  genes <span class="op">=</span> [<span class="st">'Cavin2'</span>, <span class="st">'Pbx1'</span>, <span class="st">'Rab27b'</span>],</span>
+<span id="cb50-15"><a href="#cb50-15" aria-hidden="true" tabindex="-1"></a>                  same_plot<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb50-16"><a href="#cb50-16" aria-hidden="true" tabindex="-1"></a>                  time_key <span class="op">=</span> <span class="st">'dpt_pseudotime'</span>,</span>
+<span id="cb50-17"><a href="#cb50-17" aria-hidden="true" tabindex="-1"></a>                  lineages <span class="op">=</span> [<span class="st">'10_megakaryo'</span>],</span>
+<span id="cb50-18"><a href="#cb50-18" aria-hidden="true" tabindex="-1"></a>                  hide_cells<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb50-19"><a href="#cb50-19" aria-hidden="true" tabindex="-1"></a>                  ncols<span class="op">=</span><span class="dv">3</span>,</span>
+<span id="cb50-20"><a href="#cb50-20" aria-hidden="true" tabindex="-1"></a>                  n_jobs<span class="op">=</span><span class="dv">1</span>,</span>
+<span id="cb50-21"><a href="#cb50-21" aria-hidden="true" tabindex="-1"></a>                  backend<span class="op">=</span><span class="st">'threading'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Computing trends using `1` core(s)</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>    Finish (0:00:01)</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Plotting trends
+Computing trends using `1` core(s)</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>    Finish (0:00:01)</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Plotting trends</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><a href="scanpy_07_trajectory_files/figure-html/cell-30-output-6.png" class="lightbox" data-gallery="quarto-lightbox-gallery-23"><img src="scanpy_07_trajectory_files/figure-html/cell-30-output-6.png" width="1778" height="357" class="figure-img"></a></p>
+</figure>
+</div>
+</div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><a href="scanpy_07_trajectory_files/figure-html/cell-30-output-7.png" class="lightbox" data-gallery="quarto-lightbox-gallery-24"><img src="scanpy_07_trajectory_files/figure-html/cell-30-output-7.png" width="1778" height="357" class="figure-img"></a></p>
+</figure>
+</div>
+</div>
+</div>
+<p>What would this look like if we were to try and compare the gene expression between the two lineages?</p>
+<div id="b830857c" class="cell" data-execution_count="30">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb56"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb56-1"><a href="#cb56-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Plot gene trends for erythrocyte and megakaryo lineages</span></span>
+<span id="cb56-2"><a href="#cb56-2" aria-hidden="true" tabindex="-1"></a>cr.pl.gene_trends(adata, </span>
+<span id="cb56-3"><a href="#cb56-3" aria-hidden="true" tabindex="-1"></a>                  model <span class="op">=</span> model,</span>
+<span id="cb56-4"><a href="#cb56-4" aria-hidden="true" tabindex="-1"></a>                  genes <span class="op">=</span> [<span class="st">'Cavin2'</span>, <span class="st">'Pbx1'</span>, <span class="st">'Car1'</span>],</span>
+<span id="cb56-5"><a href="#cb56-5" aria-hidden="true" tabindex="-1"></a>                  same_plot<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb56-6"><a href="#cb56-6" aria-hidden="true" tabindex="-1"></a>                  time_key <span class="op">=</span> <span class="st">'dpt_pseudotime'</span>,</span>
+<span id="cb56-7"><a href="#cb56-7" aria-hidden="true" tabindex="-1"></a>                  lineages <span class="op">=</span> [<span class="st">'10_megakaryo'</span>, <span class="st">'12_eryth'</span>],</span>
+<span id="cb56-8"><a href="#cb56-8" aria-hidden="true" tabindex="-1"></a>                  hide_cells<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb56-9"><a href="#cb56-9" aria-hidden="true" tabindex="-1"></a>                  ncols<span class="op">=</span><span class="dv">3</span>,</span>
+<span id="cb56-10"><a href="#cb56-10" aria-hidden="true" tabindex="-1"></a>                  n_jobs<span class="op">=</span><span class="dv">1</span>,</span>
+<span id="cb56-11"><a href="#cb56-11" aria-hidden="true" tabindex="-1"></a>                  backend<span class="op">=</span><span class="st">'threading'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Computing trends using `1` core(s)</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>    Finish (0:00:02)</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Plotting trends</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><a href="scanpy_07_trajectory_files/figure-html/cell-31-output-4.png" class="lightbox" data-gallery="quarto-lightbox-gallery-25"><img src="scanpy_07_trajectory_files/figure-html/cell-31-output-4.png" width="1778" height="357" class="figure-img"></a></p>
+</figure>
+</div>
+</div>
+</div>
+<div class="callout callout-style-default callout-note callout-titled" title="Discuss">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>Discuss
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Why do the different lineages in the plots above have different maximum pseudotime values? In how far do you think the gene expression values are comparable across the two lineages?</p>
+</div>
+</div>
+<p>We can also visualize the expression of several genes over pseudotime in a single trajectory. Let’s do this for the 30 top driver genes of the erythrocyte and megakaryocyte lineages. If you have any genes that you are interested in, plot these using the code below.</p>
+<div id="02924cd4" class="cell" data-execution_count="31">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb60"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb60-1"><a href="#cb60-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Plot expression cascades of several genes over pseudotime</span></span>
+<span id="cb60-2"><a href="#cb60-2" aria-hidden="true" tabindex="-1"></a>cr.pl.heatmap(</span>
+<span id="cb60-3"><a href="#cb60-3" aria-hidden="true" tabindex="-1"></a>    adata,</span>
+<span id="cb60-4"><a href="#cb60-4" aria-hidden="true" tabindex="-1"></a>    model<span class="op">=</span>model,</span>
+<span id="cb60-5"><a href="#cb60-5" aria-hidden="true" tabindex="-1"></a>    lineages<span class="op">=</span><span class="st">'12_eryth'</span>,</span>
+<span id="cb60-6"><a href="#cb60-6" aria-hidden="true" tabindex="-1"></a>    cluster_key<span class="op">=</span><span class="st">'annot'</span>,</span>
+<span id="cb60-7"><a href="#cb60-7" aria-hidden="true" tabindex="-1"></a>    show_fate_probabilities<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb60-8"><a href="#cb60-8" aria-hidden="true" tabindex="-1"></a>    genes<span class="op">=</span>drivers_ery_sort.index.tolist()[<span class="dv">1</span>:<span class="dv">30</span>],</span>
+<span id="cb60-9"><a href="#cb60-9" aria-hidden="true" tabindex="-1"></a>    time_key<span class="op">=</span><span class="st">'dpt_pseudotime'</span>,</span>
+<span id="cb60-10"><a href="#cb60-10" aria-hidden="true" tabindex="-1"></a>    figsize<span class="op">=</span>(<span class="dv">12</span>,<span class="dv">10</span>),</span>
+<span id="cb60-11"><a href="#cb60-11" aria-hidden="true" tabindex="-1"></a>    show_all_genes<span class="op">=</span><span class="va">True</span></span>
+<span id="cb60-12"><a href="#cb60-12" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb60-13"><a href="#cb60-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-14"><a href="#cb60-14" aria-hidden="true" tabindex="-1"></a>cr.pl.heatmap(</span>
+<span id="cb60-15"><a href="#cb60-15" aria-hidden="true" tabindex="-1"></a>    adata,</span>
+<span id="cb60-16"><a href="#cb60-16" aria-hidden="true" tabindex="-1"></a>    model<span class="op">=</span>model,</span>
+<span id="cb60-17"><a href="#cb60-17" aria-hidden="true" tabindex="-1"></a>    lineages<span class="op">=</span><span class="st">'10_megakaryo'</span>,</span>
+<span id="cb60-18"><a href="#cb60-18" aria-hidden="true" tabindex="-1"></a>    cluster_key<span class="op">=</span><span class="st">'annot'</span>,</span>
+<span id="cb60-19"><a href="#cb60-19" aria-hidden="true" tabindex="-1"></a>    show_fate_probabilities<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb60-20"><a href="#cb60-20" aria-hidden="true" tabindex="-1"></a>    genes<span class="op">=</span>drivers_mega_sort.index.tolist()[<span class="dv">1</span>:<span class="dv">30</span>],</span>
+<span id="cb60-21"><a href="#cb60-21" aria-hidden="true" tabindex="-1"></a>    time_key<span class="op">=</span><span class="st">'dpt_pseudotime'</span>,</span>
+<span id="cb60-22"><a href="#cb60-22" aria-hidden="true" tabindex="-1"></a>    figsize<span class="op">=</span>(<span class="dv">12</span>,<span class="dv">10</span>),</span>
+<span id="cb60-23"><a href="#cb60-23" aria-hidden="true" tabindex="-1"></a>    show_all_genes<span class="op">=</span><span class="va">True</span></span>
+<span id="cb60-24"><a href="#cb60-24" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Computing trends using `1` core(s)</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>    Finish (0:00:09)
+Computing trends using `1` core(s)</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>    Finish (0:00:07)</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><a href="scanpy_07_trajectory_files/figure-html/cell-32-output-4.png" class="lightbox" data-gallery="quarto-lightbox-gallery-26"><img src="scanpy_07_trajectory_files/figure-html/cell-32-output-4.png" width="1246" height="882" class="figure-img"></a></p>
+</figure>
+</div>
+</div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><a href="scanpy_07_trajectory_files/figure-html/cell-32-output-5.png" class="lightbox" data-gallery="quarto-lightbox-gallery-27"><img src="scanpy_07_trajectory_files/figure-html/cell-32-output-5.png" width="1246" height="882" class="figure-img"></a></p>
+</figure>
+</div>
+</div>
+</div>
+<p>Now that we have visualized expression trends for several genes associated with the our lineages, we could be interested in identifying <strong>other genes that follow a specific expression pattern</strong> along the trajectory. Let’s say we are interested in genes from the erythrocyte lineage that increase with pseudotime (like Car1) and genes whose expression peaks and then falls off again before the maximum pseudotime value is reached (like Vamp5).</p>
+<p>Cellrank provides a way for us to identify genes that have a similar expression along the trajectory, using the <code>cr.pl.cluster_trends</code> function. You can modify the number of clusters by modifying the resolution parameter until you find the clustering to be appropriate.</p>
+<div id="c27d3606" class="cell" data-execution_count="32">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb64"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb64-1"><a href="#cb64-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Then we cluster trends based on the erythrocyte driver genes</span></span>
+<span id="cb64-2"><a href="#cb64-2" aria-hidden="true" tabindex="-1"></a>cr.pl.cluster_trends(</span>
+<span id="cb64-3"><a href="#cb64-3" aria-hidden="true" tabindex="-1"></a>    adata,</span>
+<span id="cb64-4"><a href="#cb64-4" aria-hidden="true" tabindex="-1"></a>    model<span class="op">=</span>model,  <span class="co"># use the model from before</span></span>
+<span id="cb64-5"><a href="#cb64-5" aria-hidden="true" tabindex="-1"></a>    lineage<span class="op">=</span><span class="st">"12_eryth"</span>,</span>
+<span id="cb64-6"><a href="#cb64-6" aria-hidden="true" tabindex="-1"></a>    genes<span class="op">=</span>drivers_ery_sort.index.tolist(),</span>
+<span id="cb64-7"><a href="#cb64-7" aria-hidden="true" tabindex="-1"></a>    time_key<span class="op">=</span><span class="st">"dpt_pseudotime"</span>,</span>
+<span id="cb64-8"><a href="#cb64-8" aria-hidden="true" tabindex="-1"></a>    n_jobs<span class="op">=</span><span class="dv">8</span>,</span>
+<span id="cb64-9"><a href="#cb64-9" aria-hidden="true" tabindex="-1"></a>    random_state<span class="op">=</span><span class="dv">0</span>,</span>
+<span id="cb64-10"><a href="#cb64-10" aria-hidden="true" tabindex="-1"></a>    clustering_kwargs<span class="op">=</span>{<span class="st">"resolution"</span>: <span class="fl">0.4</span>, <span class="st">"random_state"</span>: <span class="dv">0</span>},</span>
+<span id="cb64-11"><a href="#cb64-11" aria-hidden="true" tabindex="-1"></a>    neighbors_kwargs<span class="op">=</span>{<span class="st">"random_state"</span>: <span class="dv">0</span>},</span>
+<span id="cb64-12"><a href="#cb64-12" aria-hidden="true" tabindex="-1"></a>    recompute<span class="op">=</span><span class="va">True</span></span>
+<span id="cb64-13"><a href="#cb64-13" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Computing trends using `8` core(s)</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>did not converge
+did not converge
+did not converge</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>did not converge
+did not converge
+did not converge
+did not converge
+did not converge</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>    Finish (0:24:38)
+WARNING: Unable to fit `5` models.
+computing PCA
+    with n_comps=49
+    finished (0:00:00)
+computing neighbors
+    using 'X_pca' with n_pcs = 49
+    finished: added to `.uns['neighbors']`
+    `.obsp['distances']`, distances for each pair of neighbors
+    `.obsp['connectivities']`, weighted adjacency matrix (0:00:00)
+running Leiden clustering
+    finished: found 13 clusters and added
+    'clusters', the cluster labels (adata.obs, categorical) (0:00:00)
+Saving data to `adata.uns['lineage_12_eryth_trend']`</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><a href="scanpy_07_trajectory_files/figure-html/cell-33-output-5.png" class="lightbox" data-gallery="quarto-lightbox-gallery-28"><img src="scanpy_07_trajectory_files/figure-html/cell-33-output-5.png" width="2977" height="4977" class="figure-img"></a></p>
+</figure>
+</div>
+</div>
+</div>
+<p>The results of the clustering trend are saved as an anndata object in <code>adata.uns['lineage_12_eryth_trend']</code>. We will now use this to extract genes that follow a specific trend and plot them.</p>
+<div id="768d1909" class="cell" data-execution_count="33">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb69"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb69-1"><a href="#cb69-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Save trends as new anndata object</span></span>
+<span id="cb69-2"><a href="#cb69-2" aria-hidden="true" tabindex="-1"></a>ery_trends <span class="op">=</span> adata.uns[<span class="st">'lineage_12_eryth_trend'</span>].copy()</span>
+<span id="cb69-3"><a href="#cb69-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb69-4"><a href="#cb69-4" aria-hidden="true" tabindex="-1"></a><span class="co">#Add means and dispersions from original data to the object</span></span>
+<span id="cb69-5"><a href="#cb69-5" aria-hidden="true" tabindex="-1"></a>cols <span class="op">=</span> [<span class="st">"means"</span>, <span class="st">"dispersions"</span>]</span>
+<span id="cb69-6"><a href="#cb69-6" aria-hidden="true" tabindex="-1"></a>ery_trends.obs <span class="op">=</span> ery_trends.obs.merge(</span>
+<span id="cb69-7"><a href="#cb69-7" aria-hidden="true" tabindex="-1"></a>    right<span class="op">=</span>adata.var[cols], how<span class="op">=</span><span class="st">"left"</span>, left_index<span class="op">=</span><span class="va">True</span>, right_index<span class="op">=</span><span class="va">True</span></span>
+<span id="cb69-8"><a href="#cb69-8" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb69-9"><a href="#cb69-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb69-10"><a href="#cb69-10" aria-hidden="true" tabindex="-1"></a><span class="co">#Extract genes that follow the expression patterns of the respective clusters</span></span>
+<span id="cb69-11"><a href="#cb69-11" aria-hidden="true" tabindex="-1"></a>low_genes <span class="op">=</span> <span class="bu">list</span>(</span>
+<span id="cb69-12"><a href="#cb69-12" aria-hidden="true" tabindex="-1"></a>    ery_trends[ery_trends.obs[<span class="st">"clusters"</span>] <span class="op">==</span> <span class="st">"4"</span>]</span>
+<span id="cb69-13"><a href="#cb69-13" aria-hidden="true" tabindex="-1"></a>    .obs.sort_values(<span class="st">"means"</span>, ascending<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb69-14"><a href="#cb69-14" aria-hidden="true" tabindex="-1"></a>    .index</span>
+<span id="cb69-15"><a href="#cb69-15" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb69-16"><a href="#cb69-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb69-17"><a href="#cb69-17" aria-hidden="true" tabindex="-1"></a>mid_genes <span class="op">=</span> <span class="bu">list</span>(</span>
+<span id="cb69-18"><a href="#cb69-18" aria-hidden="true" tabindex="-1"></a>    ery_trends[ery_trends.obs[<span class="st">"clusters"</span>] <span class="op">==</span> <span class="st">"6"</span>]</span>
+<span id="cb69-19"><a href="#cb69-19" aria-hidden="true" tabindex="-1"></a>    .obs.sort_values(<span class="st">"means"</span>, ascending<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb69-20"><a href="#cb69-20" aria-hidden="true" tabindex="-1"></a>    .index</span>
+<span id="cb69-21"><a href="#cb69-21" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb69-22"><a href="#cb69-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb69-23"><a href="#cb69-23" aria-hidden="true" tabindex="-1"></a>high_genes <span class="op">=</span> <span class="bu">list</span>(</span>
+<span id="cb69-24"><a href="#cb69-24" aria-hidden="true" tabindex="-1"></a>    ery_trends[ery_trends.obs[<span class="st">"clusters"</span>] <span class="op">==</span> <span class="st">"1"</span>]</span>
+<span id="cb69-25"><a href="#cb69-25" aria-hidden="true" tabindex="-1"></a>    .obs.sort_values(<span class="st">"means"</span>, ascending<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb69-26"><a href="#cb69-26" aria-hidden="true" tabindex="-1"></a>    .index</span>
+<span id="cb69-27"><a href="#cb69-27" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div id="0ffa8390" class="cell" data-execution_count="34">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb70"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb70-1"><a href="#cb70-1" aria-hidden="true" tabindex="-1"></a><span class="co">#There are a lot of ribosomal genes in our gene lists - these are probably not as interesting as other genes, so we remove them from our lists right now</span></span>
+<span id="cb70-2"><a href="#cb70-2" aria-hidden="true" tabindex="-1"></a>low_genes_filt <span class="op">=</span> [<span class="bu">str</span>(x) <span class="cf">for</span> x <span class="kw">in</span> low_genes <span class="cf">if</span> <span class="kw">not</span> x.lower().startswith((<span class="st">'rpl'</span>, <span class="st">'rps'</span>))]</span>
+<span id="cb70-3"><a href="#cb70-3" aria-hidden="true" tabindex="-1"></a>mid_genes_filt <span class="op">=</span> [<span class="bu">str</span>(x) <span class="cf">for</span> x <span class="kw">in</span> mid_genes <span class="cf">if</span> <span class="kw">not</span> x.lower().startswith((<span class="st">'rpl'</span>, <span class="st">'rps'</span>))]</span>
+<span id="cb70-4"><a href="#cb70-4" aria-hidden="true" tabindex="-1"></a>high_genes_filt <span class="op">=</span> [<span class="bu">str</span>(x) <span class="cf">for</span> x <span class="kw">in</span> high_genes <span class="cf">if</span> <span class="kw">not</span> x.lower().startswith((<span class="st">'rpl'</span>, <span class="st">'rps'</span>))]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div id="4d817ce4" class="cell" data-execution_count="35">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb71"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb71-1"><a href="#cb71-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Plot the selected genes</span></span>
+<span id="cb71-2"><a href="#cb71-2" aria-hidden="true" tabindex="-1"></a>cr.pl.gene_trends(</span>
+<span id="cb71-3"><a href="#cb71-3" aria-hidden="true" tabindex="-1"></a>    adata,</span>
+<span id="cb71-4"><a href="#cb71-4" aria-hidden="true" tabindex="-1"></a>    model<span class="op">=</span>model,</span>
+<span id="cb71-5"><a href="#cb71-5" aria-hidden="true" tabindex="-1"></a>    lineages<span class="op">=</span><span class="st">"12_eryth"</span>,</span>
+<span id="cb71-6"><a href="#cb71-6" aria-hidden="true" tabindex="-1"></a>    cell_color<span class="op">=</span><span class="st">"annot"</span>,</span>
+<span id="cb71-7"><a href="#cb71-7" aria-hidden="true" tabindex="-1"></a>    genes<span class="op">=</span>high_genes_filt[<span class="dv">0</span>:<span class="dv">3</span>]<span class="op">+</span>mid_genes_filt[<span class="dv">0</span>:<span class="dv">3</span>]<span class="op">+</span>low_genes_filt[<span class="dv">0</span>:<span class="dv">3</span>],</span>
+<span id="cb71-8"><a href="#cb71-8" aria-hidden="true" tabindex="-1"></a>    same_plot<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb71-9"><a href="#cb71-9" aria-hidden="true" tabindex="-1"></a>    ncols<span class="op">=</span><span class="dv">3</span>,</span>
+<span id="cb71-10"><a href="#cb71-10" aria-hidden="true" tabindex="-1"></a>    time_key<span class="op">=</span><span class="st">"dpt_pseudotime"</span>,</span>
+<span id="cb71-11"><a href="#cb71-11" aria-hidden="true" tabindex="-1"></a>    hide_cells<span class="op">=</span><span class="va">True</span></span>
+<span id="cb71-12"><a href="#cb71-12" aria-hidden="true" tabindex="-1"></a>    )</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Computing trends using `1` core(s)</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>    Finish (0:00:03)
+Plotting trends</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><a href="scanpy_07_trajectory_files/figure-html/cell-36-output-3.png" class="lightbox" data-gallery="quarto-lightbox-gallery-29"><img src="scanpy_07_trajectory_files/figure-html/cell-36-output-3.png" width="1778" height="1156" class="figure-img"></a></p>
+</figure>
+</div>
+</div>
+</div>
+<p>You can visaulize any number of genes in this manner in order to see which ones are interesting for your specific question.</p>
+<div class="callout callout-style-default callout-note callout-titled" title="Discuss">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>Discuss
+</div>
+</div>
+<div class="callout-body-container callout-body">
 <p>As you can see, we can manipulate the trajectory quite a bit by selecting different number of neighbors, components etc. to fit with our assumptions on the development of these celltypes.</p>
-<p>Please explore further how you can tweak the trajectory. For instance, can you create a PAGA trajectory using the orignial umap from Seurat instead? Hint, you first need to compute the neighbors on the umap.</p>
+<p>Please explore further how you can tweak the trajectory. For instance, can you create a PAGA trajectory using the orignial UMAP from Seurat instead? Hint, you first need to compute the neighbors on the UMAP.</p>
 </div>
 </div>
 </section>
-<section id="session-info" class="level2" data-number="10">
-<h2 data-number="10" class="anchored" data-anchor-id="session-info"><span class="header-section-number">10</span> Session info</h2>
+<section id="session-info" class="level2" data-number="11">
+<h2 data-number="11" class="anchored" data-anchor-id="session-info"><span class="header-section-number">11</span> Session info</h2>
 <details>
 <summary>
 Click here
 </summary>
-<div id="cell-session" class="cell" data-execution_count="24">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb36"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a>sc.logging.print_versions()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div id="session" class="cell-output cell-output-display" data-execution_count="24">
+<div id="cell-session" class="cell" data-execution_count="36">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb74"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb74-1"><a href="#cb74-1" aria-hidden="true" tabindex="-1"></a>sc.logging.print_versions()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div id="session" class="cell-output cell-output-display" data-execution_count="36">
 
 
         <details>
@@ -995,248 +1544,288 @@ Click here
 </thead>
 <tbody>
 <tr class="odd" style="background-color: var(--jp-layout-color1, var(--vscode-editor-background, #f8f9fa)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
-<td>prompt_toolkit</td>
-<td>3.0.52</td>
-</tr>
-<tr class="even" style="background-color: var(--jp-layout-color2, var(--vscode-tree-tableOddRowsBackground, #f1f3f4)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
-<td>natsort</td>
-<td>8.4.0</td>
-</tr>
-<tr class="odd" style="background-color: var(--jp-layout-color1, var(--vscode-editor-background, #f8f9fa)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
-<td>session-info2</td>
-<td>0.4</td>
-</tr>
-<tr class="even" style="background-color: var(--jp-layout-color2, var(--vscode-tree-tableOddRowsBackground, #f1f3f4)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
-<td>fast-array-utils</td>
-<td>1.3.1</td>
-</tr>
-<tr class="odd" style="background-color: var(--jp-layout-color1, var(--vscode-editor-background, #f8f9fa)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
-<td>xarray</td>
-<td>2026.2.0</td>
-</tr>
-<tr class="even" style="background-color: var(--jp-layout-color2, var(--vscode-tree-tableOddRowsBackground, #f1f3f4)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
 <td>executing</td>
 <td>2.2.1</td>
 </tr>
-<tr class="odd" style="background-color: var(--jp-layout-color1, var(--vscode-editor-background, #f8f9fa)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
-<td>pynndescent</td>
-<td>0.5.13</td>
-</tr>
 <tr class="even" style="background-color: var(--jp-layout-color2, var(--vscode-tree-tableOddRowsBackground, #f1f3f4)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
-<td>joblib</td>
-<td>1.5.3</td>
-</tr>
-<tr class="odd" style="background-color: var(--jp-layout-color1, var(--vscode-editor-background, #f8f9fa)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
-<td>scikit-learn</td>
-<td>1.6.1</td>
-</tr>
-<tr class="even" style="background-color: var(--jp-layout-color2, var(--vscode-tree-tableOddRowsBackground, #f1f3f4)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
-<td>python-dateutil</td>
-<td>2.9.0.post0</td>
-</tr>
-<tr class="odd" style="background-color: var(--jp-layout-color1, var(--vscode-editor-background, #f8f9fa)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
-<td>ipykernel</td>
-<td>7.2.0</td>
-</tr>
-<tr class="even" style="background-color: var(--jp-layout-color2, var(--vscode-tree-tableOddRowsBackground, #f1f3f4)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
-<td>backports.zstd</td>
-<td>1.3.0</td>
-</tr>
-<tr class="odd" style="background-color: var(--jp-layout-color1, var(--vscode-editor-background, #f8f9fa)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
-<td>zarr</td>
-<td>3.1.5</td>
-</tr>
-<tr class="even" style="background-color: var(--jp-layout-color2, var(--vscode-tree-tableOddRowsBackground, #f1f3f4)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
-<td>donfig</td>
-<td>0.8.1.post1</td>
-</tr>
-<tr class="odd" style="background-color: var(--jp-layout-color1, var(--vscode-editor-background, #f8f9fa)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
-<td>igraph</td>
-<td>1.0.0</td>
-</tr>
-<tr class="even" style="background-color: var(--jp-layout-color2, var(--vscode-tree-tableOddRowsBackground, #f1f3f4)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
-<td>leidenalg</td>
-<td>0.11.0</td>
-</tr>
-<tr class="odd" style="background-color: var(--jp-layout-color1, var(--vscode-editor-background, #f8f9fa)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
-<td>packaging</td>
-<td>26.0</td>
-</tr>
-<tr class="even" style="background-color: var(--jp-layout-color2, var(--vscode-tree-tableOddRowsBackground, #f1f3f4)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
-<td>fsspec</td>
-<td>2026.2.0</td>
-</tr>
-<tr class="odd" style="background-color: var(--jp-layout-color1, var(--vscode-editor-background, #f8f9fa)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
-<td>jedi</td>
-<td>0.19.2</td>
-</tr>
-<tr class="even" style="background-color: var(--jp-layout-color2, var(--vscode-tree-tableOddRowsBackground, #f1f3f4)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
-<td>tqdm</td>
-<td>4.67.3</td>
-</tr>
-<tr class="odd" style="background-color: var(--jp-layout-color1, var(--vscode-editor-background, #f8f9fa)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
-<td>matplotlib-inline</td>
-<td>0.2.1</td>
-</tr>
-<tr class="even" style="background-color: var(--jp-layout-color2, var(--vscode-tree-tableOddRowsBackground, #f1f3f4)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
-<td>fa2_modified</td>
-<td>0.4</td>
-</tr>
-<tr class="odd" style="background-color: var(--jp-layout-color1, var(--vscode-editor-background, #f8f9fa)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
-<td>cycler</td>
-<td>0.12.1</td>
-</tr>
-<tr class="even" style="background-color: var(--jp-layout-color2, var(--vscode-tree-tableOddRowsBackground, #f1f3f4)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
-<td>google-crc32c</td>
-<td>1.8.0</td>
-</tr>
-<tr class="odd" style="background-color: var(--jp-layout-color1, var(--vscode-editor-background, #f8f9fa)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
-<td>debugpy</td>
-<td>1.8.20</td>
-</tr>
-<tr class="even" style="background-color: var(--jp-layout-color2, var(--vscode-tree-tableOddRowsBackground, #f1f3f4)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
-<td>parso</td>
-<td>0.8.6</td>
-</tr>
-<tr class="odd" style="background-color: var(--jp-layout-color1, var(--vscode-editor-background, #f8f9fa)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
-<td>networkx</td>
-<td>3.6.1</td>
-</tr>
-<tr class="even" style="background-color: var(--jp-layout-color2, var(--vscode-tree-tableOddRowsBackground, #f1f3f4)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
-<td>pure_eval</td>
-<td>0.2.3</td>
-</tr>
-<tr class="odd" style="background-color: var(--jp-layout-color1, var(--vscode-editor-background, #f8f9fa)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
-<td>asttokens</td>
-<td>3.0.1</td>
-</tr>
-<tr class="even" style="background-color: var(--jp-layout-color2, var(--vscode-tree-tableOddRowsBackground, #f1f3f4)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
-<td>jupyter_core</td>
-<td>5.9.1</td>
-</tr>
-<tr class="odd" style="background-color: var(--jp-layout-color1, var(--vscode-editor-background, #f8f9fa)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
-<td>platformdirs</td>
-<td>4.9.2</td>
-</tr>
-<tr class="even" style="background-color: var(--jp-layout-color2, var(--vscode-tree-tableOddRowsBackground, #f1f3f4)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
-<td>wcwidth</td>
-<td>0.6.0</td>
-</tr>
-<tr class="odd" style="background-color: var(--jp-layout-color1, var(--vscode-editor-background, #f8f9fa)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
-<td>umap-learn</td>
-<td>0.5.11</td>
-</tr>
-<tr class="even" style="background-color: var(--jp-layout-color2, var(--vscode-tree-tableOddRowsBackground, #f1f3f4)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
-<td>kiwisolver</td>
-<td>1.4.9</td>
-</tr>
-<tr class="odd" style="background-color: var(--jp-layout-color1, var(--vscode-editor-background, #f8f9fa)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
-<td>PyYAML</td>
-<td>6.0.3</td>
-</tr>
-<tr class="even" style="background-color: var(--jp-layout-color2, var(--vscode-tree-tableOddRowsBackground, #f1f3f4)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
-<td>decorator</td>
-<td>5.2.1</td>
-</tr>
-<tr class="odd" style="background-color: var(--jp-layout-color1, var(--vscode-editor-background, #f8f9fa)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
-<td>numcodecs</td>
-<td>0.16.5</td>
-</tr>
-<tr class="even" style="background-color: var(--jp-layout-color2, var(--vscode-tree-tableOddRowsBackground, #f1f3f4)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
-<td>tornado</td>
-<td>6.5.3</td>
-</tr>
-<tr class="odd" style="background-color: var(--jp-layout-color1, var(--vscode-editor-background, #f8f9fa)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
-<td>msgpack</td>
-<td>1.1.2</td>
-</tr>
-<tr class="even" style="background-color: var(--jp-layout-color2, var(--vscode-tree-tableOddRowsBackground, #f1f3f4)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
-<td>pillow</td>
-<td>12.1.1</td>
-</tr>
-<tr class="odd" style="background-color: var(--jp-layout-color1, var(--vscode-editor-background, #f8f9fa)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
 <td>typing_extensions</td>
 <td>4.15.0</td>
-</tr>
-<tr class="even" style="background-color: var(--jp-layout-color2, var(--vscode-tree-tableOddRowsBackground, #f1f3f4)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
-<td>pytz</td>
-<td>2025.2</td>
-</tr>
-<tr class="odd" style="background-color: var(--jp-layout-color1, var(--vscode-editor-background, #f8f9fa)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
-<td>charset-normalizer</td>
-<td>3.4.4</td>
-</tr>
-<tr class="even" style="background-color: var(--jp-layout-color2, var(--vscode-tree-tableOddRowsBackground, #f1f3f4)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
-<td>Pygments</td>
-<td>2.19.2</td>
-</tr>
-<tr class="odd" style="background-color: var(--jp-layout-color1, var(--vscode-editor-background, #f8f9fa)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
-<td>numba</td>
-<td>0.63.1</td>
-</tr>
-<tr class="even" style="background-color: var(--jp-layout-color2, var(--vscode-tree-tableOddRowsBackground, #f1f3f4)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
-<td>threadpoolctl</td>
-<td>3.6.0</td>
-</tr>
-<tr class="odd" style="background-color: var(--jp-layout-color1, var(--vscode-editor-background, #f8f9fa)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
-<td>psutil</td>
-<td>7.2.2</td>
-</tr>
-<tr class="even" style="background-color: var(--jp-layout-color2, var(--vscode-tree-tableOddRowsBackground, #f1f3f4)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
-<td>pyparsing</td>
-<td>3.3.2</td>
-</tr>
-<tr class="odd" style="background-color: var(--jp-layout-color1, var(--vscode-editor-background, #f8f9fa)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
-<td>texttable</td>
-<td>1.7.0</td>
-</tr>
-<tr class="even" style="background-color: var(--jp-layout-color2, var(--vscode-tree-tableOddRowsBackground, #f1f3f4)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
-<td>pyzmq</td>
-<td>27.1.0</td>
-</tr>
-<tr class="odd" style="background-color: var(--jp-layout-color1, var(--vscode-editor-background, #f8f9fa)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
-<td>setuptools</td>
-<td>82.0.0</td>
-</tr>
-<tr class="even" style="background-color: var(--jp-layout-color2, var(--vscode-tree-tableOddRowsBackground, #f1f3f4)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
-<td>stack_data</td>
-<td>0.6.3</td>
-</tr>
-<tr class="odd" style="background-color: var(--jp-layout-color1, var(--vscode-editor-background, #f8f9fa)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
-<td>ipython</td>
-<td>9.10.0</td>
-</tr>
-<tr class="even" style="background-color: var(--jp-layout-color2, var(--vscode-tree-tableOddRowsBackground, #f1f3f4)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
-<td>comm</td>
-<td>0.2.3</td>
 </tr>
 <tr class="odd" style="background-color: var(--jp-layout-color1, var(--vscode-editor-background, #f8f9fa)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
 <td>sparse</td>
 <td>0.18.0</td>
 </tr>
 <tr class="even" style="background-color: var(--jp-layout-color2, var(--vscode-tree-tableOddRowsBackground, #f1f3f4)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
+<td>wrapt</td>
+<td>2.1.1</td>
+</tr>
+<tr class="odd" style="background-color: var(--jp-layout-color1, var(--vscode-editor-background, #f8f9fa)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
+<td>backports.zstd</td>
+<td>1.3.0</td>
+</tr>
+<tr class="even" style="background-color: var(--jp-layout-color2, var(--vscode-tree-tableOddRowsBackground, #f1f3f4)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
+<td>joblib</td>
+<td>1.5.3</td>
+</tr>
+<tr class="odd" style="background-color: var(--jp-layout-color1, var(--vscode-editor-background, #f8f9fa)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
+<td>platformdirs</td>
+<td>4.9.2</td>
+</tr>
+<tr class="even" style="background-color: var(--jp-layout-color2, var(--vscode-tree-tableOddRowsBackground, #f1f3f4)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
+<td>fast-array-utils</td>
+<td>1.3.1</td>
+</tr>
+<tr class="odd" style="background-color: var(--jp-layout-color1, var(--vscode-editor-background, #f8f9fa)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
+<td>pyzmq</td>
+<td>27.1.0</td>
+</tr>
+<tr class="even" style="background-color: var(--jp-layout-color2, var(--vscode-tree-tableOddRowsBackground, #f1f3f4)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
 <td>six</td>
 <td>1.17.0</td>
+</tr>
+<tr class="odd" style="background-color: var(--jp-layout-color1, var(--vscode-editor-background, #f8f9fa)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
+<td>python-dateutil</td>
+<td>2.9.0.post0</td>
+</tr>
+<tr class="even" style="background-color: var(--jp-layout-color2, var(--vscode-tree-tableOddRowsBackground, #f1f3f4)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
+<td>texttable</td>
+<td>1.7.0</td>
+</tr>
+<tr class="odd" style="background-color: var(--jp-layout-color1, var(--vscode-editor-background, #f8f9fa)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
+<td>stack_data</td>
+<td>0.6.3</td>
+</tr>
+<tr class="even" style="background-color: var(--jp-layout-color2, var(--vscode-tree-tableOddRowsBackground, #f1f3f4)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
+<td>ipython</td>
+<td>9.10.0</td>
+</tr>
+<tr class="odd" style="background-color: var(--jp-layout-color1, var(--vscode-editor-background, #f8f9fa)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
+<td>psutil</td>
+<td>7.2.2</td>
+</tr>
+<tr class="even" style="background-color: var(--jp-layout-color2, var(--vscode-tree-tableOddRowsBackground, #f1f3f4)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
+<td>pygpcca</td>
+<td>1.0.4</td>
+</tr>
+<tr class="odd" style="background-color: var(--jp-layout-color1, var(--vscode-editor-background, #f8f9fa)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
+<td>ipykernel</td>
+<td>7.2.0</td>
+</tr>
+<tr class="even" style="background-color: var(--jp-layout-color2, var(--vscode-tree-tableOddRowsBackground, #f1f3f4)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
+<td>pyparsing</td>
+<td>3.3.2</td>
+</tr>
+<tr class="odd" style="background-color: var(--jp-layout-color1, var(--vscode-editor-background, #f8f9fa)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
+<td>packaging</td>
+<td>26.0</td>
+</tr>
+<tr class="even" style="background-color: var(--jp-layout-color2, var(--vscode-tree-tableOddRowsBackground, #f1f3f4)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
+<td>jupyter_core</td>
+<td>5.9.1</td>
+</tr>
+<tr class="odd" style="background-color: var(--jp-layout-color1, var(--vscode-editor-background, #f8f9fa)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
+<td>fsspec</td>
+<td>2026.2.0</td>
+</tr>
+<tr class="even" style="background-color: var(--jp-layout-color2, var(--vscode-tree-tableOddRowsBackground, #f1f3f4)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
+<td>slepc4py</td>
+<td>3.24.2</td>
+</tr>
+<tr class="odd" style="background-color: var(--jp-layout-color1, var(--vscode-editor-background, #f8f9fa)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
+<td>natsort</td>
+<td>8.4.0</td>
+</tr>
+<tr class="even" style="background-color: var(--jp-layout-color2, var(--vscode-tree-tableOddRowsBackground, #f1f3f4)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
+<td>pytz</td>
+<td>2025.2</td>
+</tr>
+<tr class="odd" style="background-color: var(--jp-layout-color1, var(--vscode-editor-background, #f8f9fa)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
+<td>legacy-api-wrap</td>
+<td>1.5</td>
+</tr>
+<tr class="even" style="background-color: var(--jp-layout-color2, var(--vscode-tree-tableOddRowsBackground, #f1f3f4)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
+<td>traitlets</td>
+<td>5.14.3</td>
+</tr>
+<tr class="odd" style="background-color: var(--jp-layout-color1, var(--vscode-editor-background, #f8f9fa)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
+<td>parso</td>
+<td>0.8.6</td>
+</tr>
+<tr class="even" style="background-color: var(--jp-layout-color2, var(--vscode-tree-tableOddRowsBackground, #f1f3f4)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
+<td>umap-learn</td>
+<td>0.5.11</td>
+</tr>
+<tr class="odd" style="background-color: var(--jp-layout-color1, var(--vscode-editor-background, #f8f9fa)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
+<td>msgpack</td>
+<td>1.1.2</td>
+</tr>
+<tr class="even" style="background-color: var(--jp-layout-color2, var(--vscode-tree-tableOddRowsBackground, #f1f3f4)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
+<td>donfig</td>
+<td>0.8.1.post1</td>
 </tr>
 <tr class="odd" style="background-color: var(--jp-layout-color1, var(--vscode-editor-background, #f8f9fa)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
 <td>jupyter_client</td>
 <td>8.8.0</td>
 </tr>
 <tr class="even" style="background-color: var(--jp-layout-color2, var(--vscode-tree-tableOddRowsBackground, #f1f3f4)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
-<td>legacy-api-wrap</td>
-<td>1.5</td>
+<td>debugpy</td>
+<td>1.8.20</td>
 </tr>
 <tr class="odd" style="background-color: var(--jp-layout-color1, var(--vscode-editor-background, #f8f9fa)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
-<td>traitlets</td>
-<td>5.14.3</td>
+<td>progressbar2</td>
+<td>4.5.0</td>
+</tr>
+<tr class="even" style="background-color: var(--jp-layout-color2, var(--vscode-tree-tableOddRowsBackground, #f1f3f4)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
+<td>Pygments</td>
+<td>2.19.2</td>
+</tr>
+<tr class="odd" style="background-color: var(--jp-layout-color1, var(--vscode-editor-background, #f8f9fa)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
+<td>kiwisolver</td>
+<td>1.4.9</td>
+</tr>
+<tr class="even" style="background-color: var(--jp-layout-color2, var(--vscode-tree-tableOddRowsBackground, #f1f3f4)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
+<td>pillow</td>
+<td>12.1.1</td>
+</tr>
+<tr class="odd" style="background-color: var(--jp-layout-color1, var(--vscode-editor-background, #f8f9fa)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
+<td>numba</td>
+<td>0.63.1</td>
+</tr>
+<tr class="even" style="background-color: var(--jp-layout-color2, var(--vscode-tree-tableOddRowsBackground, #f1f3f4)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
+<td>cycler</td>
+<td>0.12.1</td>
+</tr>
+<tr class="odd" style="background-color: var(--jp-layout-color1, var(--vscode-editor-background, #f8f9fa)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
+<td>xarray</td>
+<td>2026.2.0</td>
+</tr>
+<tr class="even" style="background-color: var(--jp-layout-color2, var(--vscode-tree-tableOddRowsBackground, #f1f3f4)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
+<td>google-crc32c</td>
+<td>1.8.0</td>
+</tr>
+<tr class="odd" style="background-color: var(--jp-layout-color1, var(--vscode-editor-background, #f8f9fa)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
+<td>patsy</td>
+<td>1.0.2</td>
+</tr>
+<tr class="even" style="background-color: var(--jp-layout-color2, var(--vscode-tree-tableOddRowsBackground, #f1f3f4)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
+<td>matplotlib-inline</td>
+<td>0.2.1</td>
+</tr>
+<tr class="odd" style="background-color: var(--jp-layout-color1, var(--vscode-editor-background, #f8f9fa)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
+<td>h5py</td>
+<td>3.15.1</td>
+</tr>
+<tr class="even" style="background-color: var(--jp-layout-color2, var(--vscode-tree-tableOddRowsBackground, #f1f3f4)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
+<td>pygam</td>
+<td>0.12.0</td>
+</tr>
+<tr class="odd" style="background-color: var(--jp-layout-color1, var(--vscode-editor-background, #f8f9fa)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
+<td>session-info2</td>
+<td>0.4</td>
+</tr>
+<tr class="even" style="background-color: var(--jp-layout-color2, var(--vscode-tree-tableOddRowsBackground, #f1f3f4)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
+<td>fa2_modified</td>
+<td>0.4</td>
+</tr>
+<tr class="odd" style="background-color: var(--jp-layout-color1, var(--vscode-editor-background, #f8f9fa)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
+<td>jedi</td>
+<td>0.19.2</td>
+</tr>
+<tr class="even" style="background-color: var(--jp-layout-color2, var(--vscode-tree-tableOddRowsBackground, #f1f3f4)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
+<td>PyYAML</td>
+<td>6.0.3</td>
+</tr>
+<tr class="odd" style="background-color: var(--jp-layout-color1, var(--vscode-editor-background, #f8f9fa)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
+<td>setuptools</td>
+<td>82.0.0</td>
+</tr>
+<tr class="even" style="background-color: var(--jp-layout-color2, var(--vscode-tree-tableOddRowsBackground, #f1f3f4)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
+<td>zarr</td>
+<td>3.1.5</td>
+</tr>
+<tr class="odd" style="background-color: var(--jp-layout-color1, var(--vscode-editor-background, #f8f9fa)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
+<td>decorator</td>
+<td>5.2.1</td>
 </tr>
 <tr class="even" style="background-color: var(--jp-layout-color2, var(--vscode-tree-tableOddRowsBackground, #f1f3f4)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
 <td>llvmlite</td>
 <td>0.46.0</td>
 </tr>
 <tr class="odd" style="background-color: var(--jp-layout-color1, var(--vscode-editor-background, #f8f9fa)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
-<td>h5py</td>
-<td>3.15.1</td>
+<td>prompt_toolkit</td>
+<td>3.0.52</td>
+</tr>
+<tr class="even" style="background-color: var(--jp-layout-color2, var(--vscode-tree-tableOddRowsBackground, #f1f3f4)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
+<td>asttokens</td>
+<td>3.0.1</td>
+</tr>
+<tr class="odd" style="background-color: var(--jp-layout-color1, var(--vscode-editor-background, #f8f9fa)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
+<td>tornado</td>
+<td>6.5.3</td>
+</tr>
+<tr class="even" style="background-color: var(--jp-layout-color2, var(--vscode-tree-tableOddRowsBackground, #f1f3f4)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
+<td>numcodecs</td>
+<td>0.16.5</td>
+</tr>
+<tr class="odd" style="background-color: var(--jp-layout-color1, var(--vscode-editor-background, #f8f9fa)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
+<td>statsmodels</td>
+<td>0.14.6</td>
+</tr>
+<tr class="even" style="background-color: var(--jp-layout-color2, var(--vscode-tree-tableOddRowsBackground, #f1f3f4)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
+<td>leidenalg</td>
+<td>0.11.0</td>
+</tr>
+<tr class="odd" style="background-color: var(--jp-layout-color1, var(--vscode-editor-background, #f8f9fa)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
+<td>tqdm</td>
+<td>4.67.3</td>
+</tr>
+<tr class="even" style="background-color: var(--jp-layout-color2, var(--vscode-tree-tableOddRowsBackground, #f1f3f4)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
+<td>docrep</td>
+<td>0.3.2</td>
+</tr>
+<tr class="odd" style="background-color: var(--jp-layout-color1, var(--vscode-editor-background, #f8f9fa)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
+<td>wcwidth</td>
+<td>0.6.0</td>
+</tr>
+<tr class="even" style="background-color: var(--jp-layout-color2, var(--vscode-tree-tableOddRowsBackground, #f1f3f4)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
+<td>seaborn</td>
+<td>0.13.2</td>
+</tr>
+<tr class="odd" style="background-color: var(--jp-layout-color1, var(--vscode-editor-background, #f8f9fa)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
+<td>igraph</td>
+<td>1.0.0</td>
+</tr>
+<tr class="even" style="background-color: var(--jp-layout-color2, var(--vscode-tree-tableOddRowsBackground, #f1f3f4)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
+<td>charset-normalizer</td>
+<td>3.4.4</td>
+</tr>
+<tr class="odd" style="background-color: var(--jp-layout-color1, var(--vscode-editor-background, #f8f9fa)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
+<td>pynndescent</td>
+<td>0.5.13</td>
+</tr>
+<tr class="even" style="background-color: var(--jp-layout-color2, var(--vscode-tree-tableOddRowsBackground, #f1f3f4)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
+<td>threadpoolctl</td>
+<td>3.6.0</td>
+</tr>
+<tr class="odd" style="background-color: var(--jp-layout-color1, var(--vscode-editor-background, #f8f9fa)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
+<td>pure_eval</td>
+<td>0.2.3</td>
+</tr>
+<tr class="even" style="background-color: var(--jp-layout-color2, var(--vscode-tree-tableOddRowsBackground, #f1f3f4)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
+<td>networkx</td>
+<td>3.6.1</td>
+</tr>
+<tr class="odd" style="background-color: var(--jp-layout-color1, var(--vscode-editor-background, #f8f9fa)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
+<td>scikit-learn</td>
+<td>1.6.1</td>
+</tr>
+<tr class="even" style="background-color: var(--jp-layout-color2, var(--vscode-tree-tableOddRowsBackground, #f1f3f4)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
+<td>comm</td>
+<td>0.2.3</td>
+</tr>
+<tr class="odd" style="background-color: var(--jp-layout-color1, var(--vscode-editor-background, #f8f9fa)); color: var(--jp-ui-font-color1, var(--vscode-editor-foreground, #212529));">
+<td>python-utils</td>
+<td>3.9.1</td>
 </tr>
 </tbody>
 </table>
@@ -1247,84 +1836,97 @@ Click here
             <summary>Copyable Markdown</summary>
             <pre>| Package    | Version |
 | ---------- | ------- |
+| petsc4py   | 3.24.4  |
 | numpy      | 2.3.5   |
 | pandas     | 2.3.3   |
 | matplotlib | 3.10.8  |
 | scanpy     | 1.12    |
 | scipy      | 1.16.3  |
+| cellrank   | 2.0.7   |
+| scvelo     | 0.3.4   |
 | anndata    | 0.12.10 |
 
 | Dependency         | Version     |
 | ------------------ | ----------- |
-| prompt_toolkit     | 3.0.52      |
-| natsort            | 8.4.0       |
-| session-info2      | 0.4         |
-| fast-array-utils   | 1.3.1       |
-| xarray             | 2026.2.0    |
 | executing          | 2.2.1       |
-| pynndescent        | 0.5.13      |
-| joblib             | 1.5.3       |
-| scikit-learn       | 1.6.1       |
-| python-dateutil    | 2.9.0.post0 |
-| ipykernel          | 7.2.0       |
-| backports.zstd     | 1.3.0       |
-| zarr               | 3.1.5       |
-| donfig             | 0.8.1.post1 |
-| igraph             | 1.0.0       |
-| leidenalg          | 0.11.0      |
-| packaging          | 26.0        |
-| fsspec             | 2026.2.0    |
-| jedi               | 0.19.2      |
-| tqdm               | 4.67.3      |
-| matplotlib-inline  | 0.2.1       |
-| fa2_modified       | 0.4         |
-| cycler             | 0.12.1      |
-| google-crc32c      | 1.8.0       |
-| debugpy            | 1.8.20      |
-| parso              | 0.8.6       |
-| networkx           | 3.6.1       |
-| pure_eval          | 0.2.3       |
-| asttokens          | 3.0.1       |
-| jupyter_core       | 5.9.1       |
-| platformdirs       | 4.9.2       |
-| wcwidth            | 0.6.0       |
-| umap-learn         | 0.5.11      |
-| kiwisolver         | 1.4.9       |
-| PyYAML             | 6.0.3       |
-| decorator          | 5.2.1       |
-| numcodecs          | 0.16.5      |
-| tornado            | 6.5.3       |
-| msgpack            | 1.1.2       |
-| pillow             | 12.1.1      |
 | typing_extensions  | 4.15.0      |
-| pytz               | 2025.2      |
-| charset-normalizer | 3.4.4       |
-| Pygments           | 2.19.2      |
-| numba              | 0.63.1      |
-| threadpoolctl      | 3.6.0       |
-| psutil             | 7.2.2       |
-| pyparsing          | 3.3.2       |
-| texttable          | 1.7.0       |
+| sparse             | 0.18.0      |
+| wrapt              | 2.1.1       |
+| backports.zstd     | 1.3.0       |
+| joblib             | 1.5.3       |
+| platformdirs       | 4.9.2       |
+| fast-array-utils   | 1.3.1       |
 | pyzmq              | 27.1.0      |
-| setuptools         | 82.0.0      |
+| six                | 1.17.0      |
+| python-dateutil    | 2.9.0.post0 |
+| texttable          | 1.7.0       |
 | stack_data         | 0.6.3       |
 | ipython            | 9.10.0      |
-| comm               | 0.2.3       |
-| sparse             | 0.18.0      |
-| six                | 1.17.0      |
-| jupyter_client     | 8.8.0       |
+| psutil             | 7.2.2       |
+| pygpcca            | 1.0.4       |
+| ipykernel          | 7.2.0       |
+| pyparsing          | 3.3.2       |
+| packaging          | 26.0        |
+| jupyter_core       | 5.9.1       |
+| fsspec             | 2026.2.0    |
+| slepc4py           | 3.24.2      |
+| natsort            | 8.4.0       |
+| pytz               | 2025.2      |
 | legacy-api-wrap    | 1.5         |
 | traitlets          | 5.14.3      |
-| llvmlite           | 0.46.0      |
+| parso              | 0.8.6       |
+| umap-learn         | 0.5.11      |
+| msgpack            | 1.1.2       |
+| donfig             | 0.8.1.post1 |
+| jupyter_client     | 8.8.0       |
+| debugpy            | 1.8.20      |
+| progressbar2       | 4.5.0       |
+| Pygments           | 2.19.2      |
+| kiwisolver         | 1.4.9       |
+| pillow             | 12.1.1      |
+| numba              | 0.63.1      |
+| cycler             | 0.12.1      |
+| xarray             | 2026.2.0    |
+| google-crc32c      | 1.8.0       |
+| patsy              | 1.0.2       |
+| matplotlib-inline  | 0.2.1       |
 | h5py               | 3.15.1      |
+| pygam              | 0.12.0      |
+| session-info2      | 0.4         |
+| fa2_modified       | 0.4         |
+| jedi               | 0.19.2      |
+| PyYAML             | 6.0.3       |
+| setuptools         | 82.0.0      |
+| zarr               | 3.1.5       |
+| decorator          | 5.2.1       |
+| llvmlite           | 0.46.0      |
+| prompt_toolkit     | 3.0.52      |
+| asttokens          | 3.0.1       |
+| tornado            | 6.5.3       |
+| numcodecs          | 0.16.5      |
+| statsmodels        | 0.14.6      |
+| leidenalg          | 0.11.0      |
+| tqdm               | 4.67.3      |
+| docrep             | 0.3.2       |
+| wcwidth            | 0.6.0       |
+| seaborn            | 0.13.2      |
+| igraph             | 1.0.0       |
+| charset-normalizer | 3.4.4       |
+| pynndescent        | 0.5.13      |
+| threadpoolctl      | 3.6.0       |
+| pure_eval          | 0.2.3       |
+| networkx           | 3.6.1       |
+| scikit-learn       | 1.6.1       |
+| comm               | 0.2.3       |
+| python-utils       | 3.9.1       |
 
 | Component | Info                                                                           |
 | --------- | ------------------------------------------------------------------------------ |
 | Python    | 3.12.12 | packaged by conda-forge | (main, Jan 26 2026, 23:51:32) [GCC 14.3.0] |
-| OS        | Linux-6.12.5-linuxkit-x86_64-with-glibc2.35                                    |
-| CPU       | 16 logical CPU cores, x86_64                                                   |
+| OS        | Linux-6.8.0-100-generic-x86_64-with-glibc2.35                                  |
+| CPU       | 4 logical CPU cores, x86_64                                                    |
 | GPU       | No GPU found                                                                   |
-| Updated   | 2026-03-30 13:54                                                               |</pre>
+| Updated   | 2026-03-31 22:14                                                               |</pre>
         </details>
 </div>
 </div>
