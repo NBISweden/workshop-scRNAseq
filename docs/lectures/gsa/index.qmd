@@ -7,7 +7,7 @@ format:
 execute:
   echo: false
 bibliography: references.bib
-date: 2025-04-02
+date: 2026-04-15
 ---
 
 
@@ -20,6 +20,7 @@ date: 2025-04-02
 . . .
 
 Gene-level data -> Gene set data
+(Gene set = a list of genes)
 
 . . .
 
@@ -34,14 +35,15 @@ Many different kinds of genome wide analyses such differential gene expression, 
 <br>
 <br>
 
-### Predict the functional changes of cells based on differential gene expression analysis
+### Predict the functional changes of cells based on gene expression
 
 - Make sense of a long list of DEGs
   - What is the function of those genes?
   - What is the biological consequence of over/under expression of genes?
-- Connect your DEGs and thereby your experiment to pathway activity
+- Connect your results to pathway activity
 - Small differences in many genes may have a bigger impact than large differences in one genes
 - Less sensitive to false positive DEGs
+
 
 
 ## Requirements
@@ -51,7 +53,7 @@ Many different kinds of genome wide analyses such differential gene expression, 
 
 ::: {.center}
 
-### DE results 
+### DE results OR expression data
  
 ### +
 
@@ -59,86 +61,75 @@ Many different kinds of genome wide analyses such differential gene expression, 
 
 ### + 
 
-### Statistical test
+### Statistical test (usually)
 
 :::
 
-## Where to get gene sets?
+## Examples of gene sets
 
+- Genes in a pathway
+- Genes with shared functions
+- Target genes of a transcription factor
+- Cell type markers
+- Disease-related genes
+
+
+## Where to get gene sets?
 
 - Databases
   - Gene Ontology
   - KEGG
   - Reactome
   - MSigDB
+  - CellMarker
+  - PanglaoDB
+  - ChEA
   - ...
-- Previous studies
-  - Markers of a population of interest
-  - Targets of a transcription factor of interest
-  - DE genes from another analysis
+- Literature / previous studies (e.g. list of DE genes, list of transcription factor targets etc)
+
+Different sources vary in level of curation/confidence, interspecies application, number of gene sets, size of gene sets, biases etc
 
 
 
-## Gene ontology 
+## Types of gene set analysis
+<br>
+<br>
+<br>
 
-::: {.columns}
-::: {.column}
+- Gene set testing
+  - Find statistically significant enrichment of gene sets in a ranked or non-ranked list of genes
+- Activity scoring
+  - Predict activity of a gene set in individual samples or cells
 
-![](assets/hexose-biosynthetic-process.png){width=85%}
+## Gene set testing
 
-:::
-::: {.column}
+<br>
+<br>
+<br>
 
-![](assets/db-go.png)
+DE analysis -> Ranked/unranked list of genes -> Statistical test of enrichment of gene set X
 
-- Network graph, loosely hierarchical
-- Three ontologies
-  - Biological process (e.g. Neutrophil Chemotaxis, Cell proliferation)
-  - Molecular Function (e.g. Histone acetylation, Phosphorylation)
-  - Cellular compartment (e.g. Nucleus, Cytoplasm, Plasma membrane)
-- Genes can belong to multiple terms
-
-:::
-:::
-
-## Kegg 
-
-![](assets/kegg.png)
-
-. . .
-
-::: {}
-
-- Fewer and smaller ontology
-- Highly curated
-
-:::
-
-[[Pathview](https://www.bioconductor.org/packages/release/bioc/html/pathview.html)]{.small .right}
-
-
-
-## Overrepresentation analysis (ORA)
+## Gene set testing: Overrepresentation analysis (ORA)
 
 ![](assets/ora.png)
 
-- Hypergeometric test (Fisher's exact test)
+- "Universe" (background) can be all genes or all genes expressed in your cell population
 
-## Overrepresentation analysis (ORA)
+## Gene set testing: Overrepresentation analysis (ORA)
 
-- Background can be all genes or all genes expressed in your cell population
 - Requires arbitrary cut-off
 - Omits actual gene-level statistics
+- Selection of genes usually considers both p-value and fold-change
 - Computationally fast
-- Generally works for few genes with strong effects
+- Consider size of overlap in small gene sets!
 
-## Gene set enrichment analysis (GSEA)
+## Gene set testing: Gene set enrichment analysis (GSEA)
 
-![](assets/subramanium-2005-gsa.webp)
+![](assets/subramanium-2005-gsa.png)
 
 [@subramanian2005gene]{.small}
 
-## Gene set enrichment analysis (GSEA)
+## Gene set testing: Gene set enrichment analysis (GSEA)
 
 ::: {.columns}
 ::: {.column}
@@ -149,9 +140,10 @@ Many different kinds of genome wide analyses such differential gene expression, 
 ::: {.column}
 
 - Enrichment score (ES)
-- Normalized enrichment score (NES)
+- Normalized enrichment score (NES, corrected for gene set size)
 - No need for cut-offs
 - Takes gene-level stats into account
+  - Genes must be ranked according to one variable (usually either log2(FC) or sign(FC) * -log10(p))
 - More sensitive to subtle changes
 
 [[GSEA User Guide](https://www.gsea-msigdb.org/gsea/doc/GSEAUserGuideFrame.html)]{.small}
@@ -160,32 +152,65 @@ Many different kinds of genome wide analyses such differential gene expression, 
 :::
 
 
-## Tools
+## Activity scoring
 
-**Online**  
+::: {.columns}
+::: {.column}
+- For each gene set, calculate score for each sample/cell
+  - Based on gene expression (not DE)
+- Statistical test can then be performed between groups or against a continuous variable
 
-- [Enrichr](https://maayanlab.cloud/Enrichr/)
-- [Gorilla](http://cbl-gorilla.cs.technion.ac.il/)
-- [Webgestalt](https://www.webgestalt.org/)
 
-**Code**  
+:::
 
-- [fgsea (R)](https://bioconductor.org/packages/release/bioc/html/fgsea.html)
-- [clusterProfiler (R)](https://bioconductor.org/packages/release/bioc/html/clusterProfiler.html)
-- [msigdbr (R)](https://cran.r-project.org/web/packages/msigdbr/vignettes/msigdbr-intro.html)
-- [gseapy (Python)](https://gseapy.readthedocs.io/en/latest/introduction.html)
+::: {.column}
+
+![](assets/aucell_2.png)
+
+[https://www.sc-best-practices.org/conditions/gsea_pathway.html](https://www.sc-best-practices.org/conditions/gsea_pathway.html)
+
+:::
+:::
+
+## Activity scoring methods (examples)
+
+- Combined z-score
+- Control-corrected average expression
+  - AddModuleScore (Seurat), score_genes (scanpy)
+- AUCell [@Aibar2017]
+- UCell [@ANDREATTA20213796]
+- Vision [@DeTomaso2019]
+- Pagoda2 [@Lake2018]
+- SCSE [@Pont2019]
+- JASMINE [@Noureen2022-pv]
+- PROGENy (pathway activity) [@Schubert2018]
+- ssGSEA [@Barbie2009]
+- GSVA [@Hanzelmann2013]
+ 
+## Benchmarking
+
+![](assets/benchmark.jpeg)
+
+<br>
+
+- ssGSEA and GSVA usually under-perform
+
+[@Zhang2020-uj] [@Noureen2022-pv] [@Wang2024-pz]
 
 
 ## Considerations
 
+- Enrichment ≠ function
+- Activating vs inhibiting genes
 - Bias in curation - highly researched topics will be over-represented
 - Gene set names can be misleading
 - Specific vs general gene sets
 - Multifunctional genes
-- Translation of gene ids
+- Translation between different gene IDs
+- Protein-based databases
 - Databases change
 - Curation is organism-specific
-- Critical evaluation is required
+- Critical evaluation is required!
 
 ## References
 

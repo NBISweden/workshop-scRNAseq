@@ -8,7 +8,7 @@ execute:
   echo: false
 bibliography: references.bib
 transition: none
-date: 2025-04-02
+date: 2026-04-15
 ---
 
 
@@ -21,7 +21,7 @@ library(Seurat)
 library(ggplot2)
 library(dplyr)
 library(cowplot)
-library(ggpubr)
+#library(ggpubr)
 
 theme_set(theme_minimal(base_size=10))
 options(ggplot2.discrete.colour= c("#1f78b4", "#e31a1c", "#33a02c", "#ff7f00", "#6a3d9a"),
@@ -43,11 +43,7 @@ m <- FindAllMarkers(obj)
 
 - What is differential gene expression?
 - How is the analysis performed?
-  - Choosing your groups of interest
-  - Functions
-  - Simple design vs complex design
-  - 1-vs-1 and 1-vs-all
-- Other considerations
+- How do we interpret the results?
 
 # What is differential gene expression?
 
@@ -83,7 +79,7 @@ Sometimes, it's easy to visually identify if the expression of a gene is signifi
 ## Statistical tests
 
 - Null hypothesis: Mean/median/distribution is equal between group A and group B
-- $p$ < 0.05 : if null hypothesis is true, we can expect the measured result in < 5% of cases where group A and group B have been sampled with sample size $n$
+- *p* < 0.05 : if null hypothesis is true, we can expect the measured result in < 5% of cases where group A and group B have been sampled with sample size $n$
 
 
 ```{r whatissignificant, fig.width = 8, fig.height = 3}
@@ -552,14 +548,8 @@ MAST
 
 - Two part GLM (Hurdle model)
 - Models the continuous nature of gene expression and the discrete binary nature of gene detection
-- Detection hurdle
-  - Expression detected or not?
-  - Logistic regression
-  - If gene is not detected, stop, else move to next hurdle
-- Expression hurdle
-  - Genes with positive expression levels modelled using GLM
-- Hurdle model is able to handle drop-outs
-- Support complex modelling
+- Detection hurdle + Expression hurdle
+- Supports complex modelling
 
 [@finak2015mast]{.small}
 
@@ -621,15 +611,16 @@ testdata_pat = do.call("rbind",list(
 ```{r simple_complex, fig.height=4, fig.width=3}
 
 
-ggplot(rbind(testdata_ctrl,testdata_pat), 
-       aes(x = group, y = value, color = group)) +
-  geom_jitter(shape = 16, alpha = 0.5, size = 0.5) + 
-  ggpubr::stat_compare_means( size =3) +  
-  geom_violin(fill = NA, color = "black") + 
-  theme(legend.position = "none") +
-  scale_y_continuous(expand = expansion(mult = c(0.1,0.2)))
+# ggplot(rbind(testdata_ctrl,testdata_pat), 
+#        aes(x = group, y = value, color = group)) +
+#   geom_jitter(shape = 16, alpha = 0.5, size = 0.5) + 
+#   ggpubr::stat_compare_means( size =3) +  
+#   geom_violin(fill = NA, color = "black") + 
+#   theme(legend.position = "none") +
+#   scale_y_continuous(expand = expansion(mult = c(0.1,0.2)))
 
 ```
+![](assets/simple_model.png)
 
 :::
 
@@ -640,15 +631,17 @@ ggplot(rbind(testdata_ctrl,testdata_pat),
 ```{r individuals, fig.height=4, fig.width=5}
 
 
-ggplot(rbind(testdata_ctrl,testdata_pat), aes(x = individual, y = value, color = group)) +
-  geom_jitter(shape = 16, alpha = 0.5, size = 1) + 
-  geom_violin(fill = NA, color = "black") + 
-  theme(legend.position = "none") +
-  scale_y_continuous(expand = expansion(mult = c(0.1,0.2)))
+# ggplot(rbind(testdata_ctrl,testdata_pat), aes(x = individual, y = value, color = group)) +
+#   geom_jitter(shape = 16, alpha = 0.5, size = 1) + 
+#   geom_violin(fill = NA, color = "black") + 
+#   theme(legend.position = "none") +
+#   scale_y_continuous(expand = expansion(mult = c(0.1,0.2)))
 
 
 
 ```
+
+![](assets/complex_model.png)
 
 :::
 
@@ -691,19 +684,42 @@ plot_grid(
 
 ## Complex designs: Covariates
 
+
 ```{r, fig.height = 3, fig.width=7}
 
 
-plot_grid(
-  ggplot(batchdata, aes(color = sample, shape = cluster,
-                      x = umap_1, y = umap_2)) + 
-    geom_point(),
-  ggplot(batchdata, aes(x = cluster, y = il10)) + 
-    geom_violin() + 
-    geom_jitter(aes(color = sample), size = 1) + 
-    stat_compare_means(label.y = 8, size = 3),
-  rel_widths = c(3,2))
+# plot_grid(
+#   ggplot(batchdata, aes(color = sample, shape = cluster,
+#                       x = umap_1, y = umap_2)) + 
+#     geom_point(),
+#   ggplot(batchdata, aes(x = cluster, y = il10)) + 
+#     geom_violin() + 
+#     geom_jitter(aes(color = sample), size = 1) + 
+#     ggpubr::stat_compare_means(label.y = 8, size = 3),
+#   rel_widths = c(3,2))
 ```
+
+
+
+::: {.columns}
+
+::: {.column width="60%"}
+
+
+![](assets/covariates_umap.png)
+
+:::
+
+::: {.column width="40%"}
+
+
+![](assets/covariates.png)
+
+
+:::
+
+:::
+
 
 
 
@@ -856,45 +872,47 @@ Cluster C3 vs all will be mostly C3 vs C1 because C1 dominates the second group.
 
 ## Considerations - p-values
 
-- $p$ depends on $n$, variance and intergroup difference
-  - As $n$ increases, variance can increase and difference can decrease without losing power
+- *p* depends on *n*, variance and intergroup difference
+  - As *n* increases, variance can increase and difference can decrease without losing power
 
 ```{r pvalueexample, fig.height=4, fig.width=6}
 
 set.seed(654321)
 
-testdata = do.call("rbind",lapply(
-  list(list(n = 1000, diff = 0.2),
-       list(n = 20, diff = 0.2),
-       list(n = 20, diff = 2)),
-  function(x){
-    rbind(
-      data.frame(group = "A", 
-                 n = paste0("n = ",x$n),
-                 diff = paste0("diff. in pop. means = ",x$diff),
-                 sd = "sd = 1",
-                 value = rnorm(x$n, 5, 1)),
-      data.frame(group = "B", 
-                 n = paste0("n = ",x$n),
-                 diff = paste0("diff. in pop. means = ",x$diff),
-                 sd = "sd = 1",
-                 value = rnorm(x$n, 5+x$diff, 1))
-      )
-    }))
-testdata$n = factor(testdata$n, levels = paste0("n = ", c(20, 1000)))
-
-ggplot(testdata, aes(x = group, y = value)) +
-  geom_jitter(shape = 16, alpha = 0.5, size = 1) + 
-  geom_violin(fill = "white", alpha = 0.5) +
-  facet_wrap(c("n","diff","sd")) + 
-  ggpubr::stat_compare_means( size =3, label.y = 10) + 
-  theme(strip.text = element_text(size = 9), 
-        strip.background = element_rect(color = NA, fill = "#DDDDDD"),
-        panel.spacing = unit(10, "pt")) +
-  scale_y_continuous(expand = expansion(mult = c(0.1,0.2)))
+# testdata = do.call("rbind",lapply(
+#   list(list(n = 1000, diff = 0.2),
+#        list(n = 20, diff = 0.2),
+#        list(n = 20, diff = 2)),
+#   function(x){
+#     rbind(
+#       data.frame(group = "A", 
+#                  n = paste0("n = ",x$n),
+#                  diff = paste0("diff. in pop. means = ",x$diff),
+#                  sd = "sd = 1",
+#                  value = rnorm(x$n, 5, 1)),
+#       data.frame(group = "B", 
+#                  n = paste0("n = ",x$n),
+#                  diff = paste0("diff. in pop. means = ",x$diff),
+#                  sd = "sd = 1",
+#                  value = rnorm(x$n, 5+x$diff, 1))
+#       )
+#     }))
+# testdata$n = factor(testdata$n, levels = paste0("n = ", c(20, 1000)))
+#
+# ggplot(testdata, aes(x = group, y = value)) +
+#   geom_jitter(shape = 16, alpha = 0.5, size = 1) + 
+#   geom_violin(fill = "white", alpha = 0.5) +
+#   facet_wrap(c("n","diff","sd")) + 
+#   ggpubr::stat_compare_means( size =3, label.y = 10) + 
+#   theme(strip.text = element_text(size = 9), 
+#         strip.background = element_rect(color = NA, fill = "#DDDDDD"),
+#         panel.spacing = unit(10, "pt")) +
+#   scale_y_continuous(expand = expansion(mult = c(0.1,0.2)))
 
 
 ```
+
+![](assets/p_comparison.png)
 
 Are all statistically significant differences of interest for your research question?
 
@@ -1012,11 +1030,11 @@ Dot plots give a quick overview of both expression and % of cells expressing a g
 
 :::
 
-## Things to think about
+## Things to consider
 
 - How many cells/samples do I need for reliable DGE?
   - How different do I expect my cells/samples to be?
-  - How high is the expression and how deep am I sequencing?
+  - How high is the expression and how deeply am I sequencing?
   - Will also depend on library quality
 - Which test should I use?
   - Which populations am I comparing?
@@ -1024,6 +1042,9 @@ Dot plots give a quick overview of both expression and % of cells expressing a g
   - Do I need to correct for any batch effects?
 - Which data should I use? Raw? Normalized? Log Normalized?
   - Depends on test/method
+
+## Remember!
+
 - DE results are always relative to other cells
 - Don't just rely on p-values
 - Always assess your results!
@@ -1046,4 +1067,4 @@ Dot plots give a quick overview of both expression and % of cells expressing a g
 
 ## Acknowledgements
 
-Slides adapted from previous presentations by Olga Dethlefson, Åsa Björklund, Vincent van Hoef and Roy Francis.
+Slides adapted from previous presentations by Olga Dethlefsen, Åsa Björklund, Vincent van Hoef and Roy Francis.
