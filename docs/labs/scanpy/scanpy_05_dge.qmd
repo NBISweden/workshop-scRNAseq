@@ -187,7 +187,7 @@ sc.pl.stacked_violin(adata, mynames, groupby = 'leiden_0.6')
 ```{python}
 #| label: condition
 cl1 = adata[adata.obs['leiden_0.6'] == '4',:]
-cl1.obs['type'].value_counts()
+print(cl1.obs['type'].value_counts())
 
 sc.tl.rank_genes_groups(cl1, 'type', method='wilcoxon', key_added = "wilcoxon")
 sc.pl.rank_genes_groups(cl1, n_genes=25, sharey=False, key="wilcoxon")
@@ -230,18 +230,18 @@ if not os.path.exists(annot_file):
 else:
     annot = pd.read_csv(annot_file, index_col=0)
 
-chrY_genes = adata.var_names.intersection(annot.index[annot.chromosome_name == "Y"])
-chrX_genes = adata.var_names.intersection(annot.index[annot.chromosome_name == "X"])
+chrY_genes = adata.raw.var_names.intersection(annot.index[annot.chromosome_name == "Y"])
+chrX_genes = adata.raw.var_names.intersection(annot.index[annot.chromosome_name == "X"])
 
 sex_genes = chrY_genes.union(chrX_genes)
 print(len(sex_genes))
-all_genes = cl1.var.index.tolist()
+all_genes = cl1.raw.var.index.tolist()
 print(len(all_genes))
 
 keep_genes = [x for x in all_genes if x not in sex_genes]
 print(len(keep_genes))
 
-cl1 = cl1[:,keep_genes]
+cl1 = cl1.raw.to_adata()[:,keep_genes]
 ```
 
 Rerun differential expression.
